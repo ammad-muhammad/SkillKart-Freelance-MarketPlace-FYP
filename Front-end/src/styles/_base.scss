@@ -1,0 +1,108 @@
+@use './variables' as *;
+
+* {
+    box-sizing: border-box;
+}
+
+
+html {
+    font-size: 1.041666667vw;
+    scroll-behavior: smooth;
+
+    @media #{$vpDesktop1680} {
+        font-size: 1.111111111vw;
+      }
+    
+      @media #{$vpDesktop1280} {
+        font-size: 1.09375vw;
+      }
+    
+      @media #{$vpTablet991} {
+        font-size: 1.822916667vw;
+      }
+    
+      @media #{$vpMobile600} {
+        font-size: 3.076923077vw;
+      }
+}
+
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+}
+
+
+a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+        color: $primary-color;
+    }
+}
+
+
+/* Lists */
+ul,
+ol {
+    list-style: none;
+}
+
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0;
+}
+
+/* Paragraphs */
+p {
+    margin: 0;
+}
+
+/* Container class */
+.container {
+    width: 100%;
+    margin: 0 auto;
+    padding-left: 4rem;
+    padding-right: 4rem;
+
+    @media #{$vpTablet1024} {
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+
+    @media #{$vpMobile768} {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    @media #{$vpMobile600} {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+
+/* Utility classes */
+.text-center {
+    text-align: center;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

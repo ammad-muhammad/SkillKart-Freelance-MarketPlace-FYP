@@ -1,0 +1,29 @@
+// Fonts
+$primaryFont: 'Inter', sans-serif;
+$secondaryFont: 'Inter', sans-serif;
+
+// Colors
+$primary-color: #1e40af;
+$secondary-color: #2563eb;
+$background-color: #f9f9f9;
+$text-color: #333;
+
+$white: #fff;
+$black: #000;
+
+
+// Media Queries
+$vpDesktop1919: '(max-width:1919px)';
+$vpDesktop1680: '(max-width:1680px)';
+$vpDesktop1440: '(max-width:1440px)';
+$vpDesktop1280: '(max-width:1280px)';
+$vpTablet1200: '(max-width:1200px)';
+$vpTablet1024: '(max-width:1024px)';
+$vpTablet991: '(max-width:991px)';
+$vpMobile768: '(max-width:768px)';
+$vpMobile600: '(max-width:600px)';
+$vpMobile350: '(max-width:350px)';
+$vpMobile390: '(max-width:390px)';
+$vpMinTablet991: '(min-width:991px)';
+$vpMinMobile600: '(min-width:600px)';
+$vpMinTablet1200: '(min-width:1200px)';

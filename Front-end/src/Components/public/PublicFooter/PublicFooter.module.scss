@@ -1,0 +1,29 @@
+@use "../../../styles/variables" as *;
+
+.footer {
+    padding-block: 1.5rem;
+    background-color: $secondary-color;
+    .footerWrapper{
+        color: $white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: auto;
+
+        .links {
+            display: flex;
+            gap: 1rem;
+        
+            a {
+                color: $white;
+                text-decoration: none;
+        
+                &:hover {
+                    opacity: 0.8;
+                }
+            }
+        }
+    }
+}
+
