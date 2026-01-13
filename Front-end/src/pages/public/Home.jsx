@@ -1,8 +1,11 @@
+import Typography from "../../Components/common/typography/typography";
+
 const Home = () => {
     return (
       <section>
-        <h1>Welcome to SkillKart</h1>
-        <p>This is the home page for normal users.</p>
+        <div className="container">
+         <Typography />
+        </div>
       </section>
     );
   };

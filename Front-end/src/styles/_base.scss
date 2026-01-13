@@ -6,10 +6,25 @@
 
 
 html {
-    font-size: 16px;
+    font-size: 1.041666667vw;
     scroll-behavior: smooth;
-}
 
+    @media #{$vpDesktop1680} {
+        font-size: 1.111111111vw;
+      }
+    
+      @media #{$vpDesktop1280} {
+        font-size: 1.09375vw;
+      }
+    
+      @media #{$vpTablet991} {
+        font-size: 1.822916667vw;
+      }
+    
+      @media #{$vpMobile600} {
+        font-size: 3.076923077vw;
+      }
+}
 
 
 body {
@@ -19,18 +34,16 @@ body {
     padding: 0;
 }
 
-/* Links */
+
 a {
     color: inherit;
     text-decoration: none;
     transition: color 0.2s ease;
-}
 
-a:hover {
-    color: $primary-color;
-    /* primary hover color */
+    &:hover {
+        color: $primary-color;
+    }
 }
-
 
 
 /* Lists */
@@ -40,7 +53,6 @@ ol {
 }
 
 
-
 /* Headings */
 h1,
 h2,
@@ -48,22 +60,37 @@ h3,
 h4,
 h5,
 h6 {
-    font-weight: 600;
-    line-height: 1.2;
-    margin-bottom: 0;
+    margin: 0;
 }
 
 /* Paragraphs */
 p {
-    margin-bottom: 0;
+    margin: 0;
 }
 
 /* Container class */
 .container {
-    max-width: 1200px;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding-left: 4rem;
+    padding-right: 4rem;
+
+    @media #{$vpTablet1024} {
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+
+    @media #{$vpMobile768} {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    @media #{$vpMobile600} {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
 }
+
 
 /* Utility classes */
 .text-center {
@@ -78,28 +105,4 @@ p {
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-.mt-1 {
-    margin-top: 0.25rem;
-}
-
-.mt-2 {
-    margin-top: 0.5rem;
-}
-
-.mt-3 {
-    margin-top: 1rem;
-}
-
-.mb-1 {
-    margin-bottom: 0.25rem;
-}
-
-.mb-2 {
-    margin-bottom: 0.5rem;
-}
-
-.mb-3 {
-    margin-bottom: 1rem;
 }
