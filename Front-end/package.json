@@ -1,7 +1,7 @@
 {
-  "name": "my-project",
+  "name": "SkillKart",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,8 @@
     "@tailwindcss/vite": "^4.1.16",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.12.0",
+    "sass": "^1.97.2",
     "tailwindcss": "^4.1.16"
   },
   "devDependencies": {
