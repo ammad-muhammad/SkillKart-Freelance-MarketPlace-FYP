@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import Typography from "../../Components/common/typography/typography";
 import HomeBanner from "../../Components/common/Banners/HomeBanner";
 
 const Home = () => {
+  useEffect(() => {
+    document.title = "Home - SkillKart";
+  }, []);
   return (
     <>
       <HomeBanner
