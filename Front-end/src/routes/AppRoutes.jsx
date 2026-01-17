@@ -10,7 +10,7 @@ import AdminLayout from "../layouts/AdminLayout";
 // Public Pages
 import Home from "../pages/public/Home";
 import About from "../pages/public/About";
-import Contact from "../pages/public/Contact";
+import Contact from "../pages/public/Contact/Contact";
 
 // Freelancer Pages
 import FreelancerDashboard from "../pages/freelancer/Dashboard";
