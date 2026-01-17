@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import styles from "./Banners.module.scss";
+import { animateSplitText } from "../../../utils/gsapTextAnimation";
 
 const HomeBanner = ({
   backgroundImage,
-  animationImage,
   searchIcon,
   titleStart,
   titleEnd,
@@ -11,6 +12,14 @@ const HomeBanner = ({
   descriptionTwo,
   searchPlaceholder,
 }) => {
+
+    useEffect(() => {
+      animateSplitText({
+        selector: ".split",
+      });
+    }, []);
+  
+
   return (
     <div className={styles.banner}>
       <img
@@ -25,17 +34,21 @@ const HomeBanner = ({
         <div className={styles.bannerWrapper}>
           <div className={styles.bannerContent}>
             <div className={styles.mainContent}>
-              <h1 className={`heading1 ${styles.title}`}>
-                {titleStart}
-                <div className="headImgWrap">
+              <h1 className={`headline ${styles.title} split`}>
+                <span dangerouslySetInnerHTML={{ __html: titleStart }} />
+
+                <span  className={`word img-word ${styles.headImgWrap}`}>
                   <img
-                    src={animationImage}
+                    src={backgroundImage}
                     alt="creative"
-                    className="headImg"
+                    className={styles.headImg}
                   />
-                </div>
-                {titleEnd}
+                </span>
+
+                <span dangerouslySetInnerHTML={{ __html: titleEnd }} />
               </h1>
+
+
 
               <h3 className={`heading3 ${styles.subtitle}`}>{subtitle}</h3>
 
@@ -43,13 +56,13 @@ const HomeBanner = ({
                 <input
                   type="text"
                   placeholder={searchPlaceholder}
-                  className={styles.searchAllInput}
+                  className={`body1 ${styles.searchAllInput}`}
                 />
                 <div className={styles.searchAllBtn}>
                   <img
                     src={searchIcon}
                     alt="search icon"
-                    className={styles.headImg}
+                    className={styles.icon}
                   />
                 </div>
               </div>
