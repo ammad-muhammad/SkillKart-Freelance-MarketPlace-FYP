@@ -9,11 +9,10 @@ const Home = () => {
   return (
     <>
       <HomeBanner
-        backgroundImage="https://images.pexels.com/photos/459203/pexels-photo-459203.jpeg"
-        animationImage="freelancerAnimation.png"
-        searchIcon="ic-search.svg"
-        titleStart="We Create Category"
-        titleEnd="Leaders"
+        backgroundImage="https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg"
+        searchIcon="/public/assets/icons/ic-search.svg"
+        titleStart="We Create"
+        titleEnd="Category Leaders"
         subtitle="on every searchable platform"
         descriptionOne="Organic media planners creating, distributing & optimising search-first content for SEO, Social, PR"
         descriptionTwo="4 Global Offices serving UK, USA (New York) & EU"
