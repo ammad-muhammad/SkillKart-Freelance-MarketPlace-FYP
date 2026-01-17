@@ -7,7 +7,7 @@
 
 html {
     font-size: 1.041666667vw;
-    scroll-behavior: smooth;
+    // scroll-behavior: smooth;
 
     @media #{$vpDesktop1680} {
         font-size: 1.111111111vw;
@@ -28,10 +28,11 @@ html {
 
 
 body {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    // -webkit-font-smoothing: antialiased;
+    // -moz-osx-font-smoothing: grayscale;
     margin: 0;
     padding: 0;
+    scrollbar-width: none;
 }
 
 
@@ -106,3 +107,5 @@ p {
     justify-content: center;
     align-items: center;
 }
+
+
