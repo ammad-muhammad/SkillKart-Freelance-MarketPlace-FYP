@@ -168,34 +168,53 @@ const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
 
 
 // 2. Floating Label Input
-const FloatingInput = ({ label, placeholder, type = "text", fullWidth = false }) => (
+const FloatingInput = ({ label, placeholder, type = "text", fullWidth = false, inputRef, fieldName }) => (
   <div className={`space-y-2 ${fullWidth ? "col-span-2" : ""}`}>
     <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
       {label} <span className="text-red-400">*</span>
     </label>
     <input
+      ref={inputRef}
       type={type}
       placeholder={placeholder}
+      data-field={fieldName}
+      required
       className="w-full bg-[#f9f9f9] border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-black/10 transition-shadow outline-none placeholder:text-gray-400 text-black font-medium"
     />
   </div>
 );
 
 // 3. Custom Styled Dropdown
-const FloatingSelect = ({ label, options }) => {
+const FloatingSelect = ({ label, options, selectRef, fieldName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
   const handleSelect = (opt) => {
     setSelected(opt);
     setIsOpen(false);
+    if (selectRef) {
+      selectRef.current.value = opt;
+    }
   };
 
   return (
-    <div className="space-y-2 relative">
+    <div className={`space-y-2 relative ${isOpen ? "z-[9999]" : "z-10"}`}>
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
         {label} <span className="text-red-400">*</span>
       </label>
+      
+      {/* Hidden Select for Form */}
+      <select 
+        ref={selectRef}
+        data-field={fieldName}
+        required
+        className="hidden"
+      >
+        <option value="">Select an option</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
       
       {/* Dropdown Trigger */}
       <div 
@@ -223,7 +242,8 @@ const FloatingSelect = ({ label, options }) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+          className="absolute left-0 right-0 z-50 w-full top-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200"
+          style={{ maxHeight: '250px', overflowY: 'auto' }}
         >
           {options.map((opt) => (
             <div 
@@ -244,6 +264,140 @@ const FloatingSelect = ({ label, options }) => {
 // --- MAIN PAGE ---
 
 const Contact = () => {
+    // ============ DYNAMIC DATA ============
+    const contactData = {
+      hero: {
+        title: "Fill out our form\nto get in touch",
+        description: "Interested in joining our team? Head over to our Careers page to check our latest vacancies.",
+        buttonText: "Careers",
+        heroImage: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200"
+      },
+      form: {
+        fields: [
+          { 
+            type: "row", 
+            inputs: [
+              { label: "Hello, my first name is...", placeholder: "John", fullWidth: false },
+              { label: "And my last name is...", placeholder: "Doe", fullWidth: false }
+            ] 
+          },
+          { 
+            type: "single", 
+            input: { label: "My email is", placeholder: "john@company.com", fullWidth: true }
+          },
+          { 
+            type: "row", 
+            inputs: [
+              { label: "My job title is...", placeholder: "Product Designer", fullWidth: false },
+              { label: "My company name is...", placeholder: "Acme Corp", fullWidth: false }
+            ] 
+          },
+          { 
+            type: "select", 
+            label: "I'm Interested in...", 
+            options: ["Web Development", "Product Design", "Marketing", "Other"]
+          },
+          { 
+            type: "row-select", 
+            selects: [
+              { label: "Region", options: ["United Kingdom", "United States", "Europe", "Asia"] },
+              { label: "Where did you hear about us?", options: ["Google", "LinkedIn", "Clutch", "Recommendation"] }
+            ]
+          },
+          { 
+            type: "textarea", 
+            label: "How can we help you?",
+            placeholder: "Start typing here..."
+          }
+        ],
+        buttonText: "Submit Form"
+      },
+      officeLocations: [
+        {
+          city: "Sheffield",
+          country: "UK",
+          address: "3 St Pauls Place, Sheffield, S1 2JE",
+          img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300"
+        },
+        {
+          city: "Manchester",
+          country: "UK",
+          address: "Colony, One Silk Street, Ancoats, Manchester, M4 6LZ",
+          img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300"
+        },
+        {
+          city: "London",
+          country: "UK",
+          address: "6 Bevis Marks, London EC3A 8JQ",
+          img: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=300"
+        },
+        {
+          city: "New York",
+          country: "USA",
+          address: "27 E 28th St, New York, NY 10016, USA",
+          img: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=300"
+        }
+      ],
+      marquee: {
+        text: "Ready to Rise",
+        highlight: "with  Skillkart?"
+      },
+      sectionTitle: "Our Office Locations"
+    };
+
+    // ============ FORM HANDLING ============
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [formResetKey, setFormResetKey] = useState(0);
+    
+    // Create refs for all form fields
+    const firstNameRef = useRef(null);
+    const lastNameRef = useRef(null);
+    const emailRef = useRef(null);
+    const jobTitleRef = useRef(null);
+    const companyRef = useRef(null);
+    const interestedRef = useRef(null);
+    const regionRef = useRef(null);
+    const heardFromRef = useRef(null);
+    const messageRef = useRef(null);
+
+    const handleSubmitForm = (e) => {
+      e.preventDefault();
+      
+      // Get all values
+      const formData = {
+        firstName: firstNameRef.current?.value,
+        lastName: lastNameRef.current?.value,
+        email: emailRef.current?.value,
+        jobTitle: jobTitleRef.current?.value,
+        company: companyRef.current?.value,
+        interested: interestedRef.current?.value,
+        region: regionRef.current?.value,
+        heardFrom: heardFromRef.current?.value,
+        message: messageRef.current?.value
+      };
+
+      // Check all required fields
+      const emptyFields = Object.entries(formData)
+        .filter(([key, value]) => !value || value.trim() === '')
+        .map(([key]) => key);
+
+      if (emptyFields.length > 0) {
+        alert(`❌ Please fill all required fields: ${emptyFields.join(', ')}`);
+        return;
+      }
+
+      // Log to console
+      console.log('✅ Form Submitted Successfully!');
+      console.log('User Details:', formData);
+
+      // Show success message
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 4000);
+
+      // Reset form by incrementing key
+      setFormResetKey(prev => prev + 1);
+    };
+
     const heroRef = useRef(null);
     const formRef = useRef(null);
     const formInView = useInView(formRef, { once: true, margin: "-50px 0px" });
@@ -266,7 +420,7 @@ const Contact = () => {
         {/* LEFT FIXED COLUMN - with parallax */}
         <div ref={heroRef} className="relative h-[60vh] lg:h-screen lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-4 md:m-6">
           <motion.img
-            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200"
+            src={contactData.hero.heroImage}
             className="absolute inset-0 w-full h-full object-cover blur-md grayscale"
             style={{ y: heroY, scale: heroScale, opacity: heroOpacity }}
             alt="Office vibe"
@@ -280,8 +434,12 @@ const Contact = () => {
                 transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.2 }}
                 className="text-6xl md:text-7xl lg:text-8xl font-medium tracking-tighter leading-[0.9] max-w-xl"
             >
-              Fill out our form<br/>
-              to get in touch
+              {contactData.hero.title.split('\n').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}
+                  {i < contactData.hero.title.split('\n').length - 1 && <br/>}
+                </React.Fragment>
+              ))}
             </motion.h1>
 
             <motion.div 
@@ -291,14 +449,14 @@ const Contact = () => {
                 transition={{ duration: 0.9, delay: 0.5 }}
             >
                 <p className="max-w-md text-white/80 text-sm md:text-base leading-relaxed">
-                    Interested in joining our team? Head over to our Careers page to check our latest vacancies.
+                    {contactData.hero.description}
                 </p>
                 <motion.button 
                     whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(0,0,0,0.3)" }}
                     whileTap={{ scale: 0.95 }}
                     className="bg-white text-black px-8 py-4 rounded-full font-bold text-sm tracking-wide flex items-center gap-2 hover:shadow-lg transition-all"
                 >
-                    Careers <ArrowUpRight size={18} />
+                    {contactData.hero.buttonText} <ArrowUpRight size={18} />
                 </motion.button>
             </motion.div>
           </div>
@@ -306,55 +464,109 @@ const Contact = () => {
 
         {/* RIGHT SCROLLABLE COLUMN - with staggered form animations */}
         <div className="p-8 md:p-14 lg:p-20 bg-white">
+          
+          {/* Success Message */}
+
+
           <motion.form 
-            ref={formRef}
-            className="space-y-8 max-w-xl mx-auto lg:mx-0 lg:ml-auto pt-10 lg:pt-0"
-            initial="hidden"
-            animate={formInView ? "visible" : "hidden"}
-            variants={staggerContainer}
-          >
-            <motion.div variants={staggerItem} className="grid grid-cols-2 gap-6">
-                <FloatingInput label="Hello, my first name is..." placeholder="John" />
-                <FloatingInput label="And my last name is..." placeholder="Doe" />
-            </motion.div>
-            
-            <motion.div variants={staggerItem}>
-              <FloatingInput label="My email is" placeholder="john@company.com" fullWidth />
-            </motion.div>
-            
-            <motion.div variants={staggerItem} className="grid grid-cols-2 gap-6">
-                <FloatingInput label="My job title is..." placeholder="Product Designer" />
-                <FloatingInput label="My company name is..." placeholder="Acme Corp" />
-            </motion.div>
-
-            <motion.div variants={staggerItem}>
-              <FloatingSelect label="I'm Interested in..." options={["Web Development", "Product Design", "Marketing", "Other"]} />
-            </motion.div>
-            
-            <motion.div variants={staggerItem} className="grid grid-cols-2 gap-6">
-                <FloatingSelect label="Region" options={["United Kingdom", "United States", "Europe", "Asia"]} />
-                <FloatingSelect label="Where did you hear about us?" options={["Google", "LinkedIn", "Clutch", "Recommendation"]} />
-            </motion.div>
-
-            <motion.div variants={staggerItem} className="space-y-2">
-                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    How can we help you? <span className="text-red-400">*</span>
-                </label>
-                <textarea 
-                    rows={4}
-                    placeholder="Start typing here..." 
-                    className="w-full bg-[#f9f9f9] border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-black/10 transition-shadow outline-none placeholder:text-gray-400 text-black font-medium resize-none"
-                />
-            </motion.div>
+  ref={formRef}
+  onSubmit={handleSubmitForm}
+  className="space-y-8 max-w-xl mx-auto lg:mx-0 lg:ml-auto pt-10 lg:pt-0 overflow-visible"
+>
+            {contactData.form.fields.map((field, idx) => {
+              if (field.type === "row") {
+                return (
+                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem} className="grid grid-cols-2 gap-6">
+                    {field.inputs.map((input, i) => {
+                      let ref = null;
+                      if (idx === 0) ref = i === 0 ? firstNameRef : lastNameRef;
+                      if (idx === 2) ref = i === 0 ? jobTitleRef : companyRef;
+                      
+                      return (
+                        <FloatingInput 
+                          key={i}
+                          label={input.label} 
+                          placeholder={input.placeholder}
+                          inputRef={ref}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                );
+              } else if (field.type === "single") {
+                return (
+                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem}>
+                    <FloatingInput 
+                      label={field.input.label} 
+                      placeholder={field.input.placeholder} 
+                      fullWidth={field.input.fullWidth}
+                      inputRef={emailRef}
+                    />
+                  </motion.div>
+                );
+              } else if (field.type === "select") {
+                return (
+                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem}>
+                    <FloatingSelect 
+                      label={field.label} 
+                      options={field.options}
+                      selectRef={interestedRef}
+                    />
+                  </motion.div>
+                );
+              } else if (field.type === "row-select") {
+                return (
+                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem} className="grid grid-cols-2 gap-6">
+                    {field.selects.map((select, i) => (
+                      <FloatingSelect 
+                        key={i} 
+                        label={select.label} 
+                        options={select.options}
+                        selectRef={i === 0 ? regionRef : heardFromRef}
+                      />
+                    ))}
+                  </motion.div>
+                );
+              } else if (field.type === "textarea") {
+                return (
+                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem} className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                      {field.label} <span className="text-red-400">*</span>
+                    </label>
+                    <textarea 
+                      ref={messageRef}
+                      rows={4}
+                      placeholder={field.placeholder}
+                      required
+                      className="w-full bg-[#f9f9f9] border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-black/10 transition-shadow outline-none placeholder:text-gray-400 text-black font-medium resize-none"
+                    />
+                  </motion.div>
+                );
+              }
+              return null;
+            })}
 
             <motion.button
-                variants={staggerItem}
-                whileHover={{ scale: 1.02, y: -4, boxShadow: "0 25px 50px rgba(0,0,0,0.25)" }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-black text-white py-5 rounded-xl font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl hover:bg-gray-900 transition-all"
+              type="submit"
+              variants={staggerItem}
+              whileHover={{ scale: 1.02, y: -4, boxShadow: "0 25px 50px rgba(0,0,0,0.25)" }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full bg-black text-white py-5 rounded-xl font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl hover:bg-gray-900 transition-all"
             >
-                Submit Form <ArrowUpRight size={20} />
+              {contactData.form.buttonText} <ArrowUpRight size={20} />
             </motion.button>
+
+            {/* Success Message - Moved to bottom */}
+            {showSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 font-semibold text-center text-sm"
+              >
+                ✅ Form submitted successfully!
+              </motion.div>
+            )}
           </motion.form>
         </div>
       </div>
@@ -362,38 +574,20 @@ const Contact = () => {
       {/* ---------------- OFFICE LOCATIONS (FULL WIDTH) ---------------- */}
       <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-white">
         <ScrollReveal>
-          <h4 className="text-xs font-black uppercase text-gray-400 tracking-[0.2em] mb-12">Our Office Locations</h4>
+          <h4 className="text-xs font-black uppercase text-gray-400 tracking-[0.2em] mb-12">{contactData.sectionTitle}</h4>
         </ScrollReveal>
         
         <div>
-            <OfficeLocation 
-                city="Sheffield" 
-                country="UK" 
-                address="3 St Pauls Place, Sheffield, S1 2JE" 
-                img="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300"
-                index={0}
-            />
-            <OfficeLocation 
-                city="Manchester" 
-                country="UK" 
-                address="Colony, One Silk Street, Ancoats, Manchester, M4 6LZ" 
-                img="https://images.unsplash.com/photo-1449156059521-cb5e8a660c67?w=300"
-                index={1}
-            />
-            <OfficeLocation 
-                city="London" 
-                country="UK" 
-                address="6 Bevis Marks, London EC3A 8JQ" 
-                img="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=300"
-                index={2}
-            />
-             <OfficeLocation 
-                city="New York" 
-                country="USA" 
-                address="27 E 28th St, New York, NY 10016, USA" 
-                img="https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=300"
-                index={3}
-            />
+            {contactData.officeLocations.map((location, index) => (
+              <OfficeLocation 
+                key={index}
+                city={location.city}
+                country={location.country}
+                address={location.address}
+                img={location.img}
+                index={index}
+              />
+            ))}
         </div>
       </div>
 
@@ -412,6 +606,12 @@ const CinematicMarquee = () => {
         target: containerRef,
         offset: ["start end", "end start"]
     });
+
+    // Dynamic data
+    const marqueeData = {
+      text: "Ready to Rise",
+      highlight: "with  Skillkart?"
+    };
 
     // Horizontal movement: starts off-screen right, ends off-screen left
     const xRaw = useTransform(scrollYProgress, [0, 1], ["80vw", "-250vw"]);
@@ -449,7 +649,7 @@ const CinematicMarquee = () => {
                         key={i} 
                         className="text-[18vw] md:text-[14vw] font-semibold tracking-[-0.04em] leading-none text-black select-none"
                     >
-                        Ready to Rise <span className="italic font-serif text-gray-400">with  Skillkart?</span>
+                        {marqueeData.text} <span className="italic font-serif text-gray-400">{marqueeData.highlight}</span>
                     </h1>
                 ))}
             </motion.div>
