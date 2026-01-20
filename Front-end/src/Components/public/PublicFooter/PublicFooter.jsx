@@ -1,5 +1,6 @@
 import React from "react";
 import styles from "./PublicFooter.module.scss";
+import { Link } from "react-router-dom";
 
 const PublicFooter = () => {
   const scrollToTop = () => {
