@@ -3,6 +3,7 @@ import Typography from "../../Components/common/typography/typography";
 import HomeBanner from "../../Components/common/Banners/HomeBanner";
 import InfoBar from "../../Components/common/InfoBar/twoCol";
 import FeaturedCategories from "../../Components/common/category/FeaturedCategories";
+import LgLinks from "../../Components/common/InfoBar/LgLinks";
 
 const Home = () => {
   useEffect(() => {
@@ -31,6 +32,7 @@ const Home = () => {
       <FeaturedCategories>
 
       </FeaturedCategories>
+      <LgLinks></LgLinks>
 
       <section>
         <div className="container">
