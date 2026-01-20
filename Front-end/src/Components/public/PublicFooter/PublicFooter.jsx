@@ -1,4 +1,5 @@
 import styles from "./PublicFooter.module.scss";
+import { Link } from "react-router-dom";
 
 const PublicFooter = () => {
   return (
@@ -7,8 +8,8 @@ const PublicFooter = () => {
         <div className={styles.footerWrapper}>
           <p>&copy; {new Date().getFullYear()} SkillKart. All rights reserved.</p>
           <div className={styles.links}>
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
+            <Link to="/privacy-policy">Privacy Policy</Link>
+            <Link to="/terms-and-conditions">Terms of Service</Link>
           </div>
         </div>
       </div>
