@@ -112,11 +112,12 @@
             padding: 0 1.5rem; // 16px 24px
             border: none;
             outline: none;
-            color: $white;
+            color: $black;
             margin-bottom: 0.2rem;
+            font-weight: 600;
         
             &::placeholder {
-              color: $white;
+              color: rgb($black, 0.5);
             }
           }
         
