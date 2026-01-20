@@ -23,6 +23,8 @@ import Orders from "../pages/client/Orders";
 // Admin Pages
 import AdminDashboard from "../pages/admin/Dashboard";
 import Users from "../pages/admin/Users";
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+import TermsOfServices from "../pages/public/TermsOfServices";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
@@ -36,6 +38,8 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-and-conditions" element={<TermsOfServices />} />
       </Route>
 
       {/* ================= APP ROUTES (FREELANCER + CLIENT) ================= */}
