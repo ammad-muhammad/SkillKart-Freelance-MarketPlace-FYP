@@ -1,29 +1,403 @@
 @use "../../../styles/variables" as *;
 
 .footer {
-    padding-block: 1.5rem;
-    background-color: $secondary-color;
-    .footerWrapper{
-        color: $white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-top: auto;
+    background-color: #000;
+    // Linear gradient for atmospheric depth
+    background: linear-gradient(180deg, #000 60%, #001233 100%);
+    color: #fff;
+    padding: 80px 5% 0px;
+    font-family: $primaryFont;
+    overflow: hidden;
+    position: relative;
 
-        .links {
-            display: flex;
-            gap: 1rem;
-        
-            a {
-                color: $white;
-                text-decoration: none;
-        
-                &:hover {
-                    opacity: 0.8;
+    a {
+        color: inherit;
+        text-decoration: none;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+
+        &:hover {
+            color: #3b82f6;
+            text-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+        }
+    }
+
+    // CTA Section - TOP
+    .ctaSection {
+        text-align: center;
+        margin-bottom: 80px;
+
+        h2 {
+            font-size: 2.8rem;
+            font-weight: 600;
+            margin-bottom: 40px;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, #fff, #999);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .ctaButton {
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            background: linear-gradient(90deg, #004de6, #001a4d);
+            color: #fff;
+            padding: 18px 40px;
+            border-radius: 60px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+            box-shadow: 0 0 30px rgba(0, 77, 230, 0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+
+            &:hover {
+                transform: translateY(-5px) scale(1.05);
+                box-shadow: 0 15px 50px rgba(0, 77, 230, 0.7);
+                border-color: rgba(59, 130, 246, 0.5);
+            }
+
+            svg {
+                transition: transform 0.4s ease;
+            }
+
+            &:hover svg {
+                transform: translate(5px, -5px);
+            }
+        }
+    }
+
+    // Links Grid
+    .linksGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 40px;
+        padding-bottom: 60px;
+        border-bottom: 1px solid #222;
+
+        .column {
+            h4 {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin-bottom: 25px;
+                color: #fff;
+            }
+
+            ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+
+                li {
+                    margin-bottom: 12px;
+
+                    a {
+                        color: #999;
+                        font-size: 0.95rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 0;
+                        transition: all 0.3s ease;
+
+                        &::before {
+                            content: '';
+                            width: 0;
+                            height: 6px;
+                            background: #004de6;
+                            border-radius: 50%;
+                            transition: all 0.3s ease;
+                            opacity: 0;
+                        }
+
+                        &:hover {
+                            color: #fff;
+                            padding-left: 5px;
+                            gap: 10px;
+
+                            &::before {
+                                width: 6px;
+                                opacity: 1;
+                                box-shadow: 0 0 10px #004de6;
+                            }
+                        }
+                    }
+                }
+            }
+
+            .actionButtons {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                margin-top: 20px;
+
+                .outlineBtn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    border: 1px solid #333;
+                    padding: 12px 20px;
+                    border-radius: 40px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+
+                    &:hover {
+                        border-color: #004de6;
+                        background: rgba(0, 77, 230, 0.1);
+                    }
                 }
             }
         }
     }
+
+    // Badges Section
+    .badgesSection {
+        padding: 60px 0;
+        border-bottom: 1px solid #222;
+
+        .badgesWrapper {
+            display: flex;
+            gap: 120px;
+            max-width: 1400px;
+            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+
+            .badge {
+                width: 130px;
+                opacity: 0.8;
+                transition: all 0.3s ease;
+
+                &:hover {
+                    opacity: 1;
+                    transform: translateY(-8px) scale(1.05);
+                }
+
+                img {
+                    width: 100%;
+                }
+            }
+        }
+    }
+
+    // Contact Info Row
+    .contactDetails {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 60px;
+        padding: 60px 0;
+        margin-bottom: 60px;
+
+        .infoBlock {
+            h5 {
+                color: #004de6;
+                font-size: 0.95rem;
+                margin-bottom: 20px;
+                font-weight: 600;
+            }
+
+            p,
+            a {
+                display: block;
+                font-size: 1.1rem;
+                margin-bottom: 5px;
+                color: #fff;
+            }
+
+            span {
+                color: #666;
+                font-size: 0.8rem;
+                margin-bottom: 15px;
+                display: block;
+            }
+        }
+    }
+
+    // Bottom Bar - PIXEL PERFECT REPLICA
+    .bottomBar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #222;
+        padding: 30px 0;
+        color: #666;
+        font-size: 0.85rem;
+        position: relative;
+        z-index: 10;
+        flex-wrap: wrap;
+        gap: 20px;
+
+        .left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: rgba(255, 255, 255, 0.4);
+
+            .separator {
+                color: rgba(255, 255, 255, 0.2);
+                font-weight: 300;
+            }
+
+            a {
+                color: rgba(255, 255, 255, 0.4);
+
+                &:hover {
+                    color: #fff;
+                }
+            }
+        }
+
+        .rightSection {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+
+            .socials {
+                display: flex;
+                gap: 18px;
+
+                a {
+                    color: rgba(255, 255, 255, 0.6);
+                    display: flex;
+                    align-items: center;
+                    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+                    &:hover {
+                        color: #3b82f6;
+                        transform: translateY(-5px) scale(1.15);
+                        filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8));
+                    }
+                }
+            }
+
+            .backToTop {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 0.85rem;
+                transition: all 0.4s ease;
+
+                &:hover {
+                    color: #fff;
+                    transform: translateY(-3px);
+
+                    svg {
+                        transform: translateY(-5px);
+                        color: #3b82f6;
+                        filter: drop-shadow(0 0 5px #3b82f6);
+                    }
+                }
+
+                svg {
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+            }
+        }
+    }
+
+    // Giant Footer Text - THE FINCH STYLE
+    .giantTextWrapper {
+        width: 100%;
+        position: relative;
+        padding-top: 40px; // Space between bottom bar and text
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 1;
+
+        .giantText {
+            font-size: clamp(5rem, 12vw, 24rem); // Massive size as per required image
+            font-weight: 700;
+            line-height: 0.8;
+            text-align: center;
+            white-space: nowrap;
+            color: #fff;
+            display: flex;
+            align-items: baseline;
+            letter-spacing: -0.04em;
+
+            // The subtle gradient/fade effect
+            mask-image: linear-gradient(to bottom,
+                    rgba(0, 0, 0, 1) 0%,
+                    rgba(0, 0, 0, 1) 50%,
+                    rgba(0, 0, 0, 0.4) 100%);
+            -webkit-mask-image: linear-gradient(to bottom,
+                    rgba(0, 0, 0, 1) 0%,
+                    rgba(0, 0, 0, 1) 50%,
+                    rgba(0, 0, 0, 0.4) 100%);
+
+            .bold {
+                font-weight: 800;
+            }
+
+            .semiBold {
+                font-weight: 300; // Thinner for the ".design" part to match mockup
+                opacity: 0.9;
+            }
+        }
+
+        // Centered Blue Glow behind giant text
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 77, 230, 0.45) 0%, rgba(0, 77, 230, 0) 70%);
+            filter: blur(60px);
+            z-index: -1;
+        }
+    }
 }
 
+// Responsive tweaks
+@media #{$vpTablet991} {
+    .footer {
+        .ctaSection h2 {
+            font-size: 2.2rem;
+        }
+
+        .giantTextWrapper .giantText {
+            font-size: 14vw;
+        }
+    }
+}
+
+@media #{$vpMobile768} {
+    .footer {
+        padding: 60px 20px 0;
+
+        .bottomBar {
+            flex-direction: column;
+            text-align: center;
+
+            .left {
+                flex-direction: column;
+                gap: 5px;
+
+                .separator {
+                    display: none;
+                }
+            }
+
+            .rightSection {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        .giantTextWrapper .giantText {
+            font-size: 14vw;
+            letter-spacing: -0.02em;
+        }
+    }
+}
