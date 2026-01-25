@@ -90,7 +90,7 @@ const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250" }
   }, [text, id]);
 
   return (
-    <div className="overflow-hidden hidden lg:block bg-[#f0f0f0] -mt-[40vh]">
+    <div className="overflow-hidden hidden lg:block bg-[#f0f0f0] -mt-[20vh]">
       <div 
         ref={triggerRef}
         className={`flex h-[35vh] lg:h-[100vh] js-trigger-${id}`}

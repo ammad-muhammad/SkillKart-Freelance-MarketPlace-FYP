@@ -2,11 +2,12 @@ import { useEffect } from "react";
 import Typography from "../../Components/common/typography/typography";
 import HomeBanner from "../../Components/common/Banners/HomeBanner";
 import InfoBar from "../../Components/common/InfoBar/twoCol";
-import FeaturedCategories from "../../Components/common/category/FeaturedCategories";
+import FeaturedCategories from "../../Components/common/Cards/FeaturedCategories";
 import LgLinks from "../../Components/common/InfoBar/LgLinks";
 import LinerarTextAnimation from "../../Components/common/SrcollingText/LinerarTextAnimation";
 import CardStackScroll from "../../Components/common/InfoBar/CardStackScroll";
 import DroppingTextAnimation from "../../Components/common/SrcollingText/DroppingTextAnimation";
+import WhatsNewCarousel from "../../Components/common/Cards/WhatsNewCarousel";
 
 const Home = () => {
   useEffect(() => {
@@ -79,6 +80,54 @@ const Home = () => {
   ];
 
 
+  const blogPosts = [
+    {
+      id: 1,
+      title: "Rise at Seven appointed by Quorn for multi-channel marketing services",
+      category: "Social Search",
+      categoryBg: "bg-black",
+      author: "Ray Saddiq",
+      authorImage: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
+      readTime: "2 mins",
+      image: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
+      link: "/blog/post-1"
+    },
+    {
+      id: 2,
+      title: "RESOURCE: 40+ traffic sources",
+      category: "Social Search",
+      categoryBg: "bg-black",
+      authors: ["Carrie Rose", "Ray Saddiq"],
+      authorImages: ["https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg", "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg"],
+      readTime: "3 mins",
+      image: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
+      link: "/blog/post-2"
+    },
+    {
+      id: 3,
+      title: "Rise at Seven appointed by Quorn for multi-channel marketing services",
+      category: "Social Search",
+      categoryBg: "bg-black",
+      author: "Ray Saddiq",
+      authorImage: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
+      readTime: "2 mins",
+      image: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
+      link: "/blog/post-1"
+    },
+    {
+      id: 4,
+      title: "RESOURCE: 40+ traffic sources",
+      category: "Social Search",
+      categoryBg: "bg-black",
+      authors: ["Carrie Rose", "Ray Saddiq"],
+      authorImages: ["https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg", "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg"],
+      readTime: "3 mins",
+      image: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
+      link: "/blog/post-2"
+    },
+    // ... more posts
+  ];
+
 
   return (
     <>
@@ -119,7 +168,16 @@ const Home = () => {
         cards={sampleCards}
         backgroundColor="#f0f0f0"
       />
-        <DroppingTextAnimation text="Ready to serve SkillKart?" id="2250" />
+      <WhatsNewCarousel
+        posts={blogPosts}
+        sectionTitle="What's"
+        sectionTitleHighlight="New"
+        decorativeImage="https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg"
+        ctaText="Explore More Thoughts"
+        ctaLink="/blog"
+        className="my-custom-class"
+      />
+      <DroppingTextAnimation text="Ready to serve SkillKart?" id="2250" />
       {/* 
       <section>
         <div className="container">
