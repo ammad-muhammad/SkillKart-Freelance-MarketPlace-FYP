@@ -12,7 +12,7 @@ const InfoBar = ({
   return (
     <section className="w-full min-h-[400px] font-sans bg-[#f0f0f0]">
       <div className="container mx-auto">
-        <div className="w-full py-20 flex flex-col md:flex-row justify-between items-start gap-10">
+        <div className="w-full pt-20 pb-10 flex flex-col md:flex-row justify-between items-start gap-10">
           
           {/* Left Column */}
           <div className="w-full md:w-[35%] pt-2">
