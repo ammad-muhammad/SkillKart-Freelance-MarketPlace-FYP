@@ -11,10 +11,10 @@ const FeaturedCategories = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   const projects = [
-    { id: '01', title: 'SIXT', desc: 'Leading E Sim brand globally', date: '[2023-2025]', color: 'from-gray-800 to-black', img: 'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800' },
-    { id: '02', title: 'JD Sports', desc: 'Global Sportswear Leader', date: '[2024-2025]', color: 'from-gray-700 to-gray-900', img: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800' },
-    { id: '03', title: 'Parkdean Resorts', desc: 'UK Holiday Parks', date: '[2025]', color: 'from-gray-800 to-black', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800' },
-    { id: '04', title: 'Apple', desc: 'Spatial Audio Tech', date: '[2025]', color: 'from-gray-700 to-gray-900', img: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800' },
+    { id: '01', title: 'SIXT', desc: 'Leading E Sim brand globally', date: '[2023-2025]', color: 'from-gray-800 to-black', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
+    { id: '02', title: 'JD Sports', desc: 'Global Sportswear Leader', date: '[2024-2025]', color: 'from-gray-700 to-gray-900', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
+    { id: '03', title: 'Parkdean Resorts', desc: 'UK Holiday Parks', date: '[2025]', color: 'from-gray-800 to-black', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
+    { id: '04', title: 'Apple', desc: 'Spatial Audio Tech', date: '[2025]', color: 'from-gray-700 to-gray-900', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
   ];
 
   useEffect(() => {
@@ -210,7 +210,7 @@ const FeaturedCategories = () => {
               <div className="absolute top-12 left-12 lg:left-24 z-20">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-[2px] bg-gradient-to-r from-black via-gray-600 to-transparent"></div>
-                  <h2 className="font-bold text-sm text-black tracking-[0.15em] uppercase">Featured Categories</h2>
+                  <h1 className="font-bold text-sm text-black">Featured Categories</h1>
                 </div>
               </div>
 
@@ -340,13 +340,13 @@ const FeaturedCategories = () => {
 
         {/* MOBILE VERSION */}
         {isMobile && (
-          <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#f0f0f0] via-slate-300 to-[#f0f0f0] pt-0  pb-32">
+          <div className="flex flex-col bg-gradient-to-b from-[#f0f0f0] via-slate-300 to-[#f0f0f0] pt-0  pb-10">
             
             {/* Header */}
             <div className="px-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-[1.5px] bg-gradient-to-r from-black via-gray-600 to-transparent"></div>
-                <h2 className="font-bold text-xs text-black tracking-[0.15em] uppercase">Featured Categories</h2>
+                <h1 className="font-bold text-xs text-black">Featured Categories</h1>
               </div>
             </div>
 
