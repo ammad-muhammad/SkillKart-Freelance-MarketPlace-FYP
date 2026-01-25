@@ -1,6 +1,6 @@
 import React from "react";
 import styles from "./PublicFooter.module.scss";
-import { Link } from "react-router-dom";
+import { Link, Links } from "react-router-dom";
 
 const PublicFooter = () => {
   const scrollToTop = () => {
@@ -161,9 +161,9 @@ const PublicFooter = () => {
         <div className={styles.left}>
           <span>© {new Date().getFullYear()} skillkart.design studio. All Rights Reserved</span>
           <span className={styles.separator}>/</span>
-          <a href="/privacy">Privacy policy</a>
+          <Link to="/privacy-policy">Privacy policy</Link>
           <span className={styles.separator}>/</span>
-          <a href="/terms">Terms of Use</a>
+          <Link to="/terms-and-conditions">Terms of Use</Link>
         </div>
         
         <div className={styles.rightSection}>
