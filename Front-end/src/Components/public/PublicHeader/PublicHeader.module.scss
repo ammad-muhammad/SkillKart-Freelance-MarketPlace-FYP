@@ -1,37 +1,448 @@
 @use "../../../styles/variables" as *;
 
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%) rotate(25deg);
+    }
+
+    30% {
+        transform: translateX(100%) rotate(25deg);
+    }
+
+    100% {
+        transform: translateX(100%) rotate(25deg);
+    }
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .header {
-    padding-block: 1rem;
-    background-color: $primary-color;
-    display: none;
-    .headerWrapper{
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    background-color: $white;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: $primaryFont;
+
+    &.scrolled {
+        transform: translateY(-40px); // Height of the notice bar
+    }
+
+    &.noNotice {
+        &.scrolled {
+            transform: translateY(0);
+        }
+    }
+
+    &.hidden {
+        transform: translateY(-100%) !important;
+    }
+
+    .container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        width: 100%;
+    }
+
+    // Notice Bar
+    .noticeBar {
+        background-color: #f3f4f6;
+        padding: 0.5rem 0;
+        transition: all 0.3s ease;
+
+        @media #{$vpMobile768} {
+            display: none;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #374151;
+            text-align: center;
+
+            span {
+                color: #204ecf;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: underline;
+            }
+        }
+
+        .closeNotice {
+            position: absolute;
+            right: 2rem;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #9ca3af;
+            cursor: pointer;
+            line-height: 1;
+
+            &:hover {
+                color: #374151;
+            }
+        }
+    }
+
+    // Main Nav
+    .mainNav {
+        background-color: $white;
+        height: 60px; // Further reduced for a sleek look
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #e5e7eb;
+
+        .navWrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            position: relative; // Positioning parent for mega menu
+        }
+
+        .leftSection {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+    }
+
+    // Logo
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+
+        .logoText {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #204ecf;
+            letter-spacing: -0.5px;
+
+            span {
+                color: #111827;
+            }
+        }
+    }
+
+    // Desktop Nav
+    .desktopNav {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        height: 100%;
+
+        @media #{$vpTablet1024} {
+            display: none;
+        }
+
+        .navItemWrapper {
+            position: static; // Menu is placed relative to navWrapper
+            height: 60px;
+            display: flex;
+            align-items: center;
+
+            &:hover {
+                .navLink {
+                    color: #204ecf;
+                }
+            }
+        }
+
+        .navLink {
+            text-decoration: none;
+            color: #4b5563;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            transition: color 0.2s ease;
+            position: relative;
+            padding: 0.5rem 0.6rem;
+
+            .arrow {
+                width: 5px;
+                height: 5px;
+                border-right: 1.5px solid currentColor;
+                border-bottom: 1.5px solid currentColor;
+                transform: rotate(45deg);
+                margin-top: -3px;
+                opacity: 0.6;
+            }
+        }
+    }
+
+    // Mega Menu (PIXEL PERFECT & STABLE)
+    .megaMenu {
+        position: absolute;
+        top: 60px;
+        left: 0;
+        right: 0;
+        margin: 0 auto;
+        width: 100%;
+        max-width: 1400px;
+        background: $white;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+        border-radius: 0 0 8px 8px;
+        overflow: hidden;
+        animation: menuFadeIn 0.25s ease-out;
+        z-index: 100;
+
+        .megaMenuContent {
+            display: flex;
+            min-height: 380px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #f8fafc;
+            padding: 2rem 1.25rem;
+            border-right: 1px solid #e2e8f0;
+
+            .sidebarItem {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: #475569;
+                margin-bottom: 1.2rem;
+                cursor: pointer;
+                padding-left: 0.5rem;
+                border-left: 3px solid transparent;
+                transition: all 0.2s ease;
+
+                &.active {
+                    color: #204ecf;
+                    border-left-color: #204ecf;
+                }
+
+                &:hover {
+                    color: #204ecf;
+                }
+            }
+
+            .sidebarFooter {
+                margin-top: 3rem;
+
+                p {
+                    font-size: 0.7rem;
+                    color: #94a3b8;
+                    margin-bottom: 0.4rem;
+                    font-weight: 700;
+                    letter-spacing: 0.05em;
+                }
+
+                .footerLink {
+                    color: #204ecf;
+                    text-decoration: none;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+
+                    &:hover {
+                        text-decoration: underline;
+                    }
+                }
+            }
+        }
+
+        .mainGrid {
+            flex: 1;
+            padding: 2rem 3rem;
+
+            .gridHeader {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #204ecf;
+                margin-bottom: 1.5rem;
+            }
+
+            .linksGrid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.8rem 2rem;
+
+                a {
+                    text-decoration: none;
+                    color: #4b5563;
+                    font-size: 0.85rem;
+                    transition: color 0.2s ease;
+
+                    &:hover {
+                        color: #204ecf;
+                    }
+                }
+            }
+
+            .seeMore {
+                margin-top: 2.5rem;
+
+                a {
+                    color: #204ecf;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                }
+            }
+        }
+    }
+
+    // Right Actions
+    .rightActions {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+
+        .actionLink {
+            text-decoration: none;
+            color: #475569;
+            font-size: 0.8rem;
+            font-weight: 500;
+
+            @media #{$vpTablet1024} {
+                display: none;
+            }
+
+            &:hover {
+                color: #1e293b;
+            }
+        }
+
+        .hireBtn {
+            background-color: #00d68f;
+            color: $white;
+            padding: 0.35rem 0.9rem; // ULTRA SMALL SIZING
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+
+            &:hover {
+                background-color: #00be7e;
+                transform: translateY(-1px);
+            }
+        }
+
+        .loginBtn {
+            text-decoration: none;
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 0.8rem;
+
+            @media #{$vpTablet1024} {
+                display: none;
+            }
+        }
+
+        .mobileToggle {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+
+            @media #{$vpTablet1024} {
+                display: flex;
+            }
+
+            span {
+                width: 22px;
+                height: 2px;
+                background-color: #374151;
+            }
+        }
+    }
+}
+
+// Mobile Menu
+.mobileMenu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 100%;
+    height: 100%;
+    background-color: $white;
+    z-index: 2000;
+    transition: right 0.4s cubic-bezier(0.77, 0, 0.175, 1);
+    padding: 1.5rem;
+
+    &.open {
+        right: 0;
+    }
+
+    .mobileMenuHeader {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        color: $white;
+        margin-bottom: 2rem;
 
-        .logo {
-            font-weight: bold;
-            font-size: 1.5rem;
-        
+        button {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+    }
+
+    .mobileLinks {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+
+        .mobileNavItem {
             a {
                 text-decoration: none;
-                color: $white;
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: #111827;
             }
         }
-    
-        .nav {
+
+        .mobileAuth {
+            margin-top: 1.5rem;
             display: flex;
-            gap: 1.5rem;
-        
+            flex-direction: column;
+            gap: 1rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f3f4f6;
+
             a {
-                color: $white;
                 text-decoration: none;
+                font-size: 1rem;
                 font-weight: 500;
-        
-                &:hover {
-                    opacity: 0.8;
-                }
+                color: #374151;
+            }
+
+            .mobileHireBtn {
+                background-color: #00d68f;
+                color: white;
+                padding: 0.8rem;
+                text-align: center;
+                border-radius: 4px;
+                font-weight: 600;
             }
         }
     }
