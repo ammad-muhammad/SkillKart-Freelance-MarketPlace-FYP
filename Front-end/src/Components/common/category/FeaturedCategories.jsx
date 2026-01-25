@@ -210,7 +210,7 @@ const FeaturedCategories = () => {
               <div className="absolute top-12 left-12 lg:left-24 z-20">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-[2px] bg-gradient-to-r from-black via-gray-600 to-transparent"></div>
-                  <h2 className="font-bold text-sm text-black tracking-[0.15em] uppercase">Featured Categories</h2>
+                  <h1 className="font-bold text-sm text-black">Featured Categories</h1>
                 </div>
               </div>
 
@@ -340,13 +340,13 @@ const FeaturedCategories = () => {
 
         {/* MOBILE VERSION */}
         {isMobile && (
-          <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#f0f0f0] via-slate-300 to-[#f0f0f0] pt-0  pb-32">
+          <div className="flex flex-col bg-gradient-to-b from-[#f0f0f0] via-slate-300 to-[#f0f0f0] pt-0  pb-10">
             
             {/* Header */}
             <div className="px-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-[1.5px] bg-gradient-to-r from-black via-gray-600 to-transparent"></div>
-                <h2 className="font-bold text-xs text-black tracking-[0.15em] uppercase">Featured Categories</h2>
+                <h1 className="font-bold text-xs text-black">Featured Categories</h1>
               </div>
             </div>
 

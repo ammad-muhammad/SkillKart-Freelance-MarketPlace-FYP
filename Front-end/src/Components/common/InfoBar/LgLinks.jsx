@@ -1,29 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowUpRight, Zap, TrendingUp, Users, Target, BarChart3, Search } from 'lucide-react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import IconButton from '../buttons/IconButton';
 
-const LgLinks = ({ 
-  services = [
-    { id: 1, name: "Digital PR", icon: "Zap", desc: "Amplify your brand story", link: "/digital-pr" },
-    { id: 2, name: "Organic Social & Content", icon: "Users", desc: "Engage and grow your audience", link: "/social-content" },
-    { id: 3, name: "Search & Growth Strategy", icon: "TrendingUp", desc: "Scale with data-driven insights", link: "/growth-strategy" },
-    { id: 4, name: "Content Experience", icon: "Target", desc: "Create memorable interactions", link: "/content-experience" },
-    { id: 5, name: "Data & Insights", icon: "BarChart3", desc: "Transform data into action", link: "/data-insights" },
-    { id: 6, name: "Onsite SEO", icon: "Search", desc: "Optimize for visibility", link: "/onsite-seo" },
-  ],
-  headerTitle = "Our Services",
-  headerImage = "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg",
-  viewAllLink = "/services",
-  viewAllText = "View All Services",
-  stats = [
-    { value: "500+", label: "Projects Delivered" },
-    { value: "98%", label: "Client Satisfaction" },
-    { value: "50+", label: "Team Experts" },
-    { value: "24/7", label: "Support Available" },
-  ],
+
+gsap.registerPlugin(ScrollTrigger);
+
+const LgLinks = ({
+  services,
+  headerTitle,
+  headerImage,
+  viewAllLink,
+  viewAllText,
+  stats,
   onServiceClick,
   showStats = true
 }) => {
   const [hoveredId, setHoveredId] = useState(null);
+  const statsRef = useRef(null);
+  const statRefs = useRef([]);
+
+  // Animate stats when scrolled into view
+  useEffect(() => {
+    if (!showStats || !statsRef.current || !stats || stats.length === 0) return;
+
+    const statElements = statRefs.current;
+
+    statElements.forEach((el, index) => {
+      if (!el) return;
+
+      const numericValue = parseInt(stats[index].value.replace(/\D/g, ''));
+      const suffix = stats[index].value.replace(/[0-9]/g, '');
+
+      // Create a counter object to animate
+      const counter = { value: 0 };
+
+      gsap.to(counter, {
+        value: numericValue,
+        duration: 2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: statsRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+        onUpdate: function () {
+          el.textContent = Math.floor(counter.value) + suffix;
+        }
+      });
+    });
+
+    return () => {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    };
+  }, [stats, showStats]);
 
   // Icon mapping
   const iconMap = {
@@ -38,34 +69,28 @@ const LgLinks = ({
     }
   };
 
-  const handleViewAllClick = () => {
-    if (viewAllLink) {
-      window.location.href = viewAllLink;
-    }
-  };
 
   return (
-    <section className="bg-white min-h-screen py-20 px-6 md:px-12 font-sans text-[#1a1a1a]">
+    <section className="bg-[#f0f0f0] min-h-screen py-20 px-6 md:px-12 font-sans text-[#1a1a1a]">
       {/* Header */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
-        <h2 className="text-6xl md:text-8xl font-medium flex items-center gap-4 tracking-tight">
-          {headerTitle.split(' ')[0]} 
-          <span className="w-16 h-12 md:w-20 md:h-16 rounded-2xl overflow-hidden inline-block bg-gray-300">
-             <img 
-              src={headerImage} 
-              className="w-full h-full object-cover" 
+        <h1 className="text-6xl md:text-8xl font-medium flex items-center gap-4 tracking-tight">
+          {headerTitle.split(' ')[0]}
+          <span className="aspect-square h-[3rem] md:h-[4rem] rounded-xl overflow-hidden inline-block shadow-sm">
+            <img
+              src={headerImage}
+              className="w-full h-full object-cover"
               alt="team"
-             />
+            />
           </span>
           {headerTitle.split(' ').slice(1).join(' ')}
-        </h2>
-        <button 
-          onClick={handleViewAllClick}
-          className="group flex items-center gap-2 px-6 py-2.5 border border-black rounded-full text-sm font-semibold hover:bg-black hover:text-white transition-all duration-300"
-        >
-          {viewAllText}
-          <ArrowUpRight size={18} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </button>
+        </h1>
+
+        <IconButton
+          text={viewAllText}
+          link={viewAllLink}
+          variant="primary"
+        />
       </div>
 
       {/* Services Cards Grid */}
@@ -123,11 +148,14 @@ const LgLinks = ({
 
       {/* Bottom Stats Bar */}
       {showStats && (
-        <div className="max-w-7xl mx-auto mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 p-8 rounded-3xl bg-black text-white">
+        <div ref={statsRef} className="max-w-7xl mx-auto mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 p-8 rounded-3xl bg-black text-white">
           {stats.map((stat, index) => (
             <div key={index} className="text-center group cursor-default">
-              <div className="text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">
-                {stat.value}
+              <div
+                ref={el => statRefs.current[index] = el}
+                className="text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300"
+              >
+                0
               </div>
               <div className="text-sm text-gray-400 group-hover:text-white transition-colors duration-300">
                 {stat.label}

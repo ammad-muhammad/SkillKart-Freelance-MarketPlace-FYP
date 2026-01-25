@@ -9,8 +9,8 @@ const useLenis = () => {
   useEffect(() => {
     // create Lenis instance
     const mainScroller = new Lenis({
-      duration: 3,
-      easing: (t) => 1 - Math.pow(1 - t, 7.5),
+      duration: 1,
+      // easing: (t) => 1 - Math.pow(1 - t, 7.5),
       smooth: true,
       smoothTouch: true,
       direction: "vertical",
