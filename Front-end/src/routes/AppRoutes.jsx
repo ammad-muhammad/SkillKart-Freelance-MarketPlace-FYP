@@ -11,6 +11,11 @@ import AdminLayout from "../layouts/AdminLayout";
 import Home from "../pages/public/Home";
 import About from "../pages/public/About";
 import Contact from "../pages/public/Contact";
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+import TermsOfServices from "../pages/public/TermsOfServices";
+import HowItWorks from "../pages/public/HowItWorks";
+import Login from "../pages/public/Login";
+import Register from "../pages/public/Register";
 
 // Freelancer Pages
 import FreelancerDashboard from "../pages/freelancer/Dashboard";
@@ -23,9 +28,6 @@ import Orders from "../pages/client/Orders";
 // Admin Pages
 import AdminDashboard from "../pages/admin/Dashboard";
 import Users from "../pages/admin/Users";
-import PrivacyPolicy from "../pages/public/PrivacyPolicy";
-import TermsOfServices from "../pages/public/TermsOfServices";
-import HowItWorks from "../pages/public/HowItWorks";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
@@ -41,7 +43,9 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-and-conditions" element={<TermsOfServices />} />
-         <Route path="/howitworks" element={<HowItWorks />} />
+        <Route path="/howitworks" element={<HowItWorks />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
       </Route>
 
       {/* ================= APP ROUTES (FREELANCER + CLIENT) ================= */}

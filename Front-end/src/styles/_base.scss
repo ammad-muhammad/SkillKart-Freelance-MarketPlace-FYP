@@ -108,4 +108,10 @@ p {
     align-items: center;
 }
 
+body:has(.no-footer) footer{
+    display: none;
+}
 
+body:has(.no-header) header{
+    display: none;
+}
