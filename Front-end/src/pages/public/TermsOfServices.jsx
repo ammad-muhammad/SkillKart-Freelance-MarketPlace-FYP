@@ -304,10 +304,10 @@ const TermsOfServices = () => {
   };
 
   return (
-    <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black">
+    <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black pt-24">
       
       {/* ---------------- HERO SECTION ---------------- */}
-      <div ref={heroRef} className="relative h-[70vh] w-full overflow-hidden bg-gray-900 flex items-center justify-center">
+      <div ref={heroRef} className="relative h-[75vh] w-full overflow-hidden bg-gray-900 flex items-center justify-center">
         {/* Background Image with Parallax */}
         <motion.div 
             style={{ y: heroY, opacity: heroOpacity }}
