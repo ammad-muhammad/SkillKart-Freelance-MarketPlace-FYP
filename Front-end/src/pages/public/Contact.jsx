@@ -415,7 +415,7 @@ const Contact = () => {
     <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black m-1 ">
       
       {/* ---------------- SPLIT HERO SECTION ---------------- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
+      <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen pt-29">
         
         {/* LEFT FIXED COLUMN - with parallax */}
         <div ref={heroRef} className="relative h-[60vh] lg:h-screen lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-4 md:m-6">
@@ -592,70 +592,71 @@ const Contact = () => {
       </div>
 
       {/* ---------------- CINEMATIC S-CURVE MARQUEE ---------------- */}
-      <CinematicMarquee />
+      {/* <CinematicMarquee /> */}
+    
     </div>
   );
 };
 
 
 // 4. Cinematic Scroll-Driven 3D S-Curve Marquee
-const CinematicMarquee = () => {
-    const containerRef = useRef(null);
+// const CinematicMarquee = () => {
+//     const containerRef = useRef(null);
     
-    const { scrollYProgress } = useScroll({
-        target: containerRef,
-        offset: ["start end", "end start"]
-    });
+//     const { scrollYProgress } = useScroll({
+//         target: containerRef,
+//         offset: ["start end", "end start"]
+//     });
 
-    // Dynamic data
-    const marqueeData = {
-      text: "Ready to Rise",
-      highlight: "with  Skillkart?"
-    };
+//     // Dynamic data
+//     const marqueeData = {
+//       text: "Ready to Rise",
+//       highlight: "with  Skillkart?"
+//     };
 
-    // Horizontal movement: starts off-screen right, ends off-screen left
-    const xRaw = useTransform(scrollYProgress, [0, 1], ["80vw", "-250vw"]);
+//     // Horizontal movement: starts off-screen right, ends off-screen left
+//     const xRaw = useTransform(scrollYProgress, [0, 1], ["80vw", "-250vw"]);
     
-    // S-Curve vertical movement: enters low, curves up in middle, straightens at end
-    const yRaw = useTransform(scrollYProgress, [0, 0.3, 0.5, 0.7, 1], [80, 20, -30, 10, 40]);
+//     // S-Curve vertical movement: enters low, curves up in middle, straightens at end
+//     const yRaw = useTransform(scrollYProgress, [0, 0.3, 0.5, 0.7, 1], [80, 20, -30, 10, 40]);
     
-    // Subtle 3D perspective tilt
-    const rotateY = useTransform(scrollYProgress, [0, 0.5, 1], [4, 0, -4]);
-    const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [2, 0, -2]);
+//     // Subtle 3D perspective tilt
+//     const rotateY = useTransform(scrollYProgress, [0, 0.5, 1], [4, 0, -4]);
+//     const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [2, 0, -2]);
     
-    // Heavy, inertia-based spring (Apple-style, no bounce)
-    const springConfig = { stiffness: 50, damping: 40, mass: 1.5 };
-    const x = useSpring(xRaw, springConfig);
-    const y = useSpring(yRaw, springConfig);
+//     // Heavy, inertia-based spring (Apple-style, no bounce)
+//     const springConfig = { stiffness: 50, damping: 40, mass: 1.5 };
+//     const x = useSpring(xRaw, springConfig);
+//     const y = useSpring(yRaw, springConfig);
 
-    return (
-        <div 
-            ref={containerRef} 
-            className="h-[50vh] overflow-hidden  relative flex items-center"
-            style={{ perspective: "1200px" }}
-        >
-            <motion.div
-                style={{
-                    x,
-                    y,
-                    rotateY,
-                    rotateX,
-                    transformStyle: "preserve-3d",
-                }}
-                className="flex whitespace-nowrap gap-[10vw] will-change-transform"
-            >
-                {[1, 2, 3, 4].map((i) => (
-                    <h1 
-                        key={i} 
-                        className="text-[18vw] md:text-[14vw] font-semibold tracking-[-0.04em] leading-none text-black select-none"
-                    >
-                        {marqueeData.text} <span className="italic font-serif text-gray-400">{marqueeData.highlight}</span>
-                    </h1>
-                ))}
-            </motion.div>
-        </div>
-    );
-}
+//     return (
+//         <div 
+//             ref={containerRef} 
+//             className="h-[50vh] overflow-hidden  relative flex items-center"
+//             style={{ perspective: "1200px" }}
+//         >
+//             <motion.div
+//                 style={{
+//                     x,
+//                     y,
+//                     rotateY,
+//                     rotateX,
+//                     transformStyle: "preserve-3d",
+//                 }}
+//                 className="flex whitespace-nowrap gap-[10vw] will-change-transform"
+//             >
+//                 {[1, 2, 3, 4].map((i) => (
+//                     <h1 
+//                         key={i} 
+//                         className="text-[18vw] md:text-[14vw] font-semibold tracking-[-0.04em] leading-none text-black select-none"
+//                     >
+//                         {marqueeData.text} <span className="italic font-serif text-gray-400">{marqueeData.highlight}</span>
+//                     </h1>
+//                 ))}
+//             </motion.div>
+//         </div>
+//     );
+// }
 
 export default Contact;
 
