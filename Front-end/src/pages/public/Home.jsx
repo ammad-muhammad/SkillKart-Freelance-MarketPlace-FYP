@@ -95,7 +95,7 @@ const Home = () => {
       textColor: '#000000',
       image: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg',
       description: "We've created a service which takes ideas to result within 60 minutes. Our team is dedicated to pushing boundaries and delivering exceptional results.",
-      rotate: 24
+      rotate: 4
     },
   ];
 
