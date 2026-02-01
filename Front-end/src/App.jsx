@@ -14,6 +14,7 @@ function App() {
         <AppRoutes userRole={user?.role || null} />
       </BrowserRouter>
     </LenisScroller>
+    
   );
 }
 
