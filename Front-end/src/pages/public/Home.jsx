@@ -75,6 +75,26 @@ const Home = () => {
       textColor: '#000000',
       image: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg',
       description: "We've created a service which takes ideas to result within 60 minutes. Our team is dedicated to pushing boundaries and delivering exceptional results.",
+      rotate: 16
+    },
+     {
+      id: 4,
+      title: 'Syed Obaid',
+      position: "CO-CEO",
+      bgColor: '#000000',
+      textColor: '#ffffff',
+      image: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg',
+      description: "We've created a service which takes ideas to result within 60 minutes. Our team is dedicated to pushing boundaries and delivering exceptional results.",
+      rotate: 20
+    },
+     {
+      id: 5,
+      title: 'Lamiz Khan',
+      position: "QA Lead",
+      bgColor: '#ffffff',
+      textColor: '#000000',
+      image: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg',
+      description: "We've created a service which takes ideas to result within 60 minutes. Our team is dedicated to pushing boundaries and delivering exceptional results.",
       rotate: 4
     },
   ];

@@ -9,6 +9,7 @@ const PublicHeader = () => {
   const [showNotice, setShowNotice] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -58,6 +59,7 @@ const PublicHeader = () => {
 
   const handleDropdownHover = (label) => {
     setActiveDropdown(label);
+    setActiveCategoryIndex(0); // Reset category index when switching dropdowns
   };
 
   const handleDropdownLeave = () => {
@@ -114,7 +116,12 @@ const PublicHeader = () => {
                         <div className={styles.megaMenuContent}>
                           <div className={styles.sidebar}>
                             {item.categories.map((cat, idx) => (
-                              <div key={cat.name} className={`${styles.sidebarItem} ${idx === 0 ? styles.active : ""}`}>
+                              <div 
+                                key={cat.name} 
+                                className={`${styles.sidebarItem} ${idx === activeCategoryIndex ? styles.active : ""}`}
+                                onMouseEnter={() => setActiveCategoryIndex(idx)}
+                                onClick={() => setActiveCategoryIndex(idx)}
+                              >
                                 {cat.name}
                               </div>
                             ))}
@@ -125,10 +132,10 @@ const PublicHeader = () => {
                           </div>
                           <div className={styles.mainGrid}>
                             <div className={styles.gridHeader}>
-                              <span>{item.categories[0].name} &rarr;</span>
+                              <span>{item.categories[activeCategoryIndex].name} &rarr;</span>
                             </div>
                             <div className={styles.linksGrid}>
-                              {item.categories[0].items.map((subItem) => (
+                              {item.categories[activeCategoryIndex].items.map((subItem) => (
                                 <Link 
                                   key={subItem} 
                                   to={item.customLinks?.[subItem] || `/category/${subItem.toLowerCase().replace(/ /g, "-")}`}
@@ -138,7 +145,7 @@ const PublicHeader = () => {
                               ))}
                             </div>
                             <div className={styles.seeMore}>
-                              <Link to="/skills">See more {item.categories[0].name.toLowerCase()} &rarr;</Link>
+                              <Link to="/skills">See more {item.categories[activeCategoryIndex].name.toLowerCase()} &rarr;</Link>
                             </div>
                           </div>
                         </div>
