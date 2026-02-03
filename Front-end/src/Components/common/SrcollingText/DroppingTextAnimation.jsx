@@ -7,7 +7,7 @@ import { SplitText } from 'gsap/SplitText';
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
-const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250" }) => {
+const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250", className = "-mt-[20vh]" }) => {
   const triggerRef = useRef(null);
   const headingRef = useRef(null);
 
@@ -90,10 +90,10 @@ const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250" }
   }, [text, id]);
 
   return (
-    <div className="overflow-hidden hidden lg:block bg-[#f0f0f0] -mt-[20vh]">
+    <div className={`overflow-hidden hidden lg:block bg-[#f0f0f0] ${className}`}>
       <div 
         ref={triggerRef}
-        className={`flex h-[35vh] lg:h-[100vh] js-trigger-${id}`}
+        className={`flex h-[35vh] lg:h-[125vh] js-trigger-${id}`}
       >
         <div
           ref={headingRef}

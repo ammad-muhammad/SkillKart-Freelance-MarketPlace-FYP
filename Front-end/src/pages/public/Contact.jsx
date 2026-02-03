@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import { ArrowUpRight, MapPin } from "lucide-react";
+import DroppingTextAnimation from "../../Components/common/SrcollingText/DroppingTextAnimation";
 
 // --- ANIMATION VARIANTS ---
 const fadeInUp = {
@@ -198,7 +199,7 @@ const FloatingSelect = ({ label, options, selectRef, fieldName }) => {
   };
 
   return (
-    <div className={`space-y-2 relative ${isOpen ? "z-[9999]" : "z-10"}`}>
+    <div className={`space-y-2 relative ${isOpen ? "z-9999" : "z-10"}`}>
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
         {label} <span className="text-red-400">*</span>
       </label>
@@ -593,6 +594,7 @@ const Contact = () => {
 
       {/* ---------------- CINEMATIC S-CURVE MARQUEE ---------------- */}
       {/* <CinematicMarquee /> */}
+      <DroppingTextAnimation text="Ready to serve SkillKart?" id="2250" className="mt-0" />
     
     </div>
   );

@@ -7,6 +7,23 @@ import RequireAuth from "../auth/RequireAuth";
 import PublicLayout from "../layouts/PublicLayout";
 import AppLayout from "../layouts/AppLayout";
 import AdminLayout from "../layouts/AdminLayout";
+import CMSLayout from "../cms/layouts/CMSLayout";
+
+// CMS Pages
+import CMSDashboard from "../cms/pages/CMSDashboard";
+import ContentStats from "../cms/pages/ContentStats";
+import HomePageEditor from "../cms/pages/pages/HomePageEditor";
+import AboutPageEditor from "../cms/pages/pages/AboutPageEditor";
+import ContactPageEditor from "../cms/pages/pages/ContactPageEditor";
+import HowItWorksEditor from "../cms/pages/pages/HowItWorksEditor";
+import PrivacyPolicyEditor from "../cms/pages/pages/PrivacyPolicyEditor";
+import TermsOfServiceEditor from "../cms/pages/pages/TermsOfServiceEditor";
+import LoginPageEditor from "../cms/pages/pages/LoginPageEditor";
+import RegisterPageEditor from "../cms/pages/pages/RegisterPageEditor";
+import ComponentsManager from "../cms/pages/ComponentsManager";
+import MediaManager from "../cms/pages/MediaManager";
+import FormsManager from "../cms/pages/FormsManager";
+import CMSSettings from "../cms/pages/CMSSettings";
 
 // Public Pages
 import Home from "../pages/public/Home";
@@ -139,6 +156,40 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/admin/settings/platform" element={<PlatformRules />} />
         <Route path="/admin/settings/verification" element={<VerificationRules />} />
         <Route path="/admin/settings/payments" element={<PaymentRules />} />
+      </Route>
+
+      {/* ================= CMS ROUTES (PUBLIC ACCESS) ================= */}
+      <Route element={<CMSLayout />}>
+        {/* Dashboard */}
+        <Route path="/cms" element={<CMSDashboard />} />
+        <Route path="/cms/stats" element={<ContentStats />} />
+
+        {/* Page Editors */}
+        <Route path="/cms/pages/home" element={<HomePageEditor />} />
+        <Route path="/cms/pages/about" element={<AboutPageEditor />} />
+        <Route path="/cms/pages/contact" element={<ContactPageEditor />} />
+        <Route path="/cms/pages/howitworks" element={<HowItWorksEditor />} />
+        <Route path="/cms/pages/privacypolicy" element={<PrivacyPolicyEditor />} />
+        <Route path="/cms/pages/termsofservice" element={<TermsOfServiceEditor />} />
+        <Route path="/cms/pages/login" element={<LoginPageEditor />} />
+        <Route path="/cms/pages/register" element={<RegisterPageEditor />} />
+
+        {/* Components Manager */}
+        <Route path="/cms/components" element={<ComponentsManager />} />
+        <Route path="/cms/components/navbar" element={<ComponentsManager />} />
+        <Route path="/cms/components/footer" element={<ComponentsManager />} />
+        <Route path="/cms/components/buttons" element={<ComponentsManager />} />
+        <Route path="/cms/components/cards" element={<ComponentsManager />} />
+        <Route path="/cms/components/cta" element={<ComponentsManager />} />
+
+        {/* Media Manager */}
+        <Route path="/cms/media" element={<MediaManager />} />
+
+        {/* Forms Manager */}
+        <Route path="/cms/forms" element={<FormsManager />} />
+
+        {/* Settings */}
+        <Route path="/cms/settings" element={<CMSSettings />} />
       </Route>
 
       {/* ================= APP ROUTES (FREELANCER + CLIENT) ================= */}
