@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # MongoDB Service
+  mongodb:
+    image: mongo:7.0
+    container_name: skillkart-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: skillkart
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - skillkart-network
+
+  # Backend Service
+  backend:
+    build: .
+    container_name: skillkart-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/skillkart?authSource=admin
+      # Add other environment variables here or use .env file
+    depends_on:
+      - mongodb
+    networks:
+      - skillkart-network
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  skillkart-network:
+    driver: bridge
