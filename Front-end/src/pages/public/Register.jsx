@@ -1,7 +1,9 @@
+
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Briefcase, Code } from "lucide-react";
+import { useCMS } from "../../cms/context/CMSContext";
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -25,13 +27,6 @@ const staggerItem = {
   }
 };
 
-// Page transition animation
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  enter: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-  exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } }
-};
-
 // --- INPUT COMPONENT ---
 const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, name, error }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -46,7 +41,7 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
         animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
         transition={{ duration: 0.2 }}
       >
-        <Icon size={18} />
+        {Icon && <Icon size={18} />}
       </motion.div>
       <input
         type={type}
@@ -56,7 +51,7 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
         onChange={onChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl ${Icon ? "pl-12" : "pl-4"} pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
           error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
         }`}
       />
@@ -174,7 +169,7 @@ const ModernSelect = ({ options, value, onChange, name, label, error }) => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="absolute top-full mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-xl z-50"
+          className="absolute top-full mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto"
         >
           {options.map((option) => (
             <motion.button
@@ -197,23 +192,83 @@ const ModernSelect = ({ options, value, onChange, name, label, error }) => {
   );
 };
 
+// --- DYNAMIC RENDERER ---
+const renderField = (field, formData, handleInputChange, errors) => {
+  if (!field) return null;
+  const commonProps = {
+    key: field.id,
+    name: field.id,
+    label: field.label,
+    placeholder: field.placeholder, // Use placeholder from CMS
+    value: formData[field.id] || "",
+    onChange: handleInputChange,
+    error: errors[field.id],
+    type: field.type // Pass type
+  };
+
+  if (field.type === "select") {
+    return (
+      <ModernSelect
+        {...commonProps}
+        options={field.options || []}
+      />
+    );
+  }
+
+  if (field.type === "password") {
+    return (
+      <PasswordInput
+        {...commonProps}
+      />
+    );
+  }
+
+  if (field.type === "file") {
+      return (
+          <motion.div variants={staggerItem} key={field.id} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">{field.label}</label>
+            <div className="relative">
+              <input
+                type="file"
+                name={field.id}
+                accept={field.accept || "*"}
+                onChange={handleInputChange}
+                className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-black file:text-white hover:file:bg-gray-900 cursor-pointer"
+              />
+              <p className="text-xs text-gray-500 mt-1 ml-1">{field.helperText || "Supported formats: PDF, DOC, DOCX (Max 5MB)"}</p>
+            </div>
+            {errors[field.id] && <p className="text-red-500 text-xs mt-1 ml-1">{errors[field.id]}</p>}
+          </motion.div>
+      );
+  }
+
+  // Icons based on id substring
+  let Icon = null;
+  const idLower = field.id.toLowerCase();
+  if (idLower.includes("email")) Icon = Mail;
+  else if (idLower.includes("user") || idLower.includes("name")) Icon = Briefcase;
+  else if (idLower.includes("rate") || idLower.includes("price")) Icon = Check;
+  else if (field.type === "number") Icon = Check;
+  
+  // If no icon matched, maybe use default? ModernInput handles no icon.
+
+  return (
+    <ModernInput
+      {...commonProps}
+      icon={Icon} 
+    />
+  );
+};
+
 // --- MAIN REGISTER PAGE ---
 const Register = () => {
+  const { formFields } = useCMS();
+  // Get Register Form config or fallback to empty object if not loaded yet
+  const registerFormConfig = formFields?.registerForm || {};
+
   const [step, setStep] = useState(0); // 0: Role Selection, 1: Basic Registration, 2: Profile Completion
   const [userRole, setUserRole] = useState(null); // "client" or "freelancer"
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    firstName: "",
-    lastName: "",
-    companyType: "", // For client
-    companyName: "",
-    industry: "",
-    skillCategory: "", // For freelancer
-    cvFile: "", // For freelancer
-    hourlyRate: "",
-  });
+  const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -230,12 +285,15 @@ const Register = () => {
   const heroOpacity = useTransform(heroScroll, [0, 0.8], [0.7, 0.3]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, files } = e.target;
+    // Handle files if present
+    const val = files ? files[0] : value;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: val
     }));
-    // Clear error for this field when user starts typing
+    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -244,41 +302,54 @@ const Register = () => {
     }
   };
 
-  const validateStep1 = () => {
-    const newErrors = {};
+  const getFieldsForStep = (currentStep) => {
+    if (!registerFormConfig.steps) return [];
     
-    if (!formData.email) newErrors.email = "Email is required";
-    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) newErrors.email = "Invalid email format";
+    // Config steps are usually indexed 0, 1... matches logic
+    // But config step property is 1-based in initialContent (step: 1, step: 2)
+    // Our local state step is 0 (Role), 1 (Basic), 2 (Profile).
+    // So local Step 1 maps to config Step with step: 1.
+    // Local Step 2 maps to config Step with step: 2.
     
-    if (!formData.password) newErrors.password = "Password is required";
-    if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
-    
-    if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
+    const configStep = registerFormConfig.steps.find(s => s.step === currentStep);
+    if (!configStep) return [];
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (currentStep === 2) {
+        return userRole === 'client' 
+          ? (configStep.clientFields || []) 
+          : (configStep.freelancerFields || []);
+    }
+    return configStep.fields || [];
   };
 
-  const validateStep2 = () => {
+  const validateStep = (currentStep) => {
+    const currentFields = getFieldsForStep(currentStep);
     const newErrors = {};
-    
-    if (!formData.firstName) newErrors.firstName = "First name is required";
-    if (!formData.lastName) newErrors.lastName = "Last name is required";
+    let isValid = true;
 
-    if (userRole === "client" && !formData.companyType) {
-      newErrors.companyType = "Please select company type";
-    }
-
-    if (userRole === "freelancer") {
-      if (!formData.skillCategory) newErrors.skillCategory = "Please select a skill category";
-      if (!formData.cvFile) newErrors.cvFile = "Please upload your CV/Resume";
-      if (!formData.hourlyRate) newErrors.hourlyRate = "Hourly rate is required";
-      if (parseFloat(formData.hourlyRate) < 1) newErrors.hourlyRate = "Rate must be at least $1";
-    }
+    currentFields.forEach(field => {
+        // Required check
+        if (field.required && !formData[field.id]) {
+            newErrors[field.id] = (field.label || "This field") + " is required";
+            isValid = false;
+        }
+        // Specific validations
+        if (field.type === 'email' && formData[field.id] && !formData[field.id].match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+             newErrors[field.id] = "Invalid email format";
+             isValid = false;
+        }
+        if (field.type === 'password' && formData[field.id] && formData[field.id].length < 6) {
+             newErrors[field.id] = "Password must be at least 6 characters";
+             isValid = false;
+        }
+        if (field.id === 'confirmPassword' && formData['password'] !== formData['confirmPassword']) {
+             newErrors['confirmPassword'] = "Passwords do not match";
+             isValid = false;
+        }
+    });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return isValid;
   };
 
   const handleRoleSelect = (role) => {
@@ -288,7 +359,7 @@ const Register = () => {
 
   const handleNextStep = async () => {
     if (step === 1) {
-      if (validateStep1()) {
+      if (validateStep(1)) {
         setStep(2);
       }
     }
@@ -298,7 +369,7 @@ const Register = () => {
     e.preventDefault();
     
     if (step === 2) {
-      if (validateStep2()) {
+      if (validateStep(2)) {
         setIsLoading(true);
         
         setTimeout(() => {
@@ -496,31 +567,7 @@ const Register = () => {
                 {/* Registration Form */}
                 <form onSubmit={handleNextStep} className="space-y-3.5 mb-5">
                   
-                  <ModernInput
-                    icon={Mail}
-                    placeholder="Enter your email"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    error={errors.email}
-                  />
-
-                  <PasswordInput
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    name="password"
-                    placeholder="Create a password"
-                    error={errors.password}
-                  />
-
-                  <PasswordInput
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    name="confirmPassword"
-                    placeholder="Confirm password"
-                    error={errors.confirmPassword}
-                  />
+                  {getFieldsForStep(1).map(field => renderField(field, formData, handleInputChange, errors))}
 
                   {/* Terms & Conditions */}
                   <motion.label 
@@ -587,123 +634,7 @@ const Register = () => {
                 {/* Profile Form */}
                 <form onSubmit={handleSubmit} className="space-y-3.5 mb-5">
                   
-                  <motion.div className="grid grid-cols-2 gap-3" variants={staggerItem}>
-                    <div>
-                      <input
-                        type="text"
-                        name="firstName"
-                        placeholder="First Name"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                          errors.firstName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                        }`}
-                      />
-                      {errors.firstName && <p className="text-red-500 text-xs mt-1 ml-1">{errors.firstName}</p>}
-                    </div>
-                    <div>
-                      <input
-                        type="text"
-                        name="lastName"
-                        placeholder="Last Name"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                          errors.lastName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                        }`}
-                      />
-                      {errors.lastName && <p className="text-red-500 text-xs mt-1 ml-1">{errors.lastName}</p>}
-                    </div>
-                  </motion.div>
-
-                  {/* CLIENT SPECIFIC FIELDS */}
-                  {userRole === "client" && (
-                    <>
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Company Type"
-                          name="companyType"
-                          options={["Individual", "Startup", "Small Business", "Enterprise", "Agency"]}
-                          value={formData.companyType}
-                          onChange={handleInputChange}
-                          error={errors.companyType}
-                        />
-                      </motion.div>
-
-                      <motion.div variants={staggerItem}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Company Name (Optional)</label>
-                        <input
-                          type="text"
-                          name="companyName"
-                          placeholder="Enter company name"
-                          value={formData.companyName}
-                          onChange={handleInputChange}
-                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
-                        />
-                      </motion.div>
-
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Industry (Optional)"
-                          name="industry"
-                          options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Other"]}
-                          value={formData.industry}
-                          onChange={handleInputChange}
-                        />
-                      </motion.div>
-                    </>
-                  )}
-
-                  {/* FREELANCER SPECIFIC FIELDS */}
-                  {userRole === "freelancer" && (
-                    <>
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Primary Skill Category"
-                          name="skillCategory"
-                          options={["Web Development", "UI/UX Design", "Mobile Development", "Data Science", "Content Writing", "Digital Marketing", "Graphic Design", "Other"]}
-                          value={formData.skillCategory}
-                          onChange={handleInputChange}
-                          error={errors.skillCategory}
-                        />
-                      </motion.div>
-
-                      <motion.div variants={staggerItem}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload CV/Resume</label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            name="cvFile"
-                            accept=".pdf,.doc,.docx"
-                            onChange={handleInputChange}
-                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-black file:text-white hover:file:bg-gray-900 cursor-pointer"
-                          />
-                          <p className="text-xs text-gray-500 mt-1 ml-1">Supported formats: PDF, DOC, DOCX (Max 5MB)</p>
-                        </div>
-                        {errors.cvFile && <p className="text-red-500 text-xs mt-1 ml-1">{errors.cvFile}</p>}
-                      </motion.div>
-
-                      <motion.div variants={staggerItem}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate (USD)</label>
-                        <div className="flex items-center">
-                          <span className="absolute left-4 text-gray-400 font-semibold">$</span>
-                          <input
-                            type="number"
-                            name="hourlyRate"
-                            placeholder="50"
-                            value={formData.hourlyRate}
-                            onChange={handleInputChange}
-                            min="1"
-                            step="0.5"
-                            className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-8 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                              errors.hourlyRate ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                            }`}
-                          />
-                        </div>
-                        {errors.hourlyRate && <p className="text-red-500 text-xs mt-1 ml-1">{errors.hourlyRate}</p>}
-                      </motion.div>
-                    </>
-                  )}
+                  {getFieldsForStep(2).map(field => renderField(field, formData, handleInputChange, errors))}
 
                   {/* Success Message */}
                   {showSuccess && (
@@ -737,7 +668,7 @@ const Register = () => {
                       </>
                     ) : (
                       <>
-                        Create Account <Check size={16} />
+                        {registerFormConfig.submitButton?.text || "Create Account"} <Check size={16} />
                       </>
                     )}
                   </motion.button>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Layers,
@@ -37,6 +37,22 @@ const ComponentsManager = () => {
     cta: Megaphone
   };
 
+  const location = useLocation();
+  const currentPath = location.pathname.split('/').pop();
+  
+  // Filter logic
+  const filteredComponents = Object.entries(componentsContent).filter(([id, component]) => {
+      if (currentPath === "components") return true; 
+      
+      // Match ID directly or category
+      if (currentPath === id) return true;
+      if (currentPath === "ctas" && id.includes("cta")) return true;
+      if (currentPath === "buttons" && id === "buttons") return true; // buttons is plural in ID too
+      if (currentPath === "cards" && id === "cards") return true; 
+
+      return false;
+  });
+
   const handleEdit = (componentId) => {
     setEditingComponent(componentId);
     setEditedContent(componentsContent[componentId]?.content || {});
@@ -59,31 +75,46 @@ const ComponentsManager = () => {
     if (!component) return null;
 
     const content = editingComponent === componentId ? editedContent : component.content;
+    
+    // Determine editor type based on ID or Type
+    const editorType = component.type || componentId;
 
-    switch (componentId) {
-      case "navbar":
-        return (
+    // Helper for updating fields
+    const updateField = (key, val) => setEditedContent(prev => ({ ...prev, [key]: val }));
+    const updateNestedField = (parent, key, val) => setEditedContent(prev => ({ 
+      ...prev, 
+      [parent]: { ...prev[parent], [key]: val } 
+    }));
+
+    if (editorType === "navigation" || componentId === "navbar") {
+      return (
           <div className="space-y-4">
             <TextEditor
               label="Logo Text"
               value={content.logo?.text || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                logo: { ...editedContent.logo, text: val }
-              })}
+              onChange={(val) => updateNestedField("logo", "text", val)}
               disabled={editingComponent !== componentId}
             />
+            {content.logo?.tagline !== undefined && (
+              <TextEditor
+                label="Tagline"
+                value={content.logo?.tagline || ""}
+                onChange={(val) => updateNestedField("logo", "tagline", val)}
+                disabled={editingComponent !== componentId}
+              />
+            )}
+            
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Navigation Links</label>
-              {content.links?.map((link, index) => (
+              <label className="text-sm font-medium text-slate-300">Links</label>
+              {(content.links || []).map((link, index) => (
                 <div key={index} className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    value={link.label}
+                    value={link.text || link.label || ""}
                     onChange={(e) => {
-                      const newLinks = [...(editedContent.links || content.links)];
-                      newLinks[index] = { ...newLinks[index], label: e.target.value };
-                      setEditedContent({ ...editedContent, links: newLinks });
+                      const newLinks = [...(content.links)];
+                      newLinks[index] = { ...newLinks[index], [link.text ? 'text' : 'label']: e.target.value };
+                      updateField("links", newLinks);
                     }}
                     disabled={editingComponent !== componentId}
                     placeholder="Label"
@@ -91,115 +122,91 @@ const ComponentsManager = () => {
                   />
                   <input
                     type="text"
-                    value={link.path}
+                    value={link.href || link.path || ""}
                     onChange={(e) => {
-                      const newLinks = [...(editedContent.links || content.links)];
-                      newLinks[index] = { ...newLinks[index], path: e.target.value };
-                      setEditedContent({ ...editedContent, links: newLinks });
+                      const newLinks = [...(content.links)];
+                      newLinks[index] = { ...newLinks[index], [link.href ? 'href' : 'path']: e.target.value };
+                      updateField("links", newLinks);
                     }}
                     disabled={editingComponent !== componentId}
-                    placeholder="Path"
+                    placeholder="URL"
                     className="bg-[#1b2029] border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-[#204ecf]/50"
                   />
                 </div>
               ))}
             </div>
+            
+            {content.copyright !== undefined && (
+               <TextEditor
+                label="Copyright"
+                value={content.copyright || ""}
+                onChange={(val) => updateField("copyright", val)}
+                disabled={editingComponent !== componentId}
+              />
+            )}
           </div>
         );
-
-      case "footer":
-        return (
+    } 
+    
+    if (editorType === "button" || componentId.startsWith("cta")) {
+         return (
           <div className="space-y-4">
-            <TextEditor
-              label="Logo Text"
-              value={content.logo?.text || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                logo: { ...editedContent.logo, text: val }
-              })}
-              disabled={editingComponent !== componentId}
-            />
-            <TextEditor
-              label="Tagline"
-              value={content.logo?.tagline || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                logo: { ...editedContent.logo, tagline: val }
-              })}
-              disabled={editingComponent !== componentId}
-            />
-            <TextEditor
-              label="Copyright"
-              value={content.copyright || ""}
-              onChange={(val) => setEditedContent({ ...editedContent, copyright: val })}
-              disabled={editingComponent !== componentId}
-            />
-          </div>
-        );
-
-      case "cta":
-        return (
-          <div className="space-y-4">
-            <TextEditor
-              label="Title"
-              value={content.default?.title || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                default: { ...editedContent.default, title: val }
-              })}
-              disabled={editingComponent !== componentId}
-            />
-            <TextEditor
-              label="Subtitle"
-              value={content.default?.subtitle || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                default: { ...editedContent.default, subtitle: val }
-              })}
-              multiline
-              disabled={editingComponent !== componentId}
-            />
             <TextEditor
               label="Button Text"
-              value={content.default?.buttonText || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                default: { ...editedContent.default, buttonText: val }
-              })}
+              value={content.text || content.default?.buttonText || ""}
+              onChange={(val) => content.text ? updateField("text", val) : updateNestedField("default", "buttonText", val)}
               disabled={editingComponent !== componentId}
             />
             <TextEditor
-              label="Button Link"
-              value={content.default?.buttonLink || ""}
-              onChange={(val) => setEditedContent({
-                ...editedContent,
-                default: { ...editedContent.default, buttonLink: val }
-              })}
+              label="Link URL"
+              value={content.href || content.default?.buttonLink || ""}
+              onChange={(val) => content.href ? updateField("href", val) : updateNestedField("default", "buttonLink", val)}
               disabled={editingComponent !== componentId}
             />
-          </div>
-        );
-
-      default:
-        return (
-          <div className="space-y-4">
-            {Object.entries(content).map(([key, value]) => {
-              if (typeof value === "string") {
-                return (
-                  <TextEditor
-                    key={key}
-                    label={key.charAt(0).toUpperCase() + key.slice(1)}
-                    value={value}
-                    onChange={(val) => setEditedContent({ ...editedContent, [key]: val })}
+             <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Style Variant</label>
+                <select 
+                    value={content.variant || content.default?.variant || "primary"}
+                    onChange={(e) => content.variant ? updateField("variant", e.target.value) : updateNestedField("default", "variant", e.target.value)}
                     disabled={editingComponent !== componentId}
-                  />
-                );
-              }
-              return null;
-            })}
+                    className="w-full bg-[#1b2029] border border-slate-700/50 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-[#204ecf]/50"
+                >
+                    <option value="primary">Primary</option>
+                    <option value="secondary">Secondary</option>
+                    <option value="outline">Outline</option>
+                </select>
+             </div>
+             {content.icon && (
+                <TextEditor
+                    label="Icon Name"
+                    value={content.icon || ""}
+                    onChange={(val) => updateField("icon", val)}
+                    disabled={editingComponent !== componentId}
+                />
+             )}
           </div>
         );
     }
+
+    // Default Fallback
+    return (
+        <div className="space-y-4">
+        {Object.entries(content).map(([key, value]) => {
+            if (typeof value === "string") {
+            return (
+                <TextEditor
+                key={key}
+                label={key.charAt(0).toUpperCase() + key.slice(1)}
+                value={value}
+                onChange={(val) => updateField(key, val)}
+                disabled={editingComponent !== componentId}
+                />
+            );
+            }
+            return null;
+        })}
+        </div>
+    );
   };
 
   return (
@@ -218,7 +225,9 @@ const ComponentsManager = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-2xl font-bold text-slate-100"
           >
-            Components Manager
+            {currentPath !== "components" 
+                ? `${currentPath.charAt(0).toUpperCase() + currentPath.slice(1)} Manager` 
+                : "Components Manager"}
           </motion.h1>
           <p className="text-slate-500 text-sm mt-0.5">
             Manage reusable UI components across your website
@@ -228,7 +237,7 @@ const ComponentsManager = () => {
 
       {/* Components Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {Object.entries(componentsContent).map(([id, component], index) => {
+        {filteredComponents.map(([id, component], index) => {
           const IconComponent = componentIcons[id] || Layers;
           const isEditing = editingComponent === id;
 

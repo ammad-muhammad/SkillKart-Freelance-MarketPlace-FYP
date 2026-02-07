@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -36,25 +37,109 @@ const FormsManager = () => {
   const forms = Object.entries(formFields);
   const currentForm = formFields[selectedForm];
 
+  // Helper to get all fields (handling both flat and stepped forms)
+  const getAllFields = () => {
+    if (!currentForm) return [];
+    if (currentForm.fields) return currentForm.fields;
+    if (currentForm.steps) {
+      // Return fields with step info for tracking
+      return currentForm.steps.flatMap((step, stepIndex) => {
+        const stepFields = [];
+        if (step.fields) stepFields.push(...step.fields);
+        if (step.clientFields) stepFields.push(...step.clientFields);
+        if (step.freelancerFields) stepFields.push(...step.freelancerFields);
+        
+        return stepFields.map(f => ({ 
+            ...f, 
+            _stepIndex: stepIndex, 
+            _stepType: step.clientFields && step.clientFields.find(cf => cf.id === f.id) ? 'client' : (step.freelancerFields && step.freelancerFields.find(ff => ff.id === f.id) ? 'freelancer' : 'common') 
+        }));
+      });
+    }
+    return [];
+  };
+
+  const allFields = getAllFields();
+
   const handleAddField = () => {
     if (!newField.label.trim()) return;
-    addFormField(selectedForm, {
+    
+    const fieldToAdd = {
       id: generateId(),
       ...newField
-    });
+    };
+
+    if (currentForm.steps) {
+        // Add to first step by default or try to be smart? 
+        // For simplicity: Add to first step's common fields if possible, or create 'fields' array in first step.
+        const updatedSteps = [...currentForm.steps];
+        if (!updatedSteps[0].fields) updatedSteps[0].fields = [];
+        updatedSteps[0].fields.push(fieldToAdd);
+        updateFormFields(selectedForm, { steps: updatedSteps });
+    } else {
+        addFormField(selectedForm, fieldToAdd);
+    }
+    
     setShowAddFieldModal(false);
     setNewField({ label: "", placeholder: "", type: "text", required: false });
   };
 
+  const handleUpdateField = (fieldId, updatedField) => {
+     if (currentForm.steps) {
+         const updatedSteps = [...currentForm.steps];
+         updatedSteps.forEach(step => {
+             ['fields', 'clientFields', 'freelancerFields'].forEach(key => {
+                 if (step[key]) {
+                     step[key] = step[key].map(f => f.id === fieldId ? { ...f, ...updatedField } : f);
+                 }
+             });
+         });
+         updateFormFields(selectedForm, { steps: updatedSteps });
+     } else {
+         updateFormField(selectedForm, fieldId, updatedField);
+     }
+  };
+
   const handleDeleteField = () => {
     if (fieldToDelete) {
-      deleteFormField(selectedForm, fieldToDelete.id);
+      if (currentForm.steps) {
+          const updatedSteps = [...currentForm.steps];
+          updatedSteps.forEach(step => {
+             ['fields', 'clientFields', 'freelancerFields'].forEach(key => {
+                 if (step[key]) {
+                     step[key] = step[key].filter(f => f.id !== fieldToDelete.id);
+                 }
+             });
+          });
+          updateFormFields(selectedForm, { steps: updatedSteps });
+      } else {
+          deleteFormField(selectedForm, fieldToDelete.id);
+      }
       setFieldToDelete(null);
+      setShowDeleteConfirm(false);
     }
   };
 
   const handleUpdateSubmitButton = (value) => {
-    updateFormFields(selectedForm, { submitButton: value });
+      // Handle structure difference: some forms have object, others string
+      const currentBtn = currentForm.submitButton;
+      let newValue = value;
+      if (typeof currentBtn === 'object' && currentBtn !== null) {
+          newValue = { ...currentBtn, text: value };
+      }
+      // logic: if it was object, keep it object with updated text. If it was string, update string.
+      // But updateFormFields merges. 
+      // Safe bet:
+      if (typeof currentBtn === 'object') {
+           updateFormFields(selectedForm, { submitButton: { ...currentBtn, text: value } });
+      } else {
+           updateFormFields(selectedForm, { submitButton: value });
+      }
+  };
+
+  const getSubmitButtonText = () => {
+      if (!currentForm?.submitButton) return "Submit";
+      return typeof currentForm.submitButton === 'object' ? currentForm.submitButton.text : currentForm.submitButton;
   };
 
   return (
@@ -115,14 +200,14 @@ const FormsManager = () => {
       <div className="grid grid-cols-3 gap-4">
         <CMSCard noPadding>
           <div className="p-4 text-center">
-            <p className="text-2xl font-bold text-slate-100">{currentForm?.fields?.length || 0}</p>
+            <p className="text-2xl font-bold text-slate-100">{allFields.length}</p>
             <p className="text-xs text-slate-500">Total Fields</p>
           </div>
         </CMSCard>
         <CMSCard noPadding>
           <div className="p-4 text-center">
             <p className="text-2xl font-bold text-slate-100">
-              {currentForm?.fields?.filter(f => f.required).length || 0}
+              {allFields.filter(f => f.required).length}
             </p>
             <p className="text-xs text-slate-500">Required Fields</p>
           </div>
@@ -141,7 +226,7 @@ const FormsManager = () => {
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-lg font-semibold text-slate-200">Form Fields</h2>
           
-          {currentForm?.fields?.length === 0 ? (
+          {allFields.length === 0 ? (
             <CMSCard>
               <div className="py-12 text-center">
                 <FormInput size={40} className="mx-auto text-slate-600 mb-4" />
@@ -160,7 +245,7 @@ const FormsManager = () => {
             </CMSCard>
           ) : (
             <AnimatePresence>
-              {currentForm?.fields?.map((field, index) => (
+              {allFields.map((field, index) => (
                 <motion.div
                   key={field.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -170,11 +255,12 @@ const FormsManager = () => {
                 >
                   <FormFieldEditor
                     field={field}
-                    onSave={(updatedField) => updateFormField(selectedForm, field.id, updatedField)}
+                    onSave={(updatedField) => handleUpdateField(field.id, updatedField)}
                     onDelete={() => {
                       setFieldToDelete(field);
                       setShowDeleteConfirm(true);
                     }}
+                    extraInfo={field._stepIndex !== undefined ? `Step ${field._stepIndex + 1}` : null}
                   />
                 </motion.div>
               ))}
@@ -192,7 +278,7 @@ const FormsManager = () => {
                 <label className="text-sm font-medium text-slate-300">Button Text</label>
                 <input
                   type="text"
-                  value={currentForm?.submitButton || ""}
+                  value={getSubmitButtonText()}
                   onChange={(e) => handleUpdateSubmitButton(e.target.value)}
                   placeholder="Submit"
                   className="w-full bg-[#1b2029] border border-slate-700/50 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-[#204ecf]/50 transition-colors"
@@ -203,7 +289,7 @@ const FormsManager = () => {
               <div className="pt-3 border-t border-slate-700/50">
                 <label className="text-xs font-medium text-slate-500 mb-2 block">Preview</label>
                 <button className="w-full px-4 py-2.5 bg-[#204ecf] text-white text-sm font-medium rounded-lg">
-                  {currentForm?.submitButton || "Submit"}
+                  {getSubmitButtonText()}
                 </button>
               </div>
             </div>
@@ -211,14 +297,11 @@ const FormsManager = () => {
 
           <CMSCard title="Field Types">
             <div className="space-y-2">
-              {currentForm?.fields?.reduce((acc, field) => {
-                acc[field.type] = (acc[field.type] || 0) + 1;
-                return acc;
-              }, {}) && Object.entries(
-                currentForm?.fields?.reduce((acc, field) => {
+              {Object.entries(
+                allFields.reduce((acc, field) => {
                   acc[field.type] = (acc[field.type] || 0) + 1;
                   return acc;
-                }, {}) || {}
+                }, {})
               ).map(([type, count]) => (
                 <div
                   key={type}
@@ -303,6 +386,7 @@ const FormsManager = () => {
                 <option value="select">Dropdown</option>
                 <option value="checkbox">Checkbox</option>
                 <option value="date">Date</option>
+                <option value="file">File Upload</option>
               </select>
             </div>
             <div className="space-y-2">

@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ROLES } from "../auth/roles";
 import RequireAuth from "../auth/RequireAuth";
-// fdgfdg
+import { AdminProtectedRoute, CMSProtectedRoute } from "../cms/auth/CMSAuthContext"; // Auth Guards
 
 // Layouts
 import PublicLayout from "../layouts/PublicLayout";
@@ -23,7 +23,12 @@ import RegisterPageEditor from "../cms/pages/pages/RegisterPageEditor";
 import ComponentsManager from "../cms/pages/ComponentsManager";
 import MediaManager from "../cms/pages/MediaManager";
 import FormsManager from "../cms/pages/FormsManager";
+import SlidersManager from "../cms/pages/SlidersManager";
 import CMSSettings from "../cms/pages/CMSSettings";
+
+// Auth Pages
+import AdminLogin from "../cms/pages/auth/AdminLogin";
+import CMSLogin from "../cms/pages/auth/CMSLogin";
 
 // Public Pages
 import Home from "../pages/public/Home";
@@ -108,8 +113,16 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/register" element={<Register />} />
       </Route>
 
-      {/* ================= ADMIN TESTING ROUTES (PUBLIC ACCESS) ================= */}
-      <Route element={<AdminLayout />}>
+      {/* ================= SECRET LOGIN ROUTES ================= */}
+      <Route path="/sk-admin-access/login-portal-92x" element={<AdminLogin />} />
+      <Route path="/sk-cms-access/content-core-login-x91" element={<CMSLogin />} />
+
+      {/* ================= ADMIN TESTING ROUTES (SECURE) ================= */}
+      <Route element={
+        <AdminProtectedRoute>
+          <AdminLayout />
+        </AdminProtectedRoute>
+      }>
         {/* Dashboard */}
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/analytics" element={<AdminDashboard />} />
@@ -158,8 +171,12 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/admin/settings/payments" element={<PaymentRules />} />
       </Route>
 
-      {/* ================= CMS ROUTES (PUBLIC ACCESS) ================= */}
-      <Route element={<CMSLayout />}>
+      {/* ================= CMS ROUTES (SECURE) ================= */}
+      <Route element={
+        <CMSProtectedRoute>
+          <CMSLayout />
+        </CMSProtectedRoute>
+      }>
         {/* Dashboard */}
         <Route path="/cms" element={<CMSDashboard />} />
         <Route path="/cms/stats" element={<ContentStats />} />
@@ -180,7 +197,9 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/cms/components/footer" element={<ComponentsManager />} />
         <Route path="/cms/components/buttons" element={<ComponentsManager />} />
         <Route path="/cms/components/cards" element={<ComponentsManager />} />
-        <Route path="/cms/components/cta" element={<ComponentsManager />} />
+        <Route path="/cms/components/cards" element={<ComponentsManager />} />
+        <Route path="/cms/components/ctas" element={<ComponentsManager />} />
+        <Route path="/cms/components/sliders" element={<SlidersManager />} />
 
         {/* Media Manager */}
         <Route path="/cms/media" element={<MediaManager />} />

@@ -1,7 +1,9 @@
+
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import DroppingTextAnimation from "../../Components/common/SrcollingText/DroppingTextAnimation";
+import { useCMS } from "../../cms/context/CMSContext";
 
 // --- ANIMATION VARIANTS ---
 const fadeInUp = {
@@ -11,47 +13,6 @@ const fadeInUp = {
     y: 0, 
     filter: "blur(0px)",
     transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }
-  }
-};
-
-const fadeInLeft = {
-  hidden: { opacity: 0, x: -80, filter: "blur(8px)" },
-  visible: { 
-    opacity: 1, 
-    x: 0, 
-    filter: "blur(0px)",
-    transition: { duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }
-  }
-};
-
-const fadeInRight = {
-  hidden: { opacity: 0, x: 80, filter: "blur(8px)" },
-  visible: { 
-    opacity: 1, 
-    x: 0, 
-    filter: "blur(0px)",
-    transition: { duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }
-  }
-};
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.8, filter: "blur(10px)" },
-  visible: { 
-    opacity: 1, 
-    scale: 1, 
-    filter: "blur(0px)",
-    transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }
-  }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.1
-    }
   }
 };
 
@@ -86,13 +47,11 @@ const ScrollReveal = ({ children, variants = fadeInUp, delay = 0, className = ""
 
 // --- COMPONENTS ---
 
-// 1. Office Location Item (Mobile + Desktop friendly)
 const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
   const [isActive, setIsActive] = useState(false);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px 0px" });
 
-  // Toggle on tap/click for mobile, hover still works for desktop via CSS
   const handleToggle = () => setIsActive(!isActive);
 
   return (
@@ -119,10 +78,8 @@ const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
         transition: { duration: 0.3 }
       }}
     >
-      {/* Main Row */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
         <div className="flex items-center gap-4 md:gap-6">
-          {/* Thumbnail Reveal */}
           <motion.div
             initial={{ width: 0, opacity: 0 }}
             animate={isActive ? { width: 90, opacity: 1 } : { width: 0, opacity: 0 }}
@@ -130,7 +87,6 @@ const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
             className="h-12 md:h-16 rounded-lg bg-cover bg-center overflow-hidden shrink-0 hidden md:block"
             style={{ backgroundImage: `url(${img})` }}
           />
-          
           <motion.h3 
             initial={{ color: "#d1d5db", scale: 2 }}
             animate={isActive ? { color: "#000000", scale: 2.15 } : { color: "#d1d5db", scale: 2 }}
@@ -141,7 +97,6 @@ const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
           </motion.h3>
         </div>
 
-        {/* Get Directions Button */}
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isActive ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
@@ -154,7 +109,6 @@ const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
         </motion.div>
       </div>
 
-      {/* Address - Expandable */}
       <motion.div
         initial={{ height: 0, opacity: 0, marginTop: 0 }}
         animate={isActive ? { height: "auto", opacity: 1, marginTop: 12 } : { height: 0, opacity: 0, marginTop: 0 }}
@@ -167,63 +121,60 @@ const OfficeLocation = ({ city, country, address, img, index = 0 }) => {
   );
 };
 
-
-// 2. Floating Label Input
-const FloatingInput = ({ label, placeholder, type = "text", fullWidth = false, inputRef, fieldName }) => (
-  <div className={`space-y-2 ${fullWidth ? "col-span-2" : ""}`}>
+const FloatingInput = ({ label, placeholder, type = "text", value, onChange, name, fullWidth = false }) => (
+  <div className={`space-y-2 ${fullWidth ? "col-span-2" : "col-span-2 md:col-span-1"}`}>
     <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
       {label} <span className="text-red-400">*</span>
     </label>
     <input
-      ref={inputRef}
       type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
       placeholder={placeholder}
-      data-field={fieldName}
       required
       className="w-full bg-[#f9f9f9] border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-black/10 transition-shadow outline-none placeholder:text-gray-400 text-black font-medium"
     />
   </div>
 );
 
-// 3. Custom Styled Dropdown
-const FloatingSelect = ({ label, options, selectRef, fieldName }) => {
+const FloatingTextArea = ({ label, placeholder, value, onChange, name }) => (
+    <div className="space-y-2 col-span-2">
+      <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+        {label} <span className="text-red-400">*</span>
+      </label>
+      <textarea 
+        name={name}
+        value={value}
+        onChange={onChange}
+        rows={4}
+        placeholder={placeholder}
+        required
+        className="w-full bg-[#f9f9f9] border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-black/10 transition-shadow outline-none placeholder:text-gray-400 text-black font-medium resize-none"
+      />
+    </div>
+);
+
+const FloatingSelect = ({ label, options, value, onChange, name }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
 
   const handleSelect = (opt) => {
-    setSelected(opt);
+    onChange({ target: { name, value: opt } });
     setIsOpen(false);
-    if (selectRef) {
-      selectRef.current.value = opt;
-    }
   };
 
   return (
-    <div className={`space-y-2 relative ${isOpen ? "z-9999" : "z-10"}`}>
+    <div className={`space-y-2 relative ${isOpen ? "z-50" : "z-10"} col-span-2 md:col-span-1`}>
       <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
         {label} <span className="text-red-400">*</span>
       </label>
       
-      {/* Hidden Select for Form */}
-      <select 
-        ref={selectRef}
-        data-field={fieldName}
-        required
-        className="hidden"
-      >
-        <option value="">Select an option</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      
-      {/* Dropdown Trigger */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full bg-[#f9f9f9] hover:bg-[#f3f3f3] rounded-xl p-4 text-sm cursor-pointer flex items-center justify-between transition-all duration-200 ${isOpen ? 'ring-2 ring-black/10' : ''}`}
       >
-        <span className={selected ? 'text-black font-medium' : 'text-gray-400'}>
-          {selected || 'Please select an option'}
+        <span className={value ? 'text-black font-medium' : 'text-gray-400'}>
+          {value || 'Please select an option'}
         </span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
@@ -250,7 +201,7 @@ const FloatingSelect = ({ label, options, selectRef, fieldName }) => {
             <div 
               key={opt}
               onClick={() => handleSelect(opt)}
-              className={`px-4 py-3 text-sm cursor-pointer transition-colors duration-150 hover:bg-[#f3f3f3] ${selected === opt ? 'bg-[#b3f5e1] text-black font-medium' : 'text-gray-700'}`}
+              className={`px-4 py-3 text-sm cursor-pointer transition-colors duration-150 hover:bg-[#f3f3f3] ${value === opt ? 'bg-[#b3f5e1] text-black font-medium' : 'text-gray-700'}`}
             >
               {opt}
             </div>
@@ -261,57 +212,19 @@ const FloatingSelect = ({ label, options, selectRef, fieldName }) => {
   );
 };
 
-
 // --- MAIN PAGE ---
 
 const Contact = () => {
-    // ============ DYNAMIC DATA ============
+    const { formFields } = useCMS();
+    const contactFormConfig = formFields?.contactForm || {};
+    const cmsFields = contactFormConfig.fields || [];
+
     const contactData = {
       hero: {
         title: "Fill out our form\nto get in touch",
         description: "Interested in joining our team? Head over to our Careers page to check our latest vacancies.",
         buttonText: "Careers",
         heroImage: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200"
-      },
-      form: {
-        fields: [
-          { 
-            type: "row", 
-            inputs: [
-              { label: "Hello, my first name is...", placeholder: "John", fullWidth: false },
-              { label: "And my last name is...", placeholder: "Doe", fullWidth: false }
-            ] 
-          },
-          { 
-            type: "single", 
-            input: { label: "My email is", placeholder: "john@company.com", fullWidth: true }
-          },
-          { 
-            type: "row", 
-            inputs: [
-              { label: "My job title is...", placeholder: "Product Designer", fullWidth: false },
-              { label: "My company name is...", placeholder: "Acme Corp", fullWidth: false }
-            ] 
-          },
-          { 
-            type: "select", 
-            label: "I'm Interested in...", 
-            options: ["Web Development", "Product Design", "Marketing", "Other"]
-          },
-          { 
-            type: "row-select", 
-            selects: [
-              { label: "Region", options: ["United Kingdom", "United States", "Europe", "Asia"] },
-              { label: "Where did you hear about us?", options: ["Google", "LinkedIn", "Clutch", "Recommendation"] }
-            ]
-          },
-          { 
-            type: "textarea", 
-            label: "How can we help you?",
-            placeholder: "Start typing here..."
-          }
-        ],
-        buttonText: "Submit Form"
       },
       officeLocations: [
         {
@@ -339,64 +252,40 @@ const Contact = () => {
           img: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=300"
         }
       ],
-      marquee: {
-        text: "Ready to Rise",
-        highlight: "with  Skillkart?"
-      },
       sectionTitle: "Our Office Locations"
     };
 
     // ============ FORM HANDLING ============
+    const [formData, setFormData] = useState({});
     const [showSuccess, setShowSuccess] = useState(false);
-    const [formResetKey, setFormResetKey] = useState(0);
     
-    // Create refs for all form fields
-    const firstNameRef = useRef(null);
-    const lastNameRef = useRef(null);
-    const emailRef = useRef(null);
-    const jobTitleRef = useRef(null);
-    const companyRef = useRef(null);
-    const interestedRef = useRef(null);
-    const regionRef = useRef(null);
-    const heardFromRef = useRef(null);
-    const messageRef = useRef(null);
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
 
     const handleSubmitForm = (e) => {
       e.preventDefault();
       
-      // Get all values
-      const formData = {
-        firstName: firstNameRef.current?.value,
-        lastName: lastNameRef.current?.value,
-        email: emailRef.current?.value,
-        jobTitle: jobTitleRef.current?.value,
-        company: companyRef.current?.value,
-        interested: interestedRef.current?.value,
-        region: regionRef.current?.value,
-        heardFrom: heardFromRef.current?.value,
-        message: messageRef.current?.value
-      };
+      // Validation Check
+      const missingFields = cmsFields
+        .filter(field => field.required && !formData[field.id])
+        .map(field => field.label);
 
-      // Check all required fields
-      const emptyFields = Object.entries(formData)
-        .filter(([key, value]) => !value || value.trim() === '')
-        .map(([key]) => key);
-
-      if (emptyFields.length > 0) {
-        alert(`❌ Please fill all required fields: ${emptyFields.join(', ')}`);
+      if (missingFields.length > 0) {
+        alert(`❌ Please fill all required fields: ${missingFields.join(', ')}`);
         return;
       }
 
-      // Log to console
       console.log('✅ Form Submitted Successfully!');
       console.log('User Details:', formData);
 
-      // Show success message
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 4000);
-
-      // Reset form by incrementing key
-      setFormResetKey(prev => prev + 1);
+      setFormData({});
     };
 
     const heroRef = useRef(null);
@@ -466,86 +355,48 @@ const Contact = () => {
         {/* RIGHT SCROLLABLE COLUMN - with staggered form animations */}
         <div className="p-8 md:p-14 lg:p-20 bg-white">
           
-          {/* Success Message */}
-
-
           <motion.form 
-  ref={formRef}
-  onSubmit={handleSubmitForm}
-  className="space-y-8 max-w-xl mx-auto lg:mx-0 lg:ml-auto pt-10 lg:pt-0 overflow-visible"
->
-            {contactData.form.fields.map((field, idx) => {
-              if (field.type === "row") {
-                return (
-                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem} className="grid grid-cols-2 gap-6">
-                    {field.inputs.map((input, i) => {
-                      let ref = null;
-                      if (idx === 0) ref = i === 0 ? firstNameRef : lastNameRef;
-                      if (idx === 2) ref = i === 0 ? jobTitleRef : companyRef;
-                      
-                      return (
-                        <FloatingInput 
-                          key={i}
-                          label={input.label} 
-                          placeholder={input.placeholder}
-                          inputRef={ref}
+            ref={formRef}
+            onSubmit={handleSubmitForm}
+            className="space-y-6 max-w-xl mx-auto lg:mx-0 lg:ml-auto pt-10 lg:pt-0 overflow-visible"
+          >
+            <motion.div className="grid grid-cols-2 gap-6" variants={staggerItem}>
+                {cmsFields.map((field, idx) => {
+                    if (field.type === "textarea") {
+                         return <FloatingTextArea 
+                            key={field.id} 
+                            label={field.label} 
+                            placeholder={field.placeholder} 
+                            name={field.id}
+                            value={formData[field.id] || ""}
+                            onChange={handleInputChange} 
                         />
-                      );
-                    })}
-                  </motion.div>
-                );
-              } else if (field.type === "single") {
-                return (
-                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem}>
-                    <FloatingInput 
-                      label={field.input.label} 
-                      placeholder={field.input.placeholder} 
-                      fullWidth={field.input.fullWidth}
-                      inputRef={emailRef}
+                    }
+                    if (field.type === "select") {
+                        return <FloatingSelect 
+                            key={field.id} 
+                            label={field.label} 
+                            options={field.options || []}
+                            name={field.id}
+                            value={formData[field.id] || ""}
+                            onChange={handleInputChange}
+                        />
+                    }
+                    // Default to Input
+                    // Decide if full width?
+                    const isFullWidth = field.id.includes("email") || field.id.includes("Subject");
+                    return <FloatingInput 
+                        key={field.id} 
+                        label={field.label} 
+                        placeholder={field.placeholder} 
+                        type={field.type}
+                        name={field.id}
+                        value={formData[field.id] || ""}
+                        onChange={handleInputChange} 
+                        fullWidth={isFullWidth}
                     />
-                  </motion.div>
-                );
-              } else if (field.type === "select") {
-                return (
-                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem}>
-                    <FloatingSelect 
-                      label={field.label} 
-                      options={field.options}
-                      selectRef={interestedRef}
-                    />
-                  </motion.div>
-                );
-              } else if (field.type === "row-select") {
-                return (
-                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem} className="grid grid-cols-2 gap-6">
-                    {field.selects.map((select, i) => (
-                      <FloatingSelect 
-                        key={i} 
-                        label={select.label} 
-                        options={select.options}
-                        selectRef={i === 0 ? regionRef : heardFromRef}
-                      />
-                    ))}
-                  </motion.div>
-                );
-              } else if (field.type === "textarea") {
-                return (
-                  <motion.div key={`${idx}-${formResetKey}`} variants={staggerItem} className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                      {field.label} <span className="text-red-400">*</span>
-                    </label>
-                    <textarea 
-                      ref={messageRef}
-                      rows={4}
-                      placeholder={field.placeholder}
-                      required
-                      className="w-full bg-[#f9f9f9] border-none rounded-xl p-4 text-sm focus:ring-1 focus:ring-black/10 transition-shadow outline-none placeholder:text-gray-400 text-black font-medium resize-none"
-                    />
-                  </motion.div>
-                );
-              }
-              return null;
-            })}
+                })}
+            </motion.div>
 
             <motion.button
               type="submit"
@@ -554,7 +405,7 @@ const Contact = () => {
               whileTap={{ scale: 0.98 }}
               className="w-full bg-black text-white py-5 rounded-xl font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl hover:bg-gray-900 transition-all"
             >
-              {contactData.form.buttonText} <ArrowUpRight size={20} />
+              {contactFormConfig.submitButton?.text || "Submit Form"} <ArrowUpRight size={20} />
             </motion.button>
 
             {/* Success Message - Moved to bottom */}
@@ -593,72 +444,10 @@ const Contact = () => {
       </div>
 
       {/* ---------------- CINEMATIC S-CURVE MARQUEE ---------------- */}
-      {/* <CinematicMarquee /> */}
       <DroppingTextAnimation text="Ready to serve SkillKart?" id="2250" className="mt-0" />
     
     </div>
   );
 };
 
-
-// 4. Cinematic Scroll-Driven 3D S-Curve Marquee
-// const CinematicMarquee = () => {
-//     const containerRef = useRef(null);
-    
-//     const { scrollYProgress } = useScroll({
-//         target: containerRef,
-//         offset: ["start end", "end start"]
-//     });
-
-//     // Dynamic data
-//     const marqueeData = {
-//       text: "Ready to Rise",
-//       highlight: "with  Skillkart?"
-//     };
-
-//     // Horizontal movement: starts off-screen right, ends off-screen left
-//     const xRaw = useTransform(scrollYProgress, [0, 1], ["80vw", "-250vw"]);
-    
-//     // S-Curve vertical movement: enters low, curves up in middle, straightens at end
-//     const yRaw = useTransform(scrollYProgress, [0, 0.3, 0.5, 0.7, 1], [80, 20, -30, 10, 40]);
-    
-//     // Subtle 3D perspective tilt
-//     const rotateY = useTransform(scrollYProgress, [0, 0.5, 1], [4, 0, -4]);
-//     const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [2, 0, -2]);
-    
-//     // Heavy, inertia-based spring (Apple-style, no bounce)
-//     const springConfig = { stiffness: 50, damping: 40, mass: 1.5 };
-//     const x = useSpring(xRaw, springConfig);
-//     const y = useSpring(yRaw, springConfig);
-
-//     return (
-//         <div 
-//             ref={containerRef} 
-//             className="h-[50vh] overflow-hidden  relative flex items-center"
-//             style={{ perspective: "1200px" }}
-//         >
-//             <motion.div
-//                 style={{
-//                     x,
-//                     y,
-//                     rotateY,
-//                     rotateX,
-//                     transformStyle: "preserve-3d",
-//                 }}
-//                 className="flex whitespace-nowrap gap-[10vw] will-change-transform"
-//             >
-//                 {[1, 2, 3, 4].map((i) => (
-//                     <h1 
-//                         key={i} 
-//                         className="text-[18vw] md:text-[14vw] font-semibold tracking-[-0.04em] leading-none text-black select-none"
-//                     >
-//                         {marqueeData.text} <span className="italic font-serif text-gray-400">{marqueeData.highlight}</span>
-//                     </h1>
-//                 ))}
-//             </motion.div>
-//         </div>
-//     );
-// }
-
 export default Contact;
-

@@ -5,6 +5,8 @@ import { useAuth } from "./auth/useAuth";
 import LenisScroller from "./Components/common/Lenis/LenisScroller";
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 
+import { CMSAuthProvider } from "./cms/auth/CMSAuthContext"; // Import Auth Provider
+
 function App() {
   const { user } = useAuth();
 
@@ -12,9 +14,11 @@ function App() {
     <LenisScroller>
       <BrowserRouter>
         <ScrollToTop />
-        <CMSProvider>
-          <AppRoutes userRole={user?.role || null} />
-        </CMSProvider>
+        <CMSAuthProvider>
+          <CMSProvider>
+            <AppRoutes userRole={user?.role || null} />
+          </CMSProvider>
+        </CMSAuthProvider>
       </BrowserRouter>
     </LenisScroller>
     

@@ -65,8 +65,7 @@ const NAV_ITEMS = [
       { label: "Footer", path: "/cms/components/footer", icon: SquareStack },
       { label: "Buttons", path: "/cms/components/buttons", icon: MousePointer },
       { label: "Cards", path: "/cms/components/cards", icon: CreditCard },
-      { label: "Forms", path: "/cms/components/forms", icon: FormInput },
-      { label: "Sliders", path: "/cms/components/sliders", icon: Sliders },
+      // { label: "Sliders", path: "/cms/components/sliders", icon: Sliders },
       { label: "CTAs", path: "/cms/components/ctas", icon: Megaphone }
     ]
   },

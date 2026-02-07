@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
@@ -21,9 +21,18 @@ import TextEditor from "../components/editors/TextEditor";
 
 const CMSSettings = () => {
   const { siteSettings, updateSiteSettings } = useCMS();
+  
+  // Guard clause to prevent crash if settings aren't loaded
+  if (!siteSettings) return null;
+
   const [editedSettings, setEditedSettings] = useState(siteSettings);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state when context updates (e.g. from localStorage)
+  useEffect(() => {
+    if (siteSettings) setEditedSettings(siteSettings);
+  }, [siteSettings]);
 
   const handleChange = (field, value) => {
     setEditedSettings(prev => ({
@@ -236,7 +245,9 @@ const CMSSettings = () => {
                 <label className="text-sm font-medium text-slate-300">Keywords</label>
                 <input
                   type="text"
-                  value={editedSettings.seo?.keywords?.join(", ") || ""}
+                  value={Array.isArray(editedSettings.seo?.keywords) 
+                    ? editedSettings.seo.keywords.join(", ") 
+                    : editedSettings.seo?.keywords || ""}
                   onChange={(e) => handleSeoChange("keywords", e.target.value.split(",").map(k => k.trim()))}
                   placeholder="freelance, pakistan, gigs, micro tasks"
                   className="w-full bg-[#1b2029] border border-slate-700/50 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-[#204ecf]/50 transition-colors"
@@ -295,7 +306,9 @@ const CMSSettings = () => {
             <div className="flex items-center justify-between p-4">
               <span className="text-sm text-slate-400">Keywords</span>
               <span className="text-sm font-medium text-slate-200">
-                {editedSettings.seo?.keywords?.length || 0} keywords
+                {Array.isArray(editedSettings.seo?.keywords) 
+                  ? editedSettings.seo.keywords.length 
+                  : (editedSettings.seo?.keywords?.split(",")?.length || 0)} keywords
               </span>
             </div>
           </div>

@@ -10,8 +10,10 @@ import {
   Clock
 } from "lucide-react";
 import CMSSidebar from "./CMSSidebar";
-import { CMSProvider, useCMS } from "../context/CMSContext";
+import { CMSProvider, useCMS } from "../context/CMSContext"; // CMSProvider removed from here effectively, keeping useCMS
+import { useCMSAuth } from "../auth/CMSAuthContext"; // Import Auth
 import { formatDate } from "../utils/cmsHelpers";
+import { LogOut } from "lucide-react"; // Import LogOut icon
 
 // ====================================================================
 // CMS LAYOUT - Main Layout Component for CMS Dashboard
@@ -21,6 +23,12 @@ import { formatDate } from "../utils/cmsHelpers";
 // Header Component
 const CMSHeader = ({ isSidebarOpen, setIsSidebarOpen, setIsMobileMenuOpen }) => {
   const { lastSaved } = useCMS();
+  const { logoutCMS } = useCMSAuth();
+
+  const handleLogout = () => {
+    logoutCMS();
+    // Navigate is handled by ProtectedRoute or manually if needed, but Context clears user which triggers Navigate in ProtectedRoute
+  };
 
   return (
     <header className="h-14 bg-[#212631] sticky top-0 z-40 border-b border-slate-700/50 px-4 lg:px-6 flex items-center justify-between">
@@ -83,6 +91,15 @@ const CMSHeader = ({ isSidebarOpen, setIsSidebarOpen, setIsMobileMenuOpen }) => 
             CM
           </div>
         </div>
+
+        {/* Logout */}
+        <button 
+          onClick={handleLogout}
+          className="p-2 ml-1 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors"
+          title="Logout"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </header>
   );
@@ -160,13 +177,9 @@ const CMSLayoutInner = () => {
   );
 };
 
-// Wrapper with CMS Provider
+// Wrapper with CMS Provider - REDUNDANT NOW, Removing Wrapper
 const CMSLayout = () => {
-  return (
-    <CMSProvider>
-      <CMSLayoutInner />
-    </CMSProvider>
-  );
+  return <CMSLayoutInner />;
 };
 
 export default CMSLayout;
