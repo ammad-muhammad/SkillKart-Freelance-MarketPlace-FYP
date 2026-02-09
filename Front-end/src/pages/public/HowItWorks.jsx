@@ -22,6 +22,7 @@ import {
   Globe,
   Zap
 } from "lucide-react";
+import HomeBanner from "../../Components/common/Banners/HomeBanner";
 
 // --- UTILS ---
 function classNames(...classes) {
@@ -254,13 +255,13 @@ const Counter = ({ value, label, icon: Icon }) => (
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.5 }}
-    className="text-center space-y-2 p-6 rounded-2xl bg-gray-50 hover:bg-[#b3f5e1]/10 transition-colors cursor-pointer group"
+    className="text-center space-y-2 p-6 rounded-2xl bg-gray-50 hover:bg-black transition-colors cursor-pointer group"
   >
-    <div className="mx-auto w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-black group-hover:scale-110 transition-transform">
+    <div className="mx-auto w-12 h-12 bg-black rounded-xl shadow-sm flex items-center justify-center text-white group-hover:bg-white group-hover:text-black group-hover:scale-110 transition-all">
       <Icon size={24} />
     </div>
-    <h3 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">{value}</h3>
-    <p className="text-gray-500 font-medium text-sm">{label}</p>
+    <h3 className="text-3xl font-bold text-gray-900 group-hover:text-white transition-colors">{value}</h3>
+    <p className="text-gray-500 font-medium text-sm group-hover:text-gray-300 transition-colors">{label}</p>
   </motion.div>
 );
 
@@ -269,11 +270,11 @@ const ProcessStep = ({ step, index }) => {
   const isEven = index % 2 === 0;
   
   return (
-    <div className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-12 lg:gap-20 py-12 lg:py-20 relative`}>
+    <div className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-12 lg:gap-20 py-8 lg:py-12 relative`}>
         
         {/* Connecting Line (Desktop) */}
         {index !== 4 && index !== 3 && ( // Adjust based on total items, mostly visual helper
-            <div className={`hidden lg:block absolute top-1/2 left-1/2 w-0.5 h-32 bg-gradient-to-b from-gray-200 to-transparent -translate-x-1/2 translate-y-20 ${index % 2 !== 0 ? 'opacity-0' : ''}`} />
+            <div className={`hidden lg:block absolute top-1/2 left-1/2 w-0.5 h-32 bg-linear-to-b from-gray-200 to-transparent -translate-x-1/2 translate-y-20 ${index % 2 !== 0 ? 'opacity-0' : ''}`} />
         )}
 
         {/* Text Side */}
@@ -314,8 +315,8 @@ const ProcessStep = ({ step, index }) => {
             transition={{ duration: 0.7 }}
             className="flex-1 relative w-full h-[300px] md:h-[400px] group"
         >
-            <div className={`absolute inset-0 bg-[#b3f5e1] rounded-[2rem] transform ${isEven ? 'rotate-3' : '-rotate-3'} group-hover:rotate-0 transition-transform duration-500 opacity-20`} />
-            <div className="absolute inset-0 bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 transform transition-transform duration-500 hover:scale-[1.02]">
+            <div className={`absolute inset-0 bg-[#b3f5e1] rounded-4xl transform ${isEven ? 'rotate-3' : '-rotate-3'} group-hover:rotate-0 transition-transform duration-500 opacity-20`} />
+            <div className="absolute inset-0 bg-white rounded-4xl shadow-xl overflow-hidden border border-gray-100 transform transition-transform duration-500 hover:scale-[1.02]">
                 <img 
                     src={step.image} 
                     alt={step.title}
@@ -332,98 +333,6 @@ const ProcessStep = ({ step, index }) => {
   )
 }
 
-// ... unchanged components ...
-
-const Hero = () => {
-    const titleRef = useRef(null);
-    const textRef = useRef(null);
-    const imageRef = useRef(null);
-  
-    // GSAP Entrance
-    useEffect(() => {
-      const tl = gsap.timeline();
-      
-      tl.fromTo(titleRef.current, 
-        { y: 50, opacity: 0 },
-        { y: 0, opacity: 1, duration: 1, ease: "power4.out" }
-      )
-      .fromTo(textRef.current,
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.8 },
-        "-=0.5"
-      )
-      .fromTo(imageRef.current,
-        { scale: 0.95, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 1.2, ease: "expo.out" },
-        "-=0.8"
-      );
-    }, []);
-  
-    return (
-      <section className="relative pt-32 pb-20 px-6 md:px-12 lg:px-24 overflow-hidden">
-         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-            
-            {/* Text Side */}
-            <div className="flex-1 text-center md:text-left z-10 ">
-                <div ref={titleRef} className="space-y-4">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-sm text-sm font-semibold text-gray-600 shadow-sm mx-auto md:mx-0">
-                        <Sparkles size={16} className="text-[#b3f5e1] fill-[#b3f5e1]" />
-                        <span>Simple. Transparent. Secure.</span>
-                    </div>
-                    
-                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 leading-[1.1]">
-                        How <span className="relative whitespace-nowrap">
-                            SkillKart
-                            <svg className="absolute -bottom-2 left-0 w-full h-3 text-[#b3f5e1]/80 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
-                                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="5" fill="none" />
-                            </svg>
-                        </span> Works
-                    </h1>
-                </div>
-                <br/>
-                <p ref={textRef} className="mt-8 text-xl text-gray-600 max-w-lg mx-auto md:mx-0 leading-relaxed">
-                    Whether you're a skilled student looking to earn or a business scaling up, we've simplified the process to just a few steps.
-                </p>
-
-                <div 
-                  className="mt-10 flex flex-wrap justify-center md:justify-start gap-6 text-sm font-medium text-gray-500"
-                >
-                    {["Verified Freelancers", "Escrow Protection", "Fast Hiring"].map(feature => (
-                        <div key={feature} className="flex items-center gap-2">
-                             <CheckCircle2 size={16} className="text-[#b3f5e1]" strokeWidth={3} /> {feature}
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Image Side */}
-            <div ref={imageRef} className="flex-1 w-full relative">
-                <div className="relative aspect-[4/3] w-full max-w-lg mx-auto">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-[#b3f5e1] to-blue-50 rounded-[3rem] rotate-6 opacity-30 blur-2xl" />
-                    <div className="absolute inset-0 bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 z-10 transform -rotate-2 hover:rotate-0 transition-transform duration-700">
-                         <img 
-                            src="https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=1000"
-                            alt="Team collaboration" 
-                            className="w-full h-full object-cover"
-                         />
-                    </div>
-                    {/* Floating Badge */}
-                    <div className="absolute -bottom-6 -left-6 z-20 bg-white p-4 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-4 animate-bounce-slow">
-                        <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white">
-                            <Zap size={24} fill="currentColor" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500 font-bold uppercase">Average Speed</p>
-                            <p className="text-lg font-bold">24 Hrs to Hire</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-         </div>
-      </section>
-    );
-};
 
 // --- MAIN PAGE ---
 
@@ -434,8 +343,21 @@ const HowItWorks = () => {
     <div className="min-h-screen bg-white text-black font-sans selection:bg-[#b3f5e1] relative">
       <ThreeBackground />
 
-      {/* Hero */}
-      <Hero />
+      {/* Hero (New Home Style) */}
+      <HomeBanner
+        backgroundImage="https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=1200"
+        searchIcon="/assets/icons/ic-search.svg"
+        titleStart="Simple. Transparent"
+        titleEnd="How SkillKart Works"
+        subtitle="How it works"
+        descriptionOne="Whether you're a skilled student looking to earn or a business scaling up, we've simplified the process to just a few steps."
+        descriptionTwo="Simple. Transparent. Secure."
+        searchPlaceholder="How can we help you today?"
+        showSearch={false}
+        showDescription={false}
+        showBlur={true}
+        isFullWidth={true}
+      />
 
       {/* Stats Section */}
       <section className="py-12 border-y border-gray-100 bg-gray-50/50">
@@ -447,11 +369,11 @@ const HowItWorks = () => {
       </section>
 
       {/* Process Section */}
-      <section className="px-6 md:px-12 lg:px-24 py-24">
+      <section className="px-6 md:px-12 lg:px-24 py-12">
         <div className="max-w-7xl mx-auto">
             
             {/* Tab Controls */}
-            <div className="flex justify-center mb-24 z-30">
+            <div className="flex justify-center mb-8 z-30">
                 <div className="bg-white/80 p-2 rounded-full inline-flex relative backdrop-blur-xl border border-gray-200 shadow-lg">
                     {TABS.map((tab) => (
                         <button
@@ -502,7 +424,7 @@ const HowItWorks = () => {
       </section>
 
       {/* Why SkillKart */}
-      <section className="px-6 md:px-16 lg:px-24 py-24 bg-white text-gray-900 border-t border-gray-100 relative overflow-hidden">
+      <section className="px-6 md:px-16 lg:px-24 py-12 bg-white text-gray-900 border-t border-gray-100 relative overflow-hidden">
          <div className="max-w-7xl mx-auto relative z-10">
             <div className="flex flex-col items-center text-center mb-20 space-y-4 gap-5" >
                 <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 ">Why Choose SkillKart?</h2>
@@ -536,12 +458,30 @@ const HowItWorks = () => {
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/40 rounded-full blur-3xl -ml-16 -mb-16" />
                 
                 <h2 className="text-3xl md:text-5xl font-bold mb-20 tracking-tight">Success Starts Here.</h2>
-                <div className="flex flex-col sm:flex-row justify-center gap-5 mt-5" >
-                    <button className="px-6 py-3 bg-black text-white rounded-full font-bold text-base hover:bg-gray-900 transition-all hover:scale-105 flex items-center justify-center gap-2 shadow-lg">
-                        Join as Freelancer <ArrowRight size={18} />
+                <div className="flex flex-col sm:flex-row justify-center gap-5 mt-5">
+                    <button className="group relative px-6 py-3 bg-black border border-transparent rounded-full text-white font-bold text-base flex items-center justify-center overflow-hidden transition-all duration-500 shadow-lg hover:bg-gray-900 hover:scale-105">
+                        <div className="relative flex items-center overflow-hidden h-5">
+                            <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                                <span className="whitespace-nowrap">Join as Freelancer</span>
+                                <ArrowRight size={18} />
+                            </div>
+                            <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0">
+                                <span className="whitespace-nowrap">Join as Freelancer</span>
+                                <ArrowRight size={18} />
+                            </div>
+                        </div>
                     </button>
-                    <button className="px-6 py-3 bg-white/60 backdrop-blur-md text-black border border-black/5 rounded-full font-bold text-base hover:bg-white transition-all hover:scale-105 flex items-center justify-center gap-2">
-                        Post a Job <ArrowRight size={18} />
+                    <button className="group relative px-6 py-3 bg-white/60 backdrop-blur-md text-black border border-black/5 rounded-full font-bold text-base flex items-center justify-center overflow-hidden transition-all duration-500 hover:bg-white hover:scale-105">
+                         <div className="relative flex items-center overflow-hidden h-5">
+                            <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                                <span className="whitespace-nowrap">Post a Job</span>
+                                <ArrowRight size={18} />
+                            </div>
+                            <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0">
+                                <span className="whitespace-nowrap">Post a Job</span>
+                                <ArrowRight size={18} />
+                            </div>
+                        </div>
                     </button>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+
 import React, { useRef } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { 
@@ -10,97 +11,8 @@ import {
   Briefcase, 
   Globe2 
 } from "lucide-react";
-
-// --- DYNAMIC DATA CONFIGURATION ---
-const aboutData = {
-  hero: {
-    heading: {
-      line1: "Bridging the Gap",
-      line2: "in Micro-Freelancing."
-    },
-    subHeading: "Our Story",
-    description: [
-      "SkillKart was founded in 2024 with a simple yet ambitious mission: to democratize access to skilled talent in local communities. What started as a small idea has grown into a trusted platform connecting thousands of businesses with verified micro-freelancers.",
-      "We recognized that the gig economy was fragmented. Clients struggled to find reliable help for quick tasks, and talented individuals lacked a streamlined way to showcase their skills.",
-      "Today, SkillKart stands as the bridge—empowering freelancers to earn independently while providing businesses with the agility they need to thrive."
-    ],
-    ctaButton: "Read Our Full Journey",
-    images: {
-      main: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200",
-      founder: "https://ui-avatars.com/api/?name=Hassan+Siddiqui&background=random"
-    },
-    quote: {
-      text: "We are building more than just a platform; we are building a community of trust.",
-      author: "M. Hassan",
-      role: "Founder, SkillKart"
-    }
-  },
-  mission: {
-    badge: "What drives us",
-    title: "Our Mission & Values",
-    description: "We are guided by core principles that ensure every interaction on SkillKart is safe, efficient, and rewarding.",
-    values: [
-      {
-        icon: Users,
-        title: "People First",
-        description: "We prioritize the human connection behind every transaction, ensuring respect and fairness for all users."
-      },
-      {
-        icon: ShieldCheck,
-        title: "Safety Guaranteed",
-        description: "Rigorous vetting processes and secure payments mean you can focus on the work, not the risk."
-      },
-      {
-        icon: Award,
-        title: "Excellence",
-        description: "We encourage and reward high-quality work, fostering a marketplace of true professionals."
-      },
-      {
-        icon: Globe2,
-        title: "Local Impact",
-        description: "Connecting neighbors to solve problems, strengthening local economies one task at a time."
-      }
-    ]
-  },
-  stats: {
-    title: {
-      line1: "Real Impact.",
-      line2: "Real Numbers."
-    },
-    description: "Our growth is a testament to the trust our community places in us. We are just getting started.",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=800",
-    metrics: [
-      { number: "2", label: "Years of Service", suffix: "" },
-      { number: "50", label: "Active Skills", suffix: "+" },
-      { number: "10", label: "Tasks Completed", suffix: "k+" },
-      { number: "98", label: "Satisfaction Rate", suffix: "%" }
-    ]
-  },
-  team: {
-    title: "Meet the Minds",
-    description: "The passionate team working behind the scenes.",
-    members: [
-      { name: "Alex Morgan", role: "CEO & Founder", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400" },
-      { name: "Sarah Chen", role: "Head of Product", img: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400" },
-      { name: "Marcus Johnson", role: "Lead Developer", img: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400" },
-      { name: "Pria Patel", role: "Community Manager", img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400" }
-    ]
-  },
-  standards: {
-    title: "Our Standards & Commitments",
-    tags: [
-      "Identity Verified", "Secure Payments", "24/7 Support", 
-      "Data Privacy First", "No Hidden Fees", "Quality Guarantee"
-    ]
-  },
-  cta: {
-    title: "Ready to get started?",
-    buttons: {
-      primary: "Find Talent",
-      secondary: "Join as Freelancer"
-    }
-  }
-};
+import { useCMS } from "../../cms/context/CMSContext";
+import HomeBanner from "../../Components/common/Banners/HomeBanner";
 
 // --- ANIMATION VARIANTS (Consistent with Contact.jsx) ---
 const fadeInUp = {
@@ -162,20 +74,25 @@ const StatCard = ({ number, label, suffix = "+" }) => {
     )
 }
 
-const ValueCard = ({ icon: Icon, title, description }) => (
-  <motion.div 
-    variants={scaleIn}
-    className="group p-8 rounded-3xl bg-[#f9f9f9] hover:bg-white hover:shadow-xl transition-all duration-500 border border-transparent hover:border-[#b3f5e1]/50"
-  >
-    <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-6 shadow-sm group-hover:bg-[#b3f5e1] transition-colors duration-500">
-      <Icon size={28} className="text-gray-900" />
-    </div>
-    <h3 className="text-2xl font-bold mb-3 text-gray-900 group-hover:tracking-wide transition-all">{title}</h3>
-    <p className="text-gray-500 leading-relaxed text-sm md:text-base">
-      {description}
-    </p>
-  </motion.div>
-);
+const ValueCard = ({ iconName, title, description }) => {
+  const IconMap = { Users, ShieldCheck, Award, Globe2, Heart, CheckCircle2, Briefcase };
+  const Icon = IconMap[iconName] || Users;
+
+  return (
+    <motion.div 
+      variants={scaleIn}
+      className="group p-8 rounded-3xl bg-[#f9f9f9] hover:bg-white hover:shadow-xl transition-all duration-500 border border-transparent hover:border-[#b3f5e1]/50"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-6 shadow-sm group-hover:bg-[#b3f5e1] transition-colors duration-500">
+        <Icon size={28} className="text-gray-900" />
+      </div>
+      <h3 className="text-2xl font-bold mb-3 text-gray-900 group-hover:tracking-wide transition-all">{title}</h3>
+      <p className="text-gray-500 leading-relaxed text-sm md:text-base">
+        {description}
+      </p>
+    </motion.div>
+  );
+};
 
 const TeamMember = ({ name, role, img }) => (
   <motion.div 
@@ -193,7 +110,7 @@ const TeamMember = ({ name, role, img }) => (
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
     <h4 className="text-xl font-bold text-gray-900">{name}</h4>
-    <p className="text-[#b3f5e1] font-medium text-sm uppercase tracking-wider bg-black/5 inline-block px-2 py-1 rounded mt-1 group-hover:bg-black group-hover:text-[#b3f5e1] transition-colors">
+    <p className="text-gray-500 font-medium text-sm result-sm uppercase tracking-wider bg-gray-100 inline-block px-3 py-1 rounded mt-2 group-hover:bg-black group-hover:text-white transition-colors">
         {role}
     </p>
   </motion.div>
@@ -203,17 +120,60 @@ const TeamMember = ({ name, role, img }) => (
 
 const About = () => {
   const containerRef = useRef(null);
+  const sectionRef = useRef(null);
+  const { getPage } = useCMS();
+  const page = getPage('about');
   
-  // Parallax setup for Hero
-  const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 500], [0, 150]);
-  const y2 = useTransform(scrollY, [0, 500], [0, -150]);
+  // Localized Parallax for the "Our Story" section
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y1 = useTransform(scrollYProgress, [0, 1], ["-10%", "10%"]);
+  const y2 = useTransform(scrollYProgress, [0, 1], ["5%", "-5%"]);
+
+  if (!page) return null;
+
+  const getSection = (id) => page.sections?.find(s => s.id === id)?.content || {};
+
+  const hero = getSection('about-hero');
+  const mission = getSection('about-mission');
+  const stats = getSection('about-stats');
+  const team = getSection('about-team');
+  const standards = getSection('about-standards');
+  const cta = getSection('about-cta');
+
+  const teamMembers = [
+    { name: 'Muhammad Ammad', role: "CEO", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Sumair', role: "Founder", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Sherry', role: "Co-Founder", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Shammer', role: "Marketing", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Syed Obaid', role: "CO-CEO", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Lamiz Khan', role: "QA Lead", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+  ];
 
   return (
     <div ref={containerRef} className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black">
       
-      {/* 1. OUR STORY SECTION (Split Layout) */}
-      <section className="px-6 md:px-16 lg:px-24 py-20 lg:py-32 grid lg:grid-cols-2 gap-16 items-center overflow-hidden">
+      {/* 1. PREMIUM HERO SECTION */}
+      <HomeBanner
+        backgroundImage={hero.images?.main}
+        searchIcon="/assets/icons/ic-search.svg"
+        titleStart={hero.heading?.line1}
+        titleEnd={hero.heading?.line2}
+        subtitle={hero.subHeading}
+        descriptionOne={hero.description?.[0] || ""}
+        descriptionTwo={hero.description?.[2] || ""}
+        searchPlaceholder="What skill are you looking for?"
+        showSearch={false}
+        showDescription={false}
+        showBlur={true}
+        isFullWidth={true}
+      />
+
+      {/* 2. OUR STORY SECTION */}
+      <section ref={sectionRef} className="px-6 md:px-16 lg:px-24 py-10 lg:py-16 grid lg:grid-cols-2 gap-16 items-center overflow-hidden">
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -223,40 +183,48 @@ const About = () => {
         >
             <motion.div variants={fadeInUp} className="flex items-center gap-3 mb-6">
                 <span className="h-px w-8 bg-black"></span>
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">{aboutData.hero.subHeading}</span>
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">{hero.subHeading}</span>
             </motion.div>
             
             <SectionHeading>
-                {aboutData.hero.heading.line1} <br/> 
-                <span className="text-gray-400 font-serif italic">{aboutData.hero.heading.line2}</span>
+                {hero.heading?.line1} <br/> 
+                <span className="text-gray-800 font-serif italic">{hero.heading?.line2}</span>
             </SectionHeading>
 
             <motion.div variants={fadeInUp} className="space-y-6 text-gray-600 text-lg leading-relaxed">
-                {aboutData.hero.description.map((paragraph, index) => (
+                {hero.description?.map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
                 ))}
             </motion.div>
 
             <motion.button 
                 variants={fadeInUp}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="mt-10 bg-black text-white px-8 py-4 rounded-full font-bold text-sm tracking-wide flex items-center gap-2 hover:bg-[#b3f5e1] hover:text-black transition-all shadow-lg"
+                className="mt-10 group relative px-8 py-4 bg-black border border-transparent rounded-full text-white font-bold flex items-center justify-center overflow-hidden transition-all duration-500 shadow-lg hover:bg-white hover:text-black"
             >
-                {aboutData.hero.ctaButton} <ArrowUpRight size={18} />
+                <div className="relative flex items-center overflow-hidden h-5">
+                    <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                        <span className="whitespace-nowrap">{hero.ctaButton}</span>
+                        <ArrowUpRight size={18} />
+                    </div>
+                    
+                    <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0 text-black">
+                        <span className="whitespace-nowrap">{hero.ctaButton}</span>
+                        <ArrowUpRight size={18} />
+                    </div>
+                </div>
             </motion.button>
         </motion.div>
 
         <motion.div 
-            className="relative order-1 lg:order-2 h-[500px] lg:h-[700px] w-full rounded-[40px] overflow-hidden"
+            className="relative order-1 lg:order-2 aspect-4/5 lg:aspect-3/4 w-full rounded-[3rem] overflow-hidden shadow-2xl"
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 1 }}
         >
             <motion.img 
                 style={{ y: y1 }}
-                src={aboutData.hero.images.main}
-                className="absolute inset-0 w-full h-[120%] object-cover"
+                src={hero.images?.main}
+                className="absolute -inset-y-[20%] w-full h-[140%] object-cover object-center"
                 alt="Team collaboration"
             />
             
@@ -267,32 +235,32 @@ const About = () => {
             >
                 <div className="text-5xl font-serif italic mb-2">"</div>
                 <p className="font-medium text-gray-900 mb-4">
-                  {aboutData.hero.quote.text}
+                  {hero.quote?.text}
                 </p>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                        <img src={aboutData.hero.images.founder} alt="Founder" />
+                        <img src={hero.images?.founder} alt="Founder" />
                     </div>
                     <div>
-                        <div className="text-xs font-bold uppercase tracking-wider">{aboutData.hero.quote.author}</div>
-                        <div className="text-[10px] text-gray-500">{aboutData.hero.quote.role}</div>
+                        <div className="text-xs font-bold uppercase tracking-wider">{hero.quote?.author}</div>
+                        <div className="text-[10px] text-gray-500">{hero.quote?.role}</div>
                     </div>
                 </div>
             </motion.div>
         </motion.div>
       </section>
 
-      {/* 2. MISSION & VALUES SECTION (Grid) */}
+      {/* 3. MISSION & VALUES SECTION */}
       <section className="px-6 md:px-16 lg:px-24 py-20 bg-gray-50">
         <div className="text-center max-w-3xl mx-auto mb-20">
             <h4 className="text-xs font-black uppercase text-[#b3f5e1] bg-black inline-block px-3 py-1 rounded mb-6 tracking-widest">
-                {aboutData.mission.badge}
+                {mission.badge}
             </h4>
             <h2 className="text-4xl md:text-5xl font-medium tracking-tight text-gray-900">
-                {aboutData.mission.title}
+                {mission.title}
             </h2>
             <p className="mt-6 text-gray-500">
-                {aboutData.mission.description}
+                {mission.description}
             </p>
         </div>
 
@@ -303,10 +271,10 @@ const About = () => {
             viewport={{ once: true, margin: "-50px" }}
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-            {aboutData.mission.values.map((value, index) => (
+            {mission.values?.map((value, index) => (
                 <ValueCard 
                     key={index}
-                    icon={value.icon}
+                    iconName={value.icon} 
                     title={value.title}
                     description={value.description}
                 />
@@ -314,13 +282,11 @@ const About = () => {
         </motion.div>
       </section>
 
-      {/* 3. IMPACT STATS SECTION (Dark Mode) */}
+      {/* 4. IMPACT STATS SECTION */}
       <section className="bg-[#111] text-white py-24 px-6 md:px-16 lg:px-24 relative overflow-hidden">
-        {/* Abstract Background Decoration */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#b3f5e1]/5 rounded-full blur-[120px] pointer-events-none" />
         
         <div className="grid lg:grid-cols-2 gap-20 items-center relative z-10">
-            {/* Image Side */}
             <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -328,14 +294,13 @@ const About = () => {
                 className="relative rounded-3xl overflow-hidden aspect-square lg:aspect-[4/3]"
             >
                 <img 
-                    src={aboutData.stats.image}
+                    src={stats.image}
                     className="w-full h-full object-cover"
-                    alt="Happy Freelancer" 
+                    alt="Impact" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-tr from-black/60 to-transparent" />
             </motion.div>
 
-            {/* Stats Side */}
             <div className="space-y-16">
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -343,12 +308,12 @@ const About = () => {
                     transition={{ duration: 0.6 }}
                 >
                     <h2 className="text-4xl md:text-6xl font-medium tracking-tight mb-6">
-                        {aboutData.stats.title.line1} <br/>
-                        <span className="text-[#b3f5e1]">{aboutData.stats.title.line2}</span>
+                        {stats.title?.line1} <br/>
+                        <span className="text-[#b3f5e1]">{stats.title?.line2}</span>
                     </h2>
-                    <p className="text-gray-400 text-lg max-w-md">
-                        {aboutData.stats.description}
-                    </p>
+                    <h5 className="text-gray-400 text-lg max-w-md">
+                        {stats.description}
+                    </h5>
                 </motion.div>
 
                 <motion.div 
@@ -357,7 +322,7 @@ const About = () => {
                     whileInView="visible"
                     className="grid grid-cols-2 gap-10"
                 >
-                    {aboutData.stats.metrics.map((metric, index) => (
+                    {stats.metrics?.map((metric, index) => (
                         <StatCard 
                             key={index}
                             number={metric.number} 
@@ -370,20 +335,20 @@ const About = () => {
         </div>
       </section>
 
-      {/* 4. TEAM SECTION */}
+      {/* 5. TEAM SECTION */}
       <section className="px-6 md:px-16 lg:px-24 py-24">
         <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-medium tracking-tight mb-4">{aboutData.team.title}</h2>
-            <p className="text-gray-500">{aboutData.team.description}</p>
+            <h2 className="text-4xl md:text-5xl font-medium tracking-tight mb-4">The Minds Behind SkillKart</h2>
+            <p className="text-gray-500">{team.description}</p>
         </div>
 
         <motion.div 
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-            {aboutData.team.members.map((member, index) => (
+            {teamMembers.map((member, index) => (
                 <TeamMember 
                     key={index}
                     name={member.name} 
@@ -394,22 +359,22 @@ const About = () => {
         </motion.div>
       </section>
 
-      {/* 5. STANDARDS / CERTIFICATIONS */}
+      {/* 6. STANDARDS SECTION */}
       <section className="py-20 bg-white border-t border-gray-100">
         <div className="text-center px-6">
-             <h3 className="text-2xl font-serif italic text-gray-400 mb-10">{aboutData.standards.title}</h3>
+             <h3 className="text-2xl font-serif italic text-gray-400 mb-10">{standards.title}</h3>
              
              <motion.div 
                 initial="hidden"
                 whileInView="visible"
                 variants={staggerContainer}
-                className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto"
+                className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto mt-10"
              >
-                {aboutData.standards.tags.map((tag, i) => (
+                {standards.tags?.map((tag, i) => (
                     <motion.div
                         key={i}
                         variants={scaleIn}
-                        className="px-6 py-3 rounded-full bg-gray-50 border border-gray-100 text-gray-600 font-medium hover:bg-[#b3f5e1] hover:text-black hover:border-[#b3f5e1] transition-all cursor-default text-sm md:text-base"
+                        className="px-6 py-2 rounded-full bg-gray-50 border border-gray-100 text-gray-600 font-medium hover:bg-black hover:text-white hover:border-black transition-all cursor-default text-sm md:text-base"
                     >
                         {tag}
                     </motion.div>
@@ -419,19 +384,37 @@ const About = () => {
       </section>
 
       {/* FOOTER CTA */}
-      <section className="py-24 bg-[#b3f5e1] text-center">
+      <section className="py-24 bg-[#e1efec] text-center">
         <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
         >
-            <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-8 text-black">{aboutData.cta.title}</h2>
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-8 text-black">{cta.title}</h2>
             <div className="flex flex-col sm:flex-row justify-center gap-6 mt-10">
-                <button className="bg-black text-white px-10 py-4 rounded-full font-bold hover:scale-105 transition-transform">
-                    {aboutData.cta.buttons.primary}
+                <button className="group relative px-10 py-4 bg-black border border-transparent rounded-full text-white font-bold flex items-center justify-center overflow-hidden transition-all duration-500 hover:bg-white hover:text-black">
+                     <div className="relative flex items-center overflow-hidden h-5">
+                        <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                            <span className="whitespace-nowrap">{cta.buttons?.primary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                        <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0 text-white group-hover:text-black">
+                            <span className="whitespace-nowrap">{cta.buttons?.primary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                    </div>
                 </button>
-                <button className="bg-white text-black px-10 py-4 rounded-full font-bold hover:scale-105 transition-transform">
-                    {aboutData.cta.buttons.secondary}
+                <button className="group relative px-10 py-4 bg-white border border-transparent rounded-full text-black font-bold flex items-center justify-center overflow-hidden transition-all duration-500 hover:bg-black hover:text-white">
+                     <div className="relative flex items-center overflow-hidden h-5">
+                        <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                            <span className="whitespace-nowrap">{cta.buttons?.secondary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                        <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0 text-black group-hover:text-white">
+                            <span className="whitespace-nowrap">{cta.buttons?.secondary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                    </div>
                 </button>
             </div>
         </motion.div>

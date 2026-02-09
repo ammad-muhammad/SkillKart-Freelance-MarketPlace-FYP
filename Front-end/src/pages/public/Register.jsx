@@ -148,18 +148,16 @@ const RoleCard = ({ role, title, description, icon: Icon, isSelected, onClick })
 };
 
 // --- SELECT DROPDOWN ---
-const ModernSelect = ({ options, value, onChange, name, label, error }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
+const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, onToggle, openUpward = false }) => {
   return (
-    <motion.div className="relative z-30" variants={staggerItem}>
+    <motion.div className={`relative ${isOpen ? "z-[100]" : "z-10"}`} variants={staggerItem}>
       {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
       <motion.button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium text-left flex items-center justify-between transition-all duration-300 ${
           error ? "border-red-300 focus:border-red-500" : "border-gray-200 hover:border-gray-300"
-        }`}
+        } ${isOpen ? "border-black bg-white shadow-sm" : ""}`}
       >
         <span className={value ? "text-black" : "text-gray-400"}>
           {value || "Select an option"}
@@ -171,25 +169,28 @@ const ModernSelect = ({ options, value, onChange, name, label, error }) => {
 
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="absolute top-full mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-xl z-50"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className={`absolute ${openUpward ? "bottom-full mb-3" : "top-full mt-2"} left-0 w-full bg-white border-2 border-gray-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[999] overflow-hidden`}
         >
-          {options.map((option) => (
-            <motion.button
-              key={option}
-              type="button"
-              onClick={() => {
-                onChange({ target: { name, value: option } });
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
-              whileHover={{ x: 4 }}
-            >
-              {option}
-            </motion.button>
-          ))}
+          <div className="max-h-60 overflow-y-auto">
+            {options.map((option) => (
+              <motion.button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onChange({ target: { name, value: option } });
+                  onToggle();
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 text-black font-medium"
+                whileHover={{ x: 4 }}
+              >
+                {option}
+              </motion.button>
+            ))}
+          </div>
         </motion.div>
       )}
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
@@ -201,10 +202,12 @@ const ModernSelect = ({ options, value, onChange, name, label, error }) => {
 const Register = () => {
   const [step, setStep] = useState(0); // 0: Role Selection, 1: Basic Registration, 2: Profile Completion
   const [userRole, setUserRole] = useState(null); // "client" or "freelancer"
+  const [openDropdown, setOpenDropdown] = useState(null); // Track which dropdown is open
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
+    acceptedTerms: false,
     firstName: "",
     lastName: "",
     companyType: "", // For client
@@ -230,10 +233,10 @@ const Register = () => {
   const heroOpacity = useTransform(heroScroll, [0, 0.8], [0.7, 0.3]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     // Clear error for this field when user starts typing
     if (errors[name]) {
@@ -255,6 +258,8 @@ const Register = () => {
     
     if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
+    
+    if (!formData.acceptedTerms) newErrors.acceptedTerms = "You must agree to the Terms & Conditions";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -284,6 +289,11 @@ const Register = () => {
   const handleRoleSelect = (role) => {
     setUserRole(role);
     setStep(1);
+    setOpenDropdown(null);
+  };
+
+  const toggleDropdown = (id) => {
+    setOpenDropdown(prev => prev === id ? null : id);
   };
 
   const handleNextStep = async () => {
@@ -523,28 +533,33 @@ const Register = () => {
                   />
 
                   {/* Terms & Conditions */}
-                  <motion.label 
-                    className="flex items-start gap-2 cursor-pointer mt-4"
-                    variants={staggerItem}
-                  >
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 rounded border-2 border-gray-300 cursor-pointer accent-black mt-0.5"
-                      required
-                    />
-                    <span className="text-gray-600 font-medium text-xs">
-                      I agree to the <span className="font-bold text-black">Terms of Service</span> and <span className="font-bold text-black">Privacy Policy</span>
-                    </span>
-                  </motion.label>
+                  <motion.div variants={staggerItem} className="space-y-1">
+                    <label className="flex items-start gap-2 cursor-pointer mt-4">
+                      <input 
+                        type="checkbox" 
+                        name="acceptedTerms"
+                        checked={formData.acceptedTerms}
+                        onChange={handleInputChange}
+                        className={`w-4 h-4 rounded border-2 cursor-pointer accent-black mt-0.5 transition-colors ${
+                          errors.acceptedTerms ? "border-red-300" : "border-gray-200"
+                        }`}
+                      />
+                      <span className="text-gray-600 font-medium text-xs">
+                        I agree to the <span className="font-bold text-black">Terms of Service</span> and <span className="font-bold text-black">Privacy Policy</span>
+                      </span>
+                    </label>
+                    {errors.acceptedTerms && <p className="text-red-500 text-[10px] ml-6">{errors.acceptedTerms}</p>}
+                  </motion.div>
 
                   {/* Next Button */}
                   <motion.button
                     type="button"
                     onClick={handleNextStep}
+                    disabled={!formData.acceptedTerms}
                     variants={staggerItem}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-black hover:bg-gray-900 text-white py-3 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 mt-6"
+                    whileHover={{ scale: formData.acceptedTerms ? 1.02 : 1 }}
+                    whileTap={{ scale: formData.acceptedTerms ? 0.98 : 1 }}
+                    className={`w-full ${formData.acceptedTerms ? "bg-black hover:bg-gray-900" : "bg-gray-300 cursor-not-allowed"} text-white py-3 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 mt-6`}
                   >
                     Continue <ArrowUpRight size={16} />
                   </motion.button>
@@ -627,6 +642,9 @@ const Register = () => {
                           value={formData.companyType}
                           onChange={handleInputChange}
                           error={errors.companyType}
+                          isOpen={openDropdown === "companyType"}
+                          onToggle={() => toggleDropdown("companyType")}
+                          openUpward={true}
                         />
                       </motion.div>
 
@@ -649,6 +667,9 @@ const Register = () => {
                           options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Other"]}
                           value={formData.industry}
                           onChange={handleInputChange}
+                          isOpen={openDropdown === "industry"}
+                          onToggle={() => toggleDropdown("industry")}
+                          openUpward={true}
                         />
                       </motion.div>
                     </>
@@ -665,6 +686,9 @@ const Register = () => {
                           value={formData.skillCategory}
                           onChange={handleInputChange}
                           error={errors.skillCategory}
+                          isOpen={openDropdown === "skillCategory"}
+                          onToggle={() => toggleDropdown("skillCategory")}
+                          openUpward={true}
                         />
                       </motion.div>
 
