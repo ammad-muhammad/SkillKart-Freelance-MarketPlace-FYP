@@ -1,10 +1,13 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from "framer-motion";
 import { 
-  ArrowUpRight, Shield, Scale, Gavel,  
-  Users, DollarSign, Copyright, AlertTriangle, 
-  FileCheck, Ban, Terminal 
+  Shield, Scale, Gavel, 
+  Users, DollarSign, Copyright, Ban, 
+  Terminal, ArrowDown, FileText, Info, 
+  Check, FileCheck, ArrowUpRight, AlertTriangle,
+  Layers, Globe, Fingerprint, Lock
 } from "lucide-react";
+import IconButton from "../../Components/common/buttons/IconButton";
 
 // --- ANIMATION VARIANTS ---
 const fadeInUp = {
@@ -21,37 +24,27 @@ const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const sidebarVariant = {
-  hidden: { opacity: 0, x: -20 },
-  visible: { 
-    opacity: 1, 
-    x: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { staggerChildren: 0.1 }
   }
 };
 
 // --- DATA STRUCTURE ---
 const termsData = {
   lastUpdated: "January 20, 2026",
-  intro: {
+  hero: {
     title: "Terms of Service",
-    subtitle: "Please read these terms carefully before exploring the SkillKart ecosystem.",
-    description: "Welcome to SkillKart. These Terms of Service ('Terms') govern your access to and use of the SkillKart platform, website, and services. By creating an account or accessing our platform, you agree to be bound by these Terms. If you do not agree to these Terms, you may not access or use usage of our Services."
+    subtitle: "The Legal Framework of the SkillKart Ecosystem.",
+    description: "Welcome to SkillKart. These Terms of Service ('Terms') govern your access to and use of the SkillKart platform. By creating an account, you agree to be bound by these protocols that ensure a fair and safe marketplace for all.",
+    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=2670&auto=format&fit=crop"
   },
   sections: [
     {
       id: "acceptance",
       title: "Acceptance of Terms",
-      icon: <FileCheck size={20} />,
+      icon: <FileCheck className="w-5 h-5" />,
       content: [
         {
-          heading: "Agreement",
+          heading: "Contractual Binding",
           text: "By accessing or using SkillKart, you agree to comply with and be bound by these Terms and our Privacy Policy. These Terms apply to all visitors, users, and others who utilize our Service."
         },
         {
@@ -62,54 +55,50 @@ const termsData = {
     },
     {
       id: "definitions",
-      title: "Definitions",
-      icon: <Terminal size={20} />,
+      title: "Terminology",
+      icon: <Terminal className="w-5 h-5" />,
       content: [
         {
-          heading: "Platform",
-          text: "Refers to the SkillKart website and related services provided by SkillKart Inc."
+          heading: "Platform Ecosystem",
+          text: "Refers to the SkillKart website, mobile applications, and related services provided by SkillKart Inc."
         },
         {
-          heading: "User",
-          text: "Any individual or entity who accesses or uses the Platform, including Freelancers and Clients."
+          heading: "User Roles",
+          text: "Any individual or entity who accesses or uses the Platform, including Freelancers (Sellers) and Clients (Buyers)."
         },
         {
-          heading: "Freelancer",
-          text: "A User who offers and performs services ('Gigs') for Clients through the Platform."
-        },
-        {
-          heading: "Client",
-          text: "A User who purchases services ('Gigs') from Freelancers through the Platform."
+          heading: "Digital Gigs",
+          text: "A User who offers and performs services ('Gigs') for Clients through the Platform. Clients are Users who purchase these services."
         }
       ]
     },
     {
       id: "accounts",
       title: "Account Registration",
-      icon: <Users size={20} />,
+      icon: <Users className="w-5 h-5" />,
       content: [
         {
-          heading: "Eligibility",
-          text: "You must be at least 18 years old to create an account on SkillKart. By creating an account, you represent and warrant that you are capable of entering into a binding contract."
+          heading: "Identity Veracity",
+          text: "You must provide honest information. Using bots or false identities to manipulate our marketplace leads to permanent exclusion."
         },
         {
           heading: "Account Security",
-          text: "You are responsible for maintaining the confidentiality of your account credentials. You agree to notify us immediately of any unauthorized use of your account. SkillKart is not liable for any loss or damage arising from your failure to protect your account."
+          text: "You are responsible for maintaining the confidentiality of your account credentials. You agree to notify us immediately of any unauthorized use of your account."
         }
       ]
     },
     {
       id: "freelancers",
       title: "Freelancer Obligations",
-      icon: <Gavel size={20} />,
+      icon: <Gavel className="w-5 h-5" />,
       content: [
         {
           heading: "Service Quality",
           text: "Freelancers must perform services in a professional manner and deliver work that meets the specifications agreed upon with the Client."
         },
         {
-          heading: "Independence",
-          text: "Freelancers acknowledge that they are independent contractors and not employees, partners, or agents of SkillKart. You are solely responsible for your own taxes and insurance."
+          heading: "Contractor Autonomy",
+          text: "Freelancers acknowledge that they are independent contractors and not employees of SkillKart. You are solely responsible for your own taxes and insurance."
         },
         {
           heading: "Prohibited Content",
@@ -119,72 +108,72 @@ const termsData = {
     },
     {
       id: "payments",
-      title: "Payments & Fees",
-      icon: <DollarSign size={20} />,
+      title: "Payments & Escrow",
+      icon: <DollarSign className="w-5 h-5" />,
       content: [
         {
           heading: "Service Fees",
-          text: "SkillKart charges a service fee on all transactions to cover platform maintenance and support. This fee is deducted automatically from the payment released to the Freelancer."
+          text: "SkillKart charges a service fee on all transactions to cover platform maintenance. This fee is clearly displayed before any transaction."
         },
         {
-          heading: "Escrow System",
-          text: "Payments are held in escrow until the Client marks the order as complete. This ensures security for both parties. Disputes are handled via our Resolution Center."
+          heading: "Neutral Escrow",
+          text: "Payments are held in a secure neutral account until the Client marks the order as complete. Disputes are handled via our Resolution Center."
         },
         {
-          heading: "Withdrawals",
-          text: "Funds can be withdrawn to your connected bank account or payment method after a standard clearance period."
+          heading: "Withdrawal Policy",
+          text: "Funds can be withdrawn to connected bank accounts after a standard clearance period designed to prevent fraud."
         }
       ]
     },
     {
       id: "ip",
       title: "Intellectual Property",
-      icon: <Copyright size={20} />,
+      icon: <Copyright className="w-5 h-5" />,
       content: [
         {
           heading: "Ownership of Work",
-          text: "Unless otherwise clearly stated in the Gig description, when the work is delivered and paid for, the Client is granted all intellectual property rights, including but not limited to, copyright in the work delivered from the Freelancer."
+          text: "Upon full payment, the Client is usually granted all intellectual property rights for the delivered work, unless special arrangements are documented."
         },
         {
           heading: "Platform IP",
-          text: "The SkillKart logo, design, and original content are the exclusive property of SkillKart Inc. and are protected by copyright and benchmark laws."
+          text: "The SkillKart logo, design, and original source code are the exclusive property of SkillKart Inc. and are protected by international law."
         }
       ]
     },
     {
       id: "prohibited",
       title: "Prohibited Activities",
-      icon: <Ban size={20} />,
+      icon: <Ban className="w-5 h-5" />,
       content: [
         {
-          heading: "Zero Tolerance",
-          text: "We strictly prohibit spam, fraud, harassment, hate speech, and the distribution of malware. Engaging in such activities will result in immediate account suspension."
+          heading: "Marketplace Integrity",
+          text: "Spam, fraud, harassment, and off-platform payment attempts are strictly prohibited and result in immediate account termination."
         },
         {
           heading: "Circumvention",
-          text: "Users may not communicate or transact outside the SkillKart platform for orders initiated on SkillKart to avoid service fees. This is a violation of our Terms."
+          text: "Users may not communicate or transact outside the SkillKart platform for orders initiated on the platform to avoid service fees."
         }
       ]
     },
     {
       id: "liability",
       title: "Limitation of Liability",
-      icon: <AlertTriangle size={20} />,
+      icon: <AlertTriangle className="w-5 h-5" />,
       content: [
         {
-          heading: "Disclaimer",
-          text: "SkillKart services are provided 'as is'. We expressly disclaim all warranties, whether express or implied. We are not liable for any indirect, incidental, or consequential damages arising from your use of the platform."
+          heading: "Liability Disclaimer",
+          text: "SkillKart services are provided 'as is'. We are not liable for any indirect, incidental, or consequential damages arising from your use of the platform."
         }
       ]
     },
     {
       id: "termination",
-      title: "Termination",
-      icon: <Shield size={20} />,
+      title: "Right of Exclusion",
+      icon: <Shield className="w-5 h-5" />,
       content: [
         {
           heading: "Right to Terminate",
-          text: "We may terminate or suspend your account immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms."
+          text: "We reserve the right to suspend or terminate your account immediately if you breach these Terms or engage in conduct that harms the community."
         }
       ]
     }
@@ -193,31 +182,28 @@ const termsData = {
 
 // --- COMPONENTS ---
 
-// 1. Navigation Item
 const NavItem = ({ section, activeId, onClick }) => {
   const isActive = activeId === section.id;
   
   return (
-    <motion.li 
-      variants={sidebarVariant}
-      className="relative"
-    >
+    <motion.li className="relative group">
       <button
         onClick={() => onClick(section.id)}
-        className={`flex items-center gap-4 w-full text-left py-3 group transition-colors duration-300 ${
-          isActive ? "text-black font-semibold" : "text-gray-400 hover:text-gray-600"
+        className={`flex items-center gap-4 w-full text-left py-3 transition-all duration-300 ${
+          isActive ? "text-black font-bold" : "text-gray-400 hover:text-gray-900"
         }`}
       >
-        <span className={`p-2 rounded-lg transition-colors duration-300 ${isActive ? "bg-[#b3f5e1] text-black" : "bg-gray-100 group-hover:bg-gray-200"}`}>
+        <span className={`p-2 rounded-xl transition-all duration-500 scale-90 group-hover:scale-100 ${
+          isActive ? "bg-[#b3f5e1] text-black shadow-lg shadow-[#b3f5e1]/20" : "bg-gray-100"
+        }`}>
           {section.icon}
         </span>
-        <span className="text-sm uppercase tracking-wider">{section.title}</span>
+        <span className="text-[11px] uppercase tracking-[0.2em] font-black">{section.title}</span>
         
         {isActive && (
           <motion.div 
-            layoutId="activeIndicator"
-            className="absolute left-[-16px] top-1/2 -translate-y-1/2 w-1 h-8 bg-black rounded-r-full"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            layoutId="activePillTerms"
+            className="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-black rounded-full"
           />
         )}
       </button>
@@ -225,10 +211,9 @@ const NavItem = ({ section, activeId, onClick }) => {
   );
 };
 
-// 2. Content Section
-const ContentSection = ({ section, index }) => {
+const ContentBlock = ({ section }) => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px 0px" });
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
     <motion.section
@@ -237,24 +222,27 @@ const ContentSection = ({ section, index }) => {
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={fadeInUp}
-      transition={{ delay: index * 0.1 }}
-      className="mb-20 scroll-mt-32"
+      className="mb-24 last:mb-0"
     >
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 bg-black text-white rounded-xl">
+      <div className="flex items-center gap-6 mb-12">
+        <div className="w-16 h-16 bg-black text-[#b3f5e1] rounded-[1.5rem] flex items-center justify-center shadow-xl rotate-3">
           {section.icon}
         </div>
-        <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{section.title}</h2>
+        <h2 className="text-4xl md:text-5xl font-black text-black tracking-tighter uppercase italic">
+            {section.title}
+        </h2>
       </div>
 
-      <div className="space-y-8 pl-0 md:pl-4 border-l-2 border-dashed border-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {section.content.map((block, idx) => (
-          <div key={idx} className="relative group">
-            {/* Hover Indicator */}
-            <div className="absolute -left-[21px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white transition-colors duration-300 group-hover:bg-[#b3f5e1]" />
-            
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{block.heading}</h3>
-            <p className="text-gray-600 leading-relaxed text-lg">{block.text}</p>
+          <div key={idx} className="group p-8 rounded-[2rem] bg-gray-50 border border-transparent hover:border-[#b3f5e1] hover:bg-white hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+            <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-[#b3f5e1]" />
+                {block.heading}
+            </h3>
+            <p className="text-gray-500 leading-relaxed font-light text-lg">
+                {block.text}
+            </p>
           </div>
         ))}
       </div>
@@ -262,24 +250,24 @@ const ContentSection = ({ section, index }) => {
   );
 };
 
-// --- MAIN PAGE ---
 const TermsOfServices = () => {
   const [activeSection, setActiveSection] = useState("acceptance");
   const heroRef = useRef(null);
-  
-  // Parallax for Hero
+
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  // Handle Scroll Spy
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+
+  // Scroll Spy Logic
   useEffect(() => {
     const handleScroll = () => {
       const sections = termsData.sections.map(s => document.getElementById(s.id));
-      const scrollPosition = window.scrollY + 150; // Offset
+      const scrollPosition = window.scrollY + 200;
 
       for (const section of sections) {
         if (section && section.offsetTop <= scrollPosition && (section.offsetTop + section.offsetHeight) > scrollPosition) {
@@ -293,125 +281,180 @@ const TermsOfServices = () => {
   }, []);
 
   const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
+    const el = document.getElementById(id);
+    if (el) {
       window.scrollTo({
-        top: element.offsetTop - 100,
+        top: el.offsetTop - 120,
         behavior: "smooth"
       });
-      setActiveSection(id); // Optimistic update
     }
   };
 
   return (
-    <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black pt-24">
+    <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black">
       
-      {/* ---------------- HERO SECTION ---------------- */}
-      <div ref={heroRef} className="relative h-[75vh] w-full overflow-hidden bg-gray-900 flex items-center justify-center">
-        {/* Background Image with Parallax */}
+      {/* --- HERO SECTION --- */}
+      <section ref={heroRef} className="relative h-[90vh] w-full flex items-center justify-center overflow-hidden bg-black pt-20">
         <motion.div 
-            style={{ y: heroY, opacity: heroOpacity }}
+            style={{ y: heroY, scale: heroScale, opacity: heroOpacity }}
             className="absolute inset-0"
         >
-          <img 
-            src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=2670&auto=format&fit=crop" 
-            alt="Terms and Conditions Legal" 
-            className="w-full h-full object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
+            <img 
+                src={termsData.hero.image} 
+                alt="Legal Framework" 
+                className="w-full h-full object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700"
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent" />
         </motion.div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-6 text-center max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <span className="inline-block py-1 px-3 rounded-full bg-[#b3f5e1]/10 border border-[#b3f5e1]/30 text-[#b3f5e1] text-xs font-bold tracking-widest uppercase mb-6 backdrop-blur-md">
-              Effective from {termsData.lastUpdated}
-            </span>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-white mb-8 leading-[0.9]">
-              {termsData.intro.title}
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-3xl mx-auto text-center">
-              {termsData.intro.subtitle}
-            </p>
-          </motion.div>
+        {/* Unique Cyber-Grid Overlay */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none" 
+             style={{ 
+               backgroundImage: `radial-gradient(#b3f5e1 0.5px, transparent 0.5px)`, 
+               backgroundSize: '30px 30px' 
+             }} 
+        />
+
+        <div className="container mx-auto px-6 relative z-10">
+            <motion.div
+                initial={{ opacity: 0, y: 50, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="max-w-4xl"
+            >
+                <div className="flex items-center mb-6">
+                    <span className="w-12 h-[2px] bg-[#b3f5e1]" />
+                    <span className="text-[#b3f5e1] text-xs font-black uppercase tracking-[0.5em]">
+                        Document TS-2026
+                    </span>
+                </div>
+                <h1 className="text-7xl md:text-9xl font-black text-white tracking-tighter leading-[0.85] mb-8 uppercase">
+                    Terms Of Service
+                </h1>
+                <p className="text-xl md:text-2xl text-gray-300 font-light max-w-2xl leading-relaxed mb-15">
+                    {termsData.hero.subtitle}
+                </p>
+                
+                <div className="flex flex-wrap gap-6 mt-5">
+                    <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-bold">
+                        <Lock size={18} className="text-[#b3f5e1]" />
+                        Secure Marketplace
+                    </div>
+                    <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-bold">
+                        <Gavel size={18} className="text-[#b3f5e1]" />
+                        Professional Standards
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+
+        <motion.div 
+            animate={{ y: [0, 10, 0] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="absolute bottom-12 left-1/2 -translate-x-1/2 text-white/50"
+        >
+            <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] uppercase tracking-widest font-black">Scroll to Explore</span>
+                <div className="w-px h-12 bg-linear-to-b from-[#b3f5e1] to-transparent" />
+            </div>
+        </motion.div>
+      </section>
+
+      {/* --- CONTENT SPREAD --- */}
+      <div className="container mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-20">
+            
+            {/* LEFT: Premium Navigation */}
+            <aside className="lg:col-span-3">
+                <div className="sticky top-32">
+                    <div className="mb-10">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.3em] mb-8">
+                            Platform Protocols
+                        </h4>
+                        <nav>
+                            <ul className="space-y-2">
+                                {termsData.sections.map((section) => (
+                                    <NavItem 
+                                        key={section.id} 
+                                        section={section} 
+                                        activeId={activeSection}
+                                        onClick={scrollToSection}
+                                    />
+                                ))}
+                            </ul>
+                        </nav>
+                    </div>
+
+                    {/* Meta Info */}
+                    <div className="p-8 rounded-[2rem] bg-black text-white shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#b3f5e1]/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                        <h5 className="text-xl font-black mb-4 italic tracking-tight">Last Revised</h5>
+                        <p className="text-sm text-gray-400 mb-8 font-light leading-relaxed">
+                            These terms were last updated on {termsData.lastUpdated}. Usage of the platform constitutes agreement.
+                        </p>
+                        <IconButton text="Legal PDF" variant="secondary" className="!w-full !justify-center" />
+                    </div>
+                </div>
+            </aside>
+
+            {/* RIGHT: Editorial Content */}
+            <div className="lg:col-span-9">
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mb-16 md:mb-24"
+                >
+                    <p className="text-xl md:text-2xl font-light text-gray-500 leading-relaxed border-l-4 border-[#b3f5e1] pl-8 italic">
+                        {termsData.hero.description}
+                    </p>
+                </motion.div>
+
+                {termsData.sections.map((section) => (
+                   <ContentBlock key={section.id} section={section} />
+                ))}
+
+                {/* Final Trust Section */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    className="mt-16 md:mt-24 p-10 md:p-16 bg-gray-50 rounded-[3rem] text-center relative overflow-hidden border border-gray-100"
+                >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#b3f5e110_0%,_transparent_70%)]" />
+                    <div className="relative z-10 flex flex-col items-center gap-5">
+                        <Scale size={60} strokeWidth={1.5} className="text-black mb-6" />
+                        <h2 className="text-4xl md:text-5xl font-black text-black tracking-tighter uppercase mb-6">
+                            Understood Everything?
+                        </h2>
+                        <p className="text-lg text-gray-500 mb-12 max-w-xl mx-auto font-light leading-relaxed text-center">
+                            By continuing to build on SkillKart, you acknowledge and agree to the platform protocols outlined above.
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-8 items-center">
+                            <IconButton text="I Agree & Accept" variant="primary" />
+                            <IconButton text="Talk to Legal Team" variant="secondary" />
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+
         </div>
       </div>
 
-      {/* ---------------- MAIN CONTENT LAYOUT ---------------- */}
-      <div className="container mx-auto px-6 md:px-12 lg:px-20 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          
-          {/* LEFT: Sticky Sidebar Navigation */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-32">
-              <motion.div 
-                initial="hidden" 
-                animate="visible" 
-                variants={staggerContainer}
-                className="space-y-2 border-l border-gray-100 pl-4"
-              >
-                <h4 className="text-xs font-bold uppercase text-gray-400 tracking-widest mb-6 pl-2">
-                  Table of Contents
-                </h4>
-                <ul className="space-y-2">
-                  {termsData.sections.map((section) => (
-                    <NavItem 
-                      key={section.id} 
-                      section={section} 
-                      activeId={activeSection}
-                      onClick={scrollToSection}
-                    />
-                  ))}
-                </ul>
-              </motion.div>
-            </div>
+      {/* --- FOOTER DECORATION --- */}
+      <footer className="py-12 border-t border-gray-100">
+          <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10">
+              <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-[#b3f5e1] font-black">S</div>
+                  <span className="text-sm font-black uppercase tracking-widest text-black">SkillKart Legal</span>
+              </div>
+              <div className="text-[10px] text-gray-400 uppercase tracking-[0.4em] font-black text-center">
+                  Secure Digital Marketplace Foundation © 2026
+              </div>
           </div>
+      </footer>
 
-          {/* RIGHT: Content Area */}
-          <div className="lg:col-span-9">
-            {/* Introduction Text */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="mb-24"
-            >
-              <p className="text-xl md:text-2xl leading-relaxed font-light text-gray-600 border-l-4 border-[#b3f5e1] pl-6 md:pl-10 py-2">
-                {termsData.intro.description}
-              </p>
-            </motion.div>
-
-            {/* Dynamic Sections */}
-            <div>
-              {termsData.sections.map((section, index) => (
-                <ContentSection key={section.id} section={section} index={index} />
-              ))}
-            </div>
-
-            {/* Bottom Call to Action */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="mt-32 p-12 bg-gray-100 rounded-3xl border border-gray-100 text-center flex flex-col items-center"
-            >
-              <Scale className="w-16 h-16 mx-auto text-black mb-8" />
-              <h3 className="text-3xl font-bold mb-6">Need Legal Clarification?</h3>
-              <p className="text-gray-600 mb-8 max-w-xl mx-auto text-center">
-                If you have questions regarding our terms, intellectual property disputes, or platform rules, our legal team is here to assist you.
-              </p>
-              <button className="bg-black hover:bg-gray-800 text-white px-8 py-4 rounded-full font-bold transition-all hover:shadow-xl hover:-translate-y-1 flex items-center gap-2 mx-auto mt-5">
-                Contact Legal Team <ArrowUpRight size={18} />
-              </button>
-            </motion.div>
-
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -39,7 +39,7 @@ const Home = () => {
   const sampleCards = [
     {
       id: 0,
-      title: 'Ammad',
+      title: 'Muhammad Ammad',
       position: "CEO",
       bgColor: '#000000',
       textColor: '#ffffff',
@@ -70,7 +70,7 @@ const Home = () => {
     {
       id: 3,
       title: 'Shammer',
-      position: "Dishwasher",
+      position: "Marketing",
       bgColor: '#ffffff',
       textColor: '#000000',
       image: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg',
@@ -154,15 +154,15 @@ const Home = () => {
       <HomeBanner
         backgroundImage="https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg"
         searchIcon="/assets/icons/ic-search.svg"
-        titleStart="We Create"
-        titleEnd="Category Leaders"
-        subtitle="on every searchable platform"
+        titleStart="A Trusted Pakistani Platform"
+        titleEnd="for Freelancers and Digital Products"
+        subtitle=""
         descriptionOne="Organic media planners creating, distributing & optimising search-first content for SEO, Social, PR"
         descriptionTwo="4 Global Offices serving UK, USA (New York) & EU"
         searchPlaceholder="Search anything..."
       />
       <InfoBar
-        description="A global team of search-first content marketers engineering semantic relevancy & category signals for both the internet and people"
+        description="SkillKart is a Pakistan-based freelancing and product-selling platform. It helps skilled people find work and helps clients hire safely at affordable prices."
         headlineWords={["Driving", "Demand", "&"]}
         highlightWord="Discovery"
         highlightImage="https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg"
@@ -184,7 +184,7 @@ const Home = () => {
       />
       <LinerarTextAnimation items={linerText} />
       <CardStackScroll
-        title="Legacy In The Making"
+        title="Legacy in the making"
         cards={sampleCards}
         backgroundColor="#f0f0f0"
       />

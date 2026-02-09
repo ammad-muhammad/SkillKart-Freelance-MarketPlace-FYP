@@ -26,33 +26,53 @@ const LgLinks = ({
     if (!showStats || !statsRef.current || !stats || stats.length === 0) return;
 
     const statElements = statRefs.current;
+    
+    // Store animations to clean up later
+    const animations = [];
 
-    statElements.forEach((el, index) => {
-      if (!el) return;
-
-      const numericValue = parseInt(stats[index].value.replace(/\D/g, ''));
-      const suffix = stats[index].value.replace(/[0-9]/g, '');
-
-      // Create a counter object to animate
-      const counter = { value: 0 };
-
-      gsap.to(counter, {
-        value: numericValue,
-        duration: 2,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: statsRef.current,
-          start: 'top 80%',
-          toggleActions: 'play none none none',
-        },
-        onUpdate: function () {
-          el.textContent = Math.floor(counter.value) + suffix;
+      statElements.forEach((el, index) => {
+        if (!el) return;
+  
+        const valStr = stats[index].value;
+        
+        // Extract the first number found for animation base
+        const match = valStr.match(/^(\d+)(.*)$/);
+        
+        if (!match) {
+           // No number at start (or at all), just display text
+           el.textContent = valStr;
+           return;
         }
+  
+        const numericValue = parseInt(match[1]);
+        const suffix = match[2]; // Everything after the initial number, e.g. "/7" or "%" or "+"
+  
+        // Create a counter object to animate
+        const counter = { value: 0 };
+  
+        const anim = gsap.to(counter, {
+          value: numericValue,
+          duration: 2,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: statsRef.current,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+          onUpdate: function () {
+            el.textContent = Math.floor(counter.value) + suffix;
+          }
+        });
+        animations.push(anim);
       });
-    });
 
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      animations.forEach(anim => {
+        if (anim) {
+          anim.kill();
+          if (anim.scrollTrigger) anim.scrollTrigger.kill();
+        }
+      });
     };
   }, [stats, showStats]);
 
@@ -75,7 +95,7 @@ const LgLinks = ({
       {/* Header */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
         <h1 className="text-6xl md:text-8xl font-medium flex items-center gap-4 tracking-tight">
-          {headerTitle.split(' ')[0]}
+          {(headerTitle || '').split(' ')[0]}
           <span className="aspect-square h-[3rem] md:h-[4rem] rounded-xl overflow-hidden inline-block shadow-sm">
             <img
               src={headerImage}
@@ -83,7 +103,7 @@ const LgLinks = ({
               alt="team"
             />
           </span>
-          {headerTitle.split(' ').slice(1).join(' ')}
+          {(headerTitle || '').split(' ').slice(1).join(' ')}
         </h1>
 
         <IconButton
