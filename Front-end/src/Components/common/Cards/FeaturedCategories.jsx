@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const FeaturedCategories = () => {
+const FeaturedCategories = ({ categories }) => {
   const sectionRef = useRef(null);
   const contentRef = useRef(null);
   const rightColRef = useRef(null);
@@ -10,12 +10,14 @@ const FeaturedCategories = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
-  const projects = [
+  const defaultProjects = [
     { id: '01', title: 'SIXT', desc: 'Leading E Sim brand globally', date: '[2023-2025]', color: 'from-gray-800 to-black', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
     { id: '02', title: 'JD Sports', desc: 'Global Sportswear Leader', date: '[2024-2025]', color: 'from-gray-700 to-gray-900', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
     { id: '03', title: 'Parkdean Resorts', desc: 'UK Holiday Parks', date: '[2025]', color: 'from-gray-800 to-black', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
     { id: '04', title: 'Apple', desc: 'Spatial Audio Tech', date: '[2025]', color: 'from-gray-700 to-gray-900', img: 'https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg' },
   ];
+
+  const projects = categories || defaultProjects;
 
   useEffect(() => {
     const handleResize = () => {

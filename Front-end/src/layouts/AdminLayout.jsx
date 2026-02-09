@@ -33,6 +33,7 @@ import {
   X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCMSAuth } from "../cms/auth/CMSAuthContext"; // Import Auth
 
 // --- SIDEBAR DATA (Comprehensive Navigation) ---
 const NAV_ITEMS = [
@@ -201,6 +202,7 @@ const SidebarItem = ({ item, isSidebarOpen, location }) => {
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { logoutAdmin } = useCMSAuth(); // Auth Hook
   const location = useLocation();
 
   // Close mobile menu on route change
@@ -263,7 +265,9 @@ const AdminLayout = () => {
 
         {/* Footer */}
         <div className="p-3 border-t border-slate-700/50 bg-[#1b2029]">
-          <button className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors
+          <button 
+            onClick={() => logoutAdmin()}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors
             ${!isSidebarOpen ? "justify-center" : ""}`}
           >
             <LogOut size={16} className="shrink-0" />
@@ -325,7 +329,10 @@ const AdminLayout = () => {
 
               {/* Footer */}
               <div className="p-3 border-t border-slate-700/50 bg-[#1b2029]">
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors">
+                <button 
+                  onClick={() => logoutAdmin()}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors"
+                >
                   <LogOut size={16} />
                   <span className="text-sm font-medium">Logout</span>
                 </button>

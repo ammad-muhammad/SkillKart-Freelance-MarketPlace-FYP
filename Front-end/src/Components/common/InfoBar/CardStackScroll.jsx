@@ -17,10 +17,11 @@ export default function CardStackScroll({
 
   useEffect(() => {
     const items = itemsRef.current;
+    let animation;
     
     // GSAP ScrollTrigger animation for desktop
     if (window.innerWidth >= 1024) {
-      gsap.to(items, {
+      animation = gsap.to(items, {
         yPercent: -120,
         rotate: -50,
         stagger: 1,
@@ -36,7 +37,11 @@ export default function CardStackScroll({
     }
 
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      // Only kill this specific animation and its scrollTrigger
+      if (animation) {
+        animation.kill();
+        if (animation.scrollTrigger) animation.scrollTrigger.kill();
+      }
     };
   }, []);
 
