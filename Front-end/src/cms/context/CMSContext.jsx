@@ -33,8 +33,9 @@ export const CMSProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState(null);
 
-  // -------------------- PERSISTENCE --------------------
+  // -------------------- PERSISTENCE (DISABLED AS REQUESTED) --------------------
   useEffect(() => {
+    /*
     const savedData = localStorage.getItem("SKILLKART_CMS_DATA");
     if (savedData) {
       try {
@@ -49,10 +50,12 @@ export const CMSProvider = ({ children }) => {
         console.error("Failed to load CMS data", e);
       }
     }
+    */
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
+    /*
     if (isLoading) return; // Don't save while initial load is happening
     const dataToSave = {
       siteSettings,
@@ -63,12 +66,24 @@ export const CMSProvider = ({ children }) => {
       lastSaved
     };
     localStorage.setItem("SKILLKART_CMS_DATA", JSON.stringify(dataToSave));
+    */
   }, [siteSettings, pagesContent, componentsContent, mediaLibrary, formFields, lastSaved, isLoading]);
 
   // -------------------- HELPER FUNCTIONS --------------------
   const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   const updateLastSaved = () => setLastSaved(new Date().toISOString());
+  
+  const resetToDefaults = useCallback(() => {
+    localStorage.removeItem('SKILLKART_CMS_DATA');
+    setSiteSettings(initialSiteSettings);
+    setPagesContent(initialPagesContent);
+    setComponentsContent(initialComponentsContent);
+    setMediaLibrary(initialMediaLibrary);
+    setFormFields(initialFormFields);
+    setLastSaved(null);
+    window.location.reload();
+  }, []);
 
   // -------------------- SITE SETTINGS OPERATIONS --------------------
   const updateSiteSettings = useCallback((updates) => {
@@ -314,7 +329,10 @@ export const CMSProvider = ({ children }) => {
     deleteFormField,
 
     // Stats
-    getStats
+    getStats,
+
+    // Utilities
+    resetToDefaults
   };
 
   return (

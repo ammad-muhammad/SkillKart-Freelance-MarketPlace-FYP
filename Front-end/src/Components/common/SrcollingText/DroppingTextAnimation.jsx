@@ -7,7 +7,7 @@ import { SplitText } from 'gsap/SplitText';
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
-const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250", className = "-mt-[20vh]" }) => {
+const DroppingTextAnimation = ({ text = "Ready to serve SkillKart?", id = "2250", className = "-mt-[20vh]" }) => {
   const triggerRef = useRef(null);
   const headingRef = useRef(null);
 
@@ -21,7 +21,7 @@ const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250", 
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
 
-    let yStart = 150;
+    let yStart = 100;
     let yEnd = 400;
     let charyStart = -60;
 
@@ -40,15 +40,16 @@ const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250", 
     });
 
     // Animate heading position
-    gsap.to(heading, {
-      x: () => -(headingWidth - window.innerWidth + 1000),
-      y: yEnd,
+    // Animate heading position
+    const headingAnim = gsap.to(heading, {
+      x: () => -(headingWidth - window.innerWidth + (window.innerWidth * 0.1)), // Adjusted to ensure text doesn't scroll too far off
+      y: yEnd, 
       ease: 'none',
       scrollTrigger: {
         trigger: trigger,
         start: 'top 70%',
-        end: '+=' + (headingWidth - windowWidth + windowHeight * 0.35),
-        scrub: true,
+        end: '+=' + (headingWidth * 1.2), // Based on text width for more consistent pacing
+        scrub: 1,
       },
     });
 
@@ -68,7 +69,8 @@ const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250", 
     });
 
     // Animate characters
-    gsap.to(chars, {
+    // Animate characters
+    const charAnim = gsap.to(chars, {
       yPercent: 0,
       rotate: 0,
       ease: 'back.inOut(4)',
@@ -77,14 +79,22 @@ const DroppingTextAnimation = ({ text = "Ready to Rise at Seven?", id = "2250", 
       scrollTrigger: {
         trigger: trigger,
         start: 'top 72%',
-        end: '+=' + (headingWidth - windowWidth + 200),
-        scrub: true,
+        end: '+=' + (headingWidth * 1.2), // Match the heading's scroll distance
+        scrub: 1,
       },
     });
 
     // Cleanup
     return () => {
-      ScrollTrigger.getAll().forEach(st => st.kill());
+      // Correctly kill only these instances
+      if (headingAnim) {
+        headingAnim.kill();
+        if (headingAnim.scrollTrigger) headingAnim.scrollTrigger.kill();
+      }
+      if (charAnim) {
+        charAnim.kill();
+        if (charAnim.scrollTrigger) charAnim.scrollTrigger.kill();
+      }
       splitText.revert();
     };
   }, [text, id]);

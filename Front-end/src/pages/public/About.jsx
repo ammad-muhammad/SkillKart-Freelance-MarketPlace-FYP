@@ -12,6 +12,7 @@ import {
   Globe2 
 } from "lucide-react";
 import { useCMS } from "../../cms/context/CMSContext";
+import HomeBanner from "../../Components/common/Banners/HomeBanner";
 
 // --- ANIMATION VARIANTS (Consistent with Contact.jsx) ---
 const fadeInUp = {
@@ -109,7 +110,7 @@ const TeamMember = ({ name, role, img }) => (
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
     <h4 className="text-xl font-bold text-gray-900">{name}</h4>
-    <p className="text-[#b3f5e1] font-medium text-sm uppercase tracking-wider bg-black/5 inline-block px-2 py-1 rounded mt-1 group-hover:bg-black group-hover:text-[#b3f5e1] transition-colors">
+    <p className="text-gray-500 font-medium text-sm result-sm uppercase tracking-wider bg-gray-100 inline-block px-3 py-1 rounded mt-2 group-hover:bg-black group-hover:text-white transition-colors">
         {role}
     </p>
   </motion.div>
@@ -119,13 +120,18 @@ const TeamMember = ({ name, role, img }) => (
 
 const About = () => {
   const containerRef = useRef(null);
+  const sectionRef = useRef(null);
   const { getPage } = useCMS();
   const page = getPage('about');
   
-  // Parallax setup for Hero
-  const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 500], [0, 150]);
-  const y2 = useTransform(scrollY, [0, 500], [0, -150]);
+  // Localized Parallax for the "Our Story" section
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y1 = useTransform(scrollYProgress, [0, 1], ["-10%", "10%"]);
+  const y2 = useTransform(scrollYProgress, [0, 1], ["5%", "-5%"]);
 
   if (!page) return null;
 
@@ -138,11 +144,36 @@ const About = () => {
   const standards = getSection('about-standards');
   const cta = getSection('about-cta');
 
+  const teamMembers = [
+    { name: 'Muhammad Ammad', role: "CEO", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Sumair', role: "Founder", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Sherry', role: "Co-Founder", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Shammer', role: "Marketing", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Syed Obaid', role: "CO-CEO", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+    { name: 'Lamiz Khan', role: "QA Lead", img: "https://images.pexels.com/photos/35684097/pexels-photo-35684097.jpeg" },
+  ];
+
   return (
     <div ref={containerRef} className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black">
       
-      {/* 1. OUR STORY SECTION (Split Layout) */}
-      <section className="px-6 md:px-16 lg:px-24 py-20 lg:py-32 grid lg:grid-cols-2 gap-16 items-center overflow-hidden">
+      {/* 1. PREMIUM HERO SECTION */}
+      <HomeBanner
+        backgroundImage={hero.images?.main}
+        searchIcon="/assets/icons/ic-search.svg"
+        titleStart={hero.heading?.line1}
+        titleEnd={hero.heading?.line2}
+        subtitle={hero.subHeading}
+        descriptionOne={hero.description?.[0] || ""}
+        descriptionTwo={hero.description?.[2] || ""}
+        searchPlaceholder="What skill are you looking for?"
+        showSearch={false}
+        showDescription={false}
+        showBlur={true}
+        isFullWidth={true}
+      />
+
+      {/* 2. OUR STORY SECTION */}
+      <section ref={sectionRef} className="px-6 md:px-16 lg:px-24 py-10 lg:py-16 grid lg:grid-cols-2 gap-16 items-center overflow-hidden">
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -157,7 +188,7 @@ const About = () => {
             
             <SectionHeading>
                 {hero.heading?.line1} <br/> 
-                <span className="text-gray-400 font-serif italic">{hero.heading?.line2}</span>
+                <span className="text-gray-800 font-serif italic">{hero.heading?.line2}</span>
             </SectionHeading>
 
             <motion.div variants={fadeInUp} className="space-y-6 text-gray-600 text-lg leading-relaxed">
@@ -168,16 +199,24 @@ const About = () => {
 
             <motion.button 
                 variants={fadeInUp}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="mt-10 bg-black text-white px-8 py-4 rounded-full font-bold text-sm tracking-wide flex items-center gap-2 hover:bg-[#b3f5e1] hover:text-black transition-all shadow-lg"
+                className="mt-10 group relative px-8 py-4 bg-black border border-transparent rounded-full text-white font-bold flex items-center justify-center overflow-hidden transition-all duration-500 shadow-lg hover:bg-white hover:text-black"
             >
-                {hero.ctaButton} <ArrowUpRight size={18} />
+                <div className="relative flex items-center overflow-hidden h-5">
+                    <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                        <span className="whitespace-nowrap">{hero.ctaButton}</span>
+                        <ArrowUpRight size={18} />
+                    </div>
+                    
+                    <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0 text-black">
+                        <span className="whitespace-nowrap">{hero.ctaButton}</span>
+                        <ArrowUpRight size={18} />
+                    </div>
+                </div>
             </motion.button>
         </motion.div>
 
         <motion.div 
-            className="relative order-1 lg:order-2 h-[500px] lg:h-[700px] w-full rounded-[40px] overflow-hidden"
+            className="relative order-1 lg:order-2 aspect-4/5 lg:aspect-3/4 w-full rounded-[3rem] overflow-hidden shadow-2xl"
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 1 }}
@@ -185,7 +224,7 @@ const About = () => {
             <motion.img 
                 style={{ y: y1 }}
                 src={hero.images?.main}
-                className="absolute inset-0 w-full h-[120%] object-cover"
+                className="absolute -inset-y-[20%] w-full h-[140%] object-cover object-center"
                 alt="Team collaboration"
             />
             
@@ -211,7 +250,7 @@ const About = () => {
         </motion.div>
       </section>
 
-      {/* 2. MISSION & VALUES SECTION (Grid) */}
+      {/* 3. MISSION & VALUES SECTION */}
       <section className="px-6 md:px-16 lg:px-24 py-20 bg-gray-50">
         <div className="text-center max-w-3xl mx-auto mb-20">
             <h4 className="text-xs font-black uppercase text-[#b3f5e1] bg-black inline-block px-3 py-1 rounded mb-6 tracking-widest">
@@ -243,13 +282,11 @@ const About = () => {
         </motion.div>
       </section>
 
-      {/* 3. IMPACT STATS SECTION (Dark Mode) */}
+      {/* 4. IMPACT STATS SECTION */}
       <section className="bg-[#111] text-white py-24 px-6 md:px-16 lg:px-24 relative overflow-hidden">
-        {/* Abstract Background Decoration */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#b3f5e1]/5 rounded-full blur-[120px] pointer-events-none" />
         
         <div className="grid lg:grid-cols-2 gap-20 items-center relative z-10">
-            {/* Image Side */}
             <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -259,12 +296,11 @@ const About = () => {
                 <img 
                     src={stats.image}
                     className="w-full h-full object-cover"
-                    alt="Happy Freelancer" 
+                    alt="Impact" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-tr from-black/60 to-transparent" />
             </motion.div>
 
-            {/* Stats Side */}
             <div className="space-y-16">
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
@@ -275,9 +311,9 @@ const About = () => {
                         {stats.title?.line1} <br/>
                         <span className="text-[#b3f5e1]">{stats.title?.line2}</span>
                     </h2>
-                    <p className="text-gray-400 text-lg max-w-md">
+                    <h5 className="text-gray-400 text-lg max-w-md">
                         {stats.description}
-                    </p>
+                    </h5>
                 </motion.div>
 
                 <motion.div 
@@ -299,10 +335,10 @@ const About = () => {
         </div>
       </section>
 
-      {/* 4. TEAM SECTION */}
+      {/* 5. TEAM SECTION */}
       <section className="px-6 md:px-16 lg:px-24 py-24">
         <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-medium tracking-tight mb-4">{team.title}</h2>
+            <h2 className="text-4xl md:text-5xl font-medium tracking-tight mb-4">The Minds Behind SkillKart</h2>
             <p className="text-gray-500">{team.description}</p>
         </div>
 
@@ -310,9 +346,9 @@ const About = () => {
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-            {team.members?.map((member, index) => (
+            {teamMembers.map((member, index) => (
                 <TeamMember 
                     key={index}
                     name={member.name} 
@@ -323,7 +359,7 @@ const About = () => {
         </motion.div>
       </section>
 
-      {/* 5. STANDARDS / CERTIFICATIONS */}
+      {/* 6. STANDARDS SECTION */}
       <section className="py-20 bg-white border-t border-gray-100">
         <div className="text-center px-6">
              <h3 className="text-2xl font-serif italic text-gray-400 mb-10">{standards.title}</h3>
@@ -332,13 +368,13 @@ const About = () => {
                 initial="hidden"
                 whileInView="visible"
                 variants={staggerContainer}
-                className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto"
+                className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto mt-10"
              >
                 {standards.tags?.map((tag, i) => (
                     <motion.div
                         key={i}
                         variants={scaleIn}
-                        className="px-6 py-3 rounded-full bg-gray-50 border border-gray-100 text-gray-600 font-medium hover:bg-[#b3f5e1] hover:text-black hover:border-[#b3f5e1] transition-all cursor-default text-sm md:text-base"
+                        className="px-6 py-2 rounded-full bg-gray-50 border border-gray-100 text-gray-600 font-medium hover:bg-black hover:text-white hover:border-black transition-all cursor-default text-sm md:text-base"
                     >
                         {tag}
                     </motion.div>
@@ -348,7 +384,7 @@ const About = () => {
       </section>
 
       {/* FOOTER CTA */}
-      <section className="py-24 bg-[#b3f5e1] text-center">
+      <section className="py-24 bg-[#e1efec] text-center">
         <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -356,11 +392,29 @@ const About = () => {
         >
             <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-8 text-black">{cta.title}</h2>
             <div className="flex flex-col sm:flex-row justify-center gap-6 mt-10">
-                <button className="bg-black text-white px-10 py-4 rounded-full font-bold hover:scale-105 transition-transform">
-                    {cta.buttons?.primary}
+                <button className="group relative px-10 py-4 bg-black border border-transparent rounded-full text-white font-bold flex items-center justify-center overflow-hidden transition-all duration-500 hover:bg-white hover:text-black">
+                     <div className="relative flex items-center overflow-hidden h-5">
+                        <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                            <span className="whitespace-nowrap">{cta.buttons?.primary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                        <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0 text-white group-hover:text-black">
+                            <span className="whitespace-nowrap">{cta.buttons?.primary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                    </div>
                 </button>
-                <button className="bg-white text-black px-10 py-4 rounded-full font-bold hover:scale-105 transition-transform">
-                    {cta.buttons?.secondary}
+                <button className="group relative px-10 py-4 bg-white border border-transparent rounded-full text-black font-bold flex items-center justify-center overflow-hidden transition-all duration-500 hover:bg-black hover:text-white">
+                     <div className="relative flex items-center overflow-hidden h-5">
+                        <div className="flex items-center gap-2 transition-all duration-500 ease-in-out group-hover:-translate-y-full">
+                            <span className="whitespace-nowrap">{cta.buttons?.secondary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                        <div className="absolute inset-0 flex items-center gap-2 translate-y-full transition-all duration-500 ease-in-out group-hover:translate-y-0 text-black group-hover:text-white">
+                            <span className="whitespace-nowrap">{cta.buttons?.secondary}</span>
+                            <ArrowUpRight size={18} />
+                        </div>
+                    </div>
                 </button>
             </div>
         </motion.div>

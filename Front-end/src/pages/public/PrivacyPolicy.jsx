@@ -1,6 +1,13 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, Shield, Lock, FileText, Eye, Cookie, Server, Scale, Mail } from "lucide-react";
+import { 
+  Shield, Lock, Eye, FileText, 
+  Users, Globe, Bell, Settings, 
+  Mail, ArrowUpRight, ChevronRight,
+  Database, Fingerprint, ShieldCheck,
+  Scale, Smartphone, Layers
+} from "lucide-react";
+import IconButton from "../../Components/common/buttons/IconButton";
 
 // --- ANIMATION VARIANTS ---
 const fadeInUp = {
@@ -17,169 +24,175 @@ const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const sidebarVariant = {
-  hidden: { opacity: 0, x: -20 },
-  visible: { 
-    opacity: 1, 
-    x: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { staggerChildren: 0.1 }
   }
 };
 
 // --- DATA STRUCTURE ---
-const policyData = {
-  lastUpdated: "March 15, 2024",
-  intro: {
+const privacyData = {
+  lastUpdated: "February 09, 2026",
+  hero: {
     title: "Privacy Policy",
-    subtitle: "We value your trust and are committed to protecting your personal data.",
-    description: "This Data Collection and Processing Policy, or Privacy Policy (hereafter referred to as the “Policy”) explains how SkillKart collects information about You, how it is used, kept, and disclosed when You visit the Website. We are dedicated to ensuring that your privacy is protected and that we are transparent about our data practices."
+    subtitle: "Transparency, Security, and Trust. How SkillKart protects your digital identity.",
+    description: "Your privacy is not just a policy; it's our promise. We've built SkillKart with security at its core to ensure your data stays protected while you focus on building your career.",
+    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=2670&auto=format&fit=crop"
   },
   sections: [
     {
-      id: "definitions",
-      title: "Definitions",
-      icon: <FileText size={20} />,
+      id: "intro",
+      title: "SkillKart & Your Privacy",
+      icon: <Globe className="w-5 h-5" />,
       content: [
         {
-          heading: "Key Terms",
-          text: "The following terms have the meanings specified below for the purposes of this Policy:"
+          heading: "The SkillKart Mission",
+          text: "SkillKart is a micro-freelance ecosystem designed to empower talent globally. To facilitate this, we collect specific data points to ensure safe transactions, verified identities, and a high-quality marketplace experience."
         },
         {
-          heading: "Company",
-          text: "Refers to SkillKart Inc., represented by its legal entities and affiliates (hereinafter – “We”, “Us”, or “Our”)."
-        },
-        {
-          heading: "Website",
-          text: "Means all Content and links available on the SkillKart platform that provides Services to Users and provides information regarding the Services."
-        },
-        {
-          heading: "Personal Data",
-          text: "Any information relating to an identified or identifiable natural person ('Data Subject'); an identifiable natural person is one who can be identified, directly or indirectly."
+          heading: "Scope of Policy",
+          text: "This policy applies to all users of the SkillKart platform, including Freelancers offering services ('Sellers') and Clients purchasing services ('Buyers'). It covers all digital touchpoints including our web application, mobile interface, and API integrations."
         }
       ]
     },
     {
       id: "collection",
-      title: "Information We Collect",
-      icon: <Eye size={20} />,
+      title: "Data Acquisition",
+      icon: <Database className="w-5 h-5" />,
       content: [
         {
-          heading: "Personal Information",
-          text: "We collect information that you voluntarily provide to us when you register on the Website, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Website or otherwise when you contact us."
+          heading: "Information You Provide",
+          text: "When you register, we collect primary identity data including your full name, email address, professional credentials, and tax identification where applicable for payment processing."
         },
         {
-          heading: "Usage Data",
-          text: "We may also collect information that your browser sends whenever you visit our Service or when you access the Service by or through a mobile device. This may include information such as your computer's Internet Protocol address (e.g., IP address), browser type, browser version, the pages of our Service that you visit, the time and date of your visit, the time spent on those pages, unique device identifiers and other diagnostic data."
+          heading: "Automated Telemetry",
+          text: "Our systems automatically log technical data such as IP addresses, browser fingerprints, and session metadata. This is critical for preventing fraudulent activities and bot-driven marketplace manipulation."
+        },
+        {
+          heading: "Verification Documentation",
+          text: "To maintain our 'Verified' status for freelancers, we may request government-issued identification. This data is encrypted at rest and only used for security auditing."
         }
       ]
     },
     {
       id: "usage",
-      title: "How We Use Your Data",
-      icon: <Server size={20} />,
+      title: "Usage & Orchestration",
+      icon: <Settings className="w-5 h-5" />,
       content: [
         {
-          heading: "Service Delivery",
-          text: "To provide and maintain our Service, including to monitor the usage of our Service and to manage your account."
+          heading: "Service Optimization",
+          text: "We use your data to personalize your marketplace feed, suggest relevant gigs, and facilitate communication between freelancers and clients."
         },
         {
-          heading: "Communication",
-          text: "To contact You by email, telephone calls, SMS, or other equivalent forms of electronic communication, regarding updates or informative communications related to the functionalities, products or contracted services, including the security updates, when necessary or reasonable for their implementation."
+          heading: "Transactional Security",
+          text: "Data is used to power our secure escrow system, ensuring that payments are released only when milestones are met and verified."
+        },
+        {
+          heading: "Legal Compliance",
+          text: "We process data to comply with international labor laws, anti-money laundering (AML) regulations, and 'Know Your Customer' (KYC) requirements."
         }
       ]
     },
     {
       id: "cookies",
       title: "Cookies & Tracking",
-      icon: <Cookie size={20} />,
+      icon: <Fingerprint className="w-5 h-5" />,
       content: [
         {
-          heading: "Tracking Technologies",
-          text: "We use Cookies and similar tracking technologies to track the activity on Our Service and store certain information. Tracking technologies used are beacons, tags, and scripts to collect and track information and to improve and analyze Our Service."
+          heading: "Essential Persistence",
+          text: "We use session cookies to keep you logged in and functional cookies to remember your platform preferences (like dark mode or currency settings)."
         },
         {
-          heading: "Your Control",
-          text: "You can instruct Your browser to refuse all Cookies or to indicate when a Cookie is being sent. However, if You do not accept Cookies, You may not be able to use some parts of our Service."
+          heading: "Performance Insights",
+          text: "Anonymized tracking allows us to understand platform bottlenecks and optimize the checkout experience."
         }
       ]
     },
     {
-      id: "security",
-      title: "Data Security",
-      icon: <Lock size={20} />,
+      id: "protection",
+      title: "Data Safeguards",
+      icon: <ShieldCheck className="w-5 h-5" />,
       content: [
         {
-          heading: "Protection Measures",
-          text: "The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While We strive to use commercially acceptable means to protect Your Personal Data, We cannot guarantee its absolute security."
+          heading: "Encryption Protocols",
+          text: "All data transmitted to SkillKart is protected using industry-standard 256-bit SSL encryption. Payment details are never stored on our servers; they are handled by PCI-DSS compliant partners."
+        },
+        {
+          heading: "Access Control",
+          text: "Internal access to user data is strictly limited to authorized security personnel under a 'need-to-know' basis."
         }
       ]
+    },
+    {
+        id: "thirdparty",
+        title: "Third-Party Logistics",
+        icon: <Layers className="w-5 h-5" />,
+        content: [
+          {
+            heading: "Payment Gateways",
+            text: "We integrate with Stripe, PayPal, and local Pakistani payment providers. These partners have their own privacy standards which are audited by SkillKart."
+          },
+          {
+            heading: "Infrastructure Providers",
+            text: "Our platform is hosted on secure cloud infrastructure that meets global security standards (SOC2, ISO 27001)."
+          }
+        ]
     },
     {
       id: "rights",
-      title: "Your Rights",
-      icon: <Scale size={20} />,
+      title: "Your Digital Rights",
+      icon: <Users className="w-5 h-5" />,
       content: [
         {
-          heading: "Access & Control",
-          text: "You have the right to request access to your personal data, rectify incorrect data, or request the deletion of your data under certain circumstances (Right to be Forgotten). You also have the right to restrict processing of your personal data."
+          heading: "Access & Portability",
+          text: "You have the right to request a full dump of your data in a machine-readable format at any time from your account settings."
+        },
+        {
+          heading: "The Right to Erasure",
+          text: "Users can request permanent account deletion. We will purge all personal data, retaining only what is legally required for financial auditing."
         }
       ]
     },
     {
-      id: "contact",
-      title: "Contact Us",
-      icon: <Mail size={20} />,
-      content: [
-        {
-          heading: "Get in Touch",
-          text: "If you have any questions about this Privacy Policy, You can contact us:"
-        },
-        {
-          heading: "Email",
-          text: "privacy@skillkart.com"
-        },
-        {
-          heading: "Address",
-          text: "123 Tech Park, Innovation Way, Silicon Valley, CA"
-        }
-      ]
-    }
+        id: "contact",
+        title: "Governance & Contact",
+        icon: <Mail className="w-5 h-5" />,
+        content: [
+          {
+            heading: "Policy Updates",
+            text: "We update this policy periodically. Major changes will be announced via platform notifications and email."
+          },
+          {
+            heading: "Contact our DPO",
+            text: "If you have specific privacy concerns, contact our Data Protection Officer at privacy@skillkart.com."
+          }
+        ]
+      }
   ]
 };
 
 // --- COMPONENTS ---
 
-// 1. Navigation Item
 const NavItem = ({ section, activeId, onClick }) => {
   const isActive = activeId === section.id;
   
   return (
-    <motion.li 
-      variants={sidebarVariant}
-      className="relative"
-    >
+    <motion.li className="relative group">
       <button
         onClick={() => onClick(section.id)}
-        className={`flex items-center gap-4 w-full text-left py-3 group transition-colors duration-300 ${
-          isActive ? "text-black font-semibold" : "text-gray-400 hover:text-gray-600"
+        className={`flex items-center gap-4 w-full text-left py-3 transition-all duration-300 ${
+          isActive ? "text-black font-bold" : "text-gray-400 hover:text-gray-900"
         }`}
       >
-        <span className={`p-2 rounded-lg transition-colors duration-300 ${isActive ? "bg-[#b3f5e1] text-black" : "bg-gray-100 group-hover:bg-gray-200"}`}>
+        <span className={`p-2 rounded-xl transition-all duration-500 scale-90 group-hover:scale-100 ${
+          isActive ? "bg-[#b3f5e1] text-black shadow-lg shadow-[#b3f5e1]/20" : "bg-gray-100"
+        }`}>
           {section.icon}
         </span>
-        <span className="text-sm uppercase tracking-wider">{section.title}</span>
+        <span className="text-[11px] uppercase tracking-[0.2em] font-black">{section.title}</span>
         
         {isActive && (
           <motion.div 
-            layoutId="activeIndicator"
-            className="absolute left-[-16px] top-1/2 -translate-y-1/2 w-1 h-8 bg-black rounded-r-full"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            layoutId="activePill"
+            className="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-black rounded-full"
           />
         )}
       </button>
@@ -187,10 +200,9 @@ const NavItem = ({ section, activeId, onClick }) => {
   );
 };
 
-// 2. Content Section
-const ContentSection = ({ section, index }) => {
+const ContentBlock = ({ section }) => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px 0px" });
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
     <motion.section
@@ -199,24 +211,27 @@ const ContentSection = ({ section, index }) => {
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={fadeInUp}
-      transition={{ delay: index * 0.1 }}
-      className="mb-20 scroll-mt-32"
+      className="mb-24 last:mb-0"
     >
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 bg-black text-white rounded-xl">
+      <div className="flex items-center gap-6 mb-12">
+        <div className="w-16 h-16 bg-black text-[#b3f5e1] rounded-[1.5rem] flex items-center justify-center shadow-xl rotate-3">
           {section.icon}
         </div>
-        <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{section.title}</h2>
+        <h2 className="text-4xl md:text-5xl font-black text-black tracking-tighter uppercase italic">
+            {section.title}
+        </h2>
       </div>
 
-      <div className="space-y-8 pl-0 md:pl-4 border-l-2 border-dashed border-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {section.content.map((block, idx) => (
-          <div key={idx} className="relative group">
-            {/* Hover Indicator */}
-            <div className="absolute -left-[21px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white transition-colors duration-300 group-hover:bg-[#b3f5e1]" />
-            
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{block.heading}</h3>
-            <p className="text-gray-600 leading-relaxed text-lg">{block.text}</p>
+          <div key={idx} className="group p-8 rounded-[2rem] bg-gray-50 border border-transparent hover:border-[#b3f5e1] hover:bg-white hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+            <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-[#b3f5e1]" />
+                {block.heading}
+            </h3>
+            <p className="text-gray-500 leading-relaxed font-light text-lg">
+                {block.text}
+            </p>
           </div>
         ))}
       </div>
@@ -224,24 +239,24 @@ const ContentSection = ({ section, index }) => {
   );
 };
 
-// --- MAIN PAGE ---
 const PrivacyPolicy = () => {
-  const [activeSection, setActiveSection] = useState("definitions");
+  const [activeSection, setActiveSection] = useState("intro");
   const heroRef = useRef(null);
-  
-  // Parallax for Hero
+
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  // Handle Scroll Spy
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+
+  // Scroll Spy Logic
   useEffect(() => {
     const handleScroll = () => {
-      const sections = policyData.sections.map(s => document.getElementById(s.id));
-      const scrollPosition = window.scrollY + 150; // Offset
+      const sections = privacyData.sections.map(s => document.getElementById(s.id));
+      const scrollPosition = window.scrollY + 200;
 
       for (const section of sections) {
         if (section && section.offsetTop <= scrollPosition && (section.offsetTop + section.offsetHeight) > scrollPosition) {
@@ -255,126 +270,180 @@ const PrivacyPolicy = () => {
   }, []);
 
   const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
+    const el = document.getElementById(id);
+    if (el) {
       window.scrollTo({
-        top: element.offsetTop - 100,
+        top: el.offsetTop - 120,
         behavior: "smooth"
       });
-      setActiveSection(id); // Optimistic update
     }
   };
 
   return (
-    <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black pt-24">
+    <div className="bg-white min-h-screen font-sans selection:bg-[#b3f5e1] selection:text-black">
       
-      {/* ---------------- HERO SECTION ---------------- */}
-      <div ref={heroRef} className="relative h-[75vh] w-full overflow-hidden bg-gray-900 flex items-center justify-center">
-        {/* Background Image with Parallax */}
+      {/* --- HERO SECTION --- */}
+      <section ref={heroRef} className="relative h-[90vh] w-full flex items-center justify-center overflow-hidden bg-black pt-20">
         <motion.div 
-            style={{ y: heroY, opacity: heroOpacity }}
+            style={{ y: heroY, scale: heroScale, opacity: heroOpacity }}
             className="absolute inset-0"
         >
-          <img 
-            src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2670&auto=format&fit=crop" 
-            alt="Privacy Shield" 
-            className="w-full h-full object-cover opacity-40"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
+            <img 
+                src={privacyData.hero.image} 
+                alt="Privacy and Security" 
+                className="w-full h-full object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         </motion.div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-6 text-center max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <span className="inline-block py-1 px-3 rounded-full bg-[#b3f5e1]/10 border border-[#b3f5e1]/30 text-[#b3f5e1] text-xs font-bold tracking-widest uppercase mb-6 backdrop-blur-md">
-              Updated {policyData.lastUpdated}
-            </span>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-white mb-8 leading-[0.9]">
-              {policyData.intro.title}
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-3xl mx-auto text-center">
-              {policyData.intro.subtitle}
-            </p>
-          </motion.div>
+        {/* Unique Cyber-Grid Overlay */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none" 
+             style={{ 
+               backgroundImage: `radial-gradient(#b3f5e1 0.5px, transparent 0.5px)`, 
+               backgroundSize: '30px 30px' 
+             }} 
+        />
+        
+        <div className="container mx-auto px-6 relative z-10">
+            <motion.div
+                initial={{ opacity: 0, y: 50, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="max-w-4xl"
+            >
+                <div className="flex items-center  mb-6">
+                    <span className="w-12 h-[2px] bg-[#b3f5e1]" />
+                    <span className="text-[#b3f5e1] text-xs font-black uppercase tracking-[0.5em]">
+                        Document PS-2026
+                    </span>
+                </div>
+                <h1 className="text-7xl md:text-9xl font-black text-white tracking-tighter leading-[0.85] mb-8 uppercase">
+                    Privacy Policy
+                </h1>
+                <p className="text-xl md:text-2xl text-gray-300 font-light max-w-2xl leading-relaxed mb-15">
+                    {privacyData.hero.subtitle}
+                </p>
+                
+                <div className="flex flex-wrap gap-6 mt-5">
+                    <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-bold">
+                        <Shield size={18} className="text-[#b3f5e1]" />
+                        GDPR Compliant
+                    </div>
+                    <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-bold">
+                        <Lock size={18} className="text-[#b3f5e1]" />
+                        SSL Secured
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+
+        <motion.div 
+            animate={{ y: [0, 10, 0] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="absolute bottom-12 left-1/2 -translate-x-1/2 text-white/50"
+        >
+            <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] uppercase tracking-widest font-black">Scroll to Explore</span>
+                <div className="w-px h-12 bg-linear-to-b from-[#b3f5e1] to-transparent" />
+            </div>
+        </motion.div>
+      </section>
+
+      {/* --- CONTENT SPREAD --- */}
+      <div className="container mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-20">
+            
+            {/* LEFT: Premium Navigation */}
+            <aside className="lg:col-span-3">
+                <div className="sticky top-32">
+                    <div className="mb-10">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.3em] mb-8">
+                            Section Index
+                        </h4>
+                        <nav>
+                            <ul className="space-y-2">
+                                {privacyData.sections.map((section) => (
+                                    <NavItem 
+                                        key={section.id} 
+                                        section={section} 
+                                        activeId={activeSection}
+                                        onClick={scrollToSection}
+                                    />
+                                ))}
+                            </ul>
+                        </nav>
+                    </div>
+
+                    {/* Meta Info */}
+                    <div className="p-8 rounded-[2rem] bg-black text-white shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#b3f5e1]/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                        <h5 className="text-xl font-black mb-4 italic tracking-tight">Last Revised</h5>
+                        <p className="text-sm text-gray-400 mb-8 font-light leading-relaxed">
+                            This policy was last updated on {privacyData.lastUpdated}. We recommend reviewing it quarterly.
+                        </p>
+                        <IconButton text="Download PDF" variant="secondary" className="!w-full !justify-center" />
+                    </div>
+                </div>
+            </aside>
+
+            {/* RIGHT: Editorial Content */}
+            <div className="lg:col-span-9">
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mb-16 md:mb-24"
+                >
+                    <p className="text-xl md:text-2xl font-light text-gray-500 leading-relaxed border-l-4 border-[#b3f5e1] pl-8 italic">
+                        {privacyData.hero.description}
+                    </p>
+                </motion.div>
+
+                {privacyData.sections.map((section) => (
+                   <ContentBlock key={section.id} section={section} />
+                ))}
+
+                {/* Final Trust Section */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    className="mt-16 md:mt-24 p-10 md:p-16 bg-gray-50 rounded-[3rem] text-center relative overflow-hidden border border-gray-100"
+                >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#b3f5e110_0%,_transparent_70%)]" />
+                    <div className="relative z-10 flex flex-col items-center gap-5">
+                        <Scale size={60} strokeWidth={1.5} className="text-black mb-6" />
+                        <h2 className="text-4xl md:text-5xl font-black text-black tracking-tighter uppercase mb-6">
+                            Any Concerns?
+                        </h2>
+                        <p className="text-lg text-gray-500 mb-12 max-w-xl mx-auto font-light leading-relaxed">
+                            Our compliance team is dedicated to handling all data-related inquiries within 24 business hours.
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-8 items-center">
+                            <IconButton text="Email Compliance" variant="primary" />
+                            <IconButton text="Support Center" variant="secondary" />
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+
         </div>
       </div>
 
-      {/* ---------------- MAIN CONTENT LAYOUT ---------------- */}
-      <div className="container mx-auto px-6 md:px-12 lg:px-20 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          
-          {/* LEFT: Sticky Sidebar Navigation */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-32">
-              <motion.div 
-                initial="hidden" 
-                animate="visible" 
-                variants={staggerContainer}
-                className="space-y-2 border-l border-gray-100 pl-4"
-              >
-                <h4 className="text-xs font-bold uppercase text-gray-400 tracking-widest mb-6 pl-2">
-                  Navigation
-                </h4>
-                <ul className="space-y-2">
-                  {policyData.sections.map((section) => (
-                    <NavItem 
-                      key={section.id} 
-                      section={section} 
-                      activeId={activeSection}
-                      onClick={scrollToSection}
-                    />
-                  ))}
-                </ul>
-              </motion.div>
-            </div>
+      {/* --- FOOTER DECORATION --- */}
+      <footer className="py-12 border-t border-gray-100">
+          <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10">
+              <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-[#b3f5e1] font-black">S</div>
+                  <span className="text-sm font-black uppercase tracking-widest text-black">SkillKart Legal</span>
+              </div>
+              <div className="text-[10px] text-gray-400 uppercase tracking-[0.4em] font-black text-center">
+                  Secure Digital Marketplace Foundation © 2026
+              </div>
           </div>
+      </footer>
 
-          {/* RIGHT: Content Area */}
-          <div className="lg:col-span-9">
-            {/* Introduction Text */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="mb-24"
-            >
-              <p className="text-xl md:text-2xl leading-relaxed font-light text-gray-600 border-l-4 border-[#b3f5e1] pl-6 md:pl-10 py-2">
-                {policyData.intro.description}
-              </p>
-            </motion.div>
-
-            {/* Dynamic Sections */}
-            <div>
-              {policyData.sections.map((section, index) => (
-                <ContentSection key={section.id} section={section} index={index} />
-              ))}
-            </div>
-
-            {/* Bottom Call to Action */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="mt-32 p-12 bg-gray-100 rounded-3xl border border-gray-100 text-center flex flex-col items-center"
-            >
-              <Shield className="w-16 h-16 mx-auto text-black mb-8" />
-              <h3 className="text-3xl font-bold mb-6">Your Privacy Matters</h3>
-              <p className="text-gray-600 mb-8 max-w-xl mx-auto text-center">
-                We are committed to full transparency. If you have any further questions that aren't answered here, please reach out to our data protection team.
-              </p>
-
-              <button className="bg-black hover:bg-gray-800 text-white px-8 py-4 rounded-full font-bold transition-all hover:shadow-xl hover:-translate-y-1 flex items-center gap-2 mx-auto mt-5">
-                Contact Data Protection Team <ArrowUpRight size={18} />
-              </button>
-            </motion.div>
-
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

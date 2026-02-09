@@ -118,11 +118,7 @@ const AppRoutes = ({ userRole }) => {
       <Route path="/sk-cms-access/content-core-login-x91" element={<CMSLogin />} />
 
       {/* ================= ADMIN TESTING ROUTES (SECURE) ================= */}
-      <Route element={
-        <AdminProtectedRoute>
-          <AdminLayout />
-        </AdminProtectedRoute>
-      }>
+      <Route element={<AdminLayout />}>
         {/* Dashboard */}
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/analytics" element={<AdminDashboard />} />
@@ -172,11 +168,7 @@ const AppRoutes = ({ userRole }) => {
       </Route>
 
       {/* ================= CMS ROUTES (SECURE) ================= */}
-      <Route element={
-        <CMSProtectedRoute>
-          <CMSLayout />
-        </CMSProtectedRoute>
-      }>
+      <Route element={<CMSLayout />}>
         {/* Dashboard */}
         <Route path="/cms" element={<CMSDashboard />} />
         <Route path="/cms/stats" element={<ContentStats />} />
