@@ -4,7 +4,7 @@ import PublicFooter from "../Components/public/PublicFooter/PublicFooter";
 
 const PublicLayout = () => {
   const location = useLocation();
-  const hideLayout = location.pathname === "/login" || location.pathname === "/register";
+  const hideLayout = location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/otp";
 
   return (
     <>

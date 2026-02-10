@@ -39,6 +39,7 @@ import TermsOfServices from "../pages/public/TermsOfServices";
 import HowItWorks from "../pages/public/HowItWorks";
 import Login from "../pages/public/Login";
 import Register from "../pages/public/Register";
+import OTPLogin from "../pages/public/Otp-login";
 
 // Freelancer Pages
 import FreelancerDashboard from "../pages/freelancer/Dashboard";
@@ -111,6 +112,7 @@ const AppRoutes = ({ userRole }) => {
         <Route path="/howitworks" element={<HowItWorks />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/otp" element={<OTPLogin />} />
       </Route>
 
       {/* ================= SECRET LOGIN ROUTES ================= */}
