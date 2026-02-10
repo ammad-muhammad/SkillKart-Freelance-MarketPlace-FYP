@@ -1,90 +1,153 @@
-const cloudinary = require('../config/cloudinary');
+const cloudinary = require('cloudinary').v2;
+const config = require('../config');
 const FileUpload = require('../models/FileUpload');
-const ApiError = require('../utils/ApiError');
-const { v4: uuidv4 } = require('uuid');
+const { FileUploadError } = require('../utils/apiError');
 
-class UploadService {
-  /**
-   * Upload file to Cloudinary
-   */
-  async uploadFile(file, userId, fileType) {
-    try {
-      const fileName = `${uuidv4()}-${file.originalname}`;
-      const folder = `skillkart/${fileType}`;
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: config.cloudinary.cloudName,
+  api_key: config.cloudinary.apiKey,
+  api_secret: config.cloudinary.apiSecret
+});
 
-      // Upload to Cloudinary using buffer
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder,
-            resource_type: 'auto',
-            public_id: fileName,
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
+/**
+ * Upload file to Cloudinary
+ */
+const uploadToCloudinary = async (file, folder = 'uploads') => {
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'auto'
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
 
-        uploadStream.end(file.buffer);
-      });
+      uploadStream.end(file.buffer);
+    });
 
-      // Save file metadata to database
-      const fileUpload = await FileUpload.create({
-        userId,
-        fileType,
-        originalName: file.originalname,
-        fileName,
-        mimeType: file.mimetype,
-        fileSize: file.size,
-        url: result.secure_url,
-        cloudinaryPublicId: result.public_id,
-      });
+    return result;
+  } catch (error) {
+    throw new FileUploadError('File upload failed');
+  }
+};
 
-      return fileUpload;
-    } catch (error) {
-      throw new ApiError(500, `File upload failed: ${error.message}`);
-    }
+/**
+ * Upload profile picture
+ */
+const uploadProfilePicture = async (userId, file) => {
+  const result = await uploadToCloudinary(file, 'profile-pictures');
+
+  const fileUpload = await FileUpload.create({
+    userId,
+    fileName: result.public_id,
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+    size: file.size,
+    url: result.secure_url,
+    cloudinaryId: result.public_id,
+    fileType: 'image',
+    isPublic: true
+  });
+
+  return fileUpload;
+};
+
+/**
+ * Upload CV
+ */
+const uploadCV = async (userId, file) => {
+  const result = await uploadToCloudinary(file, 'cvs');
+
+  const fileUpload = await FileUpload.create({
+    userId,
+    fileName: result.public_id,
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+    size: file.size,
+    url: result.secure_url,
+    cloudinaryId: result.public_id,
+    fileType: 'cv',
+    isPublic: false
+  });
+
+  return fileUpload;
+};
+
+/**
+ * Upload portfolio item
+ */
+const uploadPortfolioImage = async (userId, file) => {
+  const result = await uploadToCloudinary(file, 'portfolio');
+
+  const fileUpload = await FileUpload.create({
+    userId,
+    fileName: result.public_id,
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+    size: file.size,
+    url: result.secure_url,
+    cloudinaryId: result.public_id,
+    fileType: 'portfolio',
+    isPublic: true
+  });
+
+  return fileUpload;
+};
+
+/**
+ * Delete file from Cloudinary
+ */
+const deleteFromCloudinary = async (cloudinaryId) => {
+  try {
+    await cloudinary.uploader.destroy(cloudinaryId);
+    return true;
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+    return false;
+  }
+};
+
+/**
+ * Delete file
+ */
+const deleteFile = async (fileId, userId) => {
+  const file = await FileUpload.findById(fileId);
+  
+  if (!file) {
+    throw new FileUploadError('File not found');
   }
 
-  /**
-   * Delete file from Cloudinary
-   */
-  async deleteFile(fileId, userId) {
-    const file = await FileUpload.findOne({ _id: fileId, userId });
-
-    if (!file) {
-      throw new ApiError(404, 'File not found');
-    }
-
-    try {
-      // Delete from Cloudinary
-      await cloudinary.uploader.destroy(file.cloudinaryPublicId);
-
-      // Mark as deleted in database
-      file.isDeleted = true;
-      await file.save();
-
-      return { message: 'File deleted successfully' };
-    } catch (error) {
-      throw new ApiError(500, `File deletion failed: ${error.message}`);
-    }
+  if (file.userId.toString() !== userId.toString()) {
+    throw new FileUploadError('Unauthorized');
   }
 
-  /**
-   * Get user files
-   */
-  async getUserFiles(userId, fileType = null) {
-    const query = { userId, isDeleted: false };
+  await deleteFromCloudinary(file.cloudinaryId);
+  await FileUpload.deleteOne({ _id: fileId });
 
-    if (fileType) {
-      query.fileType = fileType;
-    }
+  return true;
+};
 
-    const files = await FileUpload.find(query).sort({ createdAt: -1 });
+/**
+ * Get user files
+ */
+const getUserFiles = async (userId, fileType = null) => {
+  const query = { userId };
+  if (fileType) query.fileType = fileType;
 
-    return files;
-  }
-}
+  return await FileUpload.find(query).sort({ createdAt: -1 });
+};
 
-module.exports = new UploadService();
+module.exports = {
+  uploadToCloudinary,
+  uploadProfilePicture,
+  uploadCV,
+  uploadPortfolioImage,
+  deleteFromCloudinary,
+  deleteFile,
+  getUserFiles
+};

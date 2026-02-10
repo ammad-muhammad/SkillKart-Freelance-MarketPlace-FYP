@@ -1,135 +1,143 @@
-const User = require('../models/User');
-const ClientProfile = require('../models/ClientProfile');
 const FreelancerProfile = require('../models/FreelancerProfile');
-const authService = require('../services/auth.service');
-const ApiResponse = require('../utils/ApiResponse');
-const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
+const ClientProfile = require('../models/ClientProfile');
+const uploadService = require('../services/upload.service');
+const otpService = require('../services/otp.service');
+const { sendSuccess } = require('../utils/apiResponse');
+const { asyncHandler } = require('../utils/helpers');
 
 /**
- * Create client profile
- * POST /api/profile/client
+ * Upload profile picture
  */
-const createClientProfile = asyncHandler(async (req, res) => {
+const uploadProfilePicture = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  // Check if profile already exists
-  const existingProfile = await ClientProfile.findOne({ userId });
-  if (existingProfile) {
-    throw new ApiError(400, 'Profile already exists');
-  }
-
-  const profile = await ClientProfile.create({
-    userId,
-    ...req.body,
+  const file = req.file;
+  
+  const upload = await uploadService.uploadProfilePicture(userId, file);
+  
+  // Update user
+  const User = require('../models/User');
+  await User.findByIdAndUpdate(userId, { profilePicture: upload.url });
+  
+  sendSuccess(res, {
+    message: 'Profile picture uploaded successfully',
+    data: { url: upload.url }
   });
-
-  // Mark profile as complete
-  await authService.markProfileComplete(userId);
-
-  res.status(201).json(
-    new ApiResponse(201, profile, 'Client profile created successfully')
-  );
 });
 
 /**
- * Create freelancer profile
- * POST /api/profile/freelancer
+ * Upload CV (Freelancer)
  */
-const createFreelancerProfile = asyncHandler(async (req, res) => {
+const uploadCV = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  // Check if profile already exists
-  const existingProfile = await FreelancerProfile.findOne({ userId });
-  if (existingProfile) {
-    throw new ApiError(400, 'Profile already exists');
-  }
-
-  const profile = await FreelancerProfile.create({
-    userId,
-    ...req.body,
+  const file = req.file;
+  
+  const upload = await uploadService.uploadCV(userId, file);
+  
+  sendSuccess(res, {
+    message: 'CV uploaded successfully',
+    data: { cv: upload }
   });
-
-  // Mark profile as complete
-  await authService.markProfileComplete(userId);
-
-  res.status(201).json(
-    new ApiResponse(201, profile, 'Freelancer profile created successfully')
-  );
 });
 
 /**
- * Get own profile
- * GET /api/profile/me
+ * Upload portfolio image
  */
-const getMyProfile = asyncHandler(async (req, res) => {
+const uploadPortfolioImage = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const role = req.user.role;
-
-  const Model = role === 'client' ? ClientProfile : FreelancerProfile;
-  const profile = await Model.findOne({ userId });
-
-  if (!profile) {
-    throw new ApiError(404, 'Profile not found');
-  }
-
-  res.status(200).json(
-    new ApiResponse(200, profile, 'Profile retrieved successfully')
-  );
+  const file = req.file;
+  
+  const upload = await uploadService.uploadPortfolioImage(userId, file);
+  
+  sendSuccess(res, {
+    message: 'Portfolio image uploaded successfully',
+    data: { url: upload.url }
+  });
 });
 
 /**
- * Update own profile
- * PUT /api/profile/me
+ * Request OTP for profile update
  */
-const updateMyProfile = asyncHandler(async (req, res) => {
+const requestProfileUpdateOTP = asyncHandler(async (req, res) => {
+  const email = req.user.email;
+  
+  await otpService.generateAndSendOTP(email, 'profile_update');
+  
+  sendSuccess(res, {
+    message: 'OTP sent to your email'
+  });
+});
+
+/**
+ * Update profile with OTP verification
+ */
+const updateProfileWithOTP = asyncHandler(async (req, res) => {
+  const { otp, profileData, profileType } = req.body;
   const userId = req.user._id;
-  const role = req.user.role;
-
-  const Model = role === 'client' ? ClientProfile : FreelancerProfile;
-  const profile = await Model.findOneAndUpdate(
-    { userId },
-    { $set: req.body },
-    { new: true, runValidators: true }
-  );
-
-  if (!profile) {
-    throw new ApiError(404, 'Profile not found');
+  const email = req.user.email;
+  
+  // Verify OTP
+  const otpResult = await otpService.verifyOTP(email, otp, 'profile_update');
+  if (!otpResult.valid) {
+    return sendError(res, { statusCode: 400, message: otpResult.message });
   }
-
-  res.status(200).json(
-    new ApiResponse(200, profile, 'Profile updated successfully')
-  );
+  
+  let profile;
+  
+  if (profileType === 'freelancer') {
+    profile = await FreelancerProfile.findOneAndUpdate(
+      { userId },
+      profileData,
+      { new: true, upsert: true }
+    );
+  } else {
+    profile = await ClientProfile.findOneAndUpdate(
+      { userId },
+      profileData,
+      { new: true, upsert: true }
+    );
+  }
+  
+  sendSuccess(res, {
+    message: 'Profile updated successfully',
+    data: { profile }
+  });
 });
 
 /**
- * Get public profile by ID
- * GET /api/profile/:userId
+ * Delete file
  */
-const getProfileById = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
+const deleteFile = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { fileId } = req.params;
+  
+  await uploadService.deleteFile(fileId, userId);
+  
+  sendSuccess(res, {
+    message: 'File deleted successfully'
+  });
+});
 
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new ApiError(404, 'User not found');
-  }
-
-  const Model = user.role === 'client' ? ClientProfile : FreelancerProfile;
-  const profile = await Model.findOne({ userId });
-
-  if (!profile) {
-    throw new ApiError(404, 'Profile not found');
-  }
-
-  res.status(200).json(
-    new ApiResponse(200, { user, profile }, 'Profile retrieved successfully')
-  );
+/**
+ * Get user files
+ */
+const getUserFiles = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { fileType } = req.query;
+  
+  const files = await uploadService.getUserFiles(userId, fileType);
+  
+  sendSuccess(res, {
+    message: 'Files retrieved successfully',
+    data: { files }
+  });
 });
 
 module.exports = {
-  createClientProfile,
-  createFreelancerProfile,
-  getMyProfile,
-  updateMyProfile,
-  getProfileById,
+  uploadProfilePicture,
+  uploadCV,
+  uploadPortfolioImage,
+  requestProfileUpdateOTP,
+  updateProfileWithOTP,
+  deleteFile,
+  getUserFiles
 };

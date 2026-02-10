@@ -1,30 +1,97 @@
 const express = require('express');
 const router = express.Router();
 const proposalController = require('../controllers/proposal.controller');
-const { authenticate } = require('../middleware/auth');
-const { roleGuard, requireCompleteProfile } = require('../middleware/roleGuard');
-const validateRequest = require('../middleware/validateRequest');
-const { createProposalSchema } = require('../validators/proposal.validator');
+const { authenticate } = require('../middleware/auth.middleware');
+const { requireRole } = require('../middleware/rbac.middleware');
+const { validate } = require('../middleware/validation.middleware');
+const {
+  createProposalValidation,
+  updateProposalValidation,
+  getProposalValidation,
+  deleteProposalValidation,
+  listProposalsValidation,
+  acceptProposalValidation,
+  rejectProposalValidation,
+  withdrawProposalValidation
+} = require('../validators/job.validator');
 
-router.use(authenticate, requireCompleteProfile);
+/**
+ * All routes require authentication
+ */
+router.use(authenticate);
 
-// Freelancer routes
-router.post(
-  '/',
-  roleGuard('freelancer'),
-  validateRequest(createProposalSchema),
-  proposalController.submitProposal
+/**
+ * Proposal routes
+ */
+
+// List proposals
+router.get('/',
+  listProposalsValidation,
+  validate,
+  proposalController.listProposals
 );
 
-router.get('/my', roleGuard('freelancer'), proposalController.getMyProposals);
+// Get proposal by ID
+router.get('/:id',
+  getProposalValidation,
+  validate,
+  proposalController.getProposalById
+);
 
-router.patch('/:id/withdraw', roleGuard('freelancer'), proposalController.withdrawProposal);
+/**
+ * Freelancer routes
+ */
 
-// Client routes
-router.get('/job/:jobId', roleGuard('client'), proposalController.getJobProposals);
+// Create proposal
+router.post('/',
+  requireRole('freelancer'),
+  createProposalValidation,
+  validate,
+  proposalController.createProposal
+);
 
-router.patch('/:id/accept', roleGuard('client'), proposalController.acceptProposal);
+// Update proposal
+router.put('/:id',
+  requireRole('freelancer'),
+  updateProposalValidation,
+  validate,
+  proposalController.updateProposal
+);
 
-router.patch('/:id/reject', roleGuard('client'), proposalController.rejectProposal);
+// Withdraw proposal
+router.post('/:id/withdraw',
+  requireRole('freelancer'),
+  withdrawProposalValidation,
+  validate,
+  proposalController.withdrawProposal
+);
+
+// Delete proposal
+router.delete('/:id',
+  requireRole('freelancer'),
+  deleteProposalValidation,
+  validate,
+  proposalController.deleteProposal
+);
+
+/**
+ * Client routes
+ */
+
+// Accept proposal
+router.post('/:id/accept',
+  requireRole('client'),
+  acceptProposalValidation,
+  validate,
+  proposalController.acceptProposal
+);
+
+// Reject proposal
+router.post('/:id/reject',
+  requireRole('client'),
+  rejectProposalValidation,
+  validate,
+  proposalController.rejectProposal
+);
 
 module.exports = router;

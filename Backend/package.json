@@ -1,37 +1,75 @@
 {
-  "name": "skillkart-backend",
+  "name": "SkillKart--Backend",
   "version": "1.0.0",
-  "description": "Production-ready backend for SkillKart platform",
+  "description": "Complete freelance platform backend with multi-auth, RBAC, CMS, job posting, and proposals",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "setup:superadmin": "node scripts/setupSuperAdmin.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src/**/*.js",
+    "format": "prettier --write \"src/**/*.js\""
   },
-  "keywords": ["freelance", "platform", "node", "express", "mongodb"],
-  "author": "SkillKart Team",
+  "keywords": [
+    "freelance",
+    "platform",
+    "marketplace",
+    "jobs",
+    "proposals",
+    "cms",
+    "rbac",
+    "oauth",
+    "jwt",
+    "express",
+    "mongodb",
+    "supabase"
+  ],
+  "author": "SkillKart-Fuuast-team",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
     "cloudinary": "^1.41.0",
     "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
+    "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
     "uuid": "^9.0.1",
-    "zod": "^3.22.4"
+    "validator": "^13.11.0",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
-    "nodemon": "^3.0.2"
+    "eslint": "^8.55.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1"
   },
-  "engines": {
-    "node": ">=18.0.0"
+  "nodemonConfig": {
+    "watch": ["src"],
+    "ext": "js,json",
+    "ignore": ["src/logs/*", "node_modules"],
+    "exec": "node src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/freelance-platform-backend"
   }
 }

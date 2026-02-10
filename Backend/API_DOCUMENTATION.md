@@ -1,599 +1,312 @@
-# SkillKart API Documentation
+# 🚀 Freelance Platform API Documentation
 
-Base URL: `http://localhost:5000` (Development)
+## Base URL
+```
+http://localhost:5000/api/v1
+```
 
 ## Authentication
-
-All protected endpoints require a Bearer token in the Authorization header:
+Most endpoints require Bearer token authentication:
 ```
-Authorization: Bearer <supabase_jwt_token>
-```
-
----
-
-## 🔐 Authentication Endpoints
-
-### 1. Sync User
-Syncs Supabase user to MongoDB database.
-
-**Endpoint:** `POST /api/auth/sync`
-
-**Access:** Public
-
-**Request Body:**
-```json
-{
-  "supabaseId": "string (required)",
-  "email": "string (required, email format)",
-  "authProvider": "email | google (required)"
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "data": {
-    "_id": "65abc123def456789012",
-    "supabaseId": "123e4567-e89b-12d3-a456-426614174000",
-    "email": "john@example.com",
-    "role": null,
-    "authProvider": "email",
-    "isProfileComplete": false,
-    "isActive": true,
-    "lastLogin": "2024-02-03T10:30:00.000Z",
-    "createdAt": "2024-02-03T10:30:00.000Z",
-    "updatedAt": "2024-02-03T10:30:00.000Z"
-  },
-  "message": "User synced successfully"
-}
+Authorization: Bearer <your-jwt-token>
 ```
 
 ---
 
-### 2. Select Role
-Set user role (client or freelancer). Can only be set once.
+## 📁 API Endpoints Overview
 
-**Endpoint:** `POST /api/auth/role`
+### 🔐 Authentication (`/api/v1/auth`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/register/step1` | Send OTP for registration | ❌ |
+| POST | `/register/step2` | Complete registration with OTP | ❌ |
+| POST | `/login/step1` | Send OTP for login | ❌ |
+| POST | `/login/step2` | Complete login with OTP | ❌ |
+| POST | `/login` | Direct login (no OTP) | ❌ |
+| POST | `/superadmin/login` | SuperAdmin login | ❌ |
+| POST | `/password/reset/request` | Request password reset | ❌ |
+| POST | `/password/reset` | Reset password with OTP | ❌ |
+| POST | `/email/verify` | Verify email with OTP | ❌ |
+| POST | `/otp/resend` | Resend OTP | ❌ |
+| POST | `/refresh` | Refresh access token | ❌ |
+| GET | `/me` | Get current user | ✅ |
+| POST | `/password/change` | Change password | ✅ |
+| POST | `/logout` | Logout | ✅ |
 
-**Access:** Protected (Authenticated users)
+### 👥 Users (`/api/v1/users`)
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| GET | `/` | List all users | Admin |
+| GET | `/search` | Search users | Admin |
+| GET | `/stats` | User statistics | Admin |
+| GET | `/:id` | Get user by ID | Admin |
+| POST | `/` | Create user | Admin |
+| PUT | `/:id` | Update user | Admin |
+| DELETE | `/:id` | Delete user | SuperAdmin |
+| PUT | `/:id/block` | Block user | Admin |
+| PUT | `/:id/unblock` | Unblock user | Admin |
+| PUT | `/:id/role` | Update user role | Admin |
 
-**Request Body:**
-```json
-{
-  "role": "client | freelancer (required)"
-}
-```
+### 💼 Freelancers (`/api/v1/freelancers`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/search` | Search freelancers | Public |
+| GET | `/:id` | Get freelancer profile | Public |
+| GET | `/stats/overview` | Freelancer stats | Public |
+| GET | `/profile/me` | Get own profile | Freelancer |
+| PUT | `/profile/me` | Update profile | Freelancer |
+| POST | `/portfolio` | Add portfolio item | Freelancer |
+| PUT | `/portfolio/:itemId` | Update portfolio | Freelancer |
+| DELETE | `/portfolio/:itemId` | Delete portfolio | Freelancer |
 
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "data": {
-    "_id": "65abc123def456789012",
-    "email": "john@example.com",
-    "role": "freelancer",
-    "isProfileComplete": false
-  },
-  "message": "Role selected successfully"
-}
-```
+### 🏢 Clients (`/api/v1/clients`)
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| GET | `/profile/me` | Get own profile | Client |
+| PUT | `/profile/me` | Update profile | Client |
+| POST | `/verification/submit` | Submit verification | Client |
+| GET | `/:id` | Get client by ID | Admin |
+| POST | `/:id/verification/approve` | Approve verification | Admin |
+| POST | `/:id/verification/reject` | Reject verification | Admin |
+| GET | `/stats/overview` | Client statistics | Admin |
 
----
+### 🛠️ Admin (`/api/v1/admin`)
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| POST | `/create-admin` | Create admin user | SuperAdmin |
+| PUT | `/users/:id/password` | Reset user password | Admin |
+| GET | `/stats/system` | System statistics | Admin |
 
-### 3. Get Current User
-Get authenticated user details.
+### 👑 SuperAdmin (`/api/v1/superadmin`)
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| GET | `/dashboard` | SuperAdmin dashboard | SuperAdmin |
+| GET | `/health` | System health check | SuperAdmin |
 
-**Endpoint:** `GET /api/auth/me`
+### 📝 CMS (`/api/v1/cms`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/public/:pageId` | Get published page | Public |
+| GET | `/public` | List published pages | Public |
+| GET | `/search` | Search content | Public |
+| POST | `/` | Create page | Content Editor |
+| GET | `/` | List pages (admin) | Content Editor |
+| GET | `/:pageId` | Get page for edit | Content Editor |
+| PUT | `/:pageId` | Update page | Content Editor |
+| POST | `/:pageId/publish` | Publish page | Content Editor |
+| POST | `/:pageId/unpublish` | Unpublish page | Content Editor |
+| POST | `/:pageId/schedule` | Schedule publish | Content Editor |
+| POST | `/:pageId/restore` | Restore version | Content Editor |
+| GET | `/:pageId/export` | Export as JSON | Content Editor |
+| DELETE | `/:pageId` | Delete page | Content Editor |
 
-**Access:** Protected
+### 💼 Jobs (`/api/v1/jobs`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/search` | Search jobs | Public |
+| GET | `/` | List jobs | Public |
+| GET | `/:id` | Get job details | Public |
+| POST | `/` | Create job | Client |
+| PUT | `/:id` | Update job | Client |
+| POST | `/:id/close` | Close job | Client |
+| DELETE | `/:id` | Delete job | Client/Admin |
 
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "data": {
-    "_id": "65abc123def456789012",
-    "email": "john@example.com",
-    "role": "freelancer",
-    "isProfileComplete": true,
-    "profile": { /* profile data */ }
-  },
-  "message": "User retrieved successfully"
-}
-```
+### 📨 Proposals (`/api/v1/proposals`)
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| GET | `/` | List proposals | Auth |
+| GET | `/:id` | Get proposal details | Auth |
+| POST | `/` | Create proposal | Freelancer |
+| PUT | `/:id` | Update proposal | Freelancer |
+| POST | `/:id/withdraw` | Withdraw proposal | Freelancer |
+| DELETE | `/:id` | Delete proposal | Freelancer |
+| POST | `/:id/accept` | Accept proposal | Client |
+| POST | `/:id/reject` | Reject proposal | Client |
 
----
+### 🌐 Public (`/api/v1/public`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/cms/:pageId` | Get CMS page | ❌ |
+| GET | `/cms` | List CMS pages | ❌ |
+| GET | `/freelancers/search` | Search freelancers | ❌ |
+| GET | `/freelancers/:id` | Get freelancer | ❌ |
+| GET | `/jobs/search` | Search jobs | ❌ |
+| GET | `/jobs/:id` | Get job | ❌ |
+| GET | `/jobs` | List jobs | ❌ |
+| GET | `/health` | Health check | ❌ |
 
-## 👤 Profile Endpoints
-
-### 4. Create Client Profile
-Create profile for client user.
-
-**Endpoint:** `POST /api/profile/client`
-
-**Access:** Protected (Client role required)
-
-**Request Body:**
-```json
-{
-  "companyName": "string (required, min 2 chars)",
-  "fullName": "string (required, min 2 chars)",
-  "phoneNumber": "string (optional)",
-  "location": {
-    "country": "string (optional)",
-    "city": "string (optional)",
-    "timezone": "string (optional)"
-  },
-  "bio": "string (optional, max 1000 chars)",
-  "website": "string (optional, valid URL)",
-  "companySize": "1-10 | 11-50 | 51-200 | 201-500 | 500+ (optional)",
-  "industry": "string (optional)"
-}
-```
-
-**Response:** `201 Created`
-
----
-
-### 5. Create Freelancer Profile
-Create profile for freelancer user.
-
-**Endpoint:** `POST /api/profile/freelancer`
-
-**Access:** Protected (Freelancer role required)
-
-**Request Body:**
-```json
-{
-  "fullName": "string (required, min 2 chars)",
-  "title": "string (required, min 2 chars)",
-  "phoneNumber": "string (optional)",
-  "location": {
-    "country": "string (optional)",
-    "city": "string (optional)",
-    "timezone": "string (optional)"
-  },
-  "bio": "string (optional, max 2000 chars)",
-  "hourlyRate": "number (optional, min 0)",
-  "skills": [
-    {
-      "name": "string (required)",
-      "level": "beginner | intermediate | expert"
-    }
-  ],
-  "availability": "full-time | part-time | contract | hourly (optional)"
-}
-```
-
-**Response:** `201 Created`
-
----
-
-### 6. Get Own Profile
-Get authenticated user's profile.
-
-**Endpoint:** `GET /api/profile/me`
-
-**Access:** Protected
-
-**Response:** `200 OK`
+### 🔗 Webhooks
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/webhooks/supabase` | Supabase user sync |
 
 ---
 
-### 7. Update Own Profile
-Update authenticated user's profile.
+## 📋 Example Requests
 
-**Endpoint:** `PUT /api/profile/me`
-
-**Access:** Protected
-
-**Request Body:** Same as create profile (all fields optional)
-
-**Response:** `200 OK`
-
----
-
-### 8. Get Public Profile
-Get public profile by user ID.
-
-**Endpoint:** `GET /api/profile/:userId`
-
-**Access:** Protected
-
-**Response:** `200 OK`
-
----
-
-## 💼 Job Endpoints
-
-### 9. Create Job
-Create new job posting (clients only).
-
-**Endpoint:** `POST /api/jobs`
-
-**Access:** Protected (Client role + Complete profile required)
-
-**Request Body:**
-```json
-{
-  "title": "string (required, 10-200 chars)",
-  "description": "string (required, 50-5000 chars)",
-  "category": "string (required, min 2 chars)",
-  "skills": ["string (required, 1-15 items)"],
-  "budget": {
-    "type": "fixed | hourly (required)",
-    "min": "number (optional, min 0)",
-    "max": "number (optional, min 0)",
-    "currency": "string (default: USD)"
-  },
-  "duration": "less-than-week | 1-4-weeks | 1-3-months | 3-6-months | 6-months-plus (optional)",
-  "experienceLevel": "entry | intermediate | expert (required)",
-  "projectType": "one-time | ongoing (default: one-time)",
-  "deadline": "ISO 8601 datetime (optional)"
-}
-```
-
-**Response:** `201 Created`
-
----
-
-### 10. Get All Jobs
-Get all active jobs with filters.
-
-**Endpoint:** `GET /api/jobs`
-
-**Access:** Public
-
-**Query Parameters:**
-- `page`: number (default: 1)
-- `limit`: number (default: 10, max: 100)
-- `category`: string (optional)
-- `skills`: comma-separated string (optional)
-- `budgetType`: "fixed" | "hourly" (optional)
-- `minBudget`: number (optional)
-- `maxBudget`: number (optional)
-- `experienceLevel`: "entry" | "intermediate" | "expert" (optional)
-- `search`: string (optional, full-text search)
-- `sort`: "newest" | "oldest" | "budget-high" | "budget-low" (default: newest)
-
-**Example:**
-```
-GET /api/jobs?page=1&limit=10&category=Web%20Development&sort=newest
-```
-
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "data": {
-    "jobs": [ /* array of jobs */ ],
-    "pagination": {
-      "total": 45,
-      "page": 1,
-      "limit": 10,
-      "totalPages": 5
-    }
-  },
-  "message": "Jobs retrieved successfully"
-}
-```
-
----
-
-### 11. Get Job by ID
-Get single job details.
-
-**Endpoint:** `GET /api/jobs/:id`
-
-**Access:** Public
-
-**Response:** `200 OK`
-
----
-
-### 12. Update Job
-Update job posting (clients only, own jobs).
-
-**Endpoint:** `PUT /api/jobs/:id`
-
-**Access:** Protected (Client role + Complete profile)
-
-**Request Body:** Same as create job (all fields optional)
-
-**Response:** `200 OK`
-
----
-
-### 13. Cancel Job
-Cancel job posting (clients only, own jobs).
-
-**Endpoint:** `DELETE /api/jobs/:id`
-
-**Access:** Protected (Client role + Complete profile)
-
-**Response:** `200 OK`
-
----
-
-### 14. Get My Posted Jobs
-Get all jobs posted by authenticated client.
-
-**Endpoint:** `GET /api/jobs/my/posted`
-
-**Access:** Protected (Client role + Complete profile)
-
-**Query Parameters:**
-- `page`: number (default: 1)
-- `limit`: number (default: 10)
-- `status`: string (optional)
-
-**Response:** `200 OK`
-
----
-
-## 📝 Proposal Endpoints
-
-### 15. Submit Proposal
-Submit proposal for a job (freelancers only).
-
-**Endpoint:** `POST /api/proposals`
-
-**Access:** Protected (Freelancer role + Complete profile)
-
-**Request Body:**
-```json
-{
-  "jobId": "string (required)",
-  "coverLetter": "string (required, 100-3000 chars)",
-  "proposedBudget": {
-    "amount": "number (required, min 0)",
-    "type": "fixed | hourly (required)",
-    "currency": "string (default: USD)"
-  },
-  "deliveryTime": {
-    "value": "number (required, min 1)",
-    "unit": "days | weeks | months (required)"
-  }
-}
-```
-
-**Response:** `201 Created`
-
----
-
-### 16. Get Job Proposals
-Get all proposals for a specific job (clients only, own jobs).
-
-**Endpoint:** `GET /api/proposals/job/:jobId`
-
-**Access:** Protected (Client role + Complete profile)
-
-**Response:** `200 OK`
-
----
-
-### 17. Get My Proposals
-Get all proposals submitted by authenticated freelancer.
-
-**Endpoint:** `GET /api/proposals/my`
-
-**Access:** Protected (Freelancer role + Complete profile)
-
-**Query Parameters:**
-- `status`: "pending" | "accepted" | "rejected" | "withdrawn" (optional)
-- `page`: number (default: 1)
-- `limit`: number (default: 10)
-
-**Response:** `200 OK`
-
----
-
-### 18. Accept Proposal
-Accept a proposal (clients only).
-
-**Endpoint:** `PATCH /api/proposals/:id/accept`
-
-**Access:** Protected (Client role + Complete profile)
-
-**Response:** `200 OK`
-
----
-
-### 19. Reject Proposal
-Reject a proposal (clients only).
-
-**Endpoint:** `PATCH /api/proposals/:id/reject`
-
-**Access:** Protected (Client role + Complete profile)
-
-**Response:** `200 OK`
-
----
-
-### 20. Withdraw Proposal
-Withdraw a proposal (freelancers only, pending proposals).
-
-**Endpoint:** `PATCH /api/proposals/:id/withdraw`
-
-**Access:** Protected (Freelancer role + Complete profile)
-
-**Response:** `200 OK`
-
----
-
-## 📁 File Upload Endpoints
-
-### 21. Upload File
-Upload file to Cloudinary.
-
-**Endpoint:** `POST /api/upload`
-
-**Access:** Protected
-
-**Request:** `multipart/form-data`
-- `file`: File (required, max 10MB)
-- `fileType`: "resume" | "portfolio" | "job-attachment" | "proposal-attachment" | "avatar" (required)
-
-**Allowed MIME Types:**
-- `application/pdf`
-- `application/msword`
-- `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
-- `image/jpeg`
-- `image/png`
-- `image/jpg`
-
-**Example (curl):**
+### Register User (Step 1)
 ```bash
-curl -X POST http://localhost:5000/api/upload \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "file=@/path/to/resume.pdf" \
-  -F "fileType=resume"
+curl -X POST http://localhost:5000/api/v1/auth/register/step1 \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com"}'
 ```
 
-**Response:** `201 Created`
-```json
-{
-  "success": true,
-  "statusCode": 201,
-  "data": {
-    "_id": "65abcbbbccc111222333",
-    "userId": "65abc123def456789012",
-    "fileType": "resume",
-    "originalName": "john_doe_resume.pdf",
-    "fileName": "uuid-john_doe_resume.pdf",
-    "mimeType": "application/pdf",
-    "fileSize": 245678,
-    "url": "https://res.cloudinary.com/...",
-    "cloudinaryPublicId": "skillkart/resume/...",
-    "uploadedAt": "2024-02-03T13:00:00.000Z"
-  },
-  "message": "File uploaded successfully"
-}
+### Register User (Step 2)
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/register/step2 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"user@example.com",
+    "otp":"123456",
+    "password":"SecurePass123",
+    "firstName":"John",
+    "lastName":"Doe",
+    "role":"freelancer"
+  }'
+```
+
+### Login (Direct)
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"user@example.com",
+    "password":"SecurePass123"
+  }'
+```
+
+### Get Current User
+```bash
+curl -X GET http://localhost:5000/api/v1/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Create Job (Client)
+```bash
+curl -X POST http://localhost:5000/api/v1/jobs \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title":"Full-stack Developer Needed",
+    "description":"We need an experienced developer...",
+    "budget":{"min":1000,"max":5000,"type":"fixed"},
+    "skills":["React","Node.js","MongoDB"],
+    "experienceLevel":"intermediate"
+  }'
+```
+
+### Submit Proposal (Freelancer)
+```bash
+curl -X POST http://localhost:5000/api/v1/proposals \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jobId":"JOB_ID_HERE",
+    "coverLetter":"I am interested in this position...",
+    "proposedRate":3500,
+    "estimatedDuration":"2 weeks"
+  }'
+```
+
+### Search Freelancers
+```bash
+curl "http://localhost:5000/api/v1/freelancers/search?skills=React,Node.js&minRate=50&maxRate=150"
 ```
 
 ---
 
-### 22. Get My Files
-Get all files uploaded by authenticated user.
+## 🔒 Role-Based Access
 
-**Endpoint:** `GET /api/upload/my`
-
-**Access:** Protected
-
-**Query Parameters:**
-- `fileType`: "resume" | "portfolio" | "job-attachment" | "proposal-attachment" | "avatar" (optional)
-
-**Response:** `200 OK`
+### Roles Hierarchy:
+1. **SuperAdmin** (Level 100) - Full system access
+2. **Admin** (Level 90) - User & content management
+3. **Content Editor** (Level 50) - CMS only
+4. **Freelancer** (Level 30) - Profile, proposals
+5. **Client** (Level 30) - Jobs, hiring
+6. **Public Viewer** (Level 10) - Read-only public content
 
 ---
 
-### 23. Delete File
-Delete uploaded file.
+## ⚠️ Error Responses
 
-**Endpoint:** `DELETE /api/upload/:id`
-
-**Access:** Protected (Own files only)
-
-**Response:** `200 OK`
-
----
-
-## ❌ Error Responses
-
-All error responses follow this format:
-
+All errors follow this format:
 ```json
 {
   "success": false,
-  "statusCode": 400,
-  "message": "Error message here",
-  "errors": [ /* optional validation errors */ ]
-}
-```
-
-### Common Error Codes
-
-- `400` - Bad Request (validation errors)
-- `401` - Unauthorized (missing or invalid token)
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
-- `500` - Internal Server Error
-
-### Example Validation Error
-
-```json
-{
-  "success": false,
-  "statusCode": 400,
-  "message": "Validation failed",
+  "message": "Error description",
   "errors": [
     {
       "field": "email",
-      "message": "Invalid email format"
-    },
-    {
-      "field": "skills",
-      "message": "At least one skill is required"
+      "message": "Email is required"
     }
   ]
 }
 ```
 
----
-
-## 🔒 Authentication Flow
-
-1. **User signs up/logs in via Supabase** (frontend handles this)
-2. **Frontend receives Supabase JWT token**
-3. **Frontend calls `/api/auth/sync`** to create MongoDB user
-4. **Frontend calls `/api/auth/role`** to set user role
-5. **Frontend calls profile creation endpoint** to complete profile
-6. **All subsequent requests** include JWT token in Authorization header
-
----
-
-## 📊 Rate Limiting
-
-**Note:** Rate limiting is not currently implemented but recommended for production.
-
-Suggested limits:
-- Authentication endpoints: 5 requests per minute
-- File upload: 10 requests per hour
-- General API: 100 requests per minute
+### Common Status Codes:
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `422` - Validation Error
+- `429` - Too Many Requests
+- `500` - Server Error
 
 ---
 
-## 🧪 Testing
+## 📊 Pagination
 
-Use tools like:
-- **Postman** - GUI for API testing
-- **curl** - Command-line testing
-- **Thunder Client** - VS Code extension
+List endpoints support pagination:
+```bash
+GET /api/v1/jobs?page=1&limit=10&sortBy=createdAt&sortOrder=desc
+```
 
-### Example Postman Setup
-
-1. Create environment with:
-   - `baseUrl`: `http://localhost:5000`
-   - `token`: Your Supabase JWT token
-
-2. Set Authorization header in collection:
-   - Type: Bearer Token
-   - Token: `{{token}}`
+Response includes:
+```json
+{
+  "success": true,
+  "data": [...],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 100,
+      "totalPages": 10,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
+  }
+}
+```
 
 ---
 
-## 📚 Additional Resources
+## 🎯 Quick Start
 
-- [Supabase Documentation](https://supabase.com/docs)
-- [Cloudinary Documentation](https://cloudinary.com/documentation)
-- [MongoDB Documentation](https://docs.mongodb.com/)
-- [Express.js Guide](https://expressjs.com/en/guide/routing.html)
+1. **Setup SuperAdmin:**
+```bash
+npm run setup:superadmin
+```
+
+2. **Start Server:**
+```bash
+npm run dev
+```
+
+3. **Test Health:**
+```bash
+curl http://localhost:5000/health
+```
+
+4. **Login as SuperAdmin:**
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/superadmin/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your-password"}'
+```
 
 ---
 
-**Last Updated:** February 2024
+**Total Endpoints: 80+**

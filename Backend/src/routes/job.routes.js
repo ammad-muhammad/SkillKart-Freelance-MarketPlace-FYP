@@ -1,35 +1,85 @@
 const express = require('express');
 const router = express.Router();
 const jobController = require('../controllers/job.controller');
-const { authenticate } = require('../middleware/auth');
-const { roleGuard, requireCompleteProfile } = require('../middleware/roleGuard');
-const validateRequest = require('../middleware/validateRequest');
-const { createJobSchema, updateJobSchema, jobQuerySchema } = require('../validators/job.validator');
+const { authenticate, optionalAuth } = require('../middleware/auth.middleware');
+const { requireRole } = require('../middleware/rbac.middleware');
+const { validate } = require('../middleware/validation.middleware');
+const {
+  createJobValidation,
+  updateJobValidation,
+  getJobValidation,
+  deleteJobValidation,
+  listJobsValidation,
+  searchJobsValidation,
+  closeJobValidation
+} = require('../validators/job.validator');
 
-// Public routes
-router.get('/', validateRequest(jobQuerySchema), jobController.getJobs);
-router.get('/:id', jobController.getJobById);
+/**
+ * Public routes
+ */
 
-// Protected routes
-router.use(authenticate, requireCompleteProfile);
+// Search jobs (public)
+router.get('/search',
+  optionalAuth,
+  searchJobsValidation,
+  validate,
+  jobController.searchJobs
+);
 
-// Client only routes
-router.post(
-  '/',
-  roleGuard('client'),
-  validateRequest(createJobSchema),
+// List jobs (public - only open jobs)
+router.get('/',
+  optionalAuth,
+  listJobsValidation,
+  validate,
+  jobController.listJobs
+);
+
+// Get job by ID (public)
+router.get('/:id',
+  optionalAuth,
+  getJobValidation,
+  validate,
+  jobController.getJobById
+);
+
+/**
+ * Protected routes (Clients)
+ */
+
+// Create job
+router.post('/',
+  authenticate,
+  requireRole('client'),
+  createJobValidation,
+  validate,
   jobController.createJob
 );
 
-router.put(
-  '/:id',
-  roleGuard('client'),
-  validateRequest(updateJobSchema),
+// Update job
+router.put('/:id',
+  authenticate,
+  requireRole('client'),
+  updateJobValidation,
+  validate,
   jobController.updateJob
 );
 
-router.delete('/:id', roleGuard('client'), jobController.deleteJob);
+// Close job
+router.post('/:id/close',
+  authenticate,
+  requireRole('client'),
+  closeJobValidation,
+  validate,
+  jobController.closeJob
+);
 
-router.get('/my/posted', roleGuard('client'), jobController.getMyJobs);
+// Delete job
+router.delete('/:id',
+  authenticate,
+  requireRole('client', 'admin', 'superadmin'),
+  deleteJobValidation,
+  validate,
+  jobController.deleteJob
+);
 
 module.exports = router;
