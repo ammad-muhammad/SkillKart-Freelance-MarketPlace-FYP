@@ -1,7 +1,12 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { ROLES } from "../auth/roles";
-import RequireAuth from "../auth/RequireAuth";
-import { AdminProtectedRoute, CMSProtectedRoute } from "../cms/auth/CMSAuthContext"; // Auth Guards
+import { Routes, Route, Navigate } from "react-router-dom"
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+import ProtectedRoute from '../auth/ProtectedRoute';
+
+// import { ROLES } from "../auth/roles";
+// import RequireAuth from "../auth/RequireAuth";
+// import { AdminProtectedRoute, CMSProtectedRoute } from "../cms/auth/CMSAuthContext"; // Auth Guards
 
 // Layouts
 import PublicLayout from "../layouts/PublicLayout";
@@ -98,166 +103,142 @@ import PaymentRules from "../pages/admin/settings/PaymentRules";
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
 
-const AppRoutes = ({ userRole }) => {
+const AppRoutes = () => {
   return (
-    <Routes>
+        <Routes>
+          {/* <ToastContainer position="top-right" autoClose={3000} /> */}
 
-      {/* ================= PUBLIC ROUTES ================= */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/terms-and-conditions" element={<TermsOfServices />} />
-        <Route path="/howitworks" element={<HowItWorks />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/otp" element={<OTPLogin />} />
-      </Route>
+          {/* ================= PUBLIC ROUTES ================= */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-and-conditions" element={<TermsOfServices />} />
+            <Route path="/howitworks" element={<HowItWorks />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/otp" element={<OTPLogin />} />
+          </Route>
 
-      {/* ================= SECRET LOGIN ROUTES ================= */}
-      <Route path="/sk-admin-access/login-portal-92x" element={<AdminLogin />} />
-      <Route path="/sk-cms-access/content-core-login-x91" element={<CMSLogin />} />
+          {/* ================= SECRET LOGIN ROUTES ================= */}
+          <Route path="/sk-admin-access/login-portal-92x" element={<AdminLogin />} />
+          <Route path="/sk-cms-access/content-core-login-x91" element={<CMSLogin />} />
 
-      {/* ================= ADMIN TESTING ROUTES (SECURE) ================= */}
-      <Route element={<AdminLayout />}>
-        {/* Dashboard */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/analytics" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<Users />} />
+          {/* ================= ADMIN TESTING ROUTES (SECURE) ================= */}
+          <Route element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
+            {/* Dashboard */}
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/analytics" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<Users />} />
 
-        {/* Freelancers Section */}
-        <Route path="/admin/freelancers" element={<AllFreelancers />} />
-        <Route path="/admin/freelancers/verified" element={<VerifiedFreelancers />} />
-        <Route path="/admin/freelancers/skill-tests" element={<SkillTests />} />
-        <Route path="/admin/freelancers/gigs" element={<FreelancerGigs />} />
-        <Route path="/admin/freelancers/projects" element={<FreelancerProjects />} />
-        <Route path="/admin/freelancers/rankings" element={<Rankings />} />
-        <Route path="/admin/freelancers/payments" element={<FreelancerPayments />} />
-        <Route path="/admin/freelancers/disputes" element={<FreelancerDisputes />} />
+            {/* Freelancers Section */}
+            <Route path="/admin/freelancers" element={<AllFreelancers />} />
+            <Route path="/admin/freelancers/verified" element={<VerifiedFreelancers />} />
+            <Route path="/admin/freelancers/skill-tests" element={<SkillTests />} />
+            <Route path="/admin/freelancers/gigs" element={<FreelancerGigs />} />
+            <Route path="/admin/freelancers/projects" element={<FreelancerProjects />} />
+            <Route path="/admin/freelancers/rankings" element={<Rankings />} />
+            <Route path="/admin/freelancers/payments" element={<FreelancerPayments />} />
+            <Route path="/admin/freelancers/disputes" element={<FreelancerDisputes />} />
 
-        {/* Clients Section */}
-        <Route path="/admin/clients" element={<AllClients />} />
-        <Route path="/admin/clients/projects" element={<ClientProjects />} />
-        <Route path="/admin/clients/payments" element={<ClientPayments />} />
-        <Route path="/admin/clients/disputes" element={<ClientDisputes />} />
+            {/* Clients Section */}
+            <Route path="/admin/clients" element={<AllClients />} />
+            <Route path="/admin/clients/projects" element={<ClientProjects />} />
+            <Route path="/admin/clients/payments" element={<ClientPayments />} />
+            <Route path="/admin/clients/disputes" element={<ClientDisputes />} />
 
-        {/* Products Section */}
-        <Route path="/admin/products" element={<ProductsList />} />
-        <Route path="/admin/products/reviews" element={<ProductReviews />} />
-        <Route path="/admin/products/approvals" element={<ProductApprovals />} />
-        <Route path="/admin/products/payments" element={<ProductPayments />} />
+            {/* Products Section */}
+            <Route path="/admin/products" element={<ProductsList />} />
+            <Route path="/admin/products/reviews" element={<ProductReviews />} />
+            <Route path="/admin/products/approvals" element={<ProductApprovals />} />
+            <Route path="/admin/products/payments" element={<ProductPayments />} />
 
-        {/* Transactions Section */}
-        <Route path="/admin/transactions/freelance" element={<FreelancePaymentsPage />} />
-        <Route path="/admin/transactions/products" element={<ProductTransactions />} />
-        <Route path="/admin/transactions/withdrawals" element={<Withdrawals />} />
+            {/* Transactions Section */}
+            <Route path="/admin/transactions/freelance" element={<FreelancePaymentsPage />} />
+            <Route path="/admin/transactions/products" element={<ProductTransactions />} />
+            <Route path="/admin/transactions/withdrawals" element={<Withdrawals />} />
 
-        {/* Disputes Section */}
-        <Route path="/admin/disputes/active" element={<ActiveDisputes />} />
-        <Route path="/admin/disputes/resolved" element={<ResolvedDisputes />} />
-        <Route path="/admin/disputes/refunds" element={<RefundDecisions />} />
+            {/* Disputes Section */}
+            <Route path="/admin/disputes/active" element={<ActiveDisputes />} />
+            <Route path="/admin/disputes/resolved" element={<ResolvedDisputes />} />
+            <Route path="/admin/disputes/refunds" element={<RefundDecisions />} />
 
-        {/* AI Assistance Section */}
-        <Route path="/admin/ai/recommendations" element={<AIRecommendations />} />
-        <Route path="/admin/ai/skill-demand" element={<SkillDemand />} />
-        <Route path="/admin/ai/pricing" element={<PricingSuggestions />} />
+            {/* AI Assistance Section */}
+            <Route path="/admin/ai/recommendations" element={<AIRecommendations />} />
+            <Route path="/admin/ai/skill-demand" element={<SkillDemand />} />
+            <Route path="/admin/ai/pricing" element={<PricingSuggestions />} />
 
-        {/* Settings Section */}
-        <Route path="/admin/settings/platform" element={<PlatformRules />} />
-        <Route path="/admin/settings/verification" element={<VerificationRules />} />
-        <Route path="/admin/settings/payments" element={<PaymentRules />} />
-      </Route>
+            {/* Settings Section */}
+            <Route path="/admin/settings/platform" element={<PlatformRules />} />
+            <Route path="/admin/settings/verification" element={<VerificationRules />} />
+            <Route path="/admin/settings/payments" element={<PaymentRules />} />
+          </Route>
 
-      {/* ================= CMS ROUTES (SECURE) ================= */}
-      <Route element={<CMSLayout />}>
-        {/* Dashboard */}
-        <Route path="/cms" element={<CMSDashboard />} />
-        <Route path="/cms/stats" element={<ContentStats />} />
+          {/* ================= CMS ROUTES (SECURE) ================= */}
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'cms']}><CMSLayout /></ProtectedRoute>}>
+            {/* Dashboard */}
+            <Route path="/cms" element={<CMSDashboard />} />
+            <Route path="/cms/stats" element={<ContentStats />} />
 
-        {/* Page Editors */}
-        <Route path="/cms/pages/home" element={<HomePageEditor />} />
-        <Route path="/cms/pages/about" element={<AboutPageEditor />} />
-        <Route path="/cms/pages/contact" element={<ContactPageEditor />} />
-        <Route path="/cms/pages/howitworks" element={<HowItWorksEditor />} />
-        <Route path="/cms/pages/privacypolicy" element={<PrivacyPolicyEditor />} />
-        <Route path="/cms/pages/termsofservice" element={<TermsOfServiceEditor />} />
-        <Route path="/cms/pages/login" element={<LoginPageEditor />} />
-        <Route path="/cms/pages/register" element={<RegisterPageEditor />} />
+            {/* Page Editors */}
+            <Route path="/cms/pages/home" element={<HomePageEditor />} />
+            <Route path="/cms/pages/about" element={<AboutPageEditor />} />
+            <Route path="/cms/pages/contact" element={<ContactPageEditor />} />
+            <Route path="/cms/pages/howitworks" element={<HowItWorksEditor />} />
+            <Route path="/cms/pages/privacypolicy" element={<PrivacyPolicyEditor />} />
+            <Route path="/cms/pages/termsofservice" element={<TermsOfServiceEditor />} />
+            <Route path="/cms/pages/login" element={<LoginPageEditor />} />
+            <Route path="/cms/pages/register" element={<RegisterPageEditor />} />
 
-        {/* Components Manager */}
-        <Route path="/cms/components" element={<ComponentsManager />} />
-        <Route path="/cms/components/navbar" element={<ComponentsManager />} />
-        <Route path="/cms/components/footer" element={<ComponentsManager />} />
-        <Route path="/cms/components/buttons" element={<ComponentsManager />} />
-        <Route path="/cms/components/cards" element={<ComponentsManager />} />
-        <Route path="/cms/components/cards" element={<ComponentsManager />} />
-        <Route path="/cms/components/ctas" element={<ComponentsManager />} />
-        <Route path="/cms/components/sliders" element={<SlidersManager />} />
+            {/* Components Manager */}
+            <Route path="/cms/components" element={<ComponentsManager />} />
+            <Route path="/cms/components/navbar" element={<ComponentsManager />} />
+            <Route path="/cms/components/footer" element={<ComponentsManager />} />
+            <Route path="/cms/components/buttons" element={<ComponentsManager />} />
+            <Route path="/cms/components/cards" element={<ComponentsManager />} />
+            <Route path="/cms/components/cards" element={<ComponentsManager />} />
+            <Route path="/cms/components/ctas" element={<ComponentsManager />} />
+            <Route path="/cms/components/sliders" element={<SlidersManager />} />
 
-        {/* Media Manager */}
-        <Route path="/cms/media" element={<MediaManager />} />
+            {/* Media Manager */}
+            <Route path="/cms/media" element={<MediaManager />} />
 
-        {/* Forms Manager */}
-        <Route path="/cms/forms" element={<FormsManager />} />
+            {/* Forms Manager */}
+            <Route path="/cms/forms" element={<FormsManager />} />
 
-        {/* Settings */}
-        <Route path="/cms/settings" element={<CMSSettings />} />
-      </Route>
+            {/* Settings */}
+            <Route path="/cms/settings" element={<CMSSettings />} />
+          </Route>
 
-      {/* ================= APP ROUTES (FREELANCER + CLIENT) ================= */}
-      <Route
-        element={
-          <RequireAuth
-            userRole={userRole}
-            allowedRoles={[ROLES.FREELANCER, ROLES.CLIENT]}
-          >
-            <AppLayout />
-          </RequireAuth>
-        }
-      >
-        {/* Freelancer */}
-        <Route
-          path="/freelancer"
-          element={
-            userRole === ROLES.FREELANCER
-              ? <FreelancerDashboard />
-              : <Navigate to="/unauthorized" />
-          }
-        />
-        <Route
-          path="/freelancer/gigs"
-          element={
-            userRole === ROLES.FREELANCER
-              ? <Gigs />
-              : <Navigate to="/unauthorized" />
-          }
-        />
+          {/* ================= APP ROUTES (FREELANCER + CLIENT) ================= */}
+          <Route>
+            {/* Freelancer */}
+            <Route
+              path="/freelancer"
+              element={<FreelancerDashboard />}
+            />
+            <Route
+              path="/freelancer/gigs"
+              element={<Gigs />}
+            />
 
-        {/* Client */}
-        <Route
-          path="/client"
-          element={
-            userRole === ROLES.CLIENT
-              ? <ClientDashboard />
-              : <Navigate to="/unauthorized" />
-          }
-        />
-        <Route
-          path="/client/orders"
-          element={
-            userRole === ROLES.CLIENT
-              ? <Orders />
-              : <Navigate to="/unauthorized" />
-          }
-        />
-      </Route>
+            {/* Client */}
+            <Route
+              path="/client"
+              element={<ClientDashboard />}
+            />
+            <Route
+              path="/client/orders"
+              element={<Orders />}
+            />
+          </Route>
 
-      {/* ================= SYSTEM ROUTES ================= */}
-      <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
-      <Route path="*" element={<NotFound />} />
+          {/* ================= SYSTEM ROUTES ================= */}
+          <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
+          <Route path="*" element={<NotFound />} />
 
-    </Routes>
+        </Routes>
   );
 };
 

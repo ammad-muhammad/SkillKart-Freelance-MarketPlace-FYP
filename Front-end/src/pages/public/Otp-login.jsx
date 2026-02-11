@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Shield, ChevronLeft, UserPlus, LogIn, RotateCw } from "lucide-react";
+import { authAPI } from '../../api/auth';
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -127,62 +128,19 @@ const OTPInput = ({ length = 6, value, onChange }) => {
 };
 
 // --- MAIN OTP PAGE ---
-const OTPLogin = ({
-  // Hero Section Content
-  heroImage = "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1200",
-  heroTitle = "Verify Your Identity",
-  heroSubtitle = "We've sent a verification code to your email to ensure it's really you.",
-  heroFeatures = [
-    "Protect your account from unauthorized access",
-    "Ensure secure communication",
-    "Prevent fraudulent activity"
-  ],
-  heroFeaturesTitle = "Why we verify",
-  
-  // Form Content
-  formTitle = "Enter Verification Code",
-  formSubtitle = "We've sent a 6-digit code to",
-  otpLength = 6,
-  resendTimerDuration = 30,
-  resendButtonText = "Resend Code",
-  resendTimerText = "Resend code in",
-  verifyButtonText = "Verify & Continue",
-  verifyingText = "Verifying...",
-  successMessage = "Verification successful!",
-  
-  // Labels
-  newAccountLabel = "New Account",
-  loginVerificationLabel = "Login Verification",
-  
-  // Help Text
-  helpText = "Didn't receive the code? Check your spam folder",
-  wrongEmailText = "Wrong email?",
-  goBackText = "Go back to",
-  
-  // Security Notice
-  securityNoticeTitle = "Security Tip",
-  securityNoticeText = "Never share your verification code with anyone. Our team will never ask for it.",
-  
-  // Alert Messages
-  incompleteCodeAlert = "Please enter the complete 6-digit code",
-  resendSuccessAlert = "A new OTP has been sent to your email!",
-  
-  // Navigation
-  dashboardRoute = "/dashboard",
-  loginRoute = "/login",
-  registerRoute = "/register"
-}) => {
+const OTPLogin = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [otpValue, setOtpValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [resendTimer, setResendTimer] = useState(resendTimerDuration);
+  const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
 
-  // Track where user came from (login or register)
+  // Get data from navigation state
   const fromPage = location.state?.from || "login";
   const userEmail = location.state?.email || "user@example.com";
+  const savedFormData = location.state?.formData || null;
 
   const heroRef = useRef(null);
   
@@ -208,40 +166,84 @@ const OTPLogin = ({
   const handleVerify = async (e) => {
     e.preventDefault();
     
-    if (otpValue.length !== otpLength) {
-      alert(incompleteCodeAlert);
+    if (otpValue.length !== 6) {
+      alert("Please enter the complete 6-digit code");
       return;
     }
 
     setIsLoading(true);
     
-    setTimeout(() => {
-      console.log("OTP Verification Successful!");
+    try {
+      // Note: You'll need to add verifyOTP endpoint to your authAPI
+      // For now, verification happens on the backend when user submits step 2
+      // This just validates the OTP format
+      
+      console.log("✅ OTP Validation Successful!");
       console.log("OTP:", otpValue);
       console.log("Came from:", fromPage);
+      
+      // Store OTP in formData for step 2 submission
+      const updatedFormData = {
+        ...savedFormData,
+        otp: otpValue
+      };
+      
       setShowSuccess(true);
-      setIsLoading(false);
       
       setTimeout(() => {
+        setShowSuccess(false);
+        
         // Redirect based on where they came from
-        navigate(dashboardRoute);
+        if (fromPage === "register") {
+          // Go back to register page step 2 with saved data including OTP
+          navigate("/register", {
+            state: {
+              fromOTP: true,
+              formData: updatedFormData
+            }
+          });
+        } else {
+          // For login, go to dashboard
+          navigate("/dashboard");
+        }
       }, 1500);
-    }, 1500);
+    } catch (error) {
+      console.error("OTP verification failed:", error);
+      alert(error.response?.data?.message || "Invalid verification code. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
     
-    console.log("Resending OTP...");
-    alert(resendSuccessAlert);
-    setResendTimer(resendTimerDuration);
-    setCanResend(false);
-    setOtpValue("");
+    try {
+      console.log("Resending OTP...");
+      await authAPI.requestOTP(userEmail);
+      alert("A new OTP has been sent to your email!");
+      setResendTimer(30);
+      setCanResend(false);
+      setOtpValue("");
+    } catch (error) {
+      console.error("Failed to resend OTP:", error);
+      alert(error.response?.data?.message || "Failed to resend code. Please try again.");
+    }
   };
 
   const handleBackClick = () => {
     console.log("Going back to:", fromPage);
-    navigate(`/${fromPage}`);
+    
+    if (fromPage === "register") {
+      // Go back to register with saved data
+      navigate("/register", {
+        state: {
+          formData: savedFormData
+        }
+      });
+    } else {
+      navigate(`/${fromPage}`);
+    }
   };
 
   return (
@@ -256,7 +258,7 @@ const OTPLogin = ({
           className="relative hidden lg:flex lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-6 h-[94%]"
         >
           <motion.img
-            src={heroImage}
+            src="https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1200"
             className="absolute inset-0 w-full h-full object-cover blur-md grayscale"
             style={{ y: heroY, scale: heroScale, opacity: heroOpacity }}
             alt="Security"
@@ -271,10 +273,10 @@ const OTPLogin = ({
               transition={{ duration: 0.8, delay: 0.2 }}
             >
               <h2 className="text-5xl md:text-6xl font-bold tracking-tight mb-4">
-                {heroTitle}
+                Verify Your Identity
               </h2>
               <p className="text-white/70 text-lg max-w-sm">
-                {heroSubtitle}
+                We've sent a verification code to your email to ensure it's really you.
               </p>
             </motion.div>
 
@@ -285,14 +287,20 @@ const OTPLogin = ({
               className="space-y-6"
             >
               <div>
-                <h6 className="text-white/60 text-sm font-medium">{heroFeaturesTitle}</h6>
+                <h6 className="text-white/60 text-sm font-medium">Why we verify</h6>
                 <ul className="space-y-2 text-white/80 text-sm mt-4">
-                  {heroFeatures.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#b3f5e1]" />
-                      {feature}
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#b3f5e1]" />
+                    Protect your account from unauthorized access
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#b3f5e1]" />
+                    Ensure secure communication
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#b3f5e1]" />
+                    Prevent fraudulent activity
+                  </li>
                 </ul>
               </div>
             </motion.div>
@@ -337,10 +345,10 @@ const OTPLogin = ({
                 <Shield className="text-white" size={24} />
               </motion.div>
               <h2 className="text-2xl md:text-3xl font-bold text-black mb-1.5">
-                {formTitle}
+                Enter Verification Code
               </h2>
               <p className="text-gray-600 font-medium text-xs">
-                {formSubtitle}
+                We've sent a 6-digit code to
               </p>
               <p className="text-black font-bold text-xs mt-0.5">
                 {userEmail}
@@ -354,12 +362,12 @@ const OTPLogin = ({
                 {fromPage === "register" ? (
                   <>
                     <UserPlus size={12} strokeWidth={2.5} />
-                    {newAccountLabel}
+                    New Account
                   </>
                 ) : (
                   <>
                     <LogIn size={12} strokeWidth={2.5} />
-                    {loginVerificationLabel}
+                    Login Verification
                   </>
                 )}
               </motion.div>
@@ -369,7 +377,7 @@ const OTPLogin = ({
             <form onSubmit={handleVerify} className="space-y-4 mb-4">
               
               <OTPInput
-                length={otpLength}
+                length={6}
                 value={otpValue}
                 onChange={setOtpValue}
               />
@@ -388,11 +396,11 @@ const OTPLogin = ({
                     whileTap={{ scale: 0.95 }}
                   >
                     <RotateCw size={12} strokeWidth={2.5} />
-                    {resendButtonText}
+                    Resend Code
                   </motion.button>
                 ) : (
                   <p className="text-gray-600 font-medium text-xs">
-                    {resendTimerText}{" "}
+                    Resend code in{" "}
                     <span className="font-bold text-black">
                       {resendTimer}s
                     </span>
@@ -403,10 +411,10 @@ const OTPLogin = ({
               {/* Verify Button */}
               <motion.button
                 type="submit"
-                disabled={isLoading || otpValue.length !== otpLength}
+                disabled={isLoading || otpValue.length !== 6}
                 variants={staggerItem}
-                whileHover={{ scale: otpValue.length === otpLength ? 1.02 : 1 }}
-                whileTap={{ scale: otpValue.length === otpLength ? 0.98 : 1 }}
+                whileHover={{ scale: otpValue.length === 6 ? 1.02 : 1 }}
+                whileTap={{ scale: otpValue.length === 6 ? 0.98 : 1 }}
                 className="w-full bg-black hover:bg-gray-900 text-white py-2.5 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
@@ -416,11 +424,11 @@ const OTPLogin = ({
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     />
-                    {verifyingText}
+                    Verifying...
                   </>
                 ) : (
                   <>
-                    {verifyButtonText} <ArrowUpRight size={16} />
+                    Verify & Continue <ArrowUpRight size={16} />
                   </>
                 )}
               </motion.button>
@@ -442,7 +450,7 @@ const OTPLogin = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </motion.div>
-                  {successMessage}
+                  Verification successful!
                 </motion.div>
               )}
             </form>
@@ -453,15 +461,15 @@ const OTPLogin = ({
               variants={staggerItem}
             >
               <p className="text-gray-600 text-xs">
-                {helpText}
+                Didn't receive the code? Check your spam folder
               </p>
               <p className="text-gray-600 text-xs">
-                {wrongEmailText}{" "}
+                Wrong email?{" "}
                 <button
                   onClick={handleBackClick}
                   className="font-bold text-black hover:text-gray-700 transition-colors"
                 >
-                  {goBackText} {fromPage}
+                  Go back to {fromPage}
                 </button>
               </p>
             </motion.div>
@@ -479,10 +487,10 @@ const OTPLogin = ({
                 </div>
                 <div>
                   <h6 className="text-black font-bold text-xs mb-0.5">
-                    {securityNoticeTitle}
+                    Security Tip
                   </h6>
                   <p className="text-gray-600 text-xs leading-relaxed">
-                    {securityNoticeText}
+                    Never share your verification code with anyone. Our team will never ask for it.
                   </p>
                 </div>
               </div>

@@ -1,7 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Briefcase, Code } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, Check, Briefcase, Code } from "lucide-react";
+import { authAPI } from '../../api/auth';
+import { useAuth } from '../../hooks/useAuth';
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -15,7 +17,6 @@ const staggerContainer = {
   }
 };
 
-
 const staggerItem = {
   hidden: { opacity: 0, y: 15, filter: "blur(6px)" },
   visible: { 
@@ -24,13 +25,6 @@ const staggerItem = {
     filter: "blur(0px)",
     transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
   }
-};
-
-// Page transition animation
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  enter: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-  exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } }
 };
 
 // --- INPUT COMPONENT ---
@@ -164,7 +158,9 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
           {value || "Select an option"}
         </span>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-          <ChevronRight size={18} className="text-gray-400 rotate-90" />
+          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </motion.div>
       </motion.button>
 
@@ -201,27 +197,33 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
 
 // --- MAIN REGISTER PAGE ---
 const Register = () => {
-  const [step, setStep] = useState(0); // 0: Role Selection, 1: Basic Registration, 2: Profile Completion
-  const [userRole, setUserRole] = useState(null); // "client" or "freelancer"
-  const [openDropdown, setOpenDropdown] = useState(null); // Track which dropdown is open
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get saved data from location state (when returning from OTP)
+  const savedData = location.state?.formData;
+  const isReturningFromOTP = location.state?.fromOTP || false;
+  
+  const [step, setStep] = useState(isReturningFromOTP ? 2 : 0); // Start at step 2 if returning from OTP
+  const [userRole, setUserRole] = useState(savedData?.userRole || null);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [formData, setFormData] = useState(savedData || {
     email: "",
     password: "",
     confirmPassword: "",
     acceptedTerms: false,
     firstName: "",
     lastName: "",
-    companyType: "", // For client
+    companyType: "",
     companyName: "",
     industry: "",
-    skillCategory: "", // For freelancer
-    cvFile: "", // For freelancer
+    skillCategory: "",
+    cvFile: "",
     hourlyRate: "",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const navigate = useNavigate();
   const heroRef = useRef(null);
 
   // Parallax effect for hero image
@@ -239,7 +241,6 @@ const Register = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -300,7 +301,28 @@ const Register = () => {
   const handleNextStep = async () => {
     if (step === 1) {
       if (validateStep1()) {
-        setStep(2);
+        setIsLoading(true);
+        try {
+          // Call API to send OTP
+          await authAPI.requestOTP(formData.email);
+          
+          // Navigate to OTP page with form data
+          navigate("/otp", {
+            state: {
+              from: "register",
+              email: formData.email,
+              formData: { ...formData, userRole }
+            }
+          });
+        } catch (error) {
+          console.error("Failed to send OTP:", error);
+          setErrors(prev => ({
+            ...prev,
+            email: error.response?.data?.message || "Failed to send verification code. Please try again."
+          }));
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
@@ -312,26 +334,55 @@ const Register = () => {
       if (validateStep2()) {
         setIsLoading(true);
         
-        setTimeout(() => {
+        try {
+          // Prepare userData for API
+          const userData = {
+            email: formData.email,
+            password: formData.password,
+            otp: formData.otp, // Include OTP from verification step
+            role: userRole,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            ...(userRole === "client" && {
+              companyType: formData.companyType,
+              companyName: formData.companyName,
+              industry: formData.industry
+            }),
+            ...(userRole === "freelancer" && {
+              skillCategory: formData.skillCategory,
+              cvFile: formData.cvFile,
+              hourlyRate: parseFloat(formData.hourlyRate)
+            })
+          };
+
+          // Call registration API (step 2)
+          const response = await authAPI.register(userData);
+          
           console.log("✅ Registration Successful!");
-          console.log("Role:", userRole);
-          console.log("User Data:", formData);
+          console.log("Response:", response.data);
           setShowSuccess(true);
-          setIsLoading(false);
           
           setTimeout(() => {
             setShowSuccess(false);
-            // Reset or navigate
-            navigate("/login");
+            // Navigate to dashboard or login based on your flow
+            navigate("/dashboard");
           }, 2000);
-        }, 1500);
+        } catch (error) {
+          console.error("Registration failed:", error);
+          alert(error.response?.data?.message || "Registration failed. Please try again.");
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
 
   const handleBackClick = () => {
     if (step === 0) {
-      window.history.back();
+      navigate("/login");
+    } else if (step === 2) {
+      // If on step 2, go back to step 1
+      setStep(1);
     } else {
       setStep(step - 1);
     }
@@ -505,7 +556,7 @@ const Register = () => {
                 </motion.div>
 
                 {/* Registration Form */}
-                <form onSubmit={handleNextStep} className="space-y-3.5 mb-5">
+                <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-3.5 mb-5">
                   
                   <ModernInput
                     icon={Mail}
@@ -554,15 +605,27 @@ const Register = () => {
 
                   {/* Next Button */}
                   <motion.button
-                    type="button"
-                    onClick={handleNextStep}
-                    disabled={!formData.acceptedTerms}
+                    type="submit"
+                    disabled={!formData.acceptedTerms || isLoading}
                     variants={staggerItem}
-                    whileHover={{ scale: formData.acceptedTerms ? 1.02 : 1 }}
-                    whileTap={{ scale: formData.acceptedTerms ? 0.98 : 1 }}
-                    className={`w-full ${formData.acceptedTerms ? "bg-black hover:bg-gray-900" : "bg-gray-300 cursor-not-allowed"} text-white py-3 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 mt-6`}
+                    whileHover={{ scale: formData.acceptedTerms && !isLoading ? 1.02 : 1 }}
+                    whileTap={{ scale: formData.acceptedTerms && !isLoading ? 0.98 : 1 }}
+                    className={`w-full ${formData.acceptedTerms && !isLoading ? "bg-black hover:bg-gray-900" : "bg-gray-300 cursor-not-allowed"} text-white py-3 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 mt-6`}
                   >
-                    Continue <ArrowUpRight size={16} />
+                    {isLoading ? (
+                      <>
+                        <motion.div
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        Sending code...
+                      </>
+                    ) : (
+                      <>
+                        Continue <ArrowUpRight size={16} />
+                      </>
+                    )}
                   </motion.button>
                 </form>
 
@@ -710,8 +773,8 @@ const Register = () => {
 
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate (USD)</label>
-                        <div className="flex items-center">
-                          <span className="absolute left-4 text-gray-400 font-semibold">$</span>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
                           <input
                             type="number"
                             name="hourlyRate"

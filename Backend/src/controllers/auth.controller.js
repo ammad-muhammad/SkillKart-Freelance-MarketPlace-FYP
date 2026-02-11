@@ -37,7 +37,7 @@ const registerStep2 = asyncHandler(async (req, res) => {
   // Mark email as verified
   await authService.verifyEmail(email);
   
-  sendCreated(res, 'Registration successful', { userId: user._id });
+  sendCreated(res, 'Registration successful', { userData: user });
 });
 
 /**

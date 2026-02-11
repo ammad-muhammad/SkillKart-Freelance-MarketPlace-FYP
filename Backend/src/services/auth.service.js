@@ -25,6 +25,7 @@ const registerWithEmail = async (userData) => {
   });
 
   await user.save();
+  
   return user;
 };
 
