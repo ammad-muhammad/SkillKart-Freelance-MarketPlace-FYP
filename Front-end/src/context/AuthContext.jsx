@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const { data } = await authAPI.login(email, password);
+      console.log(data)
       localStorage.setItem('accessToken', data.data.tokens.accessToken);
       localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
       setUser(data.data.user);
@@ -46,7 +47,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const { data } = await authAPI.register(userData);
-      toast.success('Registration successful! Please login.');
+
+      localStorage.setItem('accessToken', data.data.userData.tokens.accessToken);
+      localStorage.setItem('refreshToken', data.data.userData.tokens.refreshToken);
+      setUser(data.data.userData.user);
+
+      toast.success('Registration successful!');
       return data;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Registration failed');
@@ -61,11 +67,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      login, 
-      register, 
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      register,
       logout,
       isAuthenticated: !!user
     }}>

@@ -26,7 +26,9 @@ const registerWithEmail = async (userData) => {
 
   await user.save();
   
-  return user;
+  // return user;
+  const tokens = generateTokenPair(user);
+  return { user: user.toAuthJSON(), tokens };
 };
 
 /**

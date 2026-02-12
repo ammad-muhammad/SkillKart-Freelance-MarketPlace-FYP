@@ -111,7 +111,7 @@ const AppRoutes = () => {
           {/* ================= PUBLIC ROUTES ================= */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
+            <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-and-conditions" element={<TermsOfServices />} />

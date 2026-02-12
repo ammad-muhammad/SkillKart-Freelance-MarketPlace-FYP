@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { authAPI } from '../api/auth';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');

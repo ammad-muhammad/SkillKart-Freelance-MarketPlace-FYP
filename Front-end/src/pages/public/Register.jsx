@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, data } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, Check, Briefcase, Code } from "lucide-react";
 import { authAPI } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,9 +19,9 @@ const staggerContainer = {
 
 const staggerItem = {
   hidden: { opacity: 0, y: 15, filter: "blur(6px)" },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
+  visible: {
+    opacity: 1,
+    y: 0,
     filter: "blur(0px)",
     transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
   }
@@ -32,7 +32,7 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <motion.div 
+    <motion.div
       className="relative"
       variants={staggerItem}
     >
@@ -51,9 +51,8 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
         onChange={onChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-          error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-        }`}
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+          }`}
       />
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
@@ -66,7 +65,7 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <motion.div 
+    <motion.div
       className="relative"
       variants={staggerItem}
     >
@@ -85,9 +84,8 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
         onChange={onChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-12 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-          error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-        }`}
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-12 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+          }`}
       />
       <motion.button
         type="button"
@@ -112,11 +110,10 @@ const RoleCard = ({ role, title, description, icon: Icon, isSelected, onClick })
       variants={staggerItem}
       whileHover={{ scale: 1.02, y: -5 }}
       whileTap={{ scale: 0.98 }}
-      className={`relative w-full p-5 rounded-2xl border-2 transition-all duration-300 text-left ${
-        isSelected 
-          ? "border-black bg-black text-white shadow-lg" 
+      className={`relative w-full p-5 rounded-2xl border-2 transition-all duration-300 text-left ${isSelected
+          ? "border-black bg-black text-white shadow-lg"
           : "border-gray-200 bg-white text-black hover:border-gray-300"
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between mb-3">
         <motion.div
@@ -150,9 +147,8 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
       <motion.button
         type="button"
         onClick={onToggle}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium text-left flex items-center justify-between transition-all duration-300 ${
-          error ? "border-red-300 focus:border-red-500" : "border-gray-200 hover:border-gray-300"
-        } ${isOpen ? "border-black bg-white shadow-sm" : ""}`}
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium text-left flex items-center justify-between transition-all duration-300 ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 hover:border-gray-300"
+          } ${isOpen ? "border-black bg-white shadow-sm" : ""}`}
       >
         <span className={value ? "text-black" : "text-gray-400"}>
           {value || "Select an option"}
@@ -199,11 +195,12 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
 const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const { register } = useAuth();
+
   // Get saved data from location state (when returning from OTP)
   const savedData = location.state?.formData;
   const isReturningFromOTP = location.state?.fromOTP || false;
-  
+
   const [step, setStep] = useState(isReturningFromOTP ? 2 : 0); // Start at step 2 if returning from OTP
   const [userRole, setUserRole] = useState(savedData?.userRole || null);
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -251,16 +248,16 @@ const Register = () => {
 
   const validateStep1 = () => {
     const newErrors = {};
-    
+
     if (!formData.email) newErrors.email = "Email is required";
     if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) newErrors.email = "Invalid email format";
-    
+
     if (!formData.password) newErrors.password = "Password is required";
     if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
-    
+
     if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
-    
+
     if (!formData.acceptedTerms) newErrors.acceptedTerms = "You must agree to the Terms & Conditions";
 
     setErrors(newErrors);
@@ -269,7 +266,7 @@ const Register = () => {
 
   const validateStep2 = () => {
     const newErrors = {};
-    
+
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
 
@@ -288,11 +285,16 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRoleSelect = (role) => {
-    setUserRole(role);
-    setStep(1);
-    setOpenDropdown(null);
-  };
+const handleRoleSelect = (role) => {
+  if (role !== "client" && role !== "freelancer") {
+    console.error("Invalid role selected");
+    return;
+  }
+  
+  setUserRole(role);
+  setStep(1);
+  setOpenDropdown(null);
+};
 
   const toggleDropdown = (id) => {
     setOpenDropdown(prev => prev === id ? null : id);
@@ -305,7 +307,7 @@ const Register = () => {
         try {
           // Call API to send OTP
           await authAPI.requestOTP(formData.email);
-          
+
           // Navigate to OTP page with form data
           navigate("/otp", {
             state: {
@@ -329,18 +331,27 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (step === 2) {
       if (validateStep2()) {
+        // ✅ Validate role before submitting
+        if (userRole !== "client" && userRole !== "freelancer") {
+          setErrors(prev => ({
+            ...prev,
+            submit: "Invalid role selected. Please start over."
+          }));
+          return;
+        }
+
         setIsLoading(true);
-        
+
         try {
           // Prepare userData for API
           const userData = {
             email: formData.email,
             password: formData.password,
-            otp: formData.otp, // Include OTP from verification step
-            role: userRole,
+            otp: formData.otp,
+            role: userRole, // This will now only be "client" or "freelancer"
             firstName: formData.firstName,
             lastName: formData.lastName,
             ...(userRole === "client" && {
@@ -355,21 +366,22 @@ const Register = () => {
             })
           };
 
-          // Call registration API (step 2)
-          const response = await authAPI.register(userData);
-          
-          console.log("✅ Registration Successful!");
-          console.log("Response:", response.data);
+          // ✅ Use the context's register function (saves tokens automatically)
+          const data = await register(userData);
+
+          console.log("✅ Registration Successful!", data);
           setShowSuccess(true);
-          
+
           setTimeout(() => {
             setShowSuccess(false);
-            // Navigate to dashboard or login based on your flow
-            navigate("/dashboard");
+            data.data.userData.user.role == "client"? navigate("/client") : navigate("/freelancer"); 
           }, 2000);
         } catch (error) {
           console.error("Registration failed:", error);
-          alert(error.response?.data?.message || "Registration failed. Please try again.");
+          setErrors(prev => ({
+            ...prev,
+            submit: error.response?.data?.message || "Registration failed. Please try again."
+          }));
         } finally {
           setIsLoading(false);
         }
@@ -390,13 +402,13 @@ const Register = () => {
 
   return (
     <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black overflow-hidden no-header no-footer">
-      
+
       {/* --- SPLIT LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
-        
+
         {/* LEFT SIDE - HERO IMAGE */}
-        <div 
-          ref={heroRef} 
+        <div
+          ref={heroRef}
           className="relative hidden lg:flex lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-6 h-[94vh]"
         >
           <motion.img
@@ -406,7 +418,7 @@ const Register = () => {
             alt="Team"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50" />
-          
+
           {/* Hero Content */}
           <div className="relative z-10 h-full p-8 md:p-14 flex flex-col justify-between text-white w-full">
             <motion.div
@@ -451,7 +463,7 @@ const Register = () => {
 
         {/* RIGHT SIDE - REGISTRATION FORM */}
         <div className="p-6 md:p-8 lg:p-12 flex flex-col justify-center bg-white relative min-h-screen lg:overflow-hidden overflow-y-auto">
-          
+
           {/* Back Button */}
           <motion.button
             onClick={handleBackClick}
@@ -466,18 +478,18 @@ const Register = () => {
           </motion.button>
 
           {/* Form Container */}
-          <motion.div 
+          <motion.div
             className="w-full max-w-sm mx-auto relative z-10"
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
           >
-            
+
             {/* --- STEP 0: ROLE SELECTION --- */}
             {step === 0 && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   className="mb-8"
                   variants={staggerItem}
                 >
@@ -498,7 +510,7 @@ const Register = () => {
                 </motion.div>
 
                 {/* Role Selection Cards */}
-                <motion.div 
+                <motion.div
                   className="space-y-3 mb-6"
                   variants={staggerContainer}
                 >
@@ -510,7 +522,7 @@ const Register = () => {
                     isSelected={userRole === "client"}
                     onClick={() => handleRoleSelect("client")}
                   />
-                  
+
                   <RoleCard
                     role="freelancer"
                     title="I'm a Freelancer"
@@ -522,7 +534,7 @@ const Register = () => {
                 </motion.div>
 
                 {/* Info Text */}
-                <motion.p 
+                <motion.p
                   className="text-center text-gray-600 text-xs"
                   variants={staggerItem}
                 >
@@ -538,7 +550,7 @@ const Register = () => {
             {step === 1 && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   className="mb-6"
                   variants={staggerItem}
                 >
@@ -557,7 +569,7 @@ const Register = () => {
 
                 {/* Registration Form */}
                 <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-3.5 mb-5">
-                  
+
                   <ModernInput
                     icon={Mail}
                     placeholder="Enter your email"
@@ -587,14 +599,13 @@ const Register = () => {
                   {/* Terms & Conditions */}
                   <motion.div variants={staggerItem} className="space-y-1">
                     <label className="flex items-start gap-2 cursor-pointer mt-4">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         name="acceptedTerms"
                         checked={formData.acceptedTerms}
                         onChange={handleInputChange}
-                        className={`w-4 h-4 rounded border-2 cursor-pointer accent-black mt-0.5 transition-colors ${
-                          errors.acceptedTerms ? "border-red-300" : "border-gray-200"
-                        }`}
+                        className={`w-4 h-4 rounded border-2 cursor-pointer accent-black mt-0.5 transition-colors ${errors.acceptedTerms ? "border-red-300" : "border-gray-200"
+                          }`}
                       />
                       <span className="text-gray-600 font-medium text-xs">
                         I agree to the <span className="font-bold text-black">Terms of Service</span> and <span className="font-bold text-black">Privacy Policy</span>
@@ -630,7 +641,7 @@ const Register = () => {
                 </form>
 
                 {/* Footer */}
-                <motion.p 
+                <motion.p
                   className="text-center text-gray-600 text-xs"
                   variants={staggerItem}
                 >
@@ -646,7 +657,7 @@ const Register = () => {
             {step === 2 && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   className="mb-6"
                   variants={staggerItem}
                 >
@@ -665,7 +676,7 @@ const Register = () => {
 
                 {/* Profile Form */}
                 <form onSubmit={handleSubmit} className="space-y-3.5 mb-5">
-                  
+
                   <motion.div className="grid grid-cols-2 gap-3" variants={staggerItem}>
                     <div>
                       <input
@@ -674,9 +685,8 @@ const Register = () => {
                         placeholder="First Name"
                         value={formData.firstName}
                         onChange={handleInputChange}
-                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                          errors.firstName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                        }`}
+                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.firstName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                          }`}
                       />
                       {errors.firstName && <p className="text-red-500 text-xs mt-1 ml-1">{errors.firstName}</p>}
                     </div>
@@ -687,9 +697,8 @@ const Register = () => {
                         placeholder="Last Name"
                         value={formData.lastName}
                         onChange={handleInputChange}
-                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                          errors.lastName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                        }`}
+                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.lastName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                          }`}
                       />
                       {errors.lastName && <p className="text-red-500 text-xs mt-1 ml-1">{errors.lastName}</p>}
                     </div>
@@ -783,9 +792,8 @@ const Register = () => {
                             onChange={handleInputChange}
                             min="1"
                             step="0.5"
-                            className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-8 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                              errors.hourlyRate ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                            }`}
+                            className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-8 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.hourlyRate ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                              }`}
                           />
                         </div>
                         {errors.hourlyRate && <p className="text-red-500 text-xs mt-1 ml-1">{errors.hourlyRate}</p>}
@@ -832,7 +840,7 @@ const Register = () => {
                 </form>
 
                 {/* Footer */}
-                <motion.p 
+                <motion.p
                   className="text-center text-gray-600 text-xs"
                   variants={staggerItem}
                 >

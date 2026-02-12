@@ -53,7 +53,6 @@ const userSchema = new mongoose.Schema({
   // Supabase Integration
   supabaseId: {
     type: String,
-    unique: true,
     sparse: true,
     index: true
   },
@@ -197,7 +196,8 @@ const userSchema = new mongoose.Schema({
 
 // Indexes for performance
 userSchema.index({ email: 1, role: 1 });
-userSchema.index({ supabaseId: 1 });
+// Create unique partial index for supabaseId - only enforces uniqueness when value is not null
+userSchema.index({ supabaseId: 1 }, { unique: true, partialFilterExpression: { supabaseId: { $type: 'string' } } });
 userSchema.index({ oauthId: 1, authProvider: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ isActive: 1, isBlocked: 1 });
