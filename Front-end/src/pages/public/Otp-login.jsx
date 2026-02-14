@@ -1,11 +1,9 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Shield, ChevronLeft, UserPlus, LogIn, RotateCw } from "lucide-react";
+import { ArrowUpRight, Shield, ChevronLeft, UserPlus, LogIn, RotateCw, AlertCircle } from "lucide-react";
 import { authAPI } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
-
-
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -49,7 +47,6 @@ const OTPInput = ({ length = 6, value, onChange }) => {
     setOtp(newOtp);
     onChange(newOtp.join(""));
 
-    // Move to next input
     if (element.value !== "" && index < length - 1) {
       inputRefs.current[index + 1].focus();
       setFocusedIndex(index + 1);
@@ -90,7 +87,6 @@ const OTPInput = ({ length = 6, value, onChange }) => {
     setOtp(newOtp);
     onChange(newOtp.join(""));
 
-    // Focus last filled input or next empty
     const lastFilledIndex = Math.min(pastedData.length, length - 1);
     inputRefs.current[lastFilledIndex].focus();
     setFocusedIndex(lastFilledIndex);
@@ -134,21 +130,22 @@ const OTPInput = ({ length = 6, value, onChange }) => {
 const OTPLogin = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { verifyOtp } = useAuth();
+
   const [otpValue, setOtpValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [error, setError] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
-  const { verifyOtp } = useAuth();
 
-  // Get data from navigation state
   const fromPage = location.state?.from || "login";
   const userEmail = location.state?.email || "user@example.com";
   const savedFormData = location.state?.formData || null;
 
   const heroRef = useRef(null);
 
-  // Parallax effect for hero image
   const { scrollYProgress: heroScroll } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
@@ -157,7 +154,6 @@ const OTPLogin = () => {
   const heroScale = useTransform(heroScroll, [0, 1], [1.05, 1.15]);
   const heroOpacity = useTransform(heroScroll, [0, 0.8], [0.7, 0.3]);
 
-  // Resend timer
   useEffect(() => {
     if (resendTimer > 0) {
       const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
@@ -169,33 +165,31 @@ const OTPLogin = () => {
 
   const handleVerify = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (otpValue.length !== 6) {
-      alert("Please enter the complete 6-digit code");
+      setError("Please enter the complete 6-digit code");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Store OTP in formData for step 2 submission
       const updatedFormData = {
         ...savedFormData,
         otp: otpValue
       };
 
-      console.log(userEmail, otpValue, fromPage)
-
       const data = await verifyOtp(userEmail, otpValue);
 
+      setSuccessMessage(fromPage === "register" ? "Code verified!" : "Verification successful!");
       setShowSuccess(true);
 
       setTimeout(() => {
         setShowSuccess(false);
+        setSuccessMessage("");
 
-        // Redirect based on where they came from
         if (fromPage === "register") {
-          // Go back to register page step 2 with saved data including OTP
           navigate("/register", {
             state: {
               fromOTP: true,
@@ -203,13 +197,12 @@ const OTPLogin = () => {
             }
           });
         } else {
-          // For login, go to dashboard
-          data.data.user.role == "client" ? navigate("/client") : navigate("/freelancer");
+          data.data.user.role === "client" ? navigate("/client") : navigate("/freelancer");
         }
       }, 1500);
-    } catch (error) {
-      console.error("OTP verification failed:", error);
-      alert(error.response?.data?.message || "Invalid verification code. Please try again.");
+    } catch (err) {
+      console.error("OTP verification failed:", err);
+      setError(err.response?.data?.message || "Invalid verification code. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -218,24 +211,27 @@ const OTPLogin = () => {
   const handleResend = async () => {
     if (!canResend) return;
 
-    // try {
-    //   console.log("Resending OTP...");
-    //   await authAPI.requestOTP(userEmail);
-    //   alert("A new OTP has been sent to your email!");
-    //   setResendTimer(30);
-    //   setCanResend(false);
-    //   setOtpValue("");
-    // } catch (error) {
-    //   console.error("Failed to resend OTP:", error);
-    //   alert(error.response?.data?.message || "Failed to resend code. Please try again.");
-    // }
+    setError("");
+
+    try {
+      await authAPI.resendOTP(userEmail);
+      setSuccessMessage("New code sent to your email!");
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setSuccessMessage("");
+      }, 2000);
+      setResendTimer(30);
+      setCanResend(false);
+      setOtpValue("");
+    } catch (err) {
+      console.error("Failed to resend OTP:", err);
+      setError(err.response?.data?.message || "Failed to resend code. Please try again.");
+    }
   };
 
   const handleBackClick = () => {
-    console.log("Going back to:", fromPage);
-
     if (fromPage === "register") {
-      // Go back to register with saved data
       navigate("/register", {
         state: {
           formData: savedFormData
@@ -248,11 +244,9 @@ const OTPLogin = () => {
 
   return (
     <div className="bg-white h-screen font-sans selection:bg-[#b3f5e1] selection:text-black overflow-hidden no-header no-footer">
-
-      {/* --- SPLIT LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 h-screen">
 
-        {/* LEFT SIDE - HERO IMAGE (HIDDEN ON MOBILE) */}
+        {/* LEFT SIDE - HERO IMAGE */}
         <div
           ref={heroRef}
           className="relative hidden lg:flex lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-6 h-[94%]"
@@ -265,7 +259,6 @@ const OTPLogin = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50" />
 
-          {/* Hero Content */}
           <div className="relative z-10 h-full p-8 md:p-14 flex flex-col justify-between text-white w-full">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -382,6 +375,19 @@ const OTPLogin = () => {
                 onChange={setOtpValue}
               />
 
+              {/* Error Message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="p-2.5 bg-red-50 border-2 border-red-200 rounded-xl text-red-800 font-bold text-center text-xs flex items-center justify-center gap-1.5"
+                >
+                  <AlertCircle size={14} />
+                  {error}
+                </motion.div>
+              )}
+
               {/* Timer & Resend */}
               <motion.div
                 className="text-center pt-1"
@@ -450,7 +456,7 @@ const OTPLogin = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </motion.div>
-                  Verification successful!
+                  {successMessage}
                 </motion.div>
               )}
             </form>

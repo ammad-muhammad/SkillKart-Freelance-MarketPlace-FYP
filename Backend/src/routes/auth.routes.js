@@ -28,14 +28,6 @@ router.post('/register/user',
   authController.createUser
 );
 
-router.post('/register/step2',
-  authLimiter,
-  otpVerificationValidation,
-  validate,
-  authController.registerStep2
-);
-
-
 // login
 router.post('/login',
   authLimiter,

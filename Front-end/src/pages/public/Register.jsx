@@ -2,8 +2,9 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link, useNavigate, useLocation, data } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, Check, Briefcase, Code } from "lucide-react";
+import { clientsAPI } from '../../api/clients';
+import { freelancersAPI } from '../../api/freelancers';
 import { authAPI } from '../../api/auth';
-import { useAuth } from '../../hooks/useAuth';
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -195,7 +196,6 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
 const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { register } = useAuth();
 
   // Get saved data from location state (when returning from OTP)
   const savedData = location.state?.formData;
@@ -209,14 +209,30 @@ const Register = () => {
     password: "",
     confirmPassword: "",
     acceptedTerms: false,
-    firstName: "",
-    lastName: "",
-    companyType: "",
+
+    phone: "",
+    profilePicture: "",
+
+    // Client fields
     companyName: "",
+    companySize: "",
     industry: "",
-    skillCategory: "",
-    cvFile: "",
+    website: null,
+    description: "",
+    country: "",
+    city: "",
+    address: "",
+
+    // Freelancer fields
+    bio: "",
+    title: "",
     hourlyRate: "",
+    skills: [],
+    availability: "full-time",
+    portfolio: [],
+    education: [],
+    certifications: [],
+    languages: []
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -233,11 +249,19 @@ const Register = () => {
   const heroOpacity = useTransform(heroScroll, [0, 0.8], [0.7, 0.3]);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked, files } = e.target;
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox'
+        ? checked
+        : type === 'file'
+          ? files[0]
+          : name === 'skills'
+            ? value.split(',').map(skill => skill.trim()).filter(Boolean) // Convert comma-separated to array
+            : value
     }));
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -264,25 +288,58 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
+  const validateUserData = () => {
     const newErrors = {};
 
+    // Common validation
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
 
-    if (userRole === "client" && !formData.companyType) {
-      newErrors.companyType = "Please select company type";
+    // Client validation
+    if (userRole === "client") {
+      // Make these required if needed
+      if (!formData.companyName) newErrors.companyName = "Company name is required";
+      if (!formData.companySize) newErrors.companySize = "Please select company size";
+      if (!formData.industry) newErrors.industry = "Please select an industry";
+
+      // Optional field validation
+      if (formData.website && !isValidUrl(formData.website)) {
+        newErrors.website = "Please enter a valid URL (e.g., https://example.com)";
+      }
     }
 
+    // Freelancer validation
     if (userRole === "freelancer") {
-      if (!formData.skillCategory) newErrors.skillCategory = "Please select a skill category";
-      if (!formData.cvFile) newErrors.cvFile = "Please upload your CV/Resume";
+      if (!formData.title) newErrors.title = "Professional title is required";
+      if (!formData.bio) newErrors.bio = "Bio is required";
       if (!formData.hourlyRate) newErrors.hourlyRate = "Hourly rate is required";
-      if (parseFloat(formData.hourlyRate) < 1) newErrors.hourlyRate = "Rate must be at least $1";
+      if (parseFloat(formData.hourlyRate) < 1) {
+        newErrors.hourlyRate = "Rate must be at least $1";
+      }
+      if (!formData.availability) newErrors.availability = "Please select your availability";
+
+      // Skills validation
+      const skillsArray = typeof formData.skills === 'string'
+        ? formData.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : formData.skills;
+
+      if (skillsArray.length === 0) {
+        newErrors.skills = "Please add at least one skill";
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Helper function for URL validation
+  const isValidUrl = (url) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
   };
 
   const handleRoleSelect = (role) => {
@@ -314,7 +371,7 @@ const Register = () => {
           };
 
           console.log(userData)
-          await authAPI.createUser(userData);
+          await authAPI.register(userData);
 
           // Navigate to OTP page with form data
           navigate("/otp", {
@@ -341,8 +398,8 @@ const Register = () => {
     e.preventDefault();
 
     if (step === 2) {
-      if (validateStep2()) {
-        // ✅ Validate role before submitting
+      if (validateUserData()) {
+        // Validate role before submitting
         if (userRole !== "client" && userRole !== "freelancer") {
           setErrors(prev => ({
             ...prev,
@@ -354,40 +411,55 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-          // Prepare userData for API
-          const userData = {
-            email: formData.email,
-            password: formData.password,
-            role: userRole,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            ...(userRole === "client" && {
-              companyType: formData.companyType,
+          if (userRole === "client") {
+            await clientsAPI.updateProfile({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone,
+              profilePicture: formData.profilePicture,
               companyName: formData.companyName,
-              industry: formData.industry
-            }),
-            ...(userRole === "freelancer" && {
-              skillCategory: formData.skillCategory,
-              cvFile: formData.cvFile,
-              hourlyRate: parseFloat(formData.hourlyRate)
-            })
-          };
+              companySize: formData.companySize,
+              industry: formData.industry,
+              website: formData.website || null,
+              description: formData.description,
+              country: formData.country,
+              city: formData.city,
+              address: formData.address
+            });
+          }
 
-          // ✅ Use the context's register function (saves tokens automatically)
-          const data = await register(userData);
+          if (userRole === "freelancer") {
+            await freelancersAPI.updateProfile({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone,
+              profilePicture: formData.profilePicture,
+              bio: formData.bio,
+              title: formData.title,
+              hourlyRate: parseFloat(formData.hourlyRate),
+              skills: typeof formData.skills === 'string'
+                ? formData.skills.split(',').map(skill => skill.trim()).filter(Boolean)
+                : formData.skills, // Convert comma-separated string to array
+              portfolio: formData.portfolio || [],
+              education: formData.education || [],
+              certifications: formData.certifications || [],
+              languages: formData.languages || [],
+              availability: formData.availability
+            });
+          }
 
-          console.log("✅ Registration Successful!", data);
+          console.log("✅ Update Successful!");
           setShowSuccess(true);
 
           setTimeout(() => {
             setShowSuccess(false);
-            data.data.userData.user.role == "client" ? navigate("/client") : navigate("/freelancer");
+            navigate(userRole === "client" ? "/client" : "/freelancer");
           }, 2000);
         } catch (error) {
-          console.error("Registration failed:", error);
+          console.error("Update failed:", error);
           setErrors(prev => ({
             ...prev,
-            submit: error.response?.data?.message || "Registration failed. Please try again."
+            submit: error.response?.data?.message || "Update failed. Please try again."
           }));
         } finally {
           setIsLoading(false);
@@ -711,23 +783,22 @@ const Register = () => {
                     </div>
                   </motion.div>
 
+                  {/* Phone Number Field - Common for both */}
+                  <motion.div variants={staggerItem}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="+1 234 567 8900"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                    />
+                  </motion.div>
+
                   {/* CLIENT SPECIFIC FIELDS */}
                   {userRole === "client" && (
                     <>
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Company Type"
-                          name="companyType"
-                          options={["Individual", "Startup", "Small Business", "Enterprise", "Agency"]}
-                          value={formData.companyType}
-                          onChange={handleInputChange}
-                          error={errors.companyType}
-                          isOpen={openDropdown === "companyType"}
-                          onToggle={() => toggleDropdown("companyType")}
-                          openUpward={true}
-                        />
-                      </motion.div>
-
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Company Name (Optional)</label>
                         <input
@@ -742,15 +813,90 @@ const Register = () => {
 
                       <motion.div variants={staggerItem}>
                         <ModernSelect
+                          label="Company Size (Optional)"
+                          name="companySize"
+                          options={["1-10", "11-50", "51-200", "201-500", "500+"]}
+                          value={formData.companySize}
+                          onChange={handleInputChange}
+                          isOpen={openDropdown === "companySize"}
+                          onToggle={() => toggleDropdown("companySize")}
+                          openUpward={true}
+                        />
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <ModernSelect
                           label="Industry (Optional)"
                           name="industry"
-                          options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Other"]}
+                          options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Education", "Real Estate", "Other"]}
                           value={formData.industry}
                           onChange={handleInputChange}
                           isOpen={openDropdown === "industry"}
                           onToggle={() => toggleDropdown("industry")}
                           openUpward={true}
                         />
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Website (Optional)</label>
+                        <input
+                          type="url"
+                          name="website"
+                          placeholder="https://yourcompany.com"
+                          value={formData.website}
+                          onChange={handleInputChange}
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                        />
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Company Description (Optional)</label>
+                        <textarea
+                          name="description"
+                          placeholder="Brief description of your company..."
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          rows="3"
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black resize-none"
+                        />
+                      </motion.div>
+
+                      {/* Location Fields */}
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Country (Optional)</label>
+                        <input
+                          type="text"
+                          name="country"
+                          placeholder="United States"
+                          value={formData.country}
+                          onChange={handleInputChange}
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                        />
+                      </motion.div>
+
+                      <motion.div className="grid grid-cols-2 gap-3" variants={staggerItem}>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City (Optional)</label>
+                          <input
+                            type="text"
+                            name="city"
+                            placeholder="San Francisco"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address (Optional)</label>
+                          <input
+                            type="text"
+                            name="address"
+                            placeholder="123 Main St"
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                          />
+                        </div>
                       </motion.div>
                     </>
                   )}
@@ -759,32 +905,29 @@ const Register = () => {
                   {userRole === "freelancer" && (
                     <>
                       <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Primary Skill Category"
-                          name="skillCategory"
-                          options={["Web Development", "UI/UX Design", "Mobile Development", "Data Science", "Content Writing", "Digital Marketing", "Graphic Design", "Other"]}
-                          value={formData.skillCategory}
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Professional Title</label>
+                        <input
+                          type="text"
+                          name="title"
+                          placeholder="e.g., Full-Stack Developer"
+                          value={formData.title}
                           onChange={handleInputChange}
-                          error={errors.skillCategory}
-                          isOpen={openDropdown === "skillCategory"}
-                          onToggle={() => toggleDropdown("skillCategory")}
-                          openUpward={true}
+                          className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.title ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                            }`}
                         />
+                        {errors.title && <p className="text-red-500 text-xs mt-1 ml-1">{errors.title}</p>}
                       </motion.div>
 
                       <motion.div variants={staggerItem}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload CV/Resume</label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            name="cvFile"
-                            accept=".pdf,.doc,.docx"
-                            onChange={handleInputChange}
-                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-black file:text-white hover:file:bg-gray-900 cursor-pointer"
-                          />
-                          <p className="text-xs text-gray-500 mt-1 ml-1">Supported formats: PDF, DOC, DOCX (Max 5MB)</p>
-                        </div>
-                        {errors.cvFile && <p className="text-red-500 text-xs mt-1 ml-1">{errors.cvFile}</p>}
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                        <textarea
+                          name="bio"
+                          placeholder="Tell us about yourself and your expertise..."
+                          value={formData.bio}
+                          onChange={handleInputChange}
+                          rows="4"
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black resize-none"
+                        />
                       </motion.div>
 
                       <motion.div variants={staggerItem}>
@@ -805,8 +948,35 @@ const Register = () => {
                         </div>
                         {errors.hourlyRate && <p className="text-red-500 text-xs mt-1 ml-1">{errors.hourlyRate}</p>}
                       </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Skills (comma-separated)</label>
+                        <input
+                          type="text"
+                          name="skills"
+                          placeholder="JavaScript, React, Node.js, MongoDB"
+                          value={formData.skills}
+                          onChange={handleInputChange}
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                        />
+                        <p className="text-xs text-gray-500 mt-1 ml-1">Separate skills with commas</p>
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <ModernSelect
+                          label="Availability"
+                          name="availability"
+                          options={["full-time", "part-time", "contract", "not-available"]}
+                          value={formData.availability}
+                          onChange={handleInputChange}
+                          isOpen={openDropdown === "availability"}
+                          onToggle={() => toggleDropdown("availability")}
+                          openUpward={true}
+                        />
+                      </motion.div>
                     </>
                   )}
+
 
                   {/* Success Message */}
                   {showSuccess && (

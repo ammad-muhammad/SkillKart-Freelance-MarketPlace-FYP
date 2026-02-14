@@ -34,37 +34,12 @@ export const AuthProvider = ({ children }) => {
       console.log(email, otp)
       const { data } = await authAPI.verifyOTP(email, otp);
       console.log(data)
-      // localStorage.setItem('accessToken', data.data.tokens.accessToken);
-      // localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+      localStorage.setItem('accessToken', data.data.tokens.accessToken);
+      localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
       toast.success('OTP Verifed!');
       return data;
     } catch (error) {
       toast.error(error.response?.data?.message || 'OTP Verification Failed');
-      throw error;
-    }
-  };
-
-  const login = async (email, password) => {
-    try {
-      const { data } = await authAPI.login(email, password);
-      console.log(data)
-
-      toast.success('Login successful!');
-      return data;
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
-      throw error;
-    }
-  };
-
-  const register = async (userData) => {
-    try {
-      const { data } = await authAPI.register(userData);
-
-      toast.success('Registration successful!');
-      return data;
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
       throw error;
     }
   };
@@ -80,8 +55,6 @@ export const AuthProvider = ({ children }) => {
       user,
       loading,
       verifyOtp,
-      login,
-      register,
       logout,
       isAuthenticated: !!user
     }}>

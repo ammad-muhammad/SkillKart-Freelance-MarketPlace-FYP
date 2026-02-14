@@ -133,7 +133,7 @@ const updateClientProfileValidation = [
     .isLength({ max: 100 }).withMessage('Industry must not exceed 100 characters'),
 
   body('website')
-    .optional()
+    .optional({ values: 'falsy' })
     .isURL().withMessage('Invalid website URL'),
 
   body('description')

@@ -22,24 +22,6 @@ const createUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * Register Step 2: Verify OTP and Create User
- */
-const registerStep2 = asyncHandler(async (req, res) => {
-  const { firstName, lastName } = req.body;
-
-  // Create user
-  const user = await authService.registerWithEmail({
-   firstName, lastName
-  });
-
-  // Mark email as verified
-  // await authService.verifyEmail(email);
-
-  sendCreated(res, 'Registration successful', { userData: user });
-});
-
-
-/**
  * Login with Email/Password (Direct - No OTP)
  */
 const login = asyncHandler(async (req, res) => {
@@ -231,7 +213,6 @@ const logout = asyncHandler(async (req, res) => {
 
 module.exports = {
   createUser,
-  registerStep2,
   login,
   verifyOtp,
   superAdminLogin,

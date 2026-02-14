@@ -3,7 +3,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { authAPI } from '../../api/auth';
-import { useAuth } from '../../hooks/useAuth';
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -119,7 +118,6 @@ const PasswordInput = ({ value, onChange, error }) => {
 // --- MAIN LOGIN PAGE ---
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -180,7 +178,7 @@ const Login = () => {
   
     try {
       // Call the API to verify credentials and send OTP
-      const response = await login(formData.email, formData.password);
+      const response = await authAPI.login(formData.email, formData.password);
   
       console.log("✅ Credentials verified, OTP sent successfully!", response);
   

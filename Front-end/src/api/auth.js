@@ -9,6 +9,9 @@ export const authAPI = {
   
   verifyOTP: (email, otp) =>
     client.post('/auth/otp/verify', { email, otp }),
+
+  resendOTP: (email, purpose = 'email_verification') =>
+    client.post('/auth/otp/resend', { email, purpose }),
   
   getCurrentUser: () =>
     client.get('/auth/me'),
