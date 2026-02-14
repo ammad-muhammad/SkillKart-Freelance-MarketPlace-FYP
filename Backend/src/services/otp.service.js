@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const OTP = require('../models/OTP');
 const { sendOTPEmail } = require('./email.service');
+const config = require('../config/index');
 
 /**
  * Generate and send OTP
@@ -12,7 +13,7 @@ const generateAndSendOTP = async (email, purpose = 'email_verification') => {
     const { otpRecord, otp } = await OTP.createOTP({
       email,
       purpose,
-      expiryMinutes: 10,
+      expiryMinutes: config.otp.expiryMinutes,
       metadata: {
         requestedOperation: purpose
       }
@@ -23,7 +24,7 @@ const generateAndSendOTP = async (email, purpose = 'email_verification') => {
 
     return { 
       message: 'OTP sent successfully', 
-      expiresIn: 600,
+      expiresIn: config.otp.expiryMinutes,
       email 
     };
   } catch (error) {

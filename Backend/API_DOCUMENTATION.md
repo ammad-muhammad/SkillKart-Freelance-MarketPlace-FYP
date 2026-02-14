@@ -18,7 +18,7 @@ Authorization: Bearer <your-jwt-token>
 ### 🔐 Authentication (`/api/v1/auth`)
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/register/step1` | Send OTP for registration | ❌ |
+| POST | `/register/user` | Send OTP for registration | ❌ |
 | POST | `/register/step2` | Complete registration with OTP | ❌ |
 | POST | `/login/step1` | Send OTP for login | ❌ |
 | POST | `/login/step2` | Complete login with OTP | ❌ |
@@ -146,7 +146,7 @@ Authorization: Bearer <your-jwt-token>
 
 ### Register User (Step 1)
 ```bash
-curl -X POST http://localhost:5000/api/v1/auth/register/step1 \
+curl -X POST http://localhost:5000/api/v1/auth/register/user \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com"}'
 ```

@@ -17,26 +17,25 @@ const registerWithEmail = async (userData) => {
   const user = new User({
     email,
     password,
-    firstName,
-    lastName,
+    firstName: firstName || "",
+    lastName: lastName || "",
     role: role || 'publicviewer',
     authProvider: 'email',
     isEmailVerified: false
   });
 
   await user.save();
-  
-  // return user;
-  const tokens = generateTokenPair(user);
-  return { user: user.toAuthJSON(), tokens };
+
+  return user;
 };
+
 
 /**
  * Login with email/password
  */
 const loginWithEmail = async (email, password) => {
   const user = await User.findOne({ email }).select('+password');
-  
+
   if (!user) {
     throw new AuthenticationError('Invalid credentials');
   }
@@ -46,7 +45,7 @@ const loginWithEmail = async (email, password) => {
   }
 
   const isPasswordValid = await user.comparePassword(password);
-  
+
   if (!isPasswordValid) {
     await user.incLoginAttempts();
     throw new AuthenticationError('Invalid credentials');
@@ -64,8 +63,8 @@ const loginWithEmail = async (email, password) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const tokens = generateTokenPair(user);
-  return { user: user.toAuthJSON(), tokens };
+
+  return { user: user.id, valid: true };
 };
 
 /**
@@ -73,9 +72,9 @@ const loginWithEmail = async (email, password) => {
  */
 const loginSuperAdmin = async (username, password, encryptedCredentials) => {
   const { verifySuperAdminCredentials } = require('./encryption.service');
-  
+
   const isValid = await verifySuperAdminCredentials(username, password, encryptedCredentials);
-  
+
   if (!isValid) {
     throw new AuthenticationError('Invalid SuperAdmin credentials');
   }
@@ -95,9 +94,9 @@ const loginSuperAdmin = async (username, password, encryptedCredentials) => {
  */
 const refreshAccessToken = async (refreshToken) => {
   const { verifyRefreshToken, generateToken } = require('../utils/jwt');
-  
+
   const decoded = verifyRefreshToken(refreshToken);
-  
+
   if (decoded.userId === 'superadmin') {
     return generateToken({ _id: 'superadmin', email: decoded.email, role: 'superadmin' });
   }
@@ -152,7 +151,9 @@ const verifyEmail = async (email) => {
   user.emailVerifiedAt = new Date();
   await user.save();
 
-  return user;
+
+  const tokens = generateTokenPair(user);
+  return { success: true, user: user.toAuthJSON(), tokens };
 };
 
 /**

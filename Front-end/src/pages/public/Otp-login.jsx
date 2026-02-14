@@ -3,6 +3,9 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Shield, ChevronLeft, UserPlus, LogIn, RotateCw } from "lucide-react";
 import { authAPI } from '../../api/auth';
+import { useAuth } from '../../hooks/useAuth';
+
+
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -18,9 +21,9 @@ const staggerContainer = {
 
 const staggerItem = {
   hidden: { opacity: 0, y: 15, filter: "blur(6px)" },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
+  visible: {
+    opacity: 1,
+    y: 0,
     filter: "blur(0px)",
     transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
   }
@@ -77,16 +80,16 @@ const OTPInput = ({ length = 6, value, onChange }) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").slice(0, length);
     const newOtp = [...otp];
-    
+
     for (let i = 0; i < pastedData.length; i++) {
       if (!isNaN(pastedData[i])) {
         newOtp[i] = pastedData[i];
       }
     }
-    
+
     setOtp(newOtp);
     onChange(newOtp.join(""));
-    
+
     // Focus last filled input or next empty
     const lastFilledIndex = Math.min(pastedData.length, length - 1);
     inputRefs.current[lastFilledIndex].focus();
@@ -94,7 +97,7 @@ const OTPInput = ({ length = 6, value, onChange }) => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="flex gap-2 justify-center"
       variants={staggerItem}
     >
@@ -136,6 +139,7 @@ const OTPLogin = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
+  const { verifyOtp } = useAuth();
 
   // Get data from navigation state
   const fromPage = location.state?.from || "login";
@@ -143,7 +147,7 @@ const OTPLogin = () => {
   const savedFormData = location.state?.formData || null;
 
   const heroRef = useRef(null);
-  
+
   // Parallax effect for hero image
   const { scrollYProgress: heroScroll } = useScroll({
     target: heroRef,
@@ -165,34 +169,30 @@ const OTPLogin = () => {
 
   const handleVerify = async (e) => {
     e.preventDefault();
-    
+
     if (otpValue.length !== 6) {
       alert("Please enter the complete 6-digit code");
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      // Note: You'll need to add verifyOTP endpoint to your authAPI
-      // For now, verification happens on the backend when user submits step 2
-      // This just validates the OTP format
-      
-      console.log("✅ OTP Validation Successful!");
-      console.log("OTP:", otpValue);
-      console.log("Came from:", fromPage);
-      
       // Store OTP in formData for step 2 submission
       const updatedFormData = {
         ...savedFormData,
         otp: otpValue
       };
-      
+
+      console.log(userEmail, otpValue, fromPage)
+
+      const data = await verifyOtp(userEmail, otpValue);
+
       setShowSuccess(true);
-      
+
       setTimeout(() => {
         setShowSuccess(false);
-        
+
         // Redirect based on where they came from
         if (fromPage === "register") {
           // Go back to register page step 2 with saved data including OTP
@@ -204,7 +204,7 @@ const OTPLogin = () => {
           });
         } else {
           // For login, go to dashboard
-          navigate("/dashboard");
+          data.data.user.role == "client" ? navigate("/client") : navigate("/freelancer");
         }
       }, 1500);
     } catch (error) {
@@ -217,23 +217,23 @@ const OTPLogin = () => {
 
   const handleResend = async () => {
     if (!canResend) return;
-    
-    try {
-      console.log("Resending OTP...");
-      await authAPI.requestOTP(userEmail);
-      alert("A new OTP has been sent to your email!");
-      setResendTimer(30);
-      setCanResend(false);
-      setOtpValue("");
-    } catch (error) {
-      console.error("Failed to resend OTP:", error);
-      alert(error.response?.data?.message || "Failed to resend code. Please try again.");
-    }
+
+    // try {
+    //   console.log("Resending OTP...");
+    //   await authAPI.requestOTP(userEmail);
+    //   alert("A new OTP has been sent to your email!");
+    //   setResendTimer(30);
+    //   setCanResend(false);
+    //   setOtpValue("");
+    // } catch (error) {
+    //   console.error("Failed to resend OTP:", error);
+    //   alert(error.response?.data?.message || "Failed to resend code. Please try again.");
+    // }
   };
 
   const handleBackClick = () => {
     console.log("Going back to:", fromPage);
-    
+
     if (fromPage === "register") {
       // Go back to register with saved data
       navigate("/register", {
@@ -248,13 +248,13 @@ const OTPLogin = () => {
 
   return (
     <div className="bg-white h-screen font-sans selection:bg-[#b3f5e1] selection:text-black overflow-hidden no-header no-footer">
-      
+
       {/* --- SPLIT LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 h-screen">
-        
+
         {/* LEFT SIDE - HERO IMAGE (HIDDEN ON MOBILE) */}
-        <div 
-          ref={heroRef} 
+        <div
+          ref={heroRef}
           className="relative hidden lg:flex lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-6 h-[94%]"
         >
           <motion.img
@@ -264,7 +264,7 @@ const OTPLogin = () => {
             alt="Security"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50" />
-          
+
           {/* Hero Content */}
           <div className="relative z-10 h-full p-8 md:p-14 flex flex-col justify-between text-white w-full">
             <motion.div
@@ -309,7 +309,7 @@ const OTPLogin = () => {
 
         {/* RIGHT SIDE - OTP FORM */}
         <div className="p-6 md:p-8 lg:p-10 flex flex-col justify-center bg-white relative h-screen overflow-hidden items-center">
-          
+
           {/* Back Button */}
           <motion.button
             onClick={handleBackClick}
@@ -324,15 +324,15 @@ const OTPLogin = () => {
           </motion.button>
 
           {/* Form Container */}
-          <motion.div 
+          <motion.div
             className="w-full max-w-md mx-auto lg:mx-0 relative z-10"
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
           >
-            
+
             {/* Header */}
-            <motion.div 
+            <motion.div
               className="mb-6 text-center"
               variants={staggerItem}
             >
@@ -375,7 +375,7 @@ const OTPLogin = () => {
 
             {/* OTP Form */}
             <form onSubmit={handleVerify} className="space-y-4 mb-4">
-              
+
               <OTPInput
                 length={6}
                 value={otpValue}
@@ -383,7 +383,7 @@ const OTPLogin = () => {
               />
 
               {/* Timer & Resend */}
-              <motion.div 
+              <motion.div
                 className="text-center pt-1"
                 variants={staggerItem}
               >
@@ -456,7 +456,7 @@ const OTPLogin = () => {
             </form>
 
             {/* Help Text */}
-            <motion.div 
+            <motion.div
               className="text-center space-y-1.5"
               variants={staggerItem}
             >

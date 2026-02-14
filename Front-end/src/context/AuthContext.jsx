@@ -29,15 +29,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const verifyOtp = async (email, otp) => {
+    try {
+      console.log(email, otp)
+      const { data } = await authAPI.verifyOTP(email, otp);
+      console.log(data)
+      // localStorage.setItem('accessToken', data.data.tokens.accessToken);
+      // localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+      toast.success('OTP Verifed!');
+      return data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'OTP Verification Failed');
+      throw error;
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const { data } = await authAPI.login(email, password);
       console.log(data)
-      localStorage.setItem('accessToken', data.data.tokens.accessToken);
-      localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
-      setUser(data.data.user);
+
       toast.success('Login successful!');
-      return data.data.user;
+      return data;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
       throw error;
@@ -47,10 +60,6 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const { data } = await authAPI.register(userData);
-
-      localStorage.setItem('accessToken', data.data.userData.tokens.accessToken);
-      localStorage.setItem('refreshToken', data.data.userData.tokens.refreshToken);
-      setUser(data.data.userData.user);
 
       toast.success('Registration successful!');
       return data;
@@ -70,6 +79,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user,
       loading,
+      verifyOtp,
       login,
       register,
       logout,

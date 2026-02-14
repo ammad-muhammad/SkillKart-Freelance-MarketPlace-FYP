@@ -111,8 +111,8 @@ const RoleCard = ({ role, title, description, icon: Icon, isSelected, onClick })
       whileHover={{ scale: 1.02, y: -5 }}
       whileTap={{ scale: 0.98 }}
       className={`relative w-full p-5 rounded-2xl border-2 transition-all duration-300 text-left ${isSelected
-          ? "border-black bg-black text-white shadow-lg"
-          : "border-gray-200 bg-white text-black hover:border-gray-300"
+        ? "border-black bg-black text-white shadow-lg"
+        : "border-gray-200 bg-white text-black hover:border-gray-300"
         }`}
     >
       <div className="flex items-start justify-between mb-3">
@@ -285,16 +285,16 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-const handleRoleSelect = (role) => {
-  if (role !== "client" && role !== "freelancer") {
-    console.error("Invalid role selected");
-    return;
-  }
-  
-  setUserRole(role);
-  setStep(1);
-  setOpenDropdown(null);
-};
+  const handleRoleSelect = (role) => {
+    if (role !== "client" && role !== "freelancer") {
+      console.error("Invalid role selected");
+      return;
+    }
+
+    setUserRole(role);
+    setStep(1);
+    setOpenDropdown(null);
+  };
 
   const toggleDropdown = (id) => {
     setOpenDropdown(prev => prev === id ? null : id);
@@ -305,8 +305,16 @@ const handleRoleSelect = (role) => {
       if (validateStep1()) {
         setIsLoading(true);
         try {
-          // Call API to send OTP
-          await authAPI.requestOTP(formData.email);
+          // Call API to Create User and Send OTP
+
+          const userData = {
+            email: formData.email,
+            password: formData.password,
+            role: userRole, // This will now only be "client" or "freelancer"
+          };
+
+          console.log(userData)
+          await authAPI.createUser(userData);
 
           // Navigate to OTP page with form data
           navigate("/otp", {
@@ -350,8 +358,7 @@ const handleRoleSelect = (role) => {
           const userData = {
             email: formData.email,
             password: formData.password,
-            otp: formData.otp,
-            role: userRole, // This will now only be "client" or "freelancer"
+            role: userRole,
             firstName: formData.firstName,
             lastName: formData.lastName,
             ...(userRole === "client" && {
@@ -374,7 +381,7 @@ const handleRoleSelect = (role) => {
 
           setTimeout(() => {
             setShowSuccess(false);
-            data.data.userData.user.role == "client"? navigate("/client") : navigate("/freelancer"); 
+            data.data.userData.user.role == "client" ? navigate("/client") : navigate("/freelancer");
           }, 2000);
         } catch (error) {
           console.error("Registration failed:", error);

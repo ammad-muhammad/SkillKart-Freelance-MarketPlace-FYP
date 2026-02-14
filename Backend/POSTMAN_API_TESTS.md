@@ -8,7 +8,7 @@ Base URL: `http://localhost:5000`
 
 ### 1.1 Register Step 1 - Send OTP
 ```
-POST /api/v1/auth/register/step1
+POST /api/v1/auth/register/user
 Headers: Content-Type: application/json
 Body:
 {

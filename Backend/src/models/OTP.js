@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const config = require('../config/index');
 
 const otpSchema = new mongoose.Schema({
   email: {
@@ -96,7 +97,7 @@ otpSchema.index({ email: 1, purpose: 1, isVerified: 1 });
 otpSchema.index({ userId: 1, purpose: 1 });
 
 // Static method to generate OTP
-otpSchema.statics.generateOTP = function(length = 6) {
+otpSchema.statics.generateOTP = function(length = config.otp.length) {
   const digits = '0123456789';
   let otp = '';
   
@@ -120,7 +121,7 @@ otpSchema.statics.createOTP = async function({
   email,
   purpose,
   userId = null,
-  expiryMinutes = 10,
+  expiryMinutes = config.otp.expiryMinutes,
   metadata = {}
 }) {
   // Delete any existing unverified OTPs for this email and purpose

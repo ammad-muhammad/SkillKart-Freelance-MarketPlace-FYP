@@ -12,7 +12,7 @@
 ### 1. Register User
 ```javascript
 // Step 1: Request OTP
-POST /auth/register/step1
+POST /auth/register/user
 Body: { "email": "user@example.com" }
 
 // Step 2: Complete registration

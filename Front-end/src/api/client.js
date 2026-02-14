@@ -25,13 +25,23 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // ✅ FIX: Only handle 401 for authenticated routes, not login/register
+    const isAuthRoute = originalRequest.url?.includes('/auth/login') || 
+                        originalRequest.url?.includes('/auth/register') ||
+                        originalRequest.url?.includes('/auth/otp');
+    
+    // Skip token refresh for auth routes (login, register, OTP)
+    if (isAuthRoute) {
+      return Promise.reject(error);
+    }
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
         localStorage.clear();
-        window.location.href = '/login';
+        // ✅ Don't reload, just reject the error
         return Promise.reject(error);
       }
       
@@ -46,7 +56,7 @@ client.interceptors.response.use(
         return client(originalRequest);
       } catch (refreshError) {
         localStorage.clear();
-        window.location.href = '/login';
+        // ✅ Don't reload, just reject the error
         return Promise.reject(refreshError);
       }
     }

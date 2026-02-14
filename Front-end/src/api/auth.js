@@ -5,13 +5,10 @@ export const authAPI = {
     client.post('/auth/login', { email, password }),
   
   register: (userData) =>
-    client.post('/auth/register/step2', userData),
-  
-  requestOTP: (email) =>
-    client.post('/auth/register/step1', { email }),
+    client.post('/auth/register/user', userData),
   
   verifyOTP: (email, otp) =>
-    client.post('/auth/verify-otp', { email, otp }),
+    client.post('/auth/otp/verify', { email, otp }),
   
   getCurrentUser: () =>
     client.get('/auth/me'),

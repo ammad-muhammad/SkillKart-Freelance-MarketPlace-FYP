@@ -172,26 +172,24 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
+    e.stopPropagation();
+  
     if (!validateForm()) return;
-
+  
     setIsLoading(true);
-
+  
     try {
-      // First, verify the credentials (email + password)
+      // Call the API to verify credentials and send OTP
       const response = await login(formData.email, formData.password);
-
-      // If credentials are valid, then request OTP
-      await authAPI.requestOTP(formData.email);
-
-      console.log("✅ Credentials verified, OTP sent successfully!");
-
+  
+      console.log("✅ Credentials verified, OTP sent successfully!", response);
+  
       // Navigate to OTP page with login credentials and user data
       navigate("/otp", {
         state: {
           from: "login",
           email: formData.email,
-          loginData: {
+          formData: {
             email: formData.email,
             password: formData.password,
             userData: response.data // Store user data for after OTP verification
@@ -199,8 +197,8 @@ const Login = () => {
         }
       });
     } catch (error) {
-      console.error("Login failed:", error);
-
+      console.error("❌ Login failed:", error);
+  
       // Show appropriate error message
       if (error.response?.status === 401) {
         setErrors(prev => ({

@@ -21,11 +21,11 @@ const {
  */
 
 // Two-step registration
-router.post('/register/step1',
+router.post('/register/user',
   authLimiter,
   emailValidation,
   validate,
-  authController.registerStep1
+  authController.createUser
 );
 
 router.post('/register/step2',
@@ -35,27 +35,21 @@ router.post('/register/step2',
   authController.registerStep2
 );
 
-// Two-step login
-router.post('/login/step1',
-  authLimiter,
-  emailValidation,
-  validate,
-  authController.loginStep1
-);
 
-router.post('/login/step2',
-  authLimiter,
-  otpVerificationValidation,
-  validate,
-  authController.loginStep2
-);
-
-// Direct login (no OTP)
+// login
 router.post('/login',
   authLimiter,
   loginValidation,
   validate,
   authController.login
+);
+
+// verify otp
+router.post('/otp/verify',
+  authLimiter,
+  otpVerificationValidation,
+  validate,
+  authController.verifyOtp
 );
 
 // SuperAdmin login
