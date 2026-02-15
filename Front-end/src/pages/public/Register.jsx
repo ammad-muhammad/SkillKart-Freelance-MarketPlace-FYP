@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Briefcase, Code } from "lucide-react";
 
@@ -18,9 +18,9 @@ const staggerContainer = {
 
 const staggerItem = {
   hidden: { opacity: 0, y: 15, filter: "blur(6px)" },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
+  visible: {
+    opacity: 1,
+    y: 0,
     filter: "blur(0px)",
     transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
   }
@@ -38,29 +38,29 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <motion.div 
-      className="relative"
+    <motion.div
       variants={staggerItem}
     >
-      <motion.div
-        className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
-        animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
-        transition={{ duration: 0.2 }}
-      >
-        <Icon size={18} />
-      </motion.div>
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-          error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-        }`}
-      />
+      <div className="relative">
+        <motion.div
+          className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
+          animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
+          transition={{ duration: 0.2 }}
+        >
+          <Icon size={18} />
+        </motion.div>
+        <input
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+            }`}
+        />
+      </div>
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -72,38 +72,38 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <motion.div 
-      className="relative"
+    <motion.div
       variants={staggerItem}
     >
-      <motion.div
-        className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
-        animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
-        transition={{ duration: 0.2 }}
-      >
-        <Lock size={18} />
-      </motion.div>
-      <input
-        type={showPassword ? "text" : "password"}
-        name={name}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-12 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-          error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-        }`}
-      />
-      <motion.button
-        type="button"
-        onClick={() => setShowPassword(!showPassword)}
-        className="absolute right-0 top-1/2 -translate-y-1/2 pr-3.5 text-gray-400 hover:text-black transition-colors"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-      </motion.button>
+      <div className="relative">
+        <motion.div
+          className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
+          animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
+          transition={{ duration: 0.2 }}
+        >
+          <Lock size={18} />
+        </motion.div>
+        <input
+          type={showPassword ? "text" : "password"}
+          name={name}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-12 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+            }`}
+        />
+        <motion.button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 pr-3.5 text-gray-400 hover:text-black transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </motion.button>
+      </div>
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -118,11 +118,10 @@ const RoleCard = ({ role, title, description, icon: Icon, isSelected, onClick })
       variants={staggerItem}
       whileHover={{ scale: 1.02, y: -5 }}
       whileTap={{ scale: 0.98 }}
-      className={`relative w-full p-5 rounded-2xl border-2 transition-all duration-300 text-left ${
-        isSelected 
-          ? "border-black bg-black text-white shadow-lg" 
-          : "border-gray-200 bg-white text-black hover:border-gray-300"
-      }`}
+      className={`relative w-full p-5 rounded-2xl border-2 transition-all duration-300 text-left ${isSelected
+        ? "border-black bg-black text-white shadow-lg"
+        : "border-gray-200 bg-white text-black hover:border-gray-300"
+        }`}
     >
       <div className="flex items-start justify-between mb-3">
         <motion.div
@@ -149,16 +148,15 @@ const RoleCard = ({ role, title, description, icon: Icon, isSelected, onClick })
 };
 
 // --- SELECT DROPDOWN ---
-const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, onToggle, openUpward = false }) => {
+const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, onToggle }) => {
   return (
-    <motion.div className={`relative ${isOpen ? "z-[100]" : "z-10"}`} variants={staggerItem}>
+    <motion.div className={`relative ${isOpen ? "z-[999]" : "z-10"}`} variants={staggerItem}>
       {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
       <motion.button
         type="button"
         onClick={onToggle}
-        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium text-left flex items-center justify-between transition-all duration-300 ${
-          error ? "border-red-300 focus:border-red-500" : "border-gray-200 hover:border-gray-300"
-        } ${isOpen ? "border-black bg-white shadow-sm" : ""}`}
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium text-left flex items-center justify-between transition-all duration-300 ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 hover:border-gray-300"
+          } ${isOpen ? "border-black bg-white shadow-sm" : ""}`}
       >
         <span className={value ? "text-black" : "text-gray-400"}>
           {value || "Select an option"}
@@ -168,32 +166,34 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
         </motion.div>
       </motion.button>
 
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className={`absolute ${openUpward ? "bottom-full mb-3" : "top-full mt-2"} left-0 w-full bg-white border-2 border-gray-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[999] overflow-hidden`}
-        >
-          <div className="max-h-60 overflow-y-auto">
-            {options.map((option) => (
-              <motion.button
-                key={option}
-                type="button"
-                onClick={() => {
-                  onChange({ target: { name, value: option } });
-                  onToggle();
-                }}
-                className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 text-black font-medium"
-                whileHover={{ x: 4 }}
-              >
-                {option}
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute top-full mt-2 left-0 w-full bg-white border-2 border-gray-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[999] overflow-hidden"
+          >
+            <div className="max-h-60 overflow-y-auto overflow-x-hidden">
+              {options.map((option) => (
+                <motion.button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onChange({ target: { name, value: option } });
+                    onToggle();
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 text-black font-medium"
+                  whileHover={{ x: 4 }}
+                >
+                  {option}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -250,16 +250,16 @@ const Register = () => {
 
   const validateStep1 = () => {
     const newErrors = {};
-    
+
     if (!formData.email) newErrors.email = "Email is required";
     if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) newErrors.email = "Invalid email format";
-    
+
     if (!formData.password) newErrors.password = "Password is required";
     if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
-    
+
     if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
-    
+
     if (!formData.acceptedTerms) newErrors.acceptedTerms = "You must agree to the Terms & Conditions";
 
     setErrors(newErrors);
@@ -268,7 +268,7 @@ const Register = () => {
 
   const validateStep2 = () => {
     const newErrors = {};
-    
+
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
 
@@ -307,18 +307,18 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (step === 2) {
       if (validateStep2()) {
         setIsLoading(true);
-        
+
         setTimeout(() => {
           console.log("✅ Registration Successful!");
           console.log("Role:", userRole);
           console.log("User Data:", formData);
           setShowSuccess(true);
           setIsLoading(false);
-          
+
           setTimeout(() => {
             setShowSuccess(false);
             // Reset or navigate
@@ -338,14 +338,14 @@ const Register = () => {
   };
 
   return (
-    <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black overflow-hidden no-header no-footer">
-      
+    <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black no-header no-footer">
+
       {/* --- SPLIT LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
-        
+
         {/* LEFT SIDE - HERO IMAGE */}
-        <div 
-          ref={heroRef} 
+        <div
+          ref={heroRef}
           className="relative hidden lg:flex lg:sticky lg:top-0 overflow-hidden bg-gray-900 rounded-3xl m-6 h-[94vh]"
         >
           <motion.img
@@ -355,7 +355,7 @@ const Register = () => {
             alt="Team"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50" />
-          
+
           {/* Hero Content */}
           <div className="relative z-10 h-full p-8 md:p-14 flex flex-col justify-between text-white w-full">
             <motion.div
@@ -399,8 +399,8 @@ const Register = () => {
         </div>
 
         {/* RIGHT SIDE - REGISTRATION FORM */}
-        <div className="p-6 md:p-8 lg:p-12 flex flex-col justify-center bg-white relative min-h-screen lg:overflow-hidden overflow-y-auto">
-          
+        <div className="p-6 md:p-8 lg:p-12 flex flex-col bg-white relative min-h-screen">
+
           {/* Back Button */}
           <motion.button
             onClick={handleBackClick}
@@ -415,18 +415,18 @@ const Register = () => {
           </motion.button>
 
           {/* Form Container */}
-          <motion.div 
+          <motion.div
             className="w-full max-w-sm mx-auto relative z-10"
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
           >
-            
+
             {/* --- STEP 0: ROLE SELECTION --- */}
             {step === 0 && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   className="mb-8"
                   variants={staggerItem}
                 >
@@ -447,7 +447,7 @@ const Register = () => {
                 </motion.div>
 
                 {/* Role Selection Cards */}
-                <motion.div 
+                <motion.div
                   className="space-y-3 mb-6"
                   variants={staggerContainer}
                 >
@@ -459,7 +459,7 @@ const Register = () => {
                     isSelected={userRole === "client"}
                     onClick={() => handleRoleSelect("client")}
                   />
-                  
+
                   <RoleCard
                     role="freelancer"
                     title="I'm a Freelancer"
@@ -471,7 +471,7 @@ const Register = () => {
                 </motion.div>
 
                 {/* Info Text */}
-                <motion.p 
+                <motion.p
                   className="text-center text-gray-600 text-xs"
                   variants={staggerItem}
                 >
@@ -487,7 +487,7 @@ const Register = () => {
             {step === 1 && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   className="mb-6"
                   variants={staggerItem}
                 >
@@ -506,7 +506,7 @@ const Register = () => {
 
                 {/* Registration Form */}
                 <form onSubmit={handleNextStep} className="space-y-3.5 mb-5">
-                  
+
                   <ModernInput
                     icon={Mail}
                     placeholder="Enter your email"
@@ -536,14 +536,13 @@ const Register = () => {
                   {/* Terms & Conditions */}
                   <motion.div variants={staggerItem} className="space-y-1">
                     <label className="flex items-start gap-2 cursor-pointer mt-4">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         name="acceptedTerms"
                         checked={formData.acceptedTerms}
                         onChange={handleInputChange}
-                        className={`w-4 h-4 rounded border-2 cursor-pointer accent-black mt-0.5 transition-colors ${
-                          errors.acceptedTerms ? "border-red-300" : "border-gray-200"
-                        }`}
+                        className={`w-4 h-4 rounded border-2 cursor-pointer accent-black mt-0.5 transition-colors ${errors.acceptedTerms ? "border-red-300" : "border-gray-200"
+                          }`}
                       />
                       <span className="text-gray-600 font-medium text-xs">
                         I agree to the <span className="font-bold text-black">Terms of Service</span> and <span className="font-bold text-black">Privacy Policy</span>
@@ -567,7 +566,7 @@ const Register = () => {
                 </form>
 
                 {/* Footer */}
-                <motion.p 
+                <motion.p
                   className="text-center text-gray-600 text-xs"
                   variants={staggerItem}
                 >
@@ -583,7 +582,7 @@ const Register = () => {
             {step === 2 && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   className="mb-6"
                   variants={staggerItem}
                 >
@@ -602,7 +601,7 @@ const Register = () => {
 
                 {/* Profile Form */}
                 <form onSubmit={handleSubmit} className="space-y-3.5 mb-5">
-                  
+
                   <motion.div className="grid grid-cols-2 gap-3" variants={staggerItem}>
                     <div>
                       <input
@@ -611,9 +610,8 @@ const Register = () => {
                         placeholder="First Name"
                         value={formData.firstName}
                         onChange={handleInputChange}
-                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                          errors.firstName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                        }`}
+                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.firstName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                          }`}
                       />
                       {errors.firstName && <p className="text-red-500 text-xs mt-1 ml-1">{errors.firstName}</p>}
                     </div>
@@ -624,9 +622,8 @@ const Register = () => {
                         placeholder="Last Name"
                         value={formData.lastName}
                         onChange={handleInputChange}
-                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                          errors.lastName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                        }`}
+                        className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.lastName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                          }`}
                       />
                       {errors.lastName && <p className="text-red-500 text-xs mt-1 ml-1">{errors.lastName}</p>}
                     </div>
@@ -635,19 +632,16 @@ const Register = () => {
                   {/* CLIENT SPECIFIC FIELDS */}
                   {userRole === "client" && (
                     <>
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Company Type"
-                          name="companyType"
-                          options={["Individual", "Startup", "Small Business", "Enterprise", "Agency"]}
-                          value={formData.companyType}
-                          onChange={handleInputChange}
-                          error={errors.companyType}
-                          isOpen={openDropdown === "companyType"}
-                          onToggle={() => toggleDropdown("companyType")}
-                          openUpward={true}
-                        />
-                      </motion.div>
+                      <ModernSelect
+                        label="Company Type"
+                        name="companyType"
+                        options={["Individual", "Startup", "Small Business", "Enterprise", "Agency"]}
+                        value={formData.companyType}
+                        onChange={handleInputChange}
+                        error={errors.companyType}
+                        isOpen={openDropdown === "companyType"}
+                        onToggle={() => toggleDropdown("companyType")}
+                      />
 
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Company Name (Optional)</label>
@@ -661,37 +655,31 @@ const Register = () => {
                         />
                       </motion.div>
 
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Industry (Optional)"
-                          name="industry"
-                          options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Other"]}
-                          value={formData.industry}
-                          onChange={handleInputChange}
-                          isOpen={openDropdown === "industry"}
-                          onToggle={() => toggleDropdown("industry")}
-                          openUpward={true}
-                        />
-                      </motion.div>
+                      <ModernSelect
+                        label="Industry (Optional)"
+                        name="industry"
+                        options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Other"]}
+                        value={formData.industry}
+                        onChange={handleInputChange}
+                        isOpen={openDropdown === "industry"}
+                        onToggle={() => toggleDropdown("industry")}
+                      />
                     </>
                   )}
 
                   {/* FREELANCER SPECIFIC FIELDS */}
                   {userRole === "freelancer" && (
                     <>
-                      <motion.div variants={staggerItem}>
-                        <ModernSelect
-                          label="Primary Skill Category"
-                          name="skillCategory"
-                          options={["Web Development", "UI/UX Design", "Mobile Development", "Data Science", "Content Writing", "Digital Marketing", "Graphic Design", "Other"]}
-                          value={formData.skillCategory}
-                          onChange={handleInputChange}
-                          error={errors.skillCategory}
-                          isOpen={openDropdown === "skillCategory"}
-                          onToggle={() => toggleDropdown("skillCategory")}
-                          openUpward={true}
-                        />
-                      </motion.div>
+                      <ModernSelect
+                        label="Primary Skill Category"
+                        name="skillCategory"
+                        options={["Web Development", "UI/UX Design", "Mobile Development", "Data Science", "Content Writing", "Digital Marketing", "Graphic Design", "Other"]}
+                        value={formData.skillCategory}
+                        onChange={handleInputChange}
+                        error={errors.skillCategory}
+                        isOpen={openDropdown === "skillCategory"}
+                        onToggle={() => toggleDropdown("skillCategory")}
+                      />
 
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Upload CV/Resume</label>
@@ -720,9 +708,8 @@ const Register = () => {
                             onChange={handleInputChange}
                             min="1"
                             step="0.5"
-                            className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-8 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${
-                              errors.hourlyRate ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-                            }`}
+                            className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-8 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.hourlyRate ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                              }`}
                           />
                         </div>
                         {errors.hourlyRate && <p className="text-red-500 text-xs mt-1 ml-1">{errors.hourlyRate}</p>}
@@ -769,7 +756,7 @@ const Register = () => {
                 </form>
 
                 {/* Footer */}
-                <motion.p 
+                <motion.p
                   className="text-center text-gray-600 text-xs"
                   variants={staggerItem}
                 >
