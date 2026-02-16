@@ -1,8 +1,9 @@
+//controlers/auth.controller
 const authService = require('../services/auth.service');
 const otpService = require('../services/otp.service');
 const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
-
+const User = require('../models/User');
 /**
  * createUser: create user and send otp
  */
@@ -211,6 +212,28 @@ const logout = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Authenticate with Supabase OAuth tokens
+ */
+const supabaseAuth = asyncHandler(async (req, res) => {
+  const { supabaseAccessToken, supabaseRefreshToken } = req.body;
+
+  if (!supabaseAccessToken) {
+    return sendError(res, {
+      statusCode: 400,
+      message: 'Supabase access token is required'
+    });
+  }
+
+  // Call auth service
+  const result = await authService.authenticateWithSupabase(supabaseAccessToken);
+
+  sendSuccess(res, {
+    message: 'Authentication successful',
+    data: result
+  });
+});
+
 module.exports = {
   createUser,
   login,
@@ -223,5 +246,6 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendOTP,
-  logout
+  logout,
+  supabaseAuth
 };

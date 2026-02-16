@@ -114,4 +114,8 @@ router.post('/logout',
   authController.logout
 );
 
+router.post('/supabase-auth', 
+  authController.supabaseAuth
+);
+
 module.exports = router;

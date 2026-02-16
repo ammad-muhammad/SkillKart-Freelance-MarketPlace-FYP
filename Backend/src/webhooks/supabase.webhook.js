@@ -1,3 +1,4 @@
+//webhooks/supabase.webhook
 const { handleSupabaseWebhook } = require('../services/sync.service');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 const crypto = require('crypto');

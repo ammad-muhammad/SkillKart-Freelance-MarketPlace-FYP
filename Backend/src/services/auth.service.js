@@ -189,6 +189,81 @@ const createOrUpdateFromOAuth = async (oauthData) => {
   return user;
 };
 
+/**
+ * Authenticate with Supabase OAuth
+ * Handles Google, GitHub, LinkedIn login
+ */
+const authenticateWithSupabase = async (supabaseAccessToken) => {
+  // Decode Supabase JWT
+  let payload;
+  try {
+    payload = JSON.parse(
+      Buffer.from(supabaseAccessToken.split('.')[1], 'base64').toString()
+    );
+  } catch (error) {
+    throw new AuthenticationError('Invalid Supabase token');
+  }
+
+  const { sub: supabaseId, email, user_metadata, app_metadata } = payload;
+  const provider = app_metadata?.provider || 'email';
+
+  console.log('🔐 Supabase OAuth:', provider, '-', email);
+
+  // Find user by supabaseId or email
+  let user = await User.findOne({ $or: [{ supabaseId }, { email }] });
+
+  if (!user) {
+    // Create new user
+    user = new User({
+      email,
+      firstName: user_metadata?.full_name?.split(' ')[0] || user_metadata?.name?.split(' ')[0] || '',
+      lastName: user_metadata?.full_name?.split(' ').slice(1).join(' ') || user_metadata?.name?.split(' ').slice(1).join(' ') || '',
+      profilePicture: user_metadata?.avatar_url || user_metadata?.picture,
+      supabaseId,
+      authProvider: provider,
+      googleId: provider === 'google' ? user_metadata?.provider_id || user_metadata?.sub : undefined,
+      githubId: provider === 'github' ? user_metadata?.provider_id || user_metadata?.sub : undefined,
+      linkedinId: provider === 'linkedin' ? user_metadata?.provider_id || user_metadata?.sub : undefined,
+      role: 'publicviewer',
+      isEmailVerified: true,
+      emailVerifiedAt: new Date(),
+      isSyncedToSupabase: true,
+      lastSyncedAt: new Date()
+    });
+
+    await user.save();
+    console.log('✅ New user created via', provider, ':', email);
+  } else {
+    // Update existing user
+    user.supabaseId = supabaseId;
+    user.profilePicture = user_metadata?.avatar_url || user_metadata?.picture || user.profilePicture;
+    user.isEmailVerified = true;
+    user.isSyncedToSupabase = true;
+    user.lastSyncedAt = new Date();
+
+    // Update provider ID if not set
+    if (provider === 'google' && !user.googleId) {
+      user.googleId = user_metadata?.provider_id || user_metadata?.sub;
+    } else if (provider === 'github' && !user.githubId) {
+      user.githubId = user_metadata?.provider_id || user_metadata?.sub;
+    } else if (provider === 'linkedin' && !user.linkedinId) {
+      user.linkedinId = user_metadata?.provider_id || user_metadata?.sub;
+    }
+
+    await user.save();
+    console.log('✅ User updated:', email);
+  }
+
+  // Generate tokens using your existing function
+  const tokens = generateTokenPair(user);
+
+  return { 
+    user: user.toAuthJSON(), 
+    tokens 
+  };
+};
+
+
 module.exports = {
   registerWithEmail,
   loginWithEmail,
@@ -197,5 +272,6 @@ module.exports = {
   changePassword,
   resetPassword,
   verifyEmail,
-  createOrUpdateFromOAuth
+  createOrUpdateFromOAuth,
+  authenticateWithSupabase
 };

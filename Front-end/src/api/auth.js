@@ -6,6 +6,9 @@ export const authAPI = {
   
   register: (userData) =>
     client.post('/auth/register/user', userData),
+
+  supabaseAuth: (supabaseAccessToken, supabaseRefreshToken) => 
+    client.post('/auth/supabase-auth', { supabaseAccessToken, supabaseRefreshToken }),
   
   verifyOTP: (email, otp) =>
     client.post('/auth/otp/verify', { email, otp }),
@@ -13,6 +16,9 @@ export const authAPI = {
   resendOTP: (email, purpose = 'email_verification') =>
     client.post('/auth/otp/resend', { email, purpose }),
   
+  refreshToken: (refreshToken) =>
+    client.post('/auth/refresh', { refreshToken }),
+
   getCurrentUser: () =>
     client.get('/auth/me'),
   

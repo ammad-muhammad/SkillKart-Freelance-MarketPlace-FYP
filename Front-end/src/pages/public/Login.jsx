@@ -2,7 +2,10 @@ import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { createClient } from '@supabase/supabase-js';
 import { authAPI } from '../../api/auth';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -219,9 +222,22 @@ const Login = () => {
     }
   };
 
-  const handleSocialLogin = (provider) => {
+  const handleSocialLogin = async (provider) => {
     console.log(`🔗 Logging in with ${provider}...`);
-    alert(`Login with ${provider} coming soon!`);
+    // alert(`Login with ${provider} coming soon!`);
+
+    if (!supabaseUrl || !supabaseKey) {
+      alert('Supabase not configured');
+      return;
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    await supabase.auth.signInWithOAuth({
+      provider: provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/consent`
+      }
+    });
   };
 
   const handleBackClick = () => {
@@ -431,7 +447,7 @@ const Login = () => {
             >
               <motion.button
                 type="button"
-                onClick={() => handleSocialLogin("Google")}
+                onClick={() => handleSocialLogin("google")}
                 variants={staggerItem}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
@@ -448,7 +464,7 @@ const Login = () => {
 
               <motion.button
                 type="button"
-                onClick={() => handleSocialLogin("GitHub")}
+                onClick={() => handleSocialLogin("github")}
                 variants={staggerItem}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
@@ -462,7 +478,7 @@ const Login = () => {
 
               <motion.button
                 type="button"
-                onClick={() => handleSocialLogin("LinkedIn")}
+                onClick={() => handleSocialLogin("linkedin")}
                 variants={staggerItem}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
