@@ -1,6 +1,4 @@
 import { Outlet, useLocation } from "react-router-dom";
-import PublicHeader from "../Components/public/PublicHeader/PublicHeader";
-import PublicFooter from "../Components/public/PublicFooter/PublicFooter";
 
 const PublicLayout = () => {
   const location = useLocation();
@@ -8,11 +6,9 @@ const PublicLayout = () => {
 
   return (
     <>
-      {!hideLayout && <PublicHeader />}
       <main>
         <Outlet />
       </main>
-      {!hideLayout && <PublicFooter />}
     </>
   );
 };

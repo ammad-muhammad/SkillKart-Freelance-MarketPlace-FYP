@@ -1,0 +1,265 @@
+/* ============================================
+   How It Works Section Styles
+   ============================================ */
+
+.how {
+  padding: var(--space-24) 0;
+  background: var(--color-secondary);
+}
+
+/* ── Header ── */
+.how__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 640px;
+  margin-bottom: var(--space-16);
+}
+
+.how__highlight {
+  color: var(--color-primary);
+}
+
+/* ── Steps ── */
+.how__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 760px;
+  margin: 0 auto var(--space-16);
+}
+
+/* ── Individual Step ── */
+.how__step {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.how__step-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.how__step-num {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-heading);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: var(--transition-spring);
+  box-shadow: 0 4px 16px rgba(4,46,76,0.25);
+  border: 3px solid var(--color-white);
+  outline: 2px solid rgba(183,201,226,0.4);
+}
+
+.how__step--accent .how__step-num {
+  background: var(--color-accent-dark);
+}
+
+.how__step:hover .how__step-num {
+  transform: scale(1.1);
+  box-shadow: 0 8px 24px rgba(4,46,76,0.3);
+}
+
+.how__step-line {
+  width: 2px;
+  flex: 1;
+  min-height: 40px;
+  background: linear-gradient(180deg, var(--color-accent), transparent);
+  margin: var(--space-2) 0;
+  opacity: 0.6;
+}
+
+.how__step-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding-bottom: var(--space-8);
+  flex: 1;
+}
+
+.how__step-icon {
+  font-size: 1.8rem;
+  width: 56px;
+  height: 56px;
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid rgba(183,201,226,0.3);
+  transition: var(--transition-spring);
+}
+
+.how__step:hover .how__step-icon {
+  transform: scale(1.08) rotate(5deg);
+  box-shadow: var(--shadow-md);
+}
+
+.how__step-body {
+  padding-top: var(--space-2);
+}
+
+.how__step-title {
+  font-family: var(--font-heading);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+  line-height: var(--lh-snug);
+}
+
+.how__step-desc {
+  font-size: var(--fs-sm);
+  color: var(--color-text-mid);
+  line-height: var(--lh-relaxed);
+  max-width: 480px;
+}
+
+/* ── CTA Banner ── */
+.how__banner {
+  background: var(--gradient-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-10) var(--space-12);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  position: relative;
+  overflow: hidden;
+}
+
+.how__banner::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(183,201,226,0.15), transparent);
+  pointer-events: none;
+}
+
+.how__banner::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: 30%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.05), transparent);
+  pointer-events: none;
+}
+
+.how__banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.how__banner-title {
+  font-family: var(--font-heading);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--color-white);
+  line-height: var(--lh-snug);
+}
+
+.how__banner-sub {
+  font-size: var(--fs-base);
+  color: rgba(183,201,226,0.85);
+}
+
+.how__banner-actions {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.how__banner-btn-main {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-accent);
+  color: var(--color-primary);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-black);
+  transition: var(--transition-spring);
+  box-shadow: 0 4px 16px rgba(183,201,226,0.3);
+  white-space: nowrap;
+}
+
+.how__banner-btn-main:hover {
+  background: var(--color-white);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(183,201,226,0.4);
+}
+
+.how__banner-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  color: var(--color-white);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  border: 2px solid rgba(255,255,255,0.35);
+  transition: var(--transition-spring);
+  white-space: nowrap;
+}
+
+.how__banner-btn-outline:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.7);
+  transform: translateY(-2px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1023px) {
+  .how__banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-8);
+  }
+
+  .how__banner-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 767px) {
+  .how {
+    padding: var(--space-16) 0;
+  }
+
+  .how__step-content {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .how__banner-title {
+    font-size: var(--fs-xl);
+  }
+
+  .how__banner-btn-main,
+  .how__banner-btn-outline {
+    width: 100%;
+    justify-content: center;
+  }
+}
