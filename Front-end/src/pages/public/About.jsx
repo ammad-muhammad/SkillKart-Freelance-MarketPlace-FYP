@@ -11,7 +11,6 @@ import {
   Briefcase, 
   Globe2 
 } from "lucide-react";
-import { useCMS } from "../../cms/context/CMSContext";
 import HomeBanner from "../../Components/common/Banners/HomeBanner";
 
 // --- ANIMATION VARIANTS (Consistent with Contact.jsx) ---
