@@ -1,14 +1,12 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import ProtectedRoute from '../auth/ProtectedRoute';
+import ProtectedRoute from '../hooks/ProtectedRoute';
 
 // Layouts
 import PublicLayout from "../layouts/PublicLayout";
 import AppLayout from "../layouts/AppLayout";
 import AdminLayout from "../layouts/AdminLayout";
-import CMSLayout from "../cms/layouts/CMSLayout";
-
 
 // Public Pages
 import Home from "../pages/public/Home";

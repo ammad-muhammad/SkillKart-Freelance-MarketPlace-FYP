@@ -10,25 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@studio-freight/lenis": "^1.0.42",
     "@supabase/supabase-js": "^2.39.0",
     "@tailwindcss/vite": "^4.1.16",
     "axios": "^1.13.5",
     "clsx": "^2.1.1",
     "framer-motion": "^12.26.2",
-    "gsap": "^3.14.2",
+    "gsap": "^3.12.5",
     "lucide-react": "^0.562.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.49.2",
     "react-router-dom": "^7.12.0",
-    "react-toastify": "^9.1.3",
-    "recharts": "^3.7.0",
-    "sass": "^1.97.2",
-    "swiper": "^12.0.3",
-    "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.16",
-    "three": "^0.182.0"
+    "react-toastify": "^9.1.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
