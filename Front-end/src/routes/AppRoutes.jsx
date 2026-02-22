@@ -14,31 +14,39 @@ import Login from "../pages/public/Login";
 import Register from "../pages/public/Register";
 import OTPLogin from "../pages/public/Otp-login";
 import AuthConsent from "../pages/public/AuthConsent";
+import Login1 from "../pages/public/login-1";
+import Registration1 from "../pages/public/registration-1";
+import OTP from "../pages/public/OTP";
+import ForgotPassword from "../pages/public/ForgotPassword";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
 
 const AppRoutes = () => {
   return (
-        <Routes>
-          {/* <ToastContainer position="top-right" autoClose={3000} /> */}
+    <Routes>
+      {/* <ToastContainer position="top-right" autoClose={3000} /> */}
 
-          {/* ================= PUBLIC ROUTES ================= */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/otp" element={<OTPLogin />} />
-            <Route path="/auth/consent" element={<AuthConsent />} />
-            {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
-          </Route>
+      {/* ================= PUBLIC ROUTES ================= */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/otp" element={<OTPLogin />} />
+        <Route path="/auth/consent" element={<AuthConsent />} />
+        <Route path="/login-1" element={<Login1 />} />
+        <Route path="/register-1" element={<Registration1 />} />
+        <Route path="/otp-verification" element={<OTP />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
+      </Route>
 
 
-          {/* ================= SYSTEM ROUTES ================= */}
-          <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
-          <Route path="*" element={<NotFound />} />
+      {/* ================= SYSTEM ROUTES ================= */}
+      <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
+      <Route path="*" element={<NotFound />} />
 
-        </Routes>
+    </Routes>
   );
 };
 
