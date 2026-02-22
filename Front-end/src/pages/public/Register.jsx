@@ -1,7 +1,17 @@
+<<<<<<< HEAD
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Briefcase, Code } from "lucide-react";
+=======
+import React, { useRef, useState, useEffect } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { Link, useNavigate, useLocation, data } from "react-router-dom";
+import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, Check, Briefcase, Code } from "lucide-react";
+import { clientsAPI } from '../../api/clients';
+import { freelancersAPI } from '../../api/freelancers';
+import { authAPI } from '../../api/auth';
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -15,7 +25,6 @@ const staggerContainer = {
   }
 };
 
-
 const staggerItem = {
   hidden: { opacity: 0, y: 15, filter: "blur(6px)" },
   visible: {
@@ -26,19 +35,13 @@ const staggerItem = {
   }
 };
 
-// Page transition animation
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  enter: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-  exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } }
-};
-
 // --- INPUT COMPONENT ---
 const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, name, error }) => {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <motion.div
+<<<<<<< HEAD
       variants={staggerItem}
     >
       <div className="relative">
@@ -61,6 +64,29 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
             }`}
         />
       </div>
+=======
+      className="relative"
+      variants={staggerItem}
+    >
+      <motion.div
+        className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
+        animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
+        transition={{ duration: 0.2 }}
+      >
+        <Icon size={18} />
+      </motion.div>
+      <input
+        type={type}
+        name={name}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+          }`}
+      />
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -73,6 +99,7 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
 
   return (
     <motion.div
+<<<<<<< HEAD
       variants={staggerItem}
     >
       <div className="relative">
@@ -104,6 +131,38 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </motion.button>
       </div>
+=======
+      className="relative"
+      variants={staggerItem}
+    >
+      <motion.div
+        className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
+        animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
+        transition={{ duration: 0.2 }}
+      >
+        <Lock size={18} />
+      </motion.div>
+      <input
+        type={showPassword ? "text" : "password"}
+        name={name}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-12 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+          }`}
+      />
+      <motion.button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-0 top-1/2 -translate-y-1/2 pr-3.5 text-gray-400 hover:text-black transition-colors"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+      </motion.button>
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -162,7 +221,9 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
           {value || "Select an option"}
         </span>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-          <ChevronRight size={18} className="text-gray-400 rotate-90" />
+          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </motion.div>
       </motion.button>
 
@@ -201,27 +262,49 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
 
 // --- MAIN REGISTER PAGE ---
 const Register = () => {
-  const [step, setStep] = useState(0); // 0: Role Selection, 1: Basic Registration, 2: Profile Completion
-  const [userRole, setUserRole] = useState(null); // "client" or "freelancer"
-  const [openDropdown, setOpenDropdown] = useState(null); // Track which dropdown is open
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get saved data from location state (when returning from OTP)
+  const savedData = location.state?.formData;
+  const isReturningFromOTP = location.state?.fromOTP || false;
+
+  const [step, setStep] = useState(isReturningFromOTP ? 2 : 0); // Start at step 2 if returning from OTP
+  const [userRole, setUserRole] = useState(savedData?.userRole || null);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [formData, setFormData] = useState(savedData || {
     email: "",
     password: "",
     confirmPassword: "",
     acceptedTerms: false,
-    firstName: "",
-    lastName: "",
-    companyType: "", // For client
+
+    phone: "",
+    profilePicture: "",
+
+    // Client fields
     companyName: "",
+    companySize: "",
     industry: "",
-    skillCategory: "", // For freelancer
-    cvFile: "", // For freelancer
+    website: null,
+    description: "",
+    country: "",
+    city: "",
+    address: "",
+
+    // Freelancer fields
+    bio: "",
+    title: "",
     hourlyRate: "",
+    skills: [],
+    availability: "full-time",
+    portfolio: [],
+    education: [],
+    certifications: [],
+    languages: []
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const navigate = useNavigate();
   const heroRef = useRef(null);
 
   // Parallax effect for hero image
@@ -234,12 +317,19 @@ const Register = () => {
   const heroOpacity = useTransform(heroScroll, [0, 0.8], [0.7, 0.3]);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked, files } = e.target;
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox'
+        ? checked
+        : type === 'file'
+          ? files[0]
+          : name === 'skills'
+            ? value.split(',').map(skill => skill.trim()).filter(Boolean) // Convert comma-separated to array
+            : value
     }));
-    // Clear error for this field when user starts typing
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -266,28 +356,69 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
+  const validateUserData = () => {
     const newErrors = {};
 
+<<<<<<< HEAD
+=======
+    // Common validation
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
 
-    if (userRole === "client" && !formData.companyType) {
-      newErrors.companyType = "Please select company type";
+    // Client validation
+    if (userRole === "client") {
+      // Make these required if needed
+      if (!formData.companyName) newErrors.companyName = "Company name is required";
+      if (!formData.companySize) newErrors.companySize = "Please select company size";
+      if (!formData.industry) newErrors.industry = "Please select an industry";
+
+      // Optional field validation
+      if (formData.website && !isValidUrl(formData.website)) {
+        newErrors.website = "Please enter a valid URL (e.g., https://example.com)";
+      }
     }
 
+    // Freelancer validation
     if (userRole === "freelancer") {
-      if (!formData.skillCategory) newErrors.skillCategory = "Please select a skill category";
-      if (!formData.cvFile) newErrors.cvFile = "Please upload your CV/Resume";
+      if (!formData.title) newErrors.title = "Professional title is required";
+      if (!formData.bio) newErrors.bio = "Bio is required";
       if (!formData.hourlyRate) newErrors.hourlyRate = "Hourly rate is required";
-      if (parseFloat(formData.hourlyRate) < 1) newErrors.hourlyRate = "Rate must be at least $1";
+      if (parseFloat(formData.hourlyRate) < 1) {
+        newErrors.hourlyRate = "Rate must be at least $1";
+      }
+      if (!formData.availability) newErrors.availability = "Please select your availability";
+
+      // Skills validation
+      const skillsArray = typeof formData.skills === 'string'
+        ? formData.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : formData.skills;
+
+      if (skillsArray.length === 0) {
+        newErrors.skills = "Please add at least one skill";
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Helper function for URL validation
+  const isValidUrl = (url) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   const handleRoleSelect = (role) => {
+    if (role !== "client" && role !== "freelancer") {
+      console.error("Invalid role selected");
+      return;
+    }
+
     setUserRole(role);
     setStep(1);
     setOpenDropdown(null);
@@ -300,7 +431,36 @@ const Register = () => {
   const handleNextStep = async () => {
     if (step === 1) {
       if (validateStep1()) {
-        setStep(2);
+        setIsLoading(true);
+        try {
+          // Call API to Create User and Send OTP
+
+          const userData = {
+            email: formData.email,
+            password: formData.password,
+            role: userRole, // This will now only be "client" or "freelancer"
+          };
+
+          console.log(userData)
+          await authAPI.register(userData);
+
+          // Navigate to OTP page with form data
+          navigate("/otp", {
+            state: {
+              from: "register",
+              email: formData.email,
+              formData: { ...formData, userRole }
+            }
+          });
+        } catch (error) {
+          console.error("Failed to send OTP:", error);
+          setErrors(prev => ({
+            ...prev,
+            email: error.response?.data?.message || "Failed to send verification code. Please try again."
+          }));
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
@@ -309,36 +469,102 @@ const Register = () => {
     e.preventDefault();
 
     if (step === 2) {
-      if (validateStep2()) {
+      if (validateUserData()) {
+        // Validate role before submitting
+        if (userRole !== "client" && userRole !== "freelancer") {
+          setErrors(prev => ({
+            ...prev,
+            submit: "Invalid role selected. Please start over."
+          }));
+          return;
+        }
+
         setIsLoading(true);
 
+<<<<<<< HEAD
         setTimeout(() => {
           console.log("✅ Registration Successful!");
           console.log("Role:", userRole);
           console.log("User Data:", formData);
           setShowSuccess(true);
           setIsLoading(false);
+=======
+        try {
+          if (userRole === "client") {
+            await clientsAPI.updateProfile({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone,
+              profilePicture: formData.profilePicture,
+              companyName: formData.companyName,
+              companySize: formData.companySize,
+              industry: formData.industry,
+              website: formData.website || null,
+              description: formData.description,
+              country: formData.country,
+              city: formData.city,
+              address: formData.address
+            });
+          }
+
+          if (userRole === "freelancer") {
+            await freelancersAPI.updateProfile({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone,
+              profilePicture: formData.profilePicture,
+              bio: formData.bio,
+              title: formData.title,
+              hourlyRate: parseFloat(formData.hourlyRate),
+              skills: typeof formData.skills === 'string'
+                ? formData.skills.split(',').map(skill => skill.trim()).filter(Boolean)
+                : formData.skills, // Convert comma-separated string to array
+              portfolio: formData.portfolio || [],
+              education: formData.education || [],
+              certifications: formData.certifications || [],
+              languages: formData.languages || [],
+              availability: formData.availability
+            });
+          }
+
+          console.log("✅ Update Successful!");
+          setShowSuccess(true);
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
           setTimeout(() => {
             setShowSuccess(false);
-            // Reset or navigate
-            navigate("/login");
+            navigate(userRole === "client" ? "/client" : "/freelancer");
           }, 2000);
-        }, 1500);
+        } catch (error) {
+          console.error("Update failed:", error);
+          setErrors(prev => ({
+            ...prev,
+            submit: error.response?.data?.message || "Update failed. Please try again."
+          }));
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
 
   const handleBackClick = () => {
     if (step === 0) {
-      window.history.back();
+      navigate("/login");
+    } else if (step === 2) {
+      // If on step 2, go back to step 1
+      setStep(1);
     } else {
       setStep(step - 1);
     }
   };
 
   return (
+<<<<<<< HEAD
     <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black no-header no-footer">
+=======
+    <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black overflow-hidden no-header no-footer">
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
       {/* --- SPLIT LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
@@ -399,7 +625,11 @@ const Register = () => {
         </div>
 
         {/* RIGHT SIDE - REGISTRATION FORM */}
+<<<<<<< HEAD
         <div className="p-6 md:p-8 lg:p-12 flex flex-col bg-white relative min-h-screen">
+=======
+        <div className="p-6 md:p-8 lg:p-12 flex flex-col justify-center bg-white relative min-h-screen lg:overflow-hidden overflow-y-auto">
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
           {/* Back Button */}
           <motion.button
@@ -505,7 +735,11 @@ const Register = () => {
                 </motion.div>
 
                 {/* Registration Form */}
+<<<<<<< HEAD
                 <form onSubmit={handleNextStep} className="space-y-3.5 mb-5">
+=======
+                <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-3.5 mb-5">
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
                   <ModernInput
                     icon={Mail}
@@ -553,15 +787,27 @@ const Register = () => {
 
                   {/* Next Button */}
                   <motion.button
-                    type="button"
-                    onClick={handleNextStep}
-                    disabled={!formData.acceptedTerms}
+                    type="submit"
+                    disabled={!formData.acceptedTerms || isLoading}
                     variants={staggerItem}
-                    whileHover={{ scale: formData.acceptedTerms ? 1.02 : 1 }}
-                    whileTap={{ scale: formData.acceptedTerms ? 0.98 : 1 }}
-                    className={`w-full ${formData.acceptedTerms ? "bg-black hover:bg-gray-900" : "bg-gray-300 cursor-not-allowed"} text-white py-3 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 mt-6`}
+                    whileHover={{ scale: formData.acceptedTerms && !isLoading ? 1.02 : 1 }}
+                    whileTap={{ scale: formData.acceptedTerms && !isLoading ? 0.98 : 1 }}
+                    className={`w-full ${formData.acceptedTerms && !isLoading ? "bg-black hover:bg-gray-900" : "bg-gray-300 cursor-not-allowed"} text-white py-3 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 mt-6`}
                   >
-                    Continue <ArrowUpRight size={16} />
+                    {isLoading ? (
+                      <>
+                        <motion.div
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        Sending code...
+                      </>
+                    ) : (
+                      <>
+                        Continue <ArrowUpRight size={16} />
+                      </>
+                    )}
                   </motion.button>
                 </form>
 
@@ -629,9 +875,23 @@ const Register = () => {
                     </div>
                   </motion.div>
 
+                  {/* Phone Number Field - Common for both */}
+                  <motion.div variants={staggerItem}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (Optional)</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="+1 234 567 8900"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                    />
+                  </motion.div>
+
                   {/* CLIENT SPECIFIC FIELDS */}
                   {userRole === "client" && (
                     <>
+<<<<<<< HEAD
                       <ModernSelect
                         label="Company Type"
                         name="companyType"
@@ -643,6 +903,8 @@ const Register = () => {
                         onToggle={() => toggleDropdown("companyType")}
                       />
 
+=======
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Company Name (Optional)</label>
                         <input
@@ -655,6 +917,7 @@ const Register = () => {
                         />
                       </motion.div>
 
+<<<<<<< HEAD
                       <ModernSelect
                         label="Industry (Optional)"
                         name="industry"
@@ -664,12 +927,102 @@ const Register = () => {
                         isOpen={openDropdown === "industry"}
                         onToggle={() => toggleDropdown("industry")}
                       />
+=======
+                      <motion.div variants={staggerItem}>
+                        <ModernSelect
+                          label="Company Size (Optional)"
+                          name="companySize"
+                          options={["1-10", "11-50", "51-200", "201-500", "500+"]}
+                          value={formData.companySize}
+                          onChange={handleInputChange}
+                          isOpen={openDropdown === "companySize"}
+                          onToggle={() => toggleDropdown("companySize")}
+                          openUpward={true}
+                        />
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <ModernSelect
+                          label="Industry (Optional)"
+                          name="industry"
+                          options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Education", "Real Estate", "Other"]}
+                          value={formData.industry}
+                          onChange={handleInputChange}
+                          isOpen={openDropdown === "industry"}
+                          onToggle={() => toggleDropdown("industry")}
+                          openUpward={true}
+                        />
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Website (Optional)</label>
+                        <input
+                          type="url"
+                          name="website"
+                          placeholder="https://yourcompany.com"
+                          value={formData.website}
+                          onChange={handleInputChange}
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                        />
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Company Description (Optional)</label>
+                        <textarea
+                          name="description"
+                          placeholder="Brief description of your company..."
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          rows="3"
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black resize-none"
+                        />
+                      </motion.div>
+
+                      {/* Location Fields */}
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Country (Optional)</label>
+                        <input
+                          type="text"
+                          name="country"
+                          placeholder="United States"
+                          value={formData.country}
+                          onChange={handleInputChange}
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                        />
+                      </motion.div>
+
+                      <motion.div className="grid grid-cols-2 gap-3" variants={staggerItem}>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City (Optional)</label>
+                          <input
+                            type="text"
+                            name="city"
+                            placeholder="San Francisco"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address (Optional)</label>
+                          <input
+                            type="text"
+                            name="address"
+                            placeholder="123 Main St"
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                          />
+                        </div>
+                      </motion.div>
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
                     </>
                   )}
 
                   {/* FREELANCER SPECIFIC FIELDS */}
                   {userRole === "freelancer" && (
                     <>
+<<<<<<< HEAD
                       <ModernSelect
                         label="Primary Skill Category"
                         name="skillCategory"
@@ -680,26 +1033,38 @@ const Register = () => {
                         isOpen={openDropdown === "skillCategory"}
                         onToggle={() => toggleDropdown("skillCategory")}
                       />
-
+=======
                       <motion.div variants={staggerItem}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload CV/Resume</label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            name="cvFile"
-                            accept=".pdf,.doc,.docx"
-                            onChange={handleInputChange}
-                            className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-black file:text-white hover:file:bg-gray-900 cursor-pointer"
-                          />
-                          <p className="text-xs text-gray-500 mt-1 ml-1">Supported formats: PDF, DOC, DOCX (Max 5MB)</p>
-                        </div>
-                        {errors.cvFile && <p className="text-red-500 text-xs mt-1 ml-1">{errors.cvFile}</p>}
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Professional Title</label>
+                        <input
+                          type="text"
+                          name="title"
+                          placeholder="e.g., Full-Stack Developer"
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          className={`w-full bg-[#f9f9f9] border-2 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${errors.title ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
+                            }`}
+                        />
+                        {errors.title && <p className="text-red-500 text-xs mt-1 ml-1">{errors.title}</p>}
                       </motion.div>
 
                       <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                        <textarea
+                          name="bio"
+                          placeholder="Tell us about yourself and your expertise..."
+                          value={formData.bio}
+                          onChange={handleInputChange}
+                          rows="4"
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black resize-none"
+                        />
+                      </motion.div>
+>>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
+
+                      <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate (USD)</label>
-                        <div className="flex items-center">
-                          <span className="absolute left-4 text-gray-400 font-semibold">$</span>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
                           <input
                             type="number"
                             name="hourlyRate"
@@ -714,8 +1079,35 @@ const Register = () => {
                         </div>
                         {errors.hourlyRate && <p className="text-red-500 text-xs mt-1 ml-1">{errors.hourlyRate}</p>}
                       </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Skills (comma-separated)</label>
+                        <input
+                          type="text"
+                          name="skills"
+                          placeholder="JavaScript, React, Node.js, MongoDB"
+                          value={formData.skills}
+                          onChange={handleInputChange}
+                          className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black"
+                        />
+                        <p className="text-xs text-gray-500 mt-1 ml-1">Separate skills with commas</p>
+                      </motion.div>
+
+                      <motion.div variants={staggerItem}>
+                        <ModernSelect
+                          label="Availability"
+                          name="availability"
+                          options={["full-time", "part-time", "contract", "not-available"]}
+                          value={formData.availability}
+                          onChange={handleInputChange}
+                          isOpen={openDropdown === "availability"}
+                          onToggle={() => toggleDropdown("availability")}
+                          openUpward={true}
+                        />
+                      </motion.div>
                     </>
                   )}
+
 
                   {/* Success Message */}
                   {showSuccess && (
