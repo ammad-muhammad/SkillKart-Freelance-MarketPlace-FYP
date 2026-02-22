@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-import React, { useRef, useState } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Briefcase, Code } from "lucide-react";
-=======
 import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link, useNavigate, useLocation, data } from "react-router-dom";
@@ -11,7 +5,6 @@ import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, Check, Briefcase, C
 import { clientsAPI } from '../../api/clients';
 import { freelancersAPI } from '../../api/freelancers';
 import { authAPI } from '../../api/auth';
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {
@@ -41,30 +34,6 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
 
   return (
     <motion.div
-<<<<<<< HEAD
-      variants={staggerItem}
-    >
-      <div className="relative">
-        <motion.div
-          className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
-          animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
-          transition={{ duration: 0.2 }}
-        >
-          <Icon size={18} />
-        </motion.div>
-        <input
-          type={type}
-          name={name}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-            }`}
-        />
-      </div>
-=======
       className="relative"
       variants={staggerItem}
     >
@@ -86,7 +55,6 @@ const ModernInput = ({ icon: Icon, placeholder, type = "text", value, onChange, 
         className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
           }`}
       />
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -99,39 +67,6 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
 
   return (
     <motion.div
-<<<<<<< HEAD
-      variants={staggerItem}
-    >
-      <div className="relative">
-        <motion.div
-          className="absolute left-0 top-1/2 -translate-y-1/2 pl-3.5 text-gray-400"
-          animate={{ color: isFocused ? "#000000" : "#9ca3af" }}
-          transition={{ duration: 0.2 }}
-        >
-          <Lock size={18} />
-        </motion.div>
-        <input
-          type={showPassword ? "text" : "password"}
-          name={name}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={`w-full bg-[#f9f9f9] border-2 rounded-xl pl-12 pr-12 py-2.5 text-sm font-medium focus:outline-none transition-all duration-300 placeholder:text-gray-400 text-black ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-black"
-            }`}
-        />
-        <motion.button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 pr-3.5 text-gray-400 hover:text-black transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-        </motion.button>
-      </div>
-=======
       className="relative"
       variants={staggerItem}
     >
@@ -162,7 +97,6 @@ const PasswordInput = ({ value, onChange, name = "password", placeholder = "Ente
       >
         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
       </motion.button>
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -207,9 +141,9 @@ const RoleCard = ({ role, title, description, icon: Icon, isSelected, onClick })
 };
 
 // --- SELECT DROPDOWN ---
-const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, onToggle }) => {
+const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, onToggle, openUpward = false }) => {
   return (
-    <motion.div className={`relative ${isOpen ? "z-[999]" : "z-10"}`} variants={staggerItem}>
+    <motion.div className={`relative ${isOpen ? "z-[100]" : "z-10"}`} variants={staggerItem}>
       {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
       <motion.button
         type="button"
@@ -227,34 +161,32 @@ const ModernSelect = ({ options, value, onChange, name, label, error, isOpen, on
         </motion.div>
       </motion.button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute top-full mt-2 left-0 w-full bg-white border-2 border-gray-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[999] overflow-hidden"
-          >
-            <div className="max-h-60 overflow-y-auto overflow-x-hidden">
-              {options.map((option) => (
-                <motion.button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    onChange({ target: { name, value: option } });
-                    onToggle();
-                  }}
-                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 text-black font-medium"
-                  whileHover={{ x: 4 }}
-                >
-                  {option}
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className={`absolute ${openUpward ? "bottom-full mb-3" : "top-full mt-2"} left-0 w-full bg-white border-2 border-gray-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[999] overflow-hidden`}
+        >
+          <div className="max-h-60 overflow-y-auto">
+            {options.map((option) => (
+              <motion.button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onChange({ target: { name, value: option } });
+                  onToggle();
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 text-black font-medium"
+                whileHover={{ x: 4 }}
+              >
+                {option}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      )}
       {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
     </motion.div>
   );
@@ -359,10 +291,7 @@ const Register = () => {
   const validateUserData = () => {
     const newErrors = {};
 
-<<<<<<< HEAD
-=======
     // Common validation
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
 
@@ -481,14 +410,6 @@ const Register = () => {
 
         setIsLoading(true);
 
-<<<<<<< HEAD
-        setTimeout(() => {
-          console.log("✅ Registration Successful!");
-          console.log("Role:", userRole);
-          console.log("User Data:", formData);
-          setShowSuccess(true);
-          setIsLoading(false);
-=======
         try {
           if (userRole === "client") {
             await clientsAPI.updateProfile({
@@ -529,7 +450,6 @@ const Register = () => {
 
           console.log("✅ Update Successful!");
           setShowSuccess(true);
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
           setTimeout(() => {
             setShowSuccess(false);
@@ -560,11 +480,7 @@ const Register = () => {
   };
 
   return (
-<<<<<<< HEAD
-    <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black no-header no-footer">
-=======
     <div className="bg-white font-sans selection:bg-[#b3f5e1] selection:text-black overflow-hidden no-header no-footer">
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
       {/* --- SPLIT LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
@@ -625,11 +541,7 @@ const Register = () => {
         </div>
 
         {/* RIGHT SIDE - REGISTRATION FORM */}
-<<<<<<< HEAD
-        <div className="p-6 md:p-8 lg:p-12 flex flex-col bg-white relative min-h-screen">
-=======
         <div className="p-6 md:p-8 lg:p-12 flex flex-col justify-center bg-white relative min-h-screen lg:overflow-hidden overflow-y-auto">
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
           {/* Back Button */}
           <motion.button
@@ -735,11 +647,7 @@ const Register = () => {
                 </motion.div>
 
                 {/* Registration Form */}
-<<<<<<< HEAD
-                <form onSubmit={handleNextStep} className="space-y-3.5 mb-5">
-=======
                 <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-3.5 mb-5">
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
                   <ModernInput
                     icon={Mail}
@@ -891,20 +799,6 @@ const Register = () => {
                   {/* CLIENT SPECIFIC FIELDS */}
                   {userRole === "client" && (
                     <>
-<<<<<<< HEAD
-                      <ModernSelect
-                        label="Company Type"
-                        name="companyType"
-                        options={["Individual", "Startup", "Small Business", "Enterprise", "Agency"]}
-                        value={formData.companyType}
-                        onChange={handleInputChange}
-                        error={errors.companyType}
-                        isOpen={openDropdown === "companyType"}
-                        onToggle={() => toggleDropdown("companyType")}
-                      />
-
-=======
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Company Name (Optional)</label>
                         <input
@@ -917,17 +811,6 @@ const Register = () => {
                         />
                       </motion.div>
 
-<<<<<<< HEAD
-                      <ModernSelect
-                        label="Industry (Optional)"
-                        name="industry"
-                        options={["Technology", "Marketing", "Design", "Finance", "Healthcare", "E-commerce", "Other"]}
-                        value={formData.industry}
-                        onChange={handleInputChange}
-                        isOpen={openDropdown === "industry"}
-                        onToggle={() => toggleDropdown("industry")}
-                      />
-=======
                       <motion.div variants={staggerItem}>
                         <ModernSelect
                           label="Company Size (Optional)"
@@ -1015,25 +898,12 @@ const Register = () => {
                           />
                         </div>
                       </motion.div>
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
                     </>
                   )}
 
                   {/* FREELANCER SPECIFIC FIELDS */}
                   {userRole === "freelancer" && (
                     <>
-<<<<<<< HEAD
-                      <ModernSelect
-                        label="Primary Skill Category"
-                        name="skillCategory"
-                        options={["Web Development", "UI/UX Design", "Mobile Development", "Data Science", "Content Writing", "Digital Marketing", "Graphic Design", "Other"]}
-                        value={formData.skillCategory}
-                        onChange={handleInputChange}
-                        error={errors.skillCategory}
-                        isOpen={openDropdown === "skillCategory"}
-                        onToggle={() => toggleDropdown("skillCategory")}
-                      />
-=======
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Professional Title</label>
                         <input
@@ -1059,7 +929,6 @@ const Register = () => {
                           className="w-full bg-[#f9f9f9] border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-black transition-all duration-300 placeholder:text-gray-400 text-black resize-none"
                         />
                       </motion.div>
->>>>>>> ee5ec45d1012356007b78cf76e8822c2a9fbcfef
 
                       <motion.div variants={staggerItem}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate (USD)</label>
