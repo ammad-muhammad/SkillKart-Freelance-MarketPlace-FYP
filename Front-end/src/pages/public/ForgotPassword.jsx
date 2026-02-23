@@ -7,6 +7,7 @@ import "../../Components/common/Hero/Hero.css";
 const ForgotPassword = () => {
     const [step, setStep] = useState(1); // 1: Reset Form, 2: Success
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formData, setFormData] = useState({
         email: "",
         newPassword: "",
@@ -52,11 +53,17 @@ const ForgotPassword = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        console.log("Forgot Password Data:", formData);
         setIsLoading(true);
         setTimeout(() => {
             setIsLoading(false);
             setStep(2);
-        }, 2000);
+            setFormData({
+                email: "",
+                newPassword: "",
+                confirmPassword: ""
+            });
+        }, 1500);
     };
 
     return (
@@ -99,7 +106,7 @@ const ForgotPassword = () => {
                                     <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>Email Address</label>
                                     <div style={{ position: 'relative' }}>
                                         <Mail size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                                        <input type="email" name="email" required value={formData.email} onChange={handleInputChange} placeholder="name@example.com" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 14px 14px 48px', color: 'white', outline: 'none', fontWeight: '500' }} />
+                                        <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="white-placeholder" placeholder="name@example.com" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 14px 14px 48px', color: 'white', outline: 'none', fontWeight: '500' }} />
                                     </div>
                                 </div>
 
@@ -107,7 +114,7 @@ const ForgotPassword = () => {
                                     <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>New Password</label>
                                     <div style={{ position: 'relative' }}>
                                         <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                                        <input type={showPassword ? "text" : "password"} name="newPassword" required value={formData.newPassword} onChange={handleInputChange} placeholder="••••••••" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 48px 14px 48px', color: 'white', outline: 'none', fontWeight: '500' }} />
+                                        <input type={showPassword ? "text" : "password"} name="newPassword" className="white-placeholder" required value={formData.newPassword} onChange={handleInputChange} placeholder="••••••••" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 48px 14px 48px', color: 'white', outline: 'none', fontWeight: '500' }} />
                                         <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>
                                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
@@ -118,10 +125,20 @@ const ForgotPassword = () => {
                                     <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>Confirm Password</label>
                                     <div style={{ position: 'relative' }}>
                                         <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                                        <input type={showPassword ? "text" : "password"} name="confirmPassword" required value={formData.confirmPassword} onChange={handleInputChange} placeholder="••••••••" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 14px 14px 48px', color: 'white', outline: 'none', fontWeight: '500' }} />
+                                        <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" className="white-placeholder" required value={formData.confirmPassword} onChange={handleInputChange} placeholder="••••••••" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '14px 14px 14px 48px', color: 'white', outline: 'none', fontWeight: '500' }} />
+                                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
                                     </div>
                                 </div>
-
+                                <style>
+                                    {`
+  .white-placeholder::placeholder {
+    color: rgba(255, 255, 255, 0.7); 
+    opacity: 1;
+  }
+`}
+                                </style>
                                 <button type="submit" disabled={isLoading} className="hero__btn-main" style={{ width: '100%', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: '16px', marginTop: '10px' }}>
                                     {isLoading ? 'Processing...' : 'Reset My Password'} <ArrowRight size={18} />
                                 </button>
