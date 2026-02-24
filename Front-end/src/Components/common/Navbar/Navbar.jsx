@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import './Navbar.css';
+import { Link } from 'react-router-dom';
 
 /* ── Nav data ── */
 const NAV_ITEMS = [
   {
     label: 'Find Talent',
     children: [
-      { label: 'Browse Freelancers', sub: 'Explore verified profiles' },
-      { label: 'Post a Project', sub: 'Get proposals fast' },
-      { label: 'AI Matchmaking', sub: 'Smart recommendations' },
+      { label: 'Browse Freelancers', sub: 'Explore verified profiles', href: '/browse-freelancers' },
+      { label: 'Post a Project', sub: 'Get proposals fast', href: '/post-project' },
+      { label: 'AI Matchmaking', sub: 'Smart recommendations', href: '/ai-matchmaking' },
     ],
   },
   {
@@ -67,9 +68,9 @@ const NAV_ITEMS = [
   {
     label: 'Resources',
     children: [
-      { label: 'Blog', sub: 'Tips & tutorials' },
-      { label: 'Community', sub: 'Connect with peers' },
-      { label: 'Help Center', sub: 'Guides & support' },
+      { label: 'Blog', sub: 'Tips & tutorials', href: '/blog' },
+      { label: 'Community', sub: 'Connect with peers', href: '/community' },
+      { label: 'Help Center', sub: 'Guides & support', href: '/help' },
     ],
   },
 ];
@@ -180,7 +181,7 @@ export default function Navbar() {
         <div className="container navbar__inner">
 
           {/* ── Logo ── */}
-          <a href="#" ref={logoRef} className="navbar__logo">
+          <Link to="/" ref={logoRef} className="navbar__logo">
             <span className="navbar__logo-icon">
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                 <rect width="32" height="32" rx="8" fill="#B7C9E2" />
@@ -192,7 +193,7 @@ export default function Navbar() {
             <span className="navbar__logo-text">
               Skill<span>Kart</span>
             </span>
-          </a>
+          </Link>
 
           {/* ── Desktop nav links ── */}
           <ul ref={linksRef} className="navbar__links">
@@ -216,13 +217,28 @@ export default function Navbar() {
                   <div className={`navbar__dropdown${activeDropdown === idx ? ' navbar__dropdown--open' : ''}`}>
                     <div className="navbar__dropdown-inner">
                       {item.children.map(child => (
-                        <a key={child.label} href="#" className="navbar__dropdown-item">
-                          <span className="navbar__dropdown-dot" />
-                          <span>
-                            <strong>{child.label}</strong>
-                            <small>{child.sub}</small>
-                          </span>
-                        </a>
+                        child.href ? (
+                          <Link
+                            key={child.label}
+                            to={child.href}
+                            className="navbar__dropdown-item"
+                            onClick={() => setActiveDropdown(null)}
+                          >
+                            <span className="navbar__dropdown-dot" />
+                            <span>
+                              <strong>{child.label}</strong>
+                              <small>{child.sub}</small>
+                            </span>
+                          </Link>
+                        ) : (
+                          <a key={child.label} href="#" className="navbar__dropdown-item">
+                            <span className="navbar__dropdown-dot" />
+                            <span>
+                              <strong>{child.label}</strong>
+                              <small>{child.sub}</small>
+                            </span>
+                          </a>
+                        )
                       ))}
                     </div>
                   </div>
@@ -233,7 +249,7 @@ export default function Navbar() {
 
           {/* ── CTA buttons ── */}
           <div ref={actionsRef} className="navbar__actions">
-            <a href="#" className="navbar__signin">Sign In</a>
+            {/* <Link to="/login" className="navbar__signin">Sign In</Link> */}
             <a href="#" className="navbar__cta btn-primary">Get Started</a>
           </div>
 
@@ -290,6 +306,30 @@ export default function Navbar() {
 
       {/* ── Mobile drawer ── */}
       <div className={`navbar__mobile-drawer${mobileOpen ? ' navbar__mobile-drawer--open' : ''}`}>
+        <div className="navbar__mobile-header">
+          <Link to="/" className="navbar__logo" onClick={() => setMobileOpen(false)}>
+            <span className="navbar__logo-icon">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="8" fill="#B7C9E2" />
+                <path d="M8 22L13 10l5 8 3-5 4 9" stroke="#042E4C" strokeWidth="2.5"
+                  strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="24" cy="10" r="2.5" fill="#042E4C" />
+              </svg>
+            </span>
+            <span className="navbar__logo-text">
+              Skill<span>Kart</span>
+            </span>
+          </Link>
+          <button
+            className="navbar__mobile-close"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
         <div className="navbar__mobile-inner">
           {NAV_ITEMS.map((item, idx) => (
             <div key={item.label} className="navbar__mobile-group">
@@ -306,13 +346,25 @@ export default function Navbar() {
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              {mobileExpanded === idx && (
+              {mobileExpanded === idx && item.children && (
                 <div className="navbar__mobile-sub">
                   {item.children.map(child => (
-                    <a key={child.label} href="#" className="navbar__mobile-child">
-                      <span className="navbar__dropdown-dot" />
-                      {child.label}
-                    </a>
+                    child.href ? (
+                      <Link
+                        key={child.label}
+                        to={child.href}
+                        className="navbar__mobile-child"
+                        onClick={() => { setMobileOpen(false); setMobileExpanded(null); }}
+                      >
+                        <span className="navbar__dropdown-dot" />
+                        {child.label}
+                      </Link>
+                    ) : (
+                      <a key={child.label} href="#" className="navbar__mobile-child">
+                        <span className="navbar__dropdown-dot" />
+                        {child.label}
+                      </a>
+                    )
                   ))}
                 </div>
               )}

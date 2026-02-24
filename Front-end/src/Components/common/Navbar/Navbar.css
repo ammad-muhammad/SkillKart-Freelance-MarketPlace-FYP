@@ -451,11 +451,37 @@
   transform: translateX(-100%);
   transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
   overflow-y: auto;
-  padding-top: var(--navbar-h);
+
 }
 
 .navbar__mobile-drawer--open {
   transform: translateX(0);
+}
+
+.navbar__mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  height: var(--navbar-h);
+  border-bottom: 1px solid rgba(183, 201, 226, 0.15);
+}
+
+.navbar__mobile-close {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-white);
+  transition: var(--transition-base);
+  background: rgba(183, 201, 226, 0.1);
+}
+
+.navbar__mobile-close:hover {
+  background: rgba(183, 201, 226, 0.2);
+  transform: rotate(90deg);
 }
 
 .navbar__mobile-inner {

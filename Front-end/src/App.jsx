@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes";
+import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 import { useAuth } from "./hooks/useAuth";
 import { log, logStatus } from './utils/logger';
 
@@ -16,9 +17,10 @@ function App() {
   }, []);
 
   return (
-      <BrowserRouter>
-            <AppRoutes/>
-      </BrowserRouter>
+    <BrowserRouter>
+      <ScrollToTop />
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
 
