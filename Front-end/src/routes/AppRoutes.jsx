@@ -18,6 +18,8 @@ import Login1 from "../pages/public/login-1";
 import Registration1 from "../pages/public/registration-1";
 import OTP from "../pages/public/OTP";
 import ForgotPassword from "../pages/public/ForgotPassword";
+import TermsAndConditions from "../pages/public/TermsAndConditions";
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
@@ -38,6 +40,8 @@ const AppRoutes = () => {
         <Route path="/register-1" element={<Registration1 />} />
         <Route path="/otp-verification" element={<OTP />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
       </Route>
 
