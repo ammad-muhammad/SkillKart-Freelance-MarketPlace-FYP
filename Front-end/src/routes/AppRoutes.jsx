@@ -32,6 +32,10 @@ import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
 import Community from "../pages/public/Community/Community";
 import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 
+//Sumair - work
+// import TermsAndConditions from "../pages/public/TermsAndConditions";
+// import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
 
@@ -64,6 +68,9 @@ const AppRoutes = () => {
         <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
         <Route path="/community" element={<Community />} />
         <Route path="/help" element={<HelpCenter />} />
+        {/* //Sumair - work */}
+        {/* <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
         {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
       </Route>
 
@@ -75,5 +82,4 @@ const AppRoutes = () => {
     </Routes>
   );
 };
-
 export default AppRoutes;
