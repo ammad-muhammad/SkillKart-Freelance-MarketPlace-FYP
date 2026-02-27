@@ -578,9 +578,7 @@
   }
 
   .hero__stat-card--2 {
-    display: flex;
-    right: 0;
-    bottom: -5%;
+    display: none;
   }
 
   .hero__dashboard {

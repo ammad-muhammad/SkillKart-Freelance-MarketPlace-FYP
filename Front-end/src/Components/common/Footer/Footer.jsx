@@ -1,37 +1,51 @@
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './Footer.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Each link: { label, to } for internal routes, { label, href } for external/placeholder
 const FOOTER_LINKS = [
   {
     heading: 'Platform',
     links: [
-      'Browse Freelancers', 'Post a Project', 'AI Matchmaking',
-      'Skill Verification', 'Pricing Plans',
+      { label: 'Browse Freelancers', href: '#' },
+      { label: 'Post a Project', href: '#' },
+      { label: 'AI Matchmaking', href: '#' },
+      { label: 'Skill Verification', href: '#' },
+      { label: 'Pricing Plans', href: '#' },
     ],
   },
   {
     heading: 'For Freelancers',
     links: [
-      'Create Profile', 'Build Portfolio', 'Skill Tests',
-      'Buddy AI Assistant', 'Earnings Dashboard',
+      { label: 'Create Profile', href: '#' },
+      { label: 'Build Portfolio', href: '#' },
+      { label: 'Skill Tests', href: '#' },
+      { label: 'Buddy AI Assistant', href: '#' },
+      { label: 'Earnings Dashboard', href: '#' },
     ],
   },
   {
     heading: 'For Clients',
     links: [
-      'Hire Talent', 'Project Management', 'Verified Freelancers',
-      'Enterprise Solutions', 'Client Reviews',
+      { label: 'Hire Talent', href: '#' },
+      { label: 'Project Management', href: '#' },
+      { label: 'Verified Freelancers', href: '#' },
+      { label: 'Enterprise Solutions', href: '#' },
+      { label: 'Client Reviews', href: '#' },
     ],
   },
   {
     heading: 'Company',
     links: [
-      'About SkillKart', 'Blog & Resources', 'Careers',
-      'Press Kit', 'Contact Us',
+      { label: 'About SkillKart', to: '/about' },
+      { label: 'Blog & Resources', to: '/blog' },
+      { label: 'Careers', to: '/careers' },
+      { label: 'Press Kit', to: '/press' },
+      { label: 'Contact Us', to: '/contact' },
     ],
   },
 ];
@@ -122,7 +136,7 @@ export default function Footer() {
           <div className="footer__grid">
             {/* Brand col */}
             <div className="footer__col footer__col--brand">
-              <a href="#" className="footer__logo">
+              <Link to="/" className="footer__logo">
                 <span className="footer__logo-icon">
                   <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
                     <rect width="32" height="32" rx="8" fill="#B7C9E2" />
@@ -134,7 +148,7 @@ export default function Footer() {
                 <span className="footer__logo-text">
                   Skill<span>Kart</span>
                 </span>
-              </a>
+              </Link>
               <p className="footer__brand-desc">
                 The AI-powered freelancing platform built exclusively for students
                 and new graduates. Verify your skills, find your first client, and
@@ -159,8 +173,12 @@ export default function Footer() {
                 <h4 className="footer__col-heading">{col.heading}</h4>
                 <ul className="footer__col-links">
                   {col.links.map(link => (
-                    <li key={link}>
-                      <a href="#" className="footer__col-link">{link}</a>
+                    <li key={link.label}>
+                      {link.to ? (
+                        <Link to={link.to} className="footer__col-link">{link.label}</Link>
+                      ) : (
+                        <a href={link.href} className="footer__col-link">{link.label}</a>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -174,9 +192,9 @@ export default function Footer() {
               © {new Date().getFullYear()} SkillKart. All rights reserved. Built with 💙 as an FYP project.
             </p>
             <div className="footer__bottom-links">
-              <a href="#">Privacy Policy</a>
-              <a href="#">Terms of Service</a>
-              <a href="#">Cookie Policy</a>
+              <Link to="/privacy">Privacy Policy</Link>
+              <Link to="/terms">Terms of Service</Link>
+              <Link to="/cookies">Cookie Policy</Link>
             </div>
           </div>
         </div>

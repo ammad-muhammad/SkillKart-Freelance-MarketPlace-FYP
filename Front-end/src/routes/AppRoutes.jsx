@@ -18,6 +18,19 @@ import Login1 from "../pages/public/login-1";
 import Registration1 from "../pages/public/registration-1";
 import OTP from "../pages/public/OTP";
 import ForgotPassword from "../pages/public/ForgotPassword";
+import About from "../pages/public/About/About";
+import Contact from "../pages/public/Contact/Contact";
+import PrivacyPolicy from "../pages/public/Legal/PrivacyPolicy";
+import TermsOfService from "../pages/public/Legal/TermsOfService";
+import CookiePolicy from "../pages/public/Legal/CookiePolicy";
+import Blog from "../pages/public/Blog/Blog";
+import Careers from "../pages/public/Careers/Careers";
+import PressKit from "../pages/public/PressKit/PressKit";
+import BrowseFreelancers from "../pages/public/BrowseFreelancers/BrowseFreelancers";
+import PostProject from "../pages/public/PostProject/PostProject";
+import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
+import Community from "../pages/public/Community/Community";
+import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
@@ -38,6 +51,19 @@ const AppRoutes = () => {
         <Route path="/register-1" element={<Registration1 />} />
         <Route path="/otp-verification" element={<OTP />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/cookies" element={<CookiePolicy />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/press" element={<PressKit />} />
+        <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
+        <Route path="/post-project" element={<PostProject />} />
+        <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/help" element={<HelpCenter />} />
         {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
       </Route>
 
