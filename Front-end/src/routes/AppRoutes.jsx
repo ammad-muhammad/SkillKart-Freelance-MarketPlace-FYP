@@ -35,6 +35,8 @@ import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 //Sumair - work
 // import TermsAndConditions from "../pages/public/TermsAndConditions";
 // import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+import ClientOnboarding from "../pages/public/ClientOnboarding";
+import Onboarding from "../pages/public/Onboarding";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
@@ -71,6 +73,8 @@ const AppRoutes = () => {
         {/* //Sumair - work */}
         {/* <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
+        <Route path="/client-onboarding" element={<ClientOnboarding />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
       </Route>
 
