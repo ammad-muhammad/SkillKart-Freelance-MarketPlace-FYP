@@ -1,0 +1,559 @@
+/* ============================================
+   Onboarding Overhaul Styles - Elite SaaS Feel
+   ============================================ */
+
+:root {
+    --onboard-primary: #004576;
+    --onboard-accent: #B7C9E2;
+    --onboard-indigo: #6366f1;
+    --onboard-purple: #8e44ad;
+    --onboard-glass: rgba(255, 255, 255, 0.08);
+    /* Lighter for better contrast */
+    --onboard-border: rgba(255, 255, 255, 0.2);
+    --onboard-text-main: white;
+    --onboard-text-dim: rgba(255, 255, 255, 0.7);
+    --onboard-placeholder: rgba(255, 255, 255, 0.5);
+}
+
+.onboard {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.1) 0%, #004576 100%);
+    overflow-x: hidden;
+    padding-top: var(--navbar-h);
+    padding-bottom: var(--space-20);
+    font-family: 'Lato', sans-serif;
+    color: white;
+}
+
+/* Background Elements */
+.onboard__circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(140px);
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.2;
+    animation: float-circles 25s infinite alternate ease-in-out;
+}
+
+.onboard__circle--1 {
+    width: 600px;
+    height: 600px;
+    background: #3498db;
+    top: -100px;
+    right: -50px;
+}
+
+.onboard__circle--2 {
+    width: 500px;
+    height: 500px;
+    background: #6366f1;
+    bottom: 50px;
+    left: -80px;
+    animation-delay: -5s;
+}
+
+@keyframes float-circles {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(40px, 30px) scale(1.05);
+    }
+}
+
+.onboard__container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 0 var(--container-pad);
+}
+
+/* --- Premium Stepper --- */
+.onboard__stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-12);
+    position: relative;
+    padding: 0 var(--space-4);
+}
+
+.onboard__step-line {
+    position: absolute;
+    top: 24px;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+.onboard__step-line-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+}
+
+.onboard__step-item {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.onboard__step-node {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-weight: 800;
+    backdrop-filter: blur(10px);
+}
+
+.onboard__step-item--active .onboard__step-node {
+    background: var(--onboard-indigo);
+    border-color: white;
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+    transform: scale(1.1);
+}
+
+.onboard__step-item--completed .onboard__step-node {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    border-color: transparent;
+    color: white;
+}
+
+.onboard__step-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+}
+
+.onboard__step-item--active .onboard__step-title {
+    color: white;
+}
+
+/* --- Premium Card --- */
+.onboard__card {
+    background: var(--onboard-glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--onboard-border);
+    border-radius: 32px;
+    padding: var(--space-12);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
+    min-height: 580px;
+    display: flex;
+    flex-direction: column;
+}
+
+.onboard__header {
+    margin-bottom: var(--space-8);
+}
+
+.onboard__title {
+    font-size: 32px;
+    font-weight: 900;
+    color: white;
+    margin-bottom: var(--space-2);
+    letter-spacing: -0.02em;
+}
+
+.onboard__subtitle {
+    color: var(--onboard-text-dim);
+    font-size: 16px;
+    line-height: var(--lh-relaxed);
+}
+
+/* --- Premium Inputs --- */
+.onboard__field {
+    margin-bottom: var(--space-6);
+    position: relative;
+}
+
+.onboard__label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 8px;
+    padding-left: 4px;
+}
+
+.onboard__input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.onboard__input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    /* Lighter for visibility */
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 14px;
+    padding: 16px 20px;
+    color: white;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.onboard__input::placeholder {
+    color: var(--onboard-placeholder);
+}
+
+.onboard__input:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: white;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.15), 0 0 0 4px rgba(255, 255, 255, 0.05);
+}
+
+/* OTP Fields */
+.onboard__otp-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: var(--space-10) 0;
+}
+
+.onboard__otp-input {
+    width: 54px !important;
+    height: 64px !important;
+    text-align: center;
+    font-size: 24px !important;
+    font-weight: 900 !important;
+    padding: 0 !important;
+}
+
+/* Password Strength */
+.onboard__strength {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.onboard__strength-bar {
+    height: 100%;
+    width: 0%;
+    transition: width 0.4s ease, background 0.4s ease;
+}
+
+.strength--weak {
+    width: 33%;
+    background: #ff4d4d;
+}
+
+.strength--medium {
+    width: 66%;
+    background: #ffa500;
+}
+
+.strength--strong {
+    width: 100%;
+    background: #00ff7f;
+}
+
+/* --- Role Selection Cards --- */
+.onboard__roles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+}
+
+.onboard__role-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: var(--space-8);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    position: relative;
+    overflow: hidden;
+}
+
+.onboard__role-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-8px);
+    border-color: white;
+}
+
+.onboard__role-card--active {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: white !important;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+.onboard__role-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.3s;
+}
+
+.onboard__role-card--active .onboard__role-icon {
+    background: white;
+    color: var(--onboard-primary);
+    transform: scale(1.1);
+}
+
+.onboard__role-card h3 {
+    color: white;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.onboard__role-card p {
+    color: var(--onboard-text-dim);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.onboard__featured-badge {
+    position: absolute;
+    top: 15px;
+    right: -30px;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    padding: 4px 35px;
+    transform: rotate(45deg);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: white;
+}
+
+/* --- Profile Pic --- */
+.onboard__profile-up {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: var(--space-8);
+}
+
+.onboard__avatar-wrap {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    padding: 4px;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.onboard__avatar-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #004576;
+    overflow: hidden;
+    position: relative;
+}
+
+.onboard__avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.onboard__avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.3s;
+    cursor: pointer;
+}
+
+.onboard__avatar-inner:hover .onboard__avatar-overlay {
+    opacity: 1;
+}
+
+/* --- Skills Tags --- */
+.onboard__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.onboard__tag {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.onboard__tag:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: white;
+}
+
+.onboard__tag--active {
+    background: white !important;
+    color: var(--onboard-primary) !important;
+    font-weight: 800;
+}
+
+/* --- CTA Buttons --- */
+.onboard__btn-next {
+    background: linear-gradient(to right, #6366f1, #a855f7);
+    color: white;
+    padding: 16px 40px;
+    border-radius: 100px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+.onboard__btn-next:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
+}
+
+.onboard__btn-next:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.onboard__btn-next:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.onboard__btn-back {
+    background: none;
+    border: none;
+    color: var(--onboard-text-dim);
+    cursor: pointer;
+    display: flex;
+    alignItems: center;
+    gap: 8px;
+    font-weight: 700;
+    transition: color 0.3s;
+}
+
+.onboard__btn-back:hover {
+    color: white;
+}
+
+.onboard__footer {
+    margin-top: auto;
+    padding-top: var(--space-8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Microcopy & Helpers */
+.onboard__micro {
+    color: var(--onboard-text-dim);
+    font-size: 12px;
+    margin-top: 15px;
+    text-align: center;
+    font-style: italic;
+}
+
+.onboard__counter {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+    font-size: 10px;
+    color: var(--onboard-text-dim);
+}
+
+/* Custom Select Arrow */
+.onboard__select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 18px;
+}
+
+.onboard__select option {
+    background: #021e33;
+    color: white;
+    padding: 12px;
+}
+
+@media (max-width: 768px) {
+    .onboard__card {
+        padding: var(--space-6);
+    }
+
+    .onboard__roles {
+        grid-template-columns: 1fr;
+    }
+
+    .onboard__title {
+        font-size: 24px;
+    }
+
+    .onboard__stepper {
+        margin-bottom: var(--space-8);
+    }
+
+    .onboard__step-node {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+
+    .onboard__step-line {
+        top: 18px;
+    }
+}
