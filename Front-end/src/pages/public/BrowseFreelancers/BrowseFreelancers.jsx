@@ -5,6 +5,7 @@ import Footer from '../../../Components/common/Footer/Footer';
 import { freelancersAPI } from '../../../api/freelancers';
 import { MOCK_FREELANCERS, ALL_SKILLS, LOCATIONS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import { useClient } from '../../../context/ClientContext';
 import './BrowseFreelancers.css';
 
 /* ─── helpers ─── */
@@ -42,7 +43,7 @@ function SkeletonCard({ list }) {
 }
 
 /* ── Freelancer Card ── */
-function FreelancerCard({ freelancer, list, onInvite }) {
+function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
     const {
         id, name, avatar, avatarBg, role, bio, skills,
         rating, reviewCount, hourlyRate, currency,
@@ -51,6 +52,13 @@ function FreelancerCard({ freelancer, list, onInvite }) {
 
     return (
         <div className={`bf-card${list ? ' bf-card--list' : ''}`}>
+            <button 
+                className={`bf-card__save ${isSaved ? 'bf-card__save--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onToggleSave(freelancer); }}
+                title={isSaved ? "Remove from saved" : "Save freelancer"}
+            >
+                {isSaved ? '🔖' : '📑'}
+            </button>
             <div className="bf-card__header">
                 <div className="bf-card__avatar" style={{ background: avatarBg }}>
                     {avatar}
@@ -101,6 +109,7 @@ function FreelancerCard({ freelancer, list, onInvite }) {
 
 /* ─────────────── MAIN PAGE ─────────────── */
 export default function BrowseFreelancers() {
+    const { savedFreelancers, toggleSavedFreelancer } = useClient();
     /* filter state */
     const [query, setQuery] = useState('');
     const [draftQuery, setDraftQuery] = useState('');
@@ -346,6 +355,8 @@ export default function BrowseFreelancers() {
                                         freelancer={f}
                                         list={viewMode === 'list'}
                                         onInvite={handleInvite}
+                                        isSaved={savedFreelancers.some(sf => sf.id === f.id)}
+                                        onToggleSave={toggleSavedFreelancer}
                                     />
                                 ))}
                             </div>
