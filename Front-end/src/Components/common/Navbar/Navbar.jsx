@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import './Navbar.css';
 import { Link } from 'react-router-dom';
+import { ShieldCheck, MessageSquareCode, UserSearch, Calculator, Newspaper, Users, HelpCircle, Search, FileEdit, Zap } from 'lucide-react';
 
 /* ── Nav data ── */
 const NAV_ITEMS = [
   {
     label: 'Find Talent',
     children: [
-      { label: 'Browse Freelancers', sub: 'Explore verified profiles', href: '/browse-freelancers' },
-      { label: 'Post a Project', sub: 'Get proposals fast', href: '/post-project' },
-      { label: 'AI Matchmaking', sub: 'Smart recommendations', href: '/ai-matchmaking' },
+      { label: 'Browse Freelancers', sub: 'Explore verified profiles', href: '/browse-freelancers', icon: <Search size={18} /> },
+      { label: 'Post a Project', sub: 'Get proposals fast', href: '/post-project', icon: <FileEdit size={18} /> },
+      { label: 'AI Matchmaking', sub: 'Smart recommendations', href: '/ai-matchmaking', icon: <Zap size={18} /> },
     ],
   },
   {
@@ -59,18 +60,18 @@ const NAV_ITEMS = [
   {
     label: 'AI Tools',
     children: [
-      { label: 'Verify Credentials', sub: 'AI-powered verification' },
-      { label: 'Buddy AI Assistant', sub: 'Your smart work buddy' },
-      { label: 'Profile Analyzer', sub: 'Get actionable insights' },
-      { label: 'Cost Estimator', sub: 'Price your projects' },
+      { label: 'Verify Credentials', sub: 'AI-powered verification', href: '/ai/verify', icon: <ShieldCheck size={18} /> },
+      { label: 'Buddy AI Assistant', sub: 'Your smart work buddy', href: '/ai/buddy', icon: <MessageSquareCode size={18} /> },
+      { label: 'Profile Analyzer', sub: 'Get actionable insights', href: '/ai/profile-analyzer', icon: <UserSearch size={18} /> },
+      { label: 'Cost Estimator', sub: 'Price your projects', href: '/ai/cost-estimator', icon: <Calculator size={18} /> },
     ],
   },
   {
     label: 'Resources',
     children: [
-      { label: 'Blog', sub: 'Tips & tutorials', href: '/blog' },
-      { label: 'Community', sub: 'Connect with peers', href: '/community' },
-      { label: 'Help Center', sub: 'Guides & support', href: '/help' },
+      { label: 'Blog', sub: 'Tips & tutorials', href: '/blog', icon: <Newspaper size={18} /> },
+      { label: 'Community', sub: 'Connect with peers', href: '/community', icon: <Users size={18} /> },
+      { label: 'Help Center', sub: 'Guides & support', href: '/help', icon: <HelpCircle size={18} /> },
     ],
   },
 ];
@@ -224,19 +225,27 @@ export default function Navbar() {
                             className="navbar__dropdown-item"
                             onClick={() => setActiveDropdown(null)}
                           >
-                            <span className="navbar__dropdown-dot" />
-                            <span>
+                            {child.icon ? (
+                              <div className="navbar__dropdown-icon">{child.icon}</div>
+                            ) : (
+                              <span className="navbar__dropdown-dot" />
+                            )}
+                            <div className="navbar__dropdown-content">
                               <strong>{child.label}</strong>
                               <small>{child.sub}</small>
-                            </span>
+                            </div>
                           </Link>
                         ) : (
                           <a key={child.label} href="#" className="navbar__dropdown-item">
-                            <span className="navbar__dropdown-dot" />
-                            <span>
+                            {child.icon ? (
+                              <div className="navbar__dropdown-icon">{child.icon}</div>
+                            ) : (
+                              <span className="navbar__dropdown-dot" />
+                            )}
+                            <div className="navbar__dropdown-content">
                               <strong>{child.label}</strong>
                               <small>{child.sub}</small>
-                            </span>
+                            </div>
                           </a>
                         )
                       ))}
@@ -356,12 +365,20 @@ export default function Navbar() {
                         className="navbar__mobile-child"
                         onClick={() => { setMobileOpen(false); setMobileExpanded(null); }}
                       >
-                        <span className="navbar__dropdown-dot" />
+                        {child.icon ? (
+                          <div className="navbar__mobile-icon">{child.icon}</div>
+                        ) : (
+                          <span className="navbar__dropdown-dot" />
+                        )}
                         {child.label}
                       </Link>
                     ) : (
                       <a key={child.label} href="#" className="navbar__mobile-child">
-                        <span className="navbar__dropdown-dot" />
+                        {child.icon ? (
+                          <div className="navbar__mobile-icon">{child.icon}</div>
+                        ) : (
+                          <span className="navbar__dropdown-dot" />
+                        )}
                         {child.label}
                       </a>
                     )

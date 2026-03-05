@@ -229,6 +229,26 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: var(--space-2);
+}
+
+.legal-toc__list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.legal-toc__list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.legal-toc__list::-webkit-scrollbar-thumb {
+    background: rgba(4, 46, 76, 0.15);
+    border-radius: var(--radius-full);
+}
+
+.legal-toc__list::-webkit-scrollbar-thumb:hover {
+    background: rgba(4, 46, 76, 0.3);
 }
 
 .legal-toc__link {

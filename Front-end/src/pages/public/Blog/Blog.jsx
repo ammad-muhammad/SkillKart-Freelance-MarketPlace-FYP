@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import './Blog.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -236,11 +237,13 @@ export default function Blog() {
                     </div>
                     <div className="blog-filter__sort">
                         <span>Sort by:</span>
-                        <select aria-label="Sort posts">
-                            <option>Latest</option>
-                            <option>Most Read</option>
-                            <option>Shortest Read</option>
-                        </select>
+                        <CustomSelect
+                            options={['Latest', 'Most Read', 'Shortest Read']}
+                            value="Latest"
+                            onChange={() => {}}
+                            compact
+                            aria-label="Sort posts"
+                        />
                     </div>
                 </div>
             </section>

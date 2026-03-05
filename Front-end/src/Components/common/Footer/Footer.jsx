@@ -29,13 +29,13 @@ const FOOTER_LINKS = [
     ],
   },
   {
-    heading: 'For Clients',
+    heading: 'AI Tools',
     links: [
-      { label: 'Hire Talent', href: '#' },
-      { label: 'Project Management', href: '#' },
-      { label: 'Verified Freelancers', href: '#' },
-      { label: 'Enterprise Solutions', href: '#' },
-      { label: 'Client Reviews', href: '#' },
+      { label: 'AI Verify Credentials', to: '/ai/verify' },
+      { label: 'Buddy AI Assistant', to: '/ai/buddy' },
+      { label: 'Profile Analyzer', to: '/ai/profile-analyzer' },
+      { label: 'Cost Estimator', to: '/ai/cost-estimator' },
+      { label: 'AI Matchmaking', to: '/ai-matchmaking' },
     ],
   },
   {

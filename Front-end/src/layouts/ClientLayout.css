@@ -1,0 +1,28 @@
+.cl-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f0f4f8;
+  font-family: var(--font-body);
+}
+
+.cl-main {
+  flex: 1;
+  margin-left: 265px;
+  padding: 2rem;
+  min-height: 100vh;
+  overflow-y: auto;
+  transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .cl-main {
+    margin-left: 0;
+    padding: 5rem 1.25rem 1.25rem; /* Space for fixed mobile header */
+  }
+}
+
+@media (max-width: 768px) {
+  .cl-main {
+    padding: 5rem 1rem 1.25rem;
+  }
+}
