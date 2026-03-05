@@ -101,7 +101,7 @@ const AppRoutes = () => {
             <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
             <Route path="/community" element={<Community />} />
             <Route path="/help" element={<HelpCenter />} />
-            {/* //Sumair - works */}
+            {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
             <Route path="/client-onboarding" element={<ClientOnboarding />} />
