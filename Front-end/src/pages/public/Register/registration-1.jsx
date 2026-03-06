@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { gsap } from "gsap";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, User, Briefcase, Code, ArrowLeft } from "lucide-react";
-import "../../Components/common/Hero/Hero.css";
+import "../../../Components/common/Hero/Hero.css";
 
 const Registration1 = () => {
     const [step, setStep] = useState(1); // 1: Role, 2: Details

@@ -177,7 +177,7 @@ export default function PrivacyPolicy() {
                                             <div className="legal-summary__title">What you need to know at a glance</div>
                                             <ul className="legal-summary__list">
                                                 <li>We collect your name, email, and profile data to operate the platform.</li>
-                                                <li>We <strong>never sell</strong> your personal data to advertisers or third parties.</li>
+                                                <li><span>We <strong>never sell</strong> your personal data to advertisers or third parties.</span></li>
                                                 <li>Payments are processed by Stripe — we never store card details.</li>
                                                 <li>AI features (Buddy AI) process your submissions via OpenAI with strict privacy controls.</li>
                                                 <li>You can request data export or full account deletion at any time.</li>
@@ -345,13 +345,13 @@ export default function PrivacyPolicy() {
                                             We invest heavily in protecting your data. Our security posture includes:
                                         </p>
                                         <ul>
-                                            <li><strong>Encryption at rest:</strong> AES-256 for all stored personal data</li>
-                                            <li><strong>Encryption in transit:</strong> TLS 1.3 for all data transmission</li>
-                                            <li><strong>Access controls:</strong> Role-based permissions; minimal privilege principle</li>
-                                            <li><strong>Authentication:</strong> JWT tokens with short expiry + OAuth 2.0</li>
-                                            <li><strong>Payment security:</strong> Stripe-managed PCI-DSS Level 1 compliance</li>
-                                            <li><strong>Penetration testing:</strong> Regular third-party security audits</li>
-                                            <li><strong>Breach response:</strong> Affected users notified within 72 hours of discovery</li>
+                                            <li><span><strong>Encryption at rest:</strong> AES-256 for all stored personal data</span></li>
+                                            <li><span><strong>Encryption in transit:</strong> TLS 1.3 for all data transmission</span></li>
+                                            <li><span><strong>Access controls:</strong> Role-based permissions; minimal privilege principle</span></li>
+                                            <li><span><strong>Authentication:</strong> JWT tokens with short expiry + OAuth 2.0</span></li>
+                                            <li><span><strong>Payment security:</strong> Stripe-managed PCI-DSS Level 1 compliance</span></li>
+                                            <li><span><strong>Penetration testing:</strong> Regular third-party security audits</span></li>
+                                            <li><span><strong>Breach response:</strong> Affected users notified within 72 hours of discovery</span></li>
                                         </ul>
                                         <div className="legal-info-card legal-info-card--warn">
                                             <div className="legal-info-card__icon">⚠️</div>

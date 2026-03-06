@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { gsap } from "gsap";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Github } from "lucide-react";
-import "../../Components/common/Hero/Hero.css";
+import "../../../Components/common/Hero/Hero.css";
 
 const Login1 = () => {
     const [showPassword, setShowPassword] = useState(false);

@@ -9,24 +9,14 @@
 
 /* ── Hero ── */
 .aim-hero {
-    background: linear-gradient(135deg, #042E4C 0%, #0a4a73 55%, #1a6fa8 100%);
-    padding: calc(var(--navbar-h) + 3rem) 0 3rem;
     position: relative;
     overflow: hidden;
+    background: linear-gradient(135deg, #042E4C 0%, #0a4a73 60%, #1a6fa8 100%);
+    padding: calc(var(--navbar-h) + 4rem) 0 0;
+    text-align: center;
+    color: #fff;
 }
 
-.aim-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(183, 201, 226, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(183, 201, 226, 0.06) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-}
-
-/* Animated orbs */
 .aim-hero__orb {
     position: absolute;
     border-radius: 50%;
@@ -37,72 +27,94 @@
 .aim-hero__orb--1 {
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, #1a6fa8, transparent);
-    top: -80px;
-    right: -60px;
-    opacity: 0.12;
-    animation: aimFloat 8s ease-in-out infinite alternate;
+    background: rgba(26, 111, 168, 0.3);
+    top: -100px;
+    left: -80px;
 }
 
 .aim-hero__orb--2 {
-    width: 280px;
-    height: 280px;
-    background: radial-gradient(circle, #B7C9E2, transparent);
-    bottom: -60px;
-    left: 5%;
-    opacity: 0.08;
-    animation: aimFloat 10s ease-in-out infinite alternate-reverse;
+    width: 350px;
+    height: 350px;
+    background: rgba(85, 60, 154, 0.25);
+    bottom: 20%;
+    right: -60px;
+}
+
+.aim-hero__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
 }
 
 @keyframes aimFloat {
-    0% {
-        transform: translate(0, 0);
-    }
-
-    100% {
-        transform: translate(20px, -20px);
-    }
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(20px, -20px); }
 }
 
 .aim-hero__inner {
     position: relative;
-    z-index: 1;
+    z-index: 2;
+    padding-bottom: 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .aim-hero__tag {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 999px;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.78rem;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.82rem;
     font-weight: 700;
+    color: #a8d4f5;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    padding: 0.3rem 0.9rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(8px);
 }
 
 .aim-hero h1 {
     font-family: var(--font-heading);
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
     font-weight: 800;
+    line-height: 1.1;
     color: #fff;
-    line-height: 1.2;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1.2rem;
 }
 
 .aim-hero h1 span {
-    color: var(--color-accent);
+    background: linear-gradient(90deg, #64b5e8 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .aim-hero p {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1rem;
-    max-width: 520px;
-    line-height: 1.65;
+    max-width: 580px;
+    margin: 0 auto 0;
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.6;
+}
+
+.aim-hero__wave {
+    position: relative;
+    z-index: 2;
+    line-height: 0;
+    width: 100%;
+}
+
+.aim-hero__wave svg {
+    width: 100%;
+    display: block;
 }
 
 /* AI Pulse indicator */

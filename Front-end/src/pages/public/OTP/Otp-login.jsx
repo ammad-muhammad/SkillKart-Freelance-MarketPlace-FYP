@@ -2,8 +2,8 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Shield, ChevronLeft, UserPlus, LogIn, RotateCw, AlertCircle } from "lucide-react";
-import { authAPI } from '../../api/auth';
-import { useAuth } from '../../hooks/useAuth';
+import { authAPI } from '../../../api/auth';
+import { useAuth } from '../../../hooks/useAuth';
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {

@@ -34,20 +34,21 @@ import ClientSavedFreelancers from "../pages/client/ClientSavedFreelancers";
 import ClientMessages from "../pages/client/ClientMessages";
 
 // Public Pages
-import Home from "../pages/public/Home";
-import Login from "../pages/public/Login";
-import Register from "../pages/public/Register";
-import OTPLogin from "../pages/public/Otp-login";
-import AuthConsent from "../pages/public/AuthConsent";
-import Login1 from "../pages/public/login-1";
-import Registration1 from "../pages/public/registration-1";
-import OTP from "../pages/public/OTP";
-import ForgotPassword from "../pages/public/ForgotPassword";
+import Home from "../pages/public/Home/Home";
+import Login from "../pages/public/Login/Login";
+import Register from "../pages/public/Register/Register";
+import OTPLogin from "../pages/public/OTP/Otp-login";
+import AuthConsent from "../pages/public/AuthConsent/AuthConsent";
+import Login1 from "../pages/public/Login/login-1";
+import Registration1 from "../pages/public/Register/registration-1";
+import OTP from "../pages/public/OTP/OTP";
+import ForgotPassword from "../pages/public/ForgotPassword/ForgotPassword";
 import About from "../pages/public/About/About";
 import Contact from "../pages/public/Contact/Contact";
 import PrivacyPolicy from "../pages/public/Legal/PrivacyPolicy";
 import TermsOfService from "../pages/public/Legal/TermsOfService";
 import CookiePolicy from "../pages/public/Legal/CookiePolicy";
+import ServicesAgreement from "../pages/public/Legal/ServicesAgreement";
 import Blog from "../pages/public/Blog/Blog";
 import Careers from "../pages/public/Careers/Careers";
 import PressKit from "../pages/public/PressKit/PressKit";
@@ -57,6 +58,11 @@ import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
 import Community from "../pages/public/Community/Community";
 import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 
+//Sumair - work
+// import TermsAndConditions from "../pages/public/TermsAndConditions";
+// import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
+import Onboarding from "../pages/public/Onboarding/Onboarding";
 // AI Tools
 import VerifyCredentials from "../pages/public/AiTools/VerifyCredentials";
 import BuddyAI from "../pages/public/AiTools/BuddyAI";
@@ -71,6 +77,7 @@ const AppRoutes = () => {
     <ClientProvider>
       <FreelancerProvider>
         <Routes>
+
           {/* ================= PUBLIC ROUTES ================= */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
@@ -87,6 +94,7 @@ const AppRoutes = () => {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/cookies" element={<CookiePolicy />} />
+            <Route path="/services-agreement" element={<ServicesAgreement />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/careers" element={<Careers />} />
             <Route path="/press" element={<PressKit />} />
@@ -95,7 +103,12 @@ const AppRoutes = () => {
             <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
             <Route path="/community" element={<Community />} />
             <Route path="/help" element={<HelpCenter />} />
-
+            {/* //Sumair - working */}
+            {/* <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
+            <Route path="/client-onboarding" element={<ClientOnboarding />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
             {/* AI Tools */}
             <Route path="/ai/verify" element={<VerifyCredentials />} />
             <Route path="/ai/buddy" element={<BuddyAI />} />
@@ -134,7 +147,7 @@ const AppRoutes = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </FreelancerProvider>
-    </ClientProvider>
+    </ClientProvider >
   );
 };
 
