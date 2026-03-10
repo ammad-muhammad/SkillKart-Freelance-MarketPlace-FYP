@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { gsap } from "gsap";
 import { ShieldCheck, ArrowRight, RotateCcw } from "lucide-react";
-import "../../Components/common/Hero/Hero.css";
+import "../../../Components/common/Hero/Hero.css";
 
 const OTP = () => {
     const [otp, setOtp] = useState(["", "", "", "", ""]);

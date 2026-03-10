@@ -1,7 +1,7 @@
 // src/pages/AuthConsent.jsx
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 import { toast } from 'react-toastify';
 
 const AuthConsent = () => {

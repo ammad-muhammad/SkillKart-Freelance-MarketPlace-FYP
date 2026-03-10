@@ -235,10 +235,10 @@ export default function CookiePolicy() {
                                             Beyond traditional cookies, {companyName} may also use related technologies:
                                         </p>
                                         <ul>
-                                            <li><strong>Local Storage:</strong> Browser-based key-value pairs for client-side state (e.g., UI preferences)</li>
-                                            <li><strong>Session Storage:</strong> Temporary data cleared when your browser tab closes</li>
-                                            <li><strong>Web Beacons / Pixels:</strong> Tiny tracking images embedded in emails to confirm receipt (marketing emails only)</li>
-                                            <li><strong>Server Logs:</strong> Automatic records of page requests, IP addresses, and browser types</li>
+                                            <li><span><strong>Local Storage:</strong> Browser-based key-value pairs for client-side state (e.g., UI preferences)</span></li>
+                                            <li><span><strong>Session Storage:</strong> Temporary data cleared when your browser tab closes</span></li>
+                                            <li><span><strong>Web Beacons / Pixels:</strong> Tiny tracking images embedded in emails to confirm receipt (marketing emails only)</span></li>
+                                            <li><span><strong>Server Logs:</strong> Automatic records of page requests, IP addresses, and browser types</span></li>
                                         </ul>
                                         <div className="legal-info-card">
                                             <div className="legal-info-card__icon">🔍</div>

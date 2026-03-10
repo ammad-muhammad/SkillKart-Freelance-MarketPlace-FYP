@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { matchmakingAPI } from '../../../api/matchmaking';
 import { MOCK_MATCH_RESULTS, ALL_SKILLS, CATEGORIES } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
@@ -149,6 +151,17 @@ export default function AiMatchmaking() {
     const [sortBy, setSortBy] = useState('score');
     const [error, setError] = useState(null);
 
+    useEffect(() => {
+        document.title = 'AI Matchmaking — SkillKart';
+
+        const tl = gsap.timeline({ delay: 0.1 });
+        tl.fromTo('.aim-hero__tag', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
+          .fromTo('.aim-hero h1', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+          .fromTo('.aim-hero p', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+          .fromTo('.aim-hero__pulse', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.7)' }, '-=0.1');
+
+    }, []);
+
     const isMounted = useRef(true);
 
     const addSkill = () => {
@@ -214,6 +227,7 @@ export default function AiMatchmaking() {
                 <section className="aim-hero">
                     <div className="aim-hero__orb aim-hero__orb--1" />
                     <div className="aim-hero__orb aim-hero__orb--2" />
+                    <div className="aim-hero__grid" />
                     <div className="container aim-hero__inner">
                         <div className="aim-hero__tag">🤖 AI Matchmaking</div>
                         <h1>Find Your <span>Perfect Match</span></h1>
@@ -225,6 +239,11 @@ export default function AiMatchmaking() {
                             <span className="aim-pulse-dot" />
                             AI engine online — matches generated in seconds
                         </div>
+                    </div>
+                    <div className="aim-hero__wave">
+                        <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                            <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
+                        </svg>
                     </div>
                 </section>
 

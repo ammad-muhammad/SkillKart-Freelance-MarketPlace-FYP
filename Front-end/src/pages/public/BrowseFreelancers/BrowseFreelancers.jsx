@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { freelancersAPI } from '../../../api/freelancers';
 import { MOCK_FREELANCERS, ALL_SKILLS, LOCATIONS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
@@ -132,7 +134,17 @@ export default function BrowseFreelancers() {
     useEffect(() => () => { isMounted.current = false; }, []);
 
     /* set page title */
-    useEffect(() => { document.title = 'Browse Freelancers – SkillKart'; }, []);
+    useEffect(() => {
+        document.title = 'Browse Freelancers – SkillKart';
+
+        const tl = gsap.timeline({ delay: 0.1 });
+        tl.fromTo('.bf-hero__tag', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
+          .fromTo('.bf-hero h1', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+          .fromTo('.bf-hero p', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+          .fromTo('.bf-search', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2')
+          .fromTo('.bf-hero-stat', { y: 15, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.4, ease: 'power3.out' }, '-=0.1');
+
+    }, []);
 
     /* fetch – tries real API; silently falls back to mock on error */
     const fetchFreelancers = useCallback(async () => {
@@ -198,12 +210,17 @@ export default function BrowseFreelancers() {
     return (
         <>
             <Navbar />
+            <div className="bf-page">
 
             {/* ── Hero Banner ── */}
             <section className="bf-hero">
+                <div className="bf-hero__orb bf-hero__orb--1" />
+                <div className="bf-hero__orb bf-hero__orb--2" />
+                <div className="bf-hero__grid" />
                 <div className="container bf-hero__inner">
+                    <div className="bf-hero__tag">🔍 Browse Talent</div>
                     <h1>Browse <span>Verified Freelancers</span></h1>
-                    <p>Discover AI-verified student talent across 40+ skill categories. Every profile is screened.</p>
+                    <p>Discover AI-verified student talent across 40+ skill categories. Every profile is screened for quality and expertise.</p>
 
                     <form onSubmit={handleSearch} className="bf-search">
                         <input
@@ -222,6 +239,11 @@ export default function BrowseFreelancers() {
                         <span className="bf-hero-stat">🌍 40+ Skill Categories</span>
                         <span className="bf-hero-stat">⚡ 1-hr Avg Response</span>
                     </div>
+                </div>
+                <div className="bf-hero__wave">
+                    <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                        <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
+                    </svg>
                 </div>
             </section>
 
@@ -393,12 +415,12 @@ export default function BrowseFreelancers() {
                                     disabled={page === totalPages}
                                     onClick={() => setPage(p => p + 1)}
                                 >→</button>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
-
+            </div>
+            </div>
             <Footer />
         </>
     );
