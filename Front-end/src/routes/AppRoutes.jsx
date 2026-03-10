@@ -36,11 +36,9 @@ import ClientMessages from "../pages/client/ClientMessages";
 // Public Pages
 import Home from "../pages/public/Home/Home";
 import Login from "../pages/public/Login/Login";
-import Register from "../pages/public/Register/Register";
-import OTPLogin from "../pages/public/OTP/Otp-login";
 import AuthConsent from "../pages/public/AuthConsent/AuthConsent";
 import Login1 from "../pages/public/Login/login-1";
-import Registration1 from "../pages/public/Register/registration-1";
+import Registration from "../pages/public/Register/Registration";
 import OTP from "../pages/public/OTP/OTP";
 import ForgotPassword from "../pages/public/ForgotPassword/ForgotPassword";
 import About from "../pages/public/About/About";
@@ -82,11 +80,9 @@ const AppRoutes = () => {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/otp" element={<OTPLogin />} />
+            <Route path="/registration" element={<Registration />} />
             <Route path="/auth/consent" element={<AuthConsent />} />
             <Route path="/login-1" element={<Login1 />} />
-            <Route path="/register-1" element={<Registration1 />} />
             <Route path="/otp-verification" element={<OTP />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
@@ -106,7 +102,7 @@ const AppRoutes = () => {
             {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
-            <Route path="/client-onboarding" element={<ClientOnboarding />} />
+            <Route path="/client/onboarding" element={<ClientOnboarding />} />
             <Route path="/onboarding" element={<Onboarding />} />
             {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
             {/* AI Tools */}

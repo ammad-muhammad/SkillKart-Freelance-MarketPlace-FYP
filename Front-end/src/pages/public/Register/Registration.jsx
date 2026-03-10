@@ -5,7 +5,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Briefcase, Code, ArrowLeft, AlertC
 import { authAPI } from "../../../api/auth";
 import "../../../Components/common/Hero/Hero.css";
 
-const Registration1 = () => {
+const Registration = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1); // 1: Role, 2: Details
     const [role, setRole] = useState("");
@@ -115,12 +115,12 @@ const Registration1 = () => {
             setSuccess("Registration successful! OTP sent to your email. Redirecting...");
             
             // Store email for OTP verification
-            sessionStorage.setItem('registrationEmail', formData.email);
+            sessionStorage.setItem('OTPEmail', formData.email);
             
             // // Redirect to OTP verification page after 2 seconds
-            // setTimeout(() => {
-            //     navigate('/verify-otp');
-            // }, 2000);
+            setTimeout(() => {
+                navigate('/otp-verification');
+            }, 2000);
 
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || 'An error occurred. Please try again.';
@@ -554,4 +554,4 @@ const Registration1 = () => {
     );
 };
 
-export default Registration1;
+export default Registration;
