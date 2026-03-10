@@ -520,18 +520,18 @@ export default function TermsOfService() {
                                         </p>
                                         <ol>
                                             <li>
-                                                <strong>Direct Resolution (0–3 days):</strong> Both parties attempt to resolve
-                                                the dispute through the in-platform messaging system.
+                                                <span><strong>Direct Resolution (0–3 days):</strong> Both parties attempt to resolve
+                                                    the dispute through the in-platform messaging system.</span>
                                             </li>
                                             <li>
-                                                <strong>Resolution Center (3–7 days):</strong> Either party opens a formal
-                                                dispute. {companyName} mediators review evidence (messages, deliverables,
-                                                milestones) and issue a binding recommendation.
+                                                <span><strong>Resolution Center (3–7 days):</strong> Either party opens a formal
+                                                    dispute. {companyName} mediators review evidence (messages, deliverables,
+                                                    milestones) and issue a binding recommendation.</span>
                                             </li>
                                             <li>
-                                                <strong>Arbitration:</strong> If Resolution Center mediation fails, disputes
-                                                are referred to binding arbitration under the applicable Arbitration Rules
-                                                of Pakistan, conducted in English.
+                                                <span><strong>Arbitration:</strong> If Resolution Center mediation fails, disputes
+                                                    are referred to binding arbitration under the applicable Arbitration Rules
+                                                    of Pakistan, conducted in English.</span>
                                             </li>
                                         </ol>
                                         <p>

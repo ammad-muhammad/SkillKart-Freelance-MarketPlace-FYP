@@ -2,9 +2,9 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link, useNavigate, useLocation, data } from "react-router-dom";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, ChevronLeft, Check, Briefcase, Code } from "lucide-react";
-import { clientsAPI } from '../../api/clients';
-import { freelancersAPI } from '../../api/freelancers';
-import { authAPI } from '../../api/auth';
+import { clientsAPI } from '../../../api/clients';
+import { freelancersAPI } from '../../../api/freelancers';
+import { authAPI } from '../../../api/auth';
 
 // --- ANIMATION VARIANTS ---
 const staggerContainer = {

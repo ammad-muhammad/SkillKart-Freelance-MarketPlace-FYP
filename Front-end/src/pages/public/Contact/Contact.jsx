@@ -108,6 +108,7 @@ export default function Contact() {
     const [touched, setTouched] = useState({});
     const [submitState, setSubmitState] = useState('idle'); // idle | loading | success | error
     const [openFaq, setOpenFaq] = useState(null);
+    const [isSubjectOpen, setIsSubjectOpen] = useState(false);
 
     /* ── Refs for animations ── */
     const heroRef = useRef(null);
@@ -116,6 +117,7 @@ export default function Contact() {
     const teamRef = useRef(null);
     const faqRef = useRef(null);
     const ctaRef = useRef(null);
+    const subjectRef = useRef(null);
 
     useEffect(() => {
         document.title = 'Contact Us – SkillKart';
@@ -149,6 +151,18 @@ export default function Contact() {
 
         return () => ScrollTrigger.getAll().forEach(t => t.kill());
     }, []);
+
+    /* ── Close subject dropdown on outside click ── */
+    useEffect(() => {
+        if (!isSubjectOpen) return;
+        const handler = (e) => {
+            if (subjectRef.current && !subjectRef.current.contains(e.target)) {
+                setIsSubjectOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [isSubjectOpen]);
 
     /* ── Field change + live re-validate if touched ── */
     const handleChange = (e) => {
@@ -348,25 +362,47 @@ export default function Contact() {
                                         <label htmlFor="cf-subject" className="contact-form__label">
                                             Subject <span aria-hidden="true" className="contact-form__required">*</span>
                                         </label>
-                                        <div className={`contact-form__input-wrap contact-form__input-wrap--select ${errors.subject && touched.subject ? 'contact-form__input-wrap--error' : ''} ${!errors.subject && touched.subject ? 'contact-form__input-wrap--ok' : ''}`}>
+                                        <div 
+                                            ref={subjectRef}
+                                            className={`contact-form__input-wrap contact-form__input-wrap--select ${isSubjectOpen ? 'contact-form__input-wrap--open' : ''} ${errors.subject && touched.subject ? 'contact-form__input-wrap--error' : ''} ${!errors.subject && touched.subject ? 'contact-form__input-wrap--ok' : ''}`}
+                                        >
                                             <span className="contact-form__input-icon">📌</span>
-                                            <select
-                                                id="cf-subject"
-                                                name="subject"
-                                                className="contact-form__select"
-                                                value={fields.subject}
-                                                onChange={handleChange}
-                                                onBlur={handleBlur}
-                                                aria-required="true"
-                                                aria-describedby={errors.subject && touched.subject ? 'cf-subject-error' : undefined}
-                                                aria-invalid={!!(errors.subject && touched.subject)}
+                                            <div 
+                                                className="contact-form__custom-select"
+                                                onClick={() => setIsSubjectOpen(!isSubjectOpen)}
+                                                role="button"
+                                                aria-haspopup="listbox"
+                                                aria-expanded={isSubjectOpen}
+                                                tabIndex={0}
+                                                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setIsSubjectOpen(!isSubjectOpen)}
                                             >
-                                                <option value="">Choose a topic…</option>
-                                                {SUBJECT_OPTIONS.map(opt => (
-                                                    <option key={opt} value={opt}>{opt}</option>
-                                                ))}
-                                            </select>
-                                            <span className="contact-form__select-arrow" aria-hidden="true">▾</span>
+                                                <span className={`contact-form__select-value ${!fields.subject ? 'contact-form__select-value--placeholder' : ''}`}>
+                                                    {fields.subject || 'Choose a topic…'}
+                                                </span>
+                                            </div>
+                                            <span className={`contact-form__select-arrow ${isSubjectOpen ? 'contact-form__select-arrow--open' : ''}`} aria-hidden="true">▾</span>
+                                            
+                                            {/* Custom Dropdown Menu */}
+                                            {isSubjectOpen && (
+                                                <div className="contact-form__dropdown-menu" role="listbox">
+                                                    {SUBJECT_OPTIONS.map(opt => (
+                                                        <div 
+                                                            key={opt} 
+                                                            className={`contact-form__dropdown-item ${fields.subject === opt ? 'contact-form__dropdown-item--selected' : ''}`}
+                                                            onClick={() => {
+                                                                handleChange({ target: { name: 'subject', value: opt } });
+                                                                setTouched(prev => ({ ...prev, subject: true }));
+                                                                setIsSubjectOpen(false);
+                                                            }}
+                                                            role="option"
+                                                            aria-selected={fields.subject === opt}
+                                                        >
+                                                            {opt}
+                                                            {fields.subject === opt && <span className="contact-form__dropdown-check">✓</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         {errors.subject && touched.subject && (
                                             <p id="cf-subject-error" className="contact-form__error" role="alert">{errors.subject}</p>

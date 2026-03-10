@@ -1,7 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { projectsAPI } from '../../../api/projects';
 import { CATEGORIES, ALL_SKILLS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
@@ -84,6 +86,17 @@ export default function PostProject() {
     const [dragOver, setDragOver] = useState(false);
     const fileRef = useRef(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        document.title = 'Post a Project — SkillKart';
+
+        const tl = gsap.timeline({ delay: 0.1 });
+        tl.fromTo('.pp-hero__tag', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
+          .fromTo('.pp-hero h1', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+          .fromTo('.pp-hero p', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+          .fromTo('.pp-step', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.1, duration: 0.4, ease: 'back.out(1.7)' }, '-=0.1');
+
+    }, []);
 
     /* update a field */
     const set = (key, value) => {
@@ -206,6 +219,9 @@ export default function PostProject() {
 
                 {/* Hero */}
                 <section className="pp-hero">
+                    <div className="pp-hero__orb pp-hero__orb--1" />
+                    <div className="pp-hero__orb pp-hero__orb--2" />
+                    <div className="pp-hero__grid" />
                     <div className="container pp-hero__inner">
                         <div className="pp-hero__tag">💼 Post a Project</div>
                         <h1>Hire <span>Top Student Talent</span></h1>
@@ -223,6 +239,11 @@ export default function PostProject() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                    <div className="pp-hero__wave">
+                        <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                            <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
+                        </svg>
                     </div>
                 </section>
 
