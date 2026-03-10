@@ -63,7 +63,7 @@ import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 // import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
 import Onboarding from "../pages/public/Onboarding/Onboarding";
-// AI Tools..
+// AI Tools
 import VerifyCredentials from "../pages/public/AiTools/VerifyCredentials";
 import BuddyAI from "../pages/public/AiTools/BuddyAI";
 import ProfileAnalyzer from "../pages/public/AiTools/ProfileAnalyzer";
