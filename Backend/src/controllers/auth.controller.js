@@ -8,17 +8,19 @@ const User = require('../models/User');
  * createUser: create user and send otp
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { email , password , role } = req.body;
+  const { email , firstName, lastName, password , role } = req.body;
 
   const user = await authService.registerWithEmail({
-    email, password, role
+    email, firstName, lastName, password, role
   });
 
   await otpService.generateAndSendOTP(email, 'email_verification');
-
+  
   sendSuccess(res, {
     message: 'User Created and OTP sent to your email',
-    data: { user }
+    data: { 
+      user,
+    }
   });
 });
 
