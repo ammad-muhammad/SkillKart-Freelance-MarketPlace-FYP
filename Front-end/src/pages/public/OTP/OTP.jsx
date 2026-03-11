@@ -132,16 +132,16 @@ const OTP = () => {
             setSuccess("Verification successful!");
 
             // Redirect based on flow
-                setTimeout(() => {
+            setTimeout(() => {
                 // Get role BEFORE clearing
                 const role = sessionStorage.getItem('userRole');
-                
+
                 if (registrationType === 'registration') {
                     // Clear OTP data
                     sessionStorage.removeItem('OTPEmail');
                     sessionStorage.removeItem('registrationType');
                     sessionStorage.removeItem('userRole');
-                    
+
                     // Redirect to onboarding based on role
                     if (role === 'client') {
                         navigate('/client/onboarding');
@@ -153,17 +153,17 @@ const OTP = () => {
                 } else {
                     // Login flow - redirect to dashboard
                     const userRole = response?.data?.user?.role;
-                    const isOnboardingcompleted =  response?.data?.user?.isOnBoardingCompleted
-                    
+                    const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted
+
                     // Clear OTP data
                     sessionStorage.removeItem('OTPEmail');
                     sessionStorage.removeItem('registrationType');
                     sessionStorage.removeItem('userRole');
-                    
+
                     if (userRole === 'client') {
-                    isOnboardingcompleted? navigate('/client/dashboard') : navigate('/client/onboarding')
+                        isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
                     } else if (userRole === 'freelancer') {
-                       isOnboardingcompleted? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+                        isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
                     } else {
                         navigate('/404');
                     }

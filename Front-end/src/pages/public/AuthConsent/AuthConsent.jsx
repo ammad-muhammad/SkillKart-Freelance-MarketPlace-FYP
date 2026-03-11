@@ -24,7 +24,7 @@ const AuthConsent = () => {
         // Extract tokens from URL hash
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
-        
+
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
         const errorParam = params.get('error');
@@ -53,8 +53,8 @@ const AuthConsent = () => {
         // Decode and log user info
         try {
           const payload = JSON.parse(atob(accessToken.split('.')[1]));
-          console.log('👤 User email:', payload.email);
-          console.log('🔑 Provider:', payload.app_metadata?.provider);
+          // console.log('👤 User email:', payload.email);
+          // console.log('🔑 Provider:', payload.app_metadata?.provider);
         } catch (e) {
           console.warn('Could not decode token:', e);
         }
@@ -66,21 +66,32 @@ const AuthConsent = () => {
         window.history.replaceState(null, '', window.location.pathname);
 
         // Send to backend
-        await handleSupabaseOAuth(accessToken, refreshToken);
+        const response = await handleSupabaseOAuth(accessToken, refreshToken);
 
-        console.log('✅ Authentication successful');
+        console.log('✅ Authentication successful', response?.user);
 
-        // Navigate to dashboard
-        navigate('/', { replace: true });
+        const userRole = response?.data?.user?.role;
+        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted
+
+        // Navigate to different routes
+        if (userRole == "publicviewer") {
+          navigate('/role', { replace: true });
+        } else if (userRole == "client") {
+          isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
+        } else if (userRole == "freelancer") {
+          isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+        }else{
+          navigate('/', { replace: true });
+        }
 
       } catch (error) {
         console.error('❌ OAuth callback error:', error);
-        
+
         // Show detailed error message
         const errorMessage = error.response?.data?.message || error.message || 'Authentication failed';
         setError(errorMessage);
         toast.error(`Login failed: ${errorMessage}`);
-        
+
         setTimeout(() => navigate('/login'), 2000);
       } finally {
         setLoading(false);

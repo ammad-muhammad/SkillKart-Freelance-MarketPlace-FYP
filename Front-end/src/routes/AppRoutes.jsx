@@ -38,6 +38,7 @@ import Home from "../pages/public/Home/Home";
 import Login from "../pages/public/Login/Login";
 import AuthConsent from "../pages/public/AuthConsent/AuthConsent";
 import Registration from "../pages/public/Register/Registration";
+import Role from "../pages/public/Role/Role";
 import OTP from "../pages/public/OTP/OTP";
 import ForgotPassword from "../pages/public/ForgotPassword/ForgotPassword";
 import About from "../pages/public/About/About";
@@ -80,6 +81,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registration" element={<Registration />} />
+            <Route path="/role" element={<Role />} />
             <Route path="/auth/consent" element={<AuthConsent />} />
             <Route path="/otp-verification" element={<OTP />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

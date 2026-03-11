@@ -13,7 +13,8 @@ const {
   changePasswordValidation,
   refreshTokenValidation,
   superAdminLoginValidation,
-  resendOtpValidation
+  resendOtpValidation,
+  changeRoleValidation
 } = require('../validators/auth.validator');
 
 /**
@@ -98,6 +99,14 @@ router.post('/refresh',
 router.get('/me',
   authenticate,
   authController.getCurrentUser
+);
+
+// Change Role
+router.put('/role/change',
+  authenticate,
+  changeRoleValidation,
+  validate,
+  authController.updateRole
 );
 
 // Change password

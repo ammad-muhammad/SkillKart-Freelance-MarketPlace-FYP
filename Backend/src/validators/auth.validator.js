@@ -118,6 +118,14 @@ const changePasswordValidation = [
     .withMessage('Passwords do not match')
 ];
 
+// Role Change validation
+const changeRoleValidation = [
+  body('role')
+    .optional()
+    .isIn([USER_ROLES.FREELANCER, USER_ROLES.CLIENT, USER_ROLES.PUBLIC_VIEWER])
+    .withMessage('Invalid role. Must be freelancer, client, or publicviewer')
+];
+
 // Refresh token validation
 const refreshTokenValidation = [
   body('refreshToken')
@@ -204,5 +212,6 @@ module.exports = {
   oauthCallbackValidation,
   superAdminLoginValidation,
   updateEmailValidation,
-  resendOtpValidation
+  resendOtpValidation,
+  changeRoleValidation
 };

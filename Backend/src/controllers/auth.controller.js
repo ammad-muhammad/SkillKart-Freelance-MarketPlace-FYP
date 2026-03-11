@@ -142,6 +142,51 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Update user role
+ */
+const updateRole = asyncHandler(async (req, res) => {
+  const userId = req.user._id; // Get from authenticated token
+  const { role } = req.body;
+  
+  // Validate role input
+  if (!role) {
+    return res.status(400).json({
+      success: false,
+      message: 'Role is required'
+    });
+  }
+
+  // Validate role value
+  const allowedRoles = ['freelancer', 'client', 'publicviewer'];
+  if (!allowedRoles.includes(role)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid role. Must be one of: ${allowedRoles.join(', ')}`
+    });
+  }
+  
+  // Update user by ID from token
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { role },
+    { new: true, runValidators: true }
+  );
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+  
+  sendSuccess(res, {
+    message: 'Your role updated successfully',
+    data: { user: user.toAuthJSON() }
+  });
+});
+
+
+/**
  * Refresh Token
  */
 const refreshToken = asyncHandler(async (req, res) => {
@@ -282,5 +327,6 @@ module.exports = {
   verifyEmail,
   resendOTP,
   logout,
-  supabaseAuth
+  supabaseAuth,
+  updateRole
 };
