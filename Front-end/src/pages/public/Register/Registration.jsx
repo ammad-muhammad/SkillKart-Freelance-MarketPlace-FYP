@@ -95,7 +95,7 @@ const Registration = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) return;
 
         setLoading(true);
@@ -113,10 +113,12 @@ const Registration = () => {
             });
 
             setSuccess("Registration successful! OTP sent to your email. Redirecting...");
-            
+
             // Store email for OTP verification
             sessionStorage.setItem('OTPEmail', formData.email);
-            
+            sessionStorage.setItem('registrationType', "registration");
+            sessionStorage.setItem('userRole', role);
+
             // // Redirect to OTP verification page after 2 seconds
             setTimeout(() => {
                 navigate('/otp-verification');
@@ -269,50 +271,50 @@ const Registration = () => {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ color: 'white', fontSize: '12px', fontWeight: '800', marginLeft: '4px' }}>First Name</label>
-                                            <input 
-                                                type="text" 
-                                                name="firstName" 
-                                                required 
-                                                value={formData.firstName} 
+                                            <input
+                                                type="text"
+                                                name="firstName"
+                                                required
+                                                value={formData.firstName}
                                                 onChange={handleInputChange}
-                                                placeholder="John" 
+                                                placeholder="John"
                                                 className="white-placeholder"
                                                 disabled={loading}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'rgba(255,255,255,0.05)', 
-                                                    border: '1px solid rgba(255,255,255,0.1)', 
-                                                    borderRadius: '14px', 
-                                                    padding: '12px', 
-                                                    color: 'white', 
-                                                    outline: 'none', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '14px',
+                                                    padding: '12px',
+                                                    color: 'white',
+                                                    outline: 'none',
                                                     fontWeight: '500',
                                                     opacity: loading ? 0.6 : 1
-                                                }} 
+                                                }}
                                             />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ color: 'white', fontSize: '12px', fontWeight: '800', marginLeft: '4px' }}>Last Name</label>
-                                            <input 
-                                                type="text" 
-                                                name="lastName" 
-                                                required 
-                                                value={formData.lastName} 
+                                            <input
+                                                type="text"
+                                                name="lastName"
+                                                required
+                                                value={formData.lastName}
                                                 onChange={handleInputChange}
-                                                placeholder="Doe" 
+                                                placeholder="Doe"
                                                 className="white-placeholder"
                                                 disabled={loading}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'rgba(255,255,255,0.05)', 
-                                                    border: '1px solid rgba(255,255,255,0.1)', 
-                                                    borderRadius: '14px', 
-                                                    padding: '12px', 
-                                                    color: 'white', 
-                                                    outline: 'none', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '14px',
+                                                    padding: '12px',
+                                                    color: 'white',
+                                                    outline: 'none',
                                                     fontWeight: '500',
                                                     opacity: loading ? 0.6 : 1
-                                                }} 
+                                                }}
                                             />
                                         </div>
                                     </div>
@@ -321,26 +323,26 @@ const Registration = () => {
                                         <label style={{ color: 'white', fontSize: '12px', fontWeight: '800', marginLeft: '4px' }}>Email Address</label>
                                         <div style={{ position: 'relative' }}>
                                             <Mail size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                                            <input 
-                                                type="email" 
-                                                name="email" 
-                                                required 
-                                                value={formData.email} 
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                required
+                                                value={formData.email}
                                                 onChange={handleInputChange}
-                                                placeholder="john@example.com" 
+                                                placeholder="john@example.com"
                                                 className="white-placeholder"
                                                 disabled={loading}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'rgba(255,255,255,0.05)', 
-                                                    border: '1px solid rgba(255,255,255,0.1)', 
-                                                    borderRadius: '14px', 
-                                                    padding: '12px 12px 12px 48px', 
-                                                    color: 'white', 
-                                                    outline: 'none', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '14px',
+                                                    padding: '12px 12px 12px 48px',
+                                                    color: 'white',
+                                                    outline: 'none',
                                                     fontWeight: '500',
                                                     opacity: loading ? 0.6 : 1
-                                                }} 
+                                                }}
                                             />
                                         </div>
                                     </div>
@@ -349,40 +351,40 @@ const Registration = () => {
                                         <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>Password</label>
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                                            <input 
-                                                type={showPassword ? "text" : "password"} 
-                                                name="password" 
-                                                className="white-placeholder" 
-                                                required 
-                                                value={formData.password} 
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                className="white-placeholder"
+                                                required
+                                                value={formData.password}
                                                 onChange={handleInputChange}
                                                 placeholder="••••••••"
                                                 disabled={loading}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'rgba(255,255,255,0.05)', 
-                                                    border: '1px solid rgba(255,255,255,0.1)', 
-                                                    borderRadius: '16px', 
-                                                    padding: '14px 48px 14px 48px', 
-                                                    color: 'white', 
-                                                    outline: 'none', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '16px',
+                                                    padding: '14px 48px 14px 48px',
+                                                    color: 'white',
+                                                    outline: 'none',
                                                     fontWeight: '500',
                                                     opacity: loading ? 0.6 : 1
-                                                }} 
+                                                }}
                                             />
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 disabled={loading}
-                                                style={{ 
-                                                    position: 'absolute', 
-                                                    right: '16px', 
-                                                    top: '50%', 
-                                                    transform: 'translateY(-50%)', 
-                                                    color: 'rgba(255,255,255,0.4)', 
-                                                    background: 'none', 
-                                                    border: 'none', 
-                                                    cursor: loading ? 'not-allowed' : 'pointer' 
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '16px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: loading ? 'not-allowed' : 'pointer'
                                                 }}
                                             >
                                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -397,40 +399,40 @@ const Registration = () => {
                                         <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>Confirm Password</label>
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                                            <input 
-                                                type={showConfirmPassword ? "text" : "password"} 
-                                                name="confirmPassword" 
-                                                className="white-placeholder" 
-                                                required 
-                                                value={formData.confirmPassword} 
+                                            <input
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                name="confirmPassword"
+                                                className="white-placeholder"
+                                                required
+                                                value={formData.confirmPassword}
                                                 onChange={handleInputChange}
                                                 placeholder="••••••••"
                                                 disabled={loading}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'rgba(255,255,255,0.05)', 
-                                                    border: '1px solid rgba(255,255,255,0.1)', 
-                                                    borderRadius: '16px', 
-                                                    padding: '14px 48px 14px 48px', 
-                                                    color: 'white', 
-                                                    outline: 'none', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '16px',
+                                                    padding: '14px 48px 14px 48px',
+                                                    color: 'white',
+                                                    outline: 'none',
                                                     fontWeight: '500',
                                                     opacity: loading ? 0.6 : 1
-                                                }} 
+                                                }}
                                             />
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 disabled={loading}
-                                                style={{ 
-                                                    position: 'absolute', 
-                                                    right: '16px', 
-                                                    top: '50%', 
-                                                    transform: 'translateY(-50%)', 
-                                                    color: 'rgba(255,255,255,0.4)', 
-                                                    background: 'none', 
-                                                    border: 'none', 
-                                                    cursor: loading ? 'not-allowed' : 'pointer' 
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '16px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: loading ? 'not-allowed' : 'pointer'
                                                 }}
                                             >
                                                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -454,12 +456,12 @@ const Registration = () => {
                                         type="submit"
                                         disabled={loading}
                                         className="hero__btn-main"
-                                        style={{ 
-                                            width: '100%', 
-                                            justifyContent: 'center', 
-                                            border: 'none', 
-                                            cursor: loading ? 'not-allowed' : 'pointer', 
-                                            padding: '16px', 
+                                        style={{
+                                            width: '100%',
+                                            justifyContent: 'center',
+                                            border: 'none',
+                                            cursor: loading ? 'not-allowed' : 'pointer',
+                                            padding: '16px',
                                             marginTop: '10px',
                                             opacity: loading ? 0.7 : 1,
                                             display: 'flex',
@@ -482,13 +484,13 @@ const Registration = () => {
                                 <button
                                     onClick={handleBackToRole}
                                     disabled={loading}
-                                    style={{ 
-                                        background: 'none', 
-                                        border: 'none', 
-                                        color: 'rgba(255,255,255,0.4)', 
-                                        fontSize: '12px', 
-                                        cursor: loading ? 'not-allowed' : 'pointer', 
-                                        fontWeight: '700', 
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'rgba(255,255,255,0.4)',
+                                        fontSize: '12px',
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        fontWeight: '700',
                                         marginTop: '5px',
                                         opacity: loading ? 0.5 : 1
                                     }}

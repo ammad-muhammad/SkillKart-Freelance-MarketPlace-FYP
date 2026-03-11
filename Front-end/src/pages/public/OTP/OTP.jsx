@@ -132,16 +132,17 @@ const OTP = () => {
             setSuccess("Verification successful!");
 
             // Redirect based on flow
-            setTimeout(() => {
-                // Clear OTP data
-
-
+                setTimeout(() => {
+                // Get role BEFORE clearing
+                const role = sessionStorage.getItem('userRole');
+                
                 if (registrationType === 'registration') {
-                    // Redirect to dashboard or profile completion
-                    const role = sessionStorage.getItem('userRole');
+                    // Clear OTP data
                     sessionStorage.removeItem('OTPEmail');
                     sessionStorage.removeItem('registrationType');
                     sessionStorage.removeItem('userRole');
+                    
+                    // Redirect to onboarding based on role
                     if (role === 'client') {
                         navigate('/client/onboarding');
                     } else if (role === 'freelancer') {
@@ -151,12 +152,16 @@ const OTP = () => {
                     }
                 } else {
                     // Login flow - redirect to dashboard
-                    const role = response.data?.data?.user?.role;
+                    const userRole = response.data?.data?.user?.role;
+                    
+                    // Clear OTP data
                     sessionStorage.removeItem('OTPEmail');
+                    sessionStorage.removeItem('registrationType');
                     sessionStorage.removeItem('userRole');
-                    if (role === 'client') {
+                    
+                    if (userRole === 'client') {
                         navigate('/client/dashboard');
-                    } else if (role === 'freelancer') {
+                    } else if (userRole === 'freelancer') {
                         navigate('/freelancer/dashboard');
                     } else {
                         navigate('/dashboard');
