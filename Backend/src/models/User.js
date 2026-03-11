@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     select: false // Don't return password by default
   },
-  
+
   // Personal Details
   firstName: {
     type: String,
@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
     enum: ['email', 'google', 'linkedin', 'github', 'supabase'],
     default: 'email'
   },
-  
+
   // Supabase Integration
   supabaseId: {
     type: String,
@@ -127,6 +127,12 @@ const userSchema = new mongoose.Schema({
     type: Date
   },
 
+  //onbaording Status
+  isOnBoardingCompleted: {
+    type: Boolean,
+    default: false
+  },
+
   // Account Status
   isActive: {
     type: Boolean,
@@ -183,9 +189,9 @@ const userSchema = new mongoose.Schema({
 
 }, {
   timestamps: true,
-  toJSON: { 
+  toJSON: {
     virtuals: true,
-    transform: function(doc, ret) {
+    transform: function (doc, ret) {
       delete ret.password;
       delete ret.__v;
       return ret;
@@ -203,13 +209,13 @@ userSchema.index({ createdAt: -1 });
 userSchema.index({ isActive: 1, isBlocked: 1 });
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   if (!this.firstName && !this.lastName) return null;
   return `${this.firstName || ''} ${this.lastName || ''}`.trim();
 });
 
 // Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   // Only hash password if it's modified and exists
   if (!this.isModified('password') || !this.password) {
     return next();
@@ -225,18 +231,18 @@ userSchema.pre('save', async function(next) {
 });
 
 // Method to check password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to check if account is locked
-userSchema.methods.isLocked = function() {
+userSchema.methods.isLocked = function () {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 };
 
 // Method to increment login attempts
-userSchema.methods.incLoginAttempts = function() {
+userSchema.methods.incLoginAttempts = function () {
   // Reset attempts if lock has expired
   if (this.lockUntil && this.lockUntil < Date.now()) {
     return this.updateOne({
@@ -258,7 +264,7 @@ userSchema.methods.incLoginAttempts = function() {
 };
 
 // Method to reset login attempts
-userSchema.methods.resetLoginAttempts = function() {
+userSchema.methods.resetLoginAttempts = function () {
   return this.updateOne({
     $set: { loginAttempts: 0 },
     $unset: { lockUntil: 1 }
@@ -266,29 +272,29 @@ userSchema.methods.resetLoginAttempts = function() {
 };
 
 // Static method to get user with role check
-userSchema.statics.findByIdWithRole = async function(userId, allowedRoles) {
+userSchema.statics.findByIdWithRole = async function (userId, allowedRoles) {
   const user = await this.findById(userId);
   if (!user) return null;
-  
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     throw new Error('Insufficient permissions');
   }
-  
+
   return user;
 };
 
 // Static method to find by Supabase ID
-userSchema.statics.findBySupabaseId = async function(supabaseId) {
+userSchema.statics.findBySupabaseId = async function (supabaseId) {
   return await this.findOne({ supabaseId });
 };
 
 // Static method to find or create from Supabase
-userSchema.statics.findOrCreateFromSupabase = async function(supabaseUser) {
+userSchema.statics.findOrCreateFromSupabase = async function (supabaseUser) {
   let user = await this.findOne({ supabaseId: supabaseUser.id });
-  
+
   if (!user) {
     user = await this.findOne({ email: supabaseUser.email });
-    
+
     if (user) {
       // Link existing user to Supabase
       user.supabaseId = supabaseUser.id;
@@ -307,22 +313,23 @@ userSchema.statics.findOrCreateFromSupabase = async function(supabaseUser) {
         isEmailVerified: supabaseUser.email_confirmed_at ? true : false,
         emailVerifiedAt: supabaseUser.email_confirmed_at ? new Date(supabaseUser.email_confirmed_at) : null,
         role: supabaseUser.user_metadata?.role || 'publicviewer',
+        isOnBoardingCompleted: false,
         isSyncedToSupabase: true,
         lastSyncedAt: new Date(),
         metadata: {
           registrationSource: 'supabase'
         }
       });
-      
+
       await user.save();
     }
   }
-  
+
   return user;
 };
 
 // Method to sanitize user data for response
-userSchema.methods.toAuthJSON = function() {
+userSchema.methods.toAuthJSON = function () {
   return {
     id: this._id,
     email: this.email,
@@ -333,20 +340,22 @@ userSchema.methods.toAuthJSON = function() {
     role: this.role,
     isEmailVerified: this.isEmailVerified,
     authProvider: this.authProvider,
+    isOnBoardingCompleted: this.isOnBoardingCompleted,
     supabaseId: this.supabaseId,
     createdAt: this.createdAt
   };
 };
 
 // Method to get public profile (for other users to see)
-userSchema.methods.toPublicJSON = function() {
+userSchema.methods.toPublicJSON = function () {
   return {
     id: this._id,
     firstName: this.firstName,
     lastName: this.lastName,
     fullName: this.fullName,
     profilePicture: this.profilePicture,
-    role: this.role
+    role: this.role,
+    isOnBoardingCompleted: this.isOnBoardingCompleted
   };
 };
 

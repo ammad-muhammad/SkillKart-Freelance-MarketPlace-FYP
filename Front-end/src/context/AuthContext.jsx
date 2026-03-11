@@ -178,6 +178,7 @@ export const AuthProvider = ({ children }) => {
   // ✅ Handle Supabase OAuth (Google, GitHub, LinkedIn)
   const handleSupabaseOAuth = async (supabaseAccessToken, supabaseRefreshToken) => {
     try {
+      console.log(supabaseAccessToken, supabaseRefreshToken)
       // Send Supabase tokens to YOUR backend
       const { data } = await authAPI.supabaseAuth(supabaseAccessToken, supabaseRefreshToken);
       

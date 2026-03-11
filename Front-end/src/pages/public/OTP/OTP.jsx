@@ -148,11 +148,12 @@ const OTP = () => {
                     } else if (role === 'freelancer') {
                         navigate('/freelancer/onboarding');
                     } else {
-                        navigate('/dashboard');
+                        navigate('/404');
                     }
                 } else {
                     // Login flow - redirect to dashboard
-                    const userRole = response.data?.data?.user?.role;
+                    const userRole = response?.data?.user?.role;
+                    const isOnboardingcompleted =  response?.data?.user?.isOnBoardingCompleted
                     
                     // Clear OTP data
                     sessionStorage.removeItem('OTPEmail');
@@ -160,11 +161,11 @@ const OTP = () => {
                     sessionStorage.removeItem('userRole');
                     
                     if (userRole === 'client') {
-                        navigate('/client/dashboard');
+                    isOnboardingcompleted? navigate('/client/dashboard') : navigate('/client/onboarding')
                     } else if (userRole === 'freelancer') {
-                        navigate('/freelancer/dashboard');
+                       isOnboardingcompleted? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
                     } else {
-                        navigate('/dashboard');
+                        navigate('/404');
                     }
                 }
             }, 1500);

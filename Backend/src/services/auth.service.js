@@ -21,6 +21,7 @@ const registerWithEmail = async (userData) => {
     lastName: lastName || "",
     role: role || 'publicviewer',
     authProvider: 'email',
+    isOnBoardingCompleted: false,
     isEmailVerified: false
   });
 
@@ -205,7 +206,7 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
   }
 
   const { sub: supabaseId, email, user_metadata, app_metadata } = payload;
-  const provider = app_metadata?.provider || 'email';
+  const provider = (app_metadata?.provider || 'email').toLowerCase();
 
   console.log('🔐 Supabase OAuth:', provider, '-', email);
 
@@ -225,6 +226,7 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
       githubId: provider === 'github' ? user_metadata?.provider_id || user_metadata?.sub : undefined,
       linkedinId: provider === 'linkedin' ? user_metadata?.provider_id || user_metadata?.sub : undefined,
       role: 'publicviewer',
+      isOnBoardingCompleted: false,
       isEmailVerified: true,
       emailVerifiedAt: new Date(),
       isSyncedToSupabase: true,

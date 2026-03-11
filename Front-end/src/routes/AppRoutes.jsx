@@ -37,7 +37,6 @@ import ClientMessages from "../pages/client/ClientMessages";
 import Home from "../pages/public/Home/Home";
 import Login from "../pages/public/Login/Login";
 import AuthConsent from "../pages/public/AuthConsent/AuthConsent";
-import Login1 from "../pages/public/Login/login-1";
 import Registration from "../pages/public/Register/Registration";
 import OTP from "../pages/public/OTP/OTP";
 import ForgotPassword from "../pages/public/ForgotPassword/ForgotPassword";
@@ -82,7 +81,6 @@ const AppRoutes = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/registration" element={<Registration />} />
             <Route path="/auth/consent" element={<AuthConsent />} />
-            <Route path="/login-1" element={<Login1 />} />
             <Route path="/otp-verification" element={<OTP />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />

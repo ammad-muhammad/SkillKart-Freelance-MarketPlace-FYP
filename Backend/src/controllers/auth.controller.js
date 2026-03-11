@@ -29,17 +29,48 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  let isOtpSend;
-  const result = await authService.loginWithEmail(email, password);
-  console.log(result)
-  if (result.valid) {
-    isOtpSend = await otpService.generateAndSendOTP(email, 'email_verification');
-  }
+  
+  try {
+    // Step 1: Verify credentials
+    const result = await authService.loginWithEmail(email, password);
 
-  sendSuccess(res, {
-    message: 'Login successful',
-    data: { result, isOtpSend }
-  });
+    // Step 2: Send OTP in background (don't wait for email)
+    otpService.generateAndSendOTP(email, 'email_verification')
+      .then(() => console.log("✅ OTP sent successfully"))
+      .catch(err => console.error("⚠️ OTP send failed:", err.message));
+
+    const responseData = {
+      message: 'Credentials verified. OTP sent to your email.',
+      data: {
+        userId: result.user,
+        email: email,
+        valid: result.valid
+      }
+    };
+
+    console.log("📤 Response payload:", responseData);
+    
+    // Use res.json directly to ensure it works
+    res.status(200).json({
+      success: true,
+      ...responseData
+    });
+
+  } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return res.status(401).json({
+        success: false,
+        message: error.message || 'Invalid credentials'
+      });
+    }
+    
+    // Handle other errors
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Login failed'
+    });
+  }
 });
 
 /**
@@ -219,6 +250,8 @@ const logout = asyncHandler(async (req, res) => {
  */
 const supabaseAuth = asyncHandler(async (req, res) => {
   const { supabaseAccessToken, supabaseRefreshToken } = req.body;
+
+  console.log(supabaseAccessToken, req.body)
 
   if (!supabaseAccessToken) {
     return sendError(res, {
