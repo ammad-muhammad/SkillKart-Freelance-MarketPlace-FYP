@@ -22,7 +22,6 @@ const Role = () => {
     const bgRef = useRef(null);
 
     useEffect(() => {
-
         if (!authLoading) {
             // If not authenticated, redirect to home
             if (!isAuthenticated) {

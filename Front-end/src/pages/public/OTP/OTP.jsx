@@ -24,9 +24,15 @@ const OTP = () => {
     const visualRef = useRef(null);
     const bgRef = useRef(null);
 
-    // Get email from sessionStorage
+    // Get email from sessionStorage (registration/login flow)
     const userEmail = sessionStorage.getItem('OTPEmail') || 'user@example.com';
     const registrationType = sessionStorage.getItem('registrationType') || 'login'; // 'registration' or 'login'
+
+    // Get password reset data from sessionStorage (password reset flow)
+    const tempForgotData = JSON.parse(sessionStorage.getItem('tempForgotData') || 'null');
+    const isPasswordReset = tempForgotData ? true : false;
+    const resetEmail = tempForgotData?.email || userEmail;
+    const resetPassword = tempForgotData?.newPassword || '';
 
     useEffect(() => {
         if (timer > 0) {
@@ -122,56 +128,77 @@ const OTP = () => {
         setSuccess("");
 
         try {
-            console.log("Verifying OTP:", otpComplete, "for email:", userEmail);
-            console.log("API Call: authAPI.verifyOTP");
+            // PASSWORD RESET FLOW
+            if (isPasswordReset) {
+                console.log("🔄 Password Reset Flow");
+                console.log("Email:", resetEmail);
+                console.log("OTP:", otpComplete);
+                console.log("New Password:", resetPassword);
 
-            // const response = await authAPI.verifyOTP(userEmail, otpComplete);
-            const response = await verifyOtp(userEmail, otpComplete);
-            console.log("OTP verification successful:", response.data);
+                const response = await authAPI.resetPassword(resetEmail, otpComplete, resetPassword);
+                console.log("✅ Password reset successful:", response.data);
 
-            setSuccess("Verification successful!");
+                setSuccess("Password reset successfully!");
 
-            // Redirect based on flow
-            setTimeout(() => {
-                // Get role BEFORE clearing
-                const role = sessionStorage.getItem('userRole');
+                setTimeout(() => {
+                    // Clear sessionStorage
+                    sessionStorage.removeItem('tempForgotData');
 
-                if (registrationType === 'registration') {
-                    // Clear OTP data
-                    sessionStorage.removeItem('OTPEmail');
-                    sessionStorage.removeItem('registrationType');
-                    sessionStorage.removeItem('userRole');
+                    navigate('/login');
+                }, 1500);
+            }
+            // REGISTRATION/LOGIN FLOW
+            else {
+                console.log("🔐 Registration/Login Flow");
+                console.log("Verifying OTP:", otpComplete, "for email:", userEmail);
+                console.log("Registration Type:", registrationType);
 
-                    // Redirect to onboarding based on role
-                    if (role === 'client') {
-                        navigate('/client/onboarding');
-                    } else if (role === 'freelancer') {
-                        navigate('/freelancer/onboarding');
+                const response = await verifyOtp(userEmail, otpComplete);
+                console.log("✅ OTP verification successful:", response.data);
+
+                setSuccess("Verification successful!");
+
+                setTimeout(() => {
+                    // Get role BEFORE clearing
+                    const role = sessionStorage.getItem('userRole');
+
+                    if (registrationType === 'registration') {
+                        // Clear OTP data
+                        sessionStorage.removeItem('OTPEmail');
+                        sessionStorage.removeItem('registrationType');
+                        sessionStorage.removeItem('userRole');
+
+                        // Redirect to onboarding based on role
+                        if (role === 'client') {
+                            navigate('/client/onboarding');
+                        } else if (role === 'freelancer') {
+                            navigate('/freelancer/onboarding');
+                        } else {
+                            navigate('/404');
+                        }
                     } else {
-                        navigate('/404');
-                    }
-                } else {
-                    // Login flow - redirect to dashboard
-                    const userRole = response?.data?.user?.role;
-                    const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted
+                        // Login flow - redirect to dashboard
+                        const userRole = response?.data?.user?.role;
+                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted
 
-                    // Clear OTP data
-                    sessionStorage.removeItem('OTPEmail');
-                    sessionStorage.removeItem('registrationType');
-                    sessionStorage.removeItem('userRole');
+                        // Clear OTP data
+                        sessionStorage.removeItem('OTPEmail');
+                        sessionStorage.removeItem('registrationType');
+                        sessionStorage.removeItem('userRole');
 
-                    if (userRole === 'client') {
-                        isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
-                    } else if (userRole === 'freelancer') {
-                        isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
-                    } else {
-                        navigate('/404');
+                        if (userRole === 'client') {
+                            isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
+                        } else if (userRole === 'freelancer') {
+                            isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+                        } else {
+                            navigate('/404');
+                        }
                     }
-                }
-            }, 1500);
+                }, 1500);
+            }
 
         } catch (err) {
-            console.error("OTP verification failed:", err);
+            console.error("❌ Verification failed:", err);
             const errorMessage = err.response?.data?.message || 'Invalid verification code. Please try again.';
             setError(errorMessage);
             setLoading(false);
@@ -186,8 +213,13 @@ const OTP = () => {
         setLoading(true);
 
         try {
-            console.log("Resending OTP to:", userEmail);
-            await authAPI.resendOTP(userEmail, 'email_verification');
+            const emailForResend = isPasswordReset ? resetEmail : userEmail;
+            const purpose = isPasswordReset ? 'password_reset' : 'email_verification';
+
+            console.log("📧 Resending OTP to:", emailForResend);
+            console.log("Purpose:", purpose);
+
+            await authAPI.resendOTP(emailForResend, purpose);
 
             setSuccess("New code sent to your email!");
             setTimer(30);
@@ -205,7 +237,7 @@ const OTP = () => {
             }
 
         } catch (err) {
-            console.error("Failed to resend OTP:", err);
+            console.error("❌ Failed to resend OTP:", err);
             const errorMessage = err.response?.data?.message || 'Failed to resend code. Please try again.';
             setError(errorMessage);
         } finally {
@@ -214,7 +246,9 @@ const OTP = () => {
     };
 
     const handleBackClick = () => {
-        if (registrationType === 'registration') {
+        if (isPasswordReset) {
+            navigate('/forgot-password');
+        } else if (registrationType === 'registration') {
             navigate('/registration');
         } else {
             navigate('/login');
@@ -245,7 +279,7 @@ const OTP = () => {
                     </h1>
 
                     <p className="hero__sub" style={{ marginBottom: '25px', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
-                        We've sent a 6-digit security code to <span style={{ color: 'white', fontWeight: '800' }}>{userEmail}</span>
+                        We've sent a 6-digit security code to <span style={{ color: 'white', fontWeight: '800' }}>{isPasswordReset ? resetEmail : userEmail}</span>
                     </p>
 
                     <div ref={formRef} className="hero__auth-container" style={{
@@ -394,7 +428,7 @@ const OTP = () => {
 
                         {/* Back Button */}
                         <p style={{ marginTop: '20px', color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '600' }}>
-                            Wrong email? <button
+                            {isPasswordReset ? 'Wrong email?' : 'Wrong email?'} <button
                                 onClick={handleBackClick}
                                 style={{
                                     background: 'none',

@@ -4,12 +4,14 @@ import { gsap } from "gsap";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
 import { createClient } from '@supabase/supabase-js';
 import { authAPI } from "../../../api/auth";
+import { useAuth } from '../../../hooks/useAuth';
 import "../../../Components/common/Hero/Hero.css";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const Login = () => {
     const navigate = useNavigate();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({ email: "", password: "" });
     const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +24,16 @@ const Login = () => {
     const formRef = useRef(null);
     const visualRef = useRef(null);
     const bgRef = useRef(null);
+
+    useEffect(() => {
+        if (!authLoading) {
+            if (isAuthenticated) {
+                navigate('/');
+                return;
+            }
+        }
+    }, [isAuthenticated, user, authLoading, navigate]);
+
 
     useEffect(() => {
         const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.4 });
@@ -418,7 +430,7 @@ const Login = () => {
                         </div>
 
                         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginTop: '25px', fontWeight: '500' }}>
-                            Don't have an account? <Link to="/register-1" style={{ color: 'white', fontWeight: '800', textDecoration: 'none', marginLeft: '5px' }}>Sign Up</Link>
+                            Don't have an account? <Link to="/registration" style={{ color: 'white', fontWeight: '800', textDecoration: 'none', marginLeft: '5px' }}>Sign Up</Link>
                         </p>
                     </div>
                 </div>

@@ -6,13 +6,22 @@ import { toast } from 'react-toastify';
 
 const AuthConsent = () => {
   const navigate = useNavigate();
-  const { handleSupabaseOAuth } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, handleSupabaseOAuth } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const hasProcessed = useRef(false); // ✅ Prevent multiple calls
+  const hasProcessed = useRef(false); // Prevent multiple call
+
+  // useEffect(() => {
+  //   if (!authLoading) {
+  //     if (isAuthenticated) {
+  //       navigate('/');
+  //       return;
+  //     }
+  //   }
+  // }, [isAuthenticated, user, authLoading, navigate]);
 
   useEffect(() => {
-    // ✅ Skip if already processed
+    // Skip if already processed
     if (hasProcessed.current) {
       return;
     }
@@ -80,7 +89,7 @@ const AuthConsent = () => {
           isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
         } else if (userRole == "freelancer") {
           isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
-        }else{
+        } else {
           navigate('/', { replace: true });
         }
 

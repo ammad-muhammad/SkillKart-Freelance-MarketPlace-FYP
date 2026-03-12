@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Briefcase, Code, ArrowLeft, AlertCircle, CheckCircle, Loader } from "lucide-react";
 import { authAPI } from "../../../api/auth";
+import { useAuth } from '../../../hooks/useAuth';
 import "../../../Components/common/Hero/Hero.css";
 
 const Registration = () => {
     const navigate = useNavigate();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
     const [step, setStep] = useState(1); // 1: Role, 2: Details
     const [role, setRole] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +31,15 @@ const Registration = () => {
     const contentRef = useRef(null);
     const visualRef = useRef(null);
     const bgRef = useRef(null);
+
+    useEffect(() => {
+        if (!authLoading) {
+            if (isAuthenticated) {
+                navigate('/');
+                return;
+            }
+        }
+    }, [isAuthenticated, user, authLoading, navigate]);
 
     useEffect(() => {
         const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.4 });
@@ -61,6 +72,7 @@ const Registration = () => {
         setError("");
     };
 
+    // ✅ STRONG PASSWORD VALIDATION
     const validateForm = () => {
         if (!formData.firstName) {
             setError("First name is required");
@@ -84,6 +96,25 @@ const Registration = () => {
         }
         if (formData.password.length < 8) {
             setError("Password must be at least 8 characters");
+            return false;
+        }
+        // ✅ Check for uppercase letter
+        if (!/[A-Z]/.test(formData.password)) {
+            setError("Password must contain at least one uppercase letter (A-Z)");
+            return false;
+        }
+        // ✅ Check for lowercase letter
+        if (!/[a-z]/.test(formData.password)) {
+            setError("Password must contain at least one lowercase letter (a-z)");
+            return false;
+        }
+        // ✅ Check for number
+        if (!/\d/.test(formData.password)) {
+            setError("Password must contain at least one number (0-9)");
+            return false;
+        }
+        if (!formData.confirmPassword) {
+            setError("Please confirm your password");
             return false;
         }
         if (formData.password !== formData.confirmPassword) {
@@ -348,7 +379,12 @@ const Registration = () => {
                                     </div>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>Password</label>
+                                        <label style={{ color: 'white', fontSize: '13px', fontWeight: '800', marginLeft: '4px' }}>
+                                            Password
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: '500', marginLeft: '8px' }}>
+                                                (Min 8 chars, 1 uppercase, 1 lowercase, 1 number)
+                                            </span>
+                                        </label>
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
                                             <input
@@ -390,9 +426,6 @@ const Registration = () => {
                                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                             </button>
                                         </div>
-                                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', marginLeft: '4px' }}>
-                                            At least 8 characters
-                                        </span>
                                     </div>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -501,7 +534,7 @@ const Registration = () => {
                         )}
 
                         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginTop: '20px', fontWeight: '500' }}>
-                            Already a member? <a href="/login-1" style={{ color: 'white', fontWeight: '800', textDecoration: 'none', marginLeft: '5px' }}>Sign In</a>
+                            Already a member? <a href="/login" style={{ color: 'white', fontWeight: '800', textDecoration: 'none', marginLeft: '5px' }}>Sign In</a>
                         </p>
                     </div>
                 </div>

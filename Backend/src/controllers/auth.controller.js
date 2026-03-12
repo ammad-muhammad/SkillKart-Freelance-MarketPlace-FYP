@@ -220,6 +220,17 @@ const changePassword = asyncHandler(async (req, res) => {
 const requestPasswordReset = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
+  // Check if user exists
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    return sendError(res, {
+      statusCode: 404,
+      message: 'User with this email does not exist'
+    });
+  }
+
+  // Only send OTP if user exists
   await otpService.generateAndSendOTP(email, 'password_reset');
 
   sendSuccess(res, {
