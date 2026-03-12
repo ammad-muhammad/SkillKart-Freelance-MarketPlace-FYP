@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Rocket, Trophy, Bot, Heart } from 'lucide-react';
 import './Footer.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -113,7 +114,7 @@ export default function Footer() {
         <div className="container footer__newsletter-inner">
           <div>
             <h3 className="footer__newsletter-title">
-              Stay ahead of the freelance market 🚀
+              Stay ahead of the freelance market <Rocket size={16} style={{ display:'inline', verticalAlign:'middle', color:'#1a6fa8' }} />
             </h3>
             <p className="footer__newsletter-sub">
               Weekly AI tips, trending skills, and opportunities for students.
@@ -162,8 +163,8 @@ export default function Footer() {
                 ))}
               </div>
               <div className="footer__badges">
-                <div className="footer__badge">🏆 FYP Project 2025</div>
-                <div className="footer__badge">🤖 AI-Powered</div>
+                <div className="footer__badge"><Trophy size={13} /> FYP Project 2025</div>
+                <div className="footer__badge"><Bot size={13} /> AI-Powered</div>
               </div>
             </div>
 
@@ -189,7 +190,7 @@ export default function Footer() {
           {/* ── Bottom bar ── */}
           <div className="footer__bottom">
             <p className="footer__copy">
-              © {new Date().getFullYear()} SkillKart. All rights reserved. Built with 💙 as an FYP project.
+              © {new Date().getFullYear()} SkillKart. All rights reserved. Built with <Heart size={13} style={{ display:'inline', verticalAlign:'middle', color:'#1a6fa8', fill:'#1a6fa8' }} /> as an FYP project.
             </p>
             <div className="footer__bottom-links">
               <Link to="/privacy">Privacy Policy</Link>

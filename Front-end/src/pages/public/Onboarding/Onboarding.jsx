@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     User, Mail, Phone, Upload, Globe, Building2, Briefcase,
-    ChevronRight, ChevronLeft, CheckCircle2, Lock, Edit2, Terminal, ShieldCheck, X
+    ChevronRight, ChevronLeft, CheckCircle2, Lock, Edit2, Terminal, ShieldCheck, X, Rocket
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -343,7 +343,11 @@ const Onboarding = () => {
 
     const renderSuccess = () => (
         <motion.div className="onboarding__success" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: '72px', marginBottom: '24px' }}>🚀</div>
+            <div style={{ display:'flex', justifyContent:'center', marginBottom: '24px' }}>
+              <div style={{ width:'90px', height:'90px', background:'rgba(26,111,168,0.1)', borderRadius:'28px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Rocket size={48} style={{ color:'#1a6fa8' }} />
+              </div>
+            </div>
             <h1 className="onboarding__title" style={{ fontSize: '32px' }}>Welcome Aboard!</h1>
             <p className="onboarding__subtitle" style={{ fontSize: '16px', maxWidth: '400px', margin: '0 auto 32px' }}>
                 Your account is ready. Step into a borderless ecosystem of talent and opportunities.

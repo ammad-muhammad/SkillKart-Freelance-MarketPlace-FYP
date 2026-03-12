@@ -592,7 +592,9 @@ const ClientOnboarding = () => {
 
     const renderSuccess = () => (
         <motion.div className="onboarding__success" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-            <div style={{ fontSize: '80px', marginBottom: '20px' }}>🚀</div>
+            <div style={{ fontSize: '80px', marginBottom: '20px', display:'flex', justifyContent:'center' }}>
+              <Rocket size={72} style={{ color:'#1a6fa8' }} />
+            </div>
             <h1 className="onboarding__title">You're All Set!</h1>
             <p className="onboarding__subtitle">Your project ecosystem is being prepared. Our AI is already analyzing local and global talent for you.</p>
 

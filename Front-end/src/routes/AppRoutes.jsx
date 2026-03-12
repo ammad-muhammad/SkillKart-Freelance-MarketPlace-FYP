@@ -61,11 +61,14 @@ import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 // import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
 import Onboarding from "../pages/public/Onboarding/Onboarding";
+import FreelancerOnboarding from "../pages/public/FreelancerOnboarding/FreelancerOnboarding";
 // AI Tools
 import VerifyCredentials from "../pages/public/AiTools/VerifyCredentials";
 import BuddyAI from "../pages/public/AiTools/BuddyAI";
 import ProfileAnalyzer from "../pages/public/AiTools/ProfileAnalyzer";
 import CostEstimator from "../pages/public/AiTools/CostEstimator";
+import CategoryPage from "../pages/public/Skills/CategoryPage";
+import SkillPage from "../pages/public/Skills/SkillPage";
 
 // Fallback
 const NotFound = () => <h1>404 – Page Not Found</h1>;
@@ -104,12 +107,16 @@ const AppRoutes = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
             <Route path="/client/onboarding" element={<ClientOnboarding />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/freelancer-onboarding" element={<FreelancerOnboarding />} />
             {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
             {/* AI Tools */}
             <Route path="/ai/verify" element={<VerifyCredentials />} />
             <Route path="/ai/buddy" element={<BuddyAI />} />
             <Route path="/ai/profile-analyzer" element={<ProfileAnalyzer />} />
             <Route path="/ai/cost-estimator" element={<CostEstimator />} />
+            {/* Skills / Category / Gig Pages */}
+            <Route path="/skills/:categorySlug" element={<CategoryPage />} />
+            <Route path="/skills/:categorySlug/:skillSlug" element={<SkillPage />} />
           </Route>
 
           {/* ================= FREELANCER ROUTES ================= */}

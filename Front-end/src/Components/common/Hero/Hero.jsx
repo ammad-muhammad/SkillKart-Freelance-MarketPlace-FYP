@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
+import { Bot, Users, Star, CheckCircle2 } from 'lucide-react';
 import './Hero.css';
 
 /* ── Floating stat cards ── */
 const STATS = [
-  { value: '50K+', label: 'Verified Freelancers', icon: '👨‍💻' },
-  { value: '98%', label: 'Client Satisfaction', icon: '⭐' },
-  { value: '12K+', label: 'Projects Completed', icon: '✅' },
+  { value: '50K+', label: 'Verified Freelancers', Icon: Users },
+  { value: '98%',  label: 'Client Satisfaction',  Icon: Star },
+  { value: '12K+', label: 'Projects Completed',   Icon: CheckCircle2 },
 ];
 
 /* ── Trusted companies mock logos ── */
@@ -103,7 +104,7 @@ export default function Hero() {
         {/* ── Left: Copy ── */}
         <div className="hero__copy">
           <div ref={tagRef} className="section-tag hero__tag" style={{ color: '#e3e5e8ff', borderColor: 'rgba(14, 14, 14, 0.35)', background: 'rgba(160, 168, 179, 0.1)' }}>
-            <span>🤖</span> AI-Powered Freelancing Platform
+            <Bot size={15} /> AI-Powered Freelancing Platform
           </div>
 
           <h1 ref={headingRef} className="hero__heading">
@@ -199,7 +200,7 @@ export default function Hero() {
 
               {/* AI insight card */}
               <div className="hero__db-ai">
-                <div className="hero__db-ai-icon">🤖</div>
+                <div className="hero__db-ai-icon"><Bot size={20} /></div>
                 <div>
                   <div className="hero__db-ai-title">Buddy AI Insight</div>
                   <div className="hero__db-ai-text">
@@ -232,7 +233,7 @@ export default function Hero() {
           {/* ── Floating stat cards ── */}
           {STATS.map((stat, i) => (
             <div key={stat.label} className={`hero__stat-card hero__stat-card--${i + 1}`}>
-              <span className="hero__stat-icon">{stat.icon}</span>
+              <span className="hero__stat-icon"><stat.Icon size={18} /></span>
               <div>
                 <div className="hero__stat-val">{stat.value}</div>
                 <div className="hero__stat-lbl">{stat.label}</div>
