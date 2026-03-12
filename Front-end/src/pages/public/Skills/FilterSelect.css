@@ -1,0 +1,158 @@
+/* =======================================================
+   FilterSelect — Custom Dropdown
+   Matches SkillKart theme (#042E4C navy, Lato, etc.)
+   ======================================================= */
+
+.fsel {
+  position: relative;
+  display: inline-flex;
+  font-family: 'Lato', sans-serif;
+}
+
+/* ── Trigger button ── */
+.fsel__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f6f9;
+  border: 1.5px solid #dde5ef;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #042E4C;
+  font-family: 'Lato', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 130px;
+  justify-content: space-between;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  user-select: none;
+  outline: none;
+}
+
+.fsel__trigger:hover {
+  border-color: #0a4a73;
+  background: #eef2f7;
+}
+
+.fsel--open .fsel__trigger {
+  border-color: #042E4C;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(4, 46, 76, 0.1);
+}
+
+/* Active state — when a non-default option is selected */
+.fsel--active .fsel__trigger {
+  background: #042E4C;
+  border-color: #042E4C;
+  color: #fff;
+}
+
+.fsel--active.fsel--open .fsel__trigger {
+  background: #0a4a73;
+  border-color: #0a4a73;
+  box-shadow: 0 0 0 3px rgba(4, 46, 76, 0.18);
+}
+
+/* Chevron icon */
+.fsel__chevron {
+  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.fsel--active .fsel__chevron { color: #fff; opacity: 0.9; }
+.fsel--open .fsel__chevron { transform: rotate(180deg); opacity: 1; }
+
+/* ── Dropdown panel ── */
+.fsel__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  background: #fff;
+  border: 1.5px solid #dde5ef;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 24px rgba(4, 46, 76, 0.12),
+    0 2px 8px rgba(4, 46, 76, 0.06);
+  z-index: 9999;
+  padding: 6px;
+  list-style: none;
+  margin: 0;
+  animation: fsel-drop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+/* Arrow pointer */
+.fsel__panel::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 18px;
+  width: 13px;
+  height: 13px;
+  background: #fff;
+  border-left: 1.5px solid #dde5ef;
+  border-top: 1.5px solid #dde5ef;
+  transform: rotate(45deg);
+  border-radius: 2px 0 0 0;
+}
+
+@keyframes fsel-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Option items ── */
+.fsel__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a5568;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  gap: 10px;
+}
+
+.fsel__option:hover {
+  background: #f0f5fa;
+  color: #042E4C;
+}
+
+/* Selected option */
+.fsel__option--selected {
+  background: #042E4C;
+  color: #fff;
+  font-weight: 700;
+}
+
+.fsel__option--selected:hover {
+  background: #0a4a73;
+  color: #fff;
+}
+
+/* Checkmark icon */
+.fsel__check {
+  flex-shrink: 0;
+  opacity: 0.9;
+  color: #B7C9E2;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .fsel__trigger {
+    min-width: unset;
+    width: 100%;
+  }
+}

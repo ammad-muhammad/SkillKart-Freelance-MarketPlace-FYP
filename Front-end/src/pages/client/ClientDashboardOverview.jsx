@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
+import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, CheckCircle2 } from 'lucide-react';
 import './ClientDashboard.css';
 
 const StatCard = ({ icon, value, label }) => (
@@ -19,10 +20,10 @@ const ClientDashboardOverview = () => {
     .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const statsData = [
-    { icon: '📁', value: projects.length, label: 'Total Projects' },
-    { icon: '⚡', value: stats.activeProjects, label: 'Active Projects' },
-    { icon: '👥', value: stats.freelancersHired, label: 'Freelancers Hired' },
-    { icon: '💰', value: `$${stats.totalSpent.toLocaleString()}`, label: 'Total Spent' },
+    { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects'      },
+    { icon: <Zap size={20} />,        value: stats.activeProjects,                      label: 'Active Projects'     },
+    { icon: <Users2 size={20} />,     value: stats.freelancersHired,                    label: 'Freelancers Hired'   },
+    { icon: <DollarSign size={20} />, value: `$${stats.totalSpent.toLocaleString()}`,  label: 'Total Spent'         },
   ];
 
   const recentProjects = projects.slice(0, 3);
@@ -31,7 +32,7 @@ const ClientDashboardOverview = () => {
     <div>
       {/* Header */}
       <div className="cl-page-header">
-        <h1 className="cl-page-title">Welcome back, {personalInfo.fullName.split(' ')[0]}! 👋</h1>
+        <h1 className="cl-page-title">Welcome back, {personalInfo.fullName.split(' ')[0]}!</h1>
         <p className="cl-page-sub">Here's an overview of your client activity on SkillKart.</p>
       </div>
 
@@ -45,11 +46,11 @@ const ClientDashboardOverview = () => {
           </div>
           <div className="cl-dash-hero__info">
             <h2 className="cl-dash-hero__name">{personalInfo.fullName}</h2>
-            <p className="cl-dash-hero__company">🏢 {personalInfo.companyName} · {personalInfo.industry}</p>
+            <p className="cl-dash-hero__company"><Building2 size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.companyName} · {personalInfo.industry}</p>
             <div className="cl-dash-hero__meta">
-              <span>📍 {personalInfo.location}</span>
-              <span>🗓️ Member since {personalInfo.memberSince}</span>
-              <span>🌐 {personalInfo.website}</span>
+              <span><MapPin size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.location}</span>
+              <span><Calendar size={13} style={{display:'inline',verticalAlign:'middle'}} /> Member since {personalInfo.memberSince}</span>
+              <span><Globe size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.website}</span>
             </div>
           </div>
           <Link to="/client/profile" className="cl-btn cl-btn--outline">
@@ -65,7 +66,7 @@ const ClientDashboardOverview = () => {
 
       {/* Quick Actions */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title">⚡ Quick Actions</h3>
+        <h3 className="cl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/client/projects/create" className="cl-btn cl-btn--primary">＋ Post New Project</Link>
           <Link to="/client/projects" className="cl-btn cl-btn--ghost">View My Projects</Link>
@@ -76,7 +77,7 @@ const ClientDashboardOverview = () => {
 
       {/* Recent Projects */}
       <div className="cl-card">
-        <h3 className="cl-section-title">📁 Recent Projects</h3>
+        <h3 className="cl-section-title"><FolderOpen size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Recent Projects</h3>
         {recentProjects.length === 0 ? (
           <p style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>
             No projects yet.{' '}
@@ -95,7 +96,7 @@ const ClientDashboardOverview = () => {
                   </p>
                 </div>
                 <span className={`cl-badge cl-badge--${p.status.replace(' ', '-')}`}>
-                  {p.status === 'open' ? '🟢 Open' : p.status === 'in-progress' ? '🔵 In Progress' : '✅ Completed'}
+                  {p.status === 'open' ? <><CheckCircle2 size={12} style={{color:'#16a34a'}} /> Open</> : p.status === 'in-progress' ? 'In Progress' : <><CheckCircle2 size={12} /> Completed</>}
                 </span>
               </div>
             ))}

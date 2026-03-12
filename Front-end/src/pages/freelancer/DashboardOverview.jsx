@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen } from 'lucide-react';
 import './FreelancerDashboard.css';
 
 const StatCard = ({ icon, value, label }) => (
@@ -23,17 +24,17 @@ const DashboardOverview = () => {
     .slice(0, 2);
 
   const statsData = [
-    { icon: '📦', value: gigs.length, label: 'Total Gigs' },
-    { icon: '⚡', value: stats.activeOrders, label: 'Active Orders' },
-    { icon: '✅', value: stats.completedOrders, label: 'Completed Orders' },
-    { icon: '👁️', value: stats.profileViews.toLocaleString(), label: 'Profile Views' },
+    { icon: <Package size={20} />,     value: gigs.length,                              label: 'Total Gigs'       },
+    { icon: <Zap size={20} />,         value: stats.activeOrders,                       label: 'Active Orders'    },
+    { icon: <CheckCircle2 size={20} />, value: stats.completedOrders,                   label: 'Completed Orders' },
+    { icon: <Eye size={20} />,         value: stats.profileViews.toLocaleString(),      label: 'Profile Views'    },
   ];
 
   return (
     <div>
       {/* Header */}
       <div className="fl-page-header">
-        <h1 className="fl-page-title">Welcome back, {personalInfo.fullName.split(' ')[0]}! 👋</h1>
+        <h1 className="fl-page-title">Welcome back, {personalInfo.fullName.split(' ')[0]}!</h1>
         <p className="fl-page-sub">Here's an overview of your freelance activity.</p>
       </div>
 
@@ -51,9 +52,9 @@ const DashboardOverview = () => {
             <h2 className="fl-dashboard-hero__name">{personalInfo.fullName}</h2>
             <p className="fl-dashboard-hero__title">{personalInfo.title}</p>
             <p className="fl-dashboard-hero__meta">
-              <span>📍 {personalInfo.location}</span>
-              <span>🗓️ Member since {personalInfo.memberSince}</span>
-              <span>⭐ 4.9 Rating</span>
+              <span><MapPin size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.location}</span>
+              <span><Calendar size={13} style={{display:'inline',verticalAlign:'middle'}} /> Member since {personalInfo.memberSince}</span>
+              <span><Star size={13} style={{display:'inline',verticalAlign:'middle',fill:'#facc15',color:'#facc15'}} /> 4.9 Rating</span>
             </p>
           </div>
           <Link to="/freelancer/profile" className="fl-btn fl-btn--outline">
@@ -71,7 +72,7 @@ const DashboardOverview = () => {
 
       {/* Quick Actions */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="fl-section-title">⚡ Quick Actions</h3>
+        <h3 className="fl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--primary">＋ Create New Gig</Link>
           <Link to="/freelancer/gigs" className="fl-btn fl-btn--ghost">View My Gigs</Link>
@@ -82,7 +83,7 @@ const DashboardOverview = () => {
 
       {/* Recent Gigs */}
       <div className="fl-card">
-        <h3 className="fl-section-title">📦 Recent Gigs</h3>
+        <h3 className="fl-section-title"><FolderOpen size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Recent Gigs</h3>
         {gigs.length === 0 ? (
           <div className="fl-empty-state">
             <p style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>

@@ -1,24 +1,28 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+  Globe, Palette, Bot, BarChart2, Smartphone, PenLine,
+  Film, TrendingUp, Brush, ShieldCheck, CloudCog, Link, Briefcase
+} from 'lucide-react';
 import './SkillsSlider.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
 /* ── Skills data ── */
 const SKILLS = [
-  { name: 'Web Development', icon: '🌐', count: '2.4k freelancers', color: '#e8f4fd' },
-  { name: 'UI/UX Design', icon: '🎨', count: '1.8k freelancers', color: '#fef3e8' },
-  { name: 'AI & Machine Learning', icon: '🤖', count: '950 freelancers', color: '#edf9f0' },
-  { name: 'Data Science', icon: '📊', count: '1.2k freelancers', color: '#f3f0fd' },
-  { name: 'Mobile Development', icon: '📱', count: '1.5k freelancers', color: '#fef0f0' },
-  { name: 'Content Writing', icon: '✍️', count: '3.1k freelancers', color: '#fff8e8' },
-  { name: 'Video Editing', icon: '🎬', count: '870 freelancers', color: '#f0f8f0' },
-  { name: 'SEO & Marketing', icon: '📈', count: '2.0k freelancers', color: '#e8f0fd' },
-  { name: 'Graphic Design', icon: '🖌️', count: '2.6k freelancers', color: '#fdf0f8' },
-  { name: 'Cybersecurity', icon: '🔐', count: '640 freelancers', color: '#f0fdf4' },
-  { name: 'Cloud Computing', icon: '☁️', count: '780 freelancers', color: '#e8f4f9' },
-  { name: 'Blockchain', icon: '⛓️', count: '420 freelancers', color: '#fdf8e8' },
+  { name: 'Web Development',      Icon: Globe,       count: '2.4k freelancers', color: '#e8f4fd' },
+  { name: 'UI/UX Design',         Icon: Palette,     count: '1.8k freelancers', color: '#fef3e8' },
+  { name: 'AI & Machine Learning',Icon: Bot,         count: '950 freelancers',  color: '#edf9f0' },
+  { name: 'Data Science',         Icon: BarChart2,   count: '1.2k freelancers', color: '#f3f0fd' },
+  { name: 'Mobile Development',   Icon: Smartphone,  count: '1.5k freelancers', color: '#fef0f0' },
+  { name: 'Content Writing',      Icon: PenLine,     count: '3.1k freelancers', color: '#fff8e8' },
+  { name: 'Video Editing',        Icon: Film,        count: '870 freelancers',  color: '#f0f8f0' },
+  { name: 'SEO & Marketing',      Icon: TrendingUp,  count: '2.0k freelancers', color: '#e8f0fd' },
+  { name: 'Graphic Design',       Icon: Brush,       count: '2.6k freelancers', color: '#fdf0f8' },
+  { name: 'Cybersecurity',        Icon: ShieldCheck, count: '640 freelancers',  color: '#f0fdf4' },
+  { name: 'Cloud Computing',      Icon: CloudCog,    count: '780 freelancers',  color: '#e8f4f9' },
+  { name: 'Blockchain',           Icon: Link,        count: '420 freelancers',  color: '#fdf8e8' },
 ];
 
 /* Double the array so the loop is seamless */
@@ -80,7 +84,7 @@ export default function SkillsSlider() {
       <div className="container">
         <div ref={headerRef} className="skills-slider__header">
           <div className="section-tag">
-            <span>💼</span> Browse by Category
+            <Briefcase size={15} /> Browse by Category
           </div>
           <h2 className="section-title">
             Find Experts Across <span className="highlight-text">All Skills</span>
@@ -102,7 +106,7 @@ export default function SkillsSlider() {
           {SKILLS_DOUBLED.map((skill, idx) => (
             <div key={`${skill.name}-${idx}`} className="skills-slider__card">
               <div className="skills-slider__card-icon" style={{ background: skill.color }}>
-                <span>{skill.icon}</span>
+                <skill.Icon size={22} />
               </div>
               <div className="skills-slider__card-info">
                 <h3>{skill.name}</h3>

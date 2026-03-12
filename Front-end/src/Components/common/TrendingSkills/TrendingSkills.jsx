@@ -1,92 +1,24 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+  Bot, Monitor, Palette, BarChart2, Smartphone, Cloud,
+  TrendingUp, ShieldCheck, Film, Flame, Briefcase
+} from 'lucide-react';
 import './TrendingSkills.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const TRENDING = [
-  {
-    name: 'AI & Prompt Engineering',
-    icon: '🤖',
-    trend: '+148%',
-    avg: '$85/hr',
-    level: 'Advanced',
-    tags: ['OpenAI', 'LangChain', 'GPT-4'],
-    hot: true,
-  },
-  {
-    name: 'Full-Stack Web Dev',
-    icon: '💻',
-    trend: '+67%',
-    avg: '$65/hr',
-    level: 'Mid-Senior',
-    tags: ['React', 'Node.js', 'PostgreSQL'],
-    hot: true,
-  },
-  {
-    name: 'UI/UX Product Design',
-    icon: '🎨',
-    trend: '+54%',
-    avg: '$72/hr',
-    level: 'Mid-Level',
-    tags: ['Figma', 'Prototyping', 'Research'],
-    hot: false,
-  },
-  {
-    name: 'Data Science & Analytics',
-    icon: '📊',
-    trend: '+89%',
-    avg: '$90/hr',
-    level: 'Senior',
-    tags: ['Python', 'TensorFlow', 'SQL'],
-    hot: true,
-  },
-  {
-    name: 'Mobile App Development',
-    icon: '📱',
-    trend: '+43%',
-    avg: '$70/hr',
-    level: 'Mid-Level',
-    tags: ['Flutter', 'React Native', 'Swift'],
-    hot: false,
-  },
-  {
-    name: 'Cloud & DevOps',
-    icon: '☁️',
-    trend: '+112%',
-    avg: '$95/hr',
-    level: 'Advanced',
-    tags: ['AWS', 'Docker', 'Kubernetes'],
-    hot: true,
-  },
-  {
-    name: 'SEO & Growth Marketing',
-    icon: '📈',
-    trend: '+38%',
-    avg: '$55/hr',
-    level: 'Entry-Mid',
-    tags: ['SEMrush', 'GA4', 'Content'],
-    hot: false,
-  },
-  {
-    name: 'Cybersecurity',
-    icon: '🔐',
-    trend: '+130%',
-    avg: '$110/hr',
-    level: 'Expert',
-    tags: ['Penetration Testing', 'SIEM', 'CTF'],
-    hot: true,
-  },
-  {
-    name: 'Video Editing & Motion',
-    icon: '🎬',
-    trend: '+29%',
-    avg: '$48/hr',
-    level: 'Entry-Mid',
-    tags: ['Premiere Pro', 'After Effects', '4K'],
-    hot: false,
-  },
+  { name: 'AI & Prompt Engineering', Icon: Bot,         trend: '+148%', avg: '$85/hr',  level: 'Advanced',   tags: ['OpenAI', 'LangChain', 'GPT-4'],              hot: true  },
+  { name: 'Full-Stack Web Dev',       Icon: Monitor,     trend: '+67%',  avg: '$65/hr',  level: 'Mid-Senior', tags: ['React', 'Node.js', 'PostgreSQL'],             hot: true  },
+  { name: 'UI/UX Product Design',     Icon: Palette,     trend: '+54%',  avg: '$72/hr',  level: 'Mid-Level',  tags: ['Figma', 'Prototyping', 'Research'],           hot: false },
+  { name: 'Data Science & Analytics', Icon: BarChart2,   trend: '+89%',  avg: '$90/hr',  level: 'Senior',     tags: ['Python', 'TensorFlow', 'SQL'],                hot: true  },
+  { name: 'Mobile App Development',   Icon: Smartphone,  trend: '+43%',  avg: '$70/hr',  level: 'Mid-Level',  tags: ['Flutter', 'React Native', 'Swift'],           hot: false },
+  { name: 'Cloud & DevOps',           Icon: Cloud,       trend: '+112%', avg: '$95/hr',  level: 'Advanced',   tags: ['AWS', 'Docker', 'Kubernetes'],                hot: true  },
+  { name: 'SEO & Growth Marketing',   Icon: TrendingUp,  trend: '+38%',  avg: '$55/hr',  level: 'Entry-Mid',  tags: ['SEMrush', 'GA4', 'Content'],                  hot: false },
+  { name: 'Cybersecurity',            Icon: ShieldCheck, trend: '+130%', avg: '$110/hr', level: 'Expert',     tags: ['Penetration Testing', 'SIEM', 'CTF'],         hot: true  },
+  { name: 'Video Editing & Motion',   Icon: Film,        trend: '+29%',  avg: '$48/hr',  level: 'Entry-Mid',  tags: ['Premiere Pro', 'After Effects', '4K'],        hot: false },
 ];
 
 const LEVEL_COLORS = {
@@ -136,7 +68,7 @@ export default function TrendingSkills() {
       <div className="container">
         <div ref={headerRef} className="trending__header">
           <div className="section-tag">
-            <span>🔥</span> What's Trending Now
+            <Flame size={15} style={{ color: '#ef4444' }} /> What's Trending Now
           </div>
           <div className="trending__header-row">
             <div>
@@ -165,10 +97,10 @@ export default function TrendingSkills() {
             return (
               <div key={skill.name} className={`trending__card${skill.hot ? ' trending__card--hot' : ''}`}>
                 <div className="trending__card-header">
-                  <div className="trending__card-icon">{skill.icon}</div>
+                  <div className="trending__card-icon"><skill.Icon size={22} /></div>
                   <div className="trending__card-indicators">
                     {skill.hot && (
-                      <div className="trending__hot-badge">🔥 Hot</div>
+                      <div className="trending__hot-badge"><Flame size={11} /> Hot</div>
                     )}
                     <div className="trending__card-trend">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
