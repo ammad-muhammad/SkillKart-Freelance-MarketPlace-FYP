@@ -107,7 +107,7 @@ const AppRoutes = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
             <Route path="/client/onboarding" element={<ClientOnboarding />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/freelancer-onboarding" element={<FreelancerOnboarding />} />
+            <Route path="/freelancer/onboarding" element={<FreelancerOnboarding />} />
             {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
             {/* AI Tools */}
             <Route path="/ai/verify" element={<VerifyCredentials />} />
