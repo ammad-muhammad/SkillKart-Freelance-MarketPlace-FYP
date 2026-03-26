@@ -55,6 +55,7 @@ import PostProject from "../pages/public/PostProject/PostProject";
 import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
 import Community from "../pages/public/Community/Community";
 import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
+import Categories from "../pages/public/Categories/Categories";
 
 //Sumair - work
 // import TermsAndConditions from "../pages/public/TermsAndConditions";
@@ -102,6 +103,7 @@ const AppRoutes = () => {
             <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
             <Route path="/community" element={<Community />} />
             <Route path="/help" element={<HelpCenter />} />
+            <Route path="/categories" element={<Categories />} />
             {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}

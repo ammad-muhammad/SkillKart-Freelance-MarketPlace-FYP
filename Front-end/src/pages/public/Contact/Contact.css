@@ -779,7 +779,7 @@
    SUPPORT TEAM
 ════════════════════════════════════ */
 .team {
-    padding: var(--space-24) 0;
+    padding: var(--space-24) 0 var(--space-8);
     background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
 }
 
@@ -879,7 +879,7 @@
    FAQ
 ════════════════════════════════════ */
 .cfaq {
-    padding: var(--space-24) 0;
+    padding: var(--space-8) 0 var(--space-24);
     background: var(--color-white);
 }
 
@@ -1156,7 +1156,7 @@
     }
 
     .team {
-        padding: var(--space-16) 0;
+        padding: var(--space-16) 0 var(--space-6);
     }
 
     .team__grid {
@@ -1165,7 +1165,7 @@
     }
 
     .cfaq {
-        padding: var(--space-16) 0;
+        padding: var(--space-6) 0 var(--space-16);
     }
 
     .cfaq__grid {

@@ -1,0 +1,143 @@
+import { useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Search, ChevronRight, Briefcase, TrendingUp, Users, ArrowRight } from "lucide-react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { categories } from "../../../data/categories";
+import Navbar from "../../../Components/common/Navbar/Navbar";
+import Footer from "../../../Components/common/Footer/Footer";
+import "./Categories.css";
+
+gsap.registerPlugin(ScrollTrigger);
+
+export default function Categories() {
+  const heroRef = useRef(null);
+  const gridRef = useRef(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.title = "All Categories - SkillKart";
+
+    /* Hero entrance */
+    const tl = gsap.timeline({ delay: 0.2 });
+    tl.fromTo(".cats-hero__tag",   { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
+      .fromTo(".cats-hero__title", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power4.out" }, "-=0.2")
+      .fromTo(".cats-hero__desc",  { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, "-=0.3")
+      .fromTo(".cats-hero__search",{ y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, "-=0.2");
+
+    /* Grid entrance */
+    gsap.fromTo(gridRef.current.children,
+      { y: 40, opacity: 0 },
+      {
+        y: 0, opacity: 1, stagger: 0.1, duration: 0.6, ease: "power3.out",
+        scrollTrigger: { trigger: gridRef.current, start: "top 85%" }
+      }
+    );
+
+    return () => ScrollTrigger.getAll().forEach(t => t.kill());
+  }, []);
+
+  return (
+    <>
+      <Navbar />
+      <div className="cats-page">
+        {/* ── HERO ── */}
+        <section ref={heroRef} className="cats-hero">
+          <div className="cats-hero__bg">
+            <div className="cats-hero__orb cats-hero__orb--1" />
+            <div className="cats-hero__orb cats-hero__orb--2" />
+            <div className="cats-hero__orb cats-hero__orb--3" />
+            <div className="cats-hero__grid" />
+          </div>
+
+          <div className="container cats-hero__inner">
+            <div className="section-tag cats-hero__tag">
+                <span>📂</span> Marketplace Categories
+            </div>
+
+            <h1 className="cats-hero__title">
+              Explore Our <span className="cats-hero__accent">Marketplace</span>
+            </h1>
+            <p className="cats-hero__desc">
+              Discover verified student freelancers across hundreds of specialized skills. 
+              Find the perfect talent filtered by category, rating, and expertise.
+            </p>
+
+            <div className="cats-hero__search">
+              <Search size={18} color="rgba(255,255,255,0.55)" />
+              <input placeholder="Search for any service or category..." />
+              <button>Search</button>
+            </div>
+          </div>
+
+          <div className="cats-hero__wave">
+            <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="var(--color-bg)" />
+            </svg>
+          </div>
+        </section>
+
+        {/* ── CATEGORY GRID ── */}
+        <div className="container cats-main">
+          <div className="cats-main__head">
+            <div className="section-tag"><Briefcase size={14} /> Main Sectors</div>
+            <h2 className="section-title">All Service Categories</h2>
+          </div>
+
+          <div ref={gridRef} className="cats-grid">
+            {categories.map((cat) => (
+              <Link key={cat.id} to={`/skills/${cat.slug}`} className="cat-card">
+                <div className="cat-card__content">
+                  <div className="cat-card__icon" style={{ background: cat.lightBg }}>
+                    {cat.icon}
+                  </div>
+                  <div className="cat-card__info">
+                    <h3>{cat.name}</h3>
+                    <p>{cat.description}</p>
+                  </div>
+                  <div className="cat-card__footer">
+                    <div className="cat-card__stat">
+                      <Users size={14} />
+                      <span>{cat.totalServices.toLocaleString()} Services</span>
+                    </div>
+                    <div className="cat-card__arrow">
+                      <ArrowRight size={16} />
+                    </div>
+                  </div>
+                </div>
+                {/* Decorative gradient overlay */}
+                <div className="cat-card__glow" style={{ background: cat.gradient }} />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ── TRENDING ── */}
+        <section className="cats-trending">
+            <div className="container">
+                <div className="cats-trending__box">
+                    <div className="cats-trending__info">
+                        <div className="section-tag"><TrendingUp size={14} /> Trending Now</div>
+                        <h2 className="section-title">Can't find what you're looking for?</h2>
+                        <p className="section-subtitle">
+                           Try our AI Buddy to help you match with the perfect freelancer or 
+                           browse our most trending skillsets this month.
+                        </p>
+                        <div className="cats-trending__actions">
+                            <Link to="/ai/buddy" className="btn-primary">Talk to AI Buddy</Link>
+                            <Link to="/post-project" className="btn-secondary">Post a Project</Link>
+                        </div>
+                    </div>
+                    <div className="cats-trending__visual">
+                        <div className="cats-trending__circle">
+                            <div className="cats-trending__icon">🤖</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+      </div>
+      <Footer />
+    </>
+  );
+}

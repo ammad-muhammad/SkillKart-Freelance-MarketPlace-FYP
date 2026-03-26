@@ -30,6 +30,7 @@ export default function ProfileAnalyzer() {
             tl.from(".ai-hero__badge", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" })
               .from(".ai-hero__title", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, "-=0.3")
               .from(".ai-hero__sub", { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.5")
+              .from(".ai-hero-stat", { opacity: 0, y: 15, stagger: 0.08, duration: 0.4, ease: "power3.out" }, "-=0.3")
               .from(".ai-hero .ai-btn-primary", { opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.7)" }, "-=0.4");
 
             gsap.fromTo(".ai-card", 
@@ -102,6 +103,12 @@ export default function ProfileAnalyzer() {
                         Get data-driven insights into your Bio, Skills, and SEO positioning.
                         Turn more profile views into high-ticket client invitations.
                     </p>
+                    <div className="ai-hero-stats" style={{ marginBottom: '2.5rem' }}>
+                        <span className="ai-hero-stat">🔍 Deep Skill Audit</span>
+                        <span className="ai-hero-stat">🛠️ SEO Optimization</span>
+                        <span className="ai-hero-stat">📊 Market Benchmarking</span>
+                        <span className="ai-hero-stat">💡 Content Strategy</span>
+                    </div>
                     <a href="#analyze-tool" className="ai-btn-primary">Analyze My Profile</a>
                 </div>
             </header>

@@ -3,7 +3,7 @@
    ============================================ */
 
 .navbar {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -11,7 +11,12 @@
   height: var(--navbar-h);
   z-index: var(--z-navbar) !important;
   background: transparent !important;
-  transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: 
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.6s ease,
+    background 0.5s ease,
+    width 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    top 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex !important;
   opacity: 1 !important;
   visibility: visible !important;
@@ -20,27 +25,28 @@
 
 /* ── Smart Hide on Scroll Down ── */
 .navbar--hidden {
-  transform: translateY(-160%);
+  transform: translateY(-110%) scaleY(0.9);
   opacity: 0 !important;
   pointer-events: none;
 }
 
 /* ── Sticky Crystal Pill Style ── */
 .navbar--sticky {
-  top: 16px;
+  position: fixed;
+  top: 20px;
   height: 64px;
   width: calc(100% - 40px);
-  max-width: 1240px;
+  max-width: 1080px;
   margin: 0 auto;
   left: 0;
   right: 0;
-  background: rgba(4, 46, 76, 0.6) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(4, 46, 76, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 100px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  /* Extra crystal depth */
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .navbar--sticky .navbar__mega {
@@ -50,13 +56,16 @@
 .navbar--sticky .navbar__inner {
   height: 64px;
   padding: 0 var(--space-6);
+  max-width: 100% !important;
+  width: 100%;
 }
 
 .navbar__inner {
   display: flex;
   align-items: center;
   height: var(--navbar-h);
-  gap: var(--space-8);
+  gap: var(--space-4);
+  width: 100%;
 }
 
 /* ── Logo ── */
@@ -135,7 +144,7 @@
 /* ── Dropdown & Mega Menu ── */
 .navbar__mega {
   position: absolute;
-  top: 100%;
+  top: 75%;
   left: 50%;
   transform: translateX(-50%) translateY(10px);
   width: calc(100% - 40px);
@@ -152,7 +161,8 @@
   pointer-events: none;
   z-index: var(--z-dropdown);
   padding: var(--space-10) 0;
-  margin-top: 12px;
+  margin-top: 8px;
+  max-height: 85vh
   /* Gap from the navbar */
 }
 
@@ -161,8 +171,8 @@
   content: '';
   position: absolute;
   top: -8px;
-  left: 54%;
-  /* Corrected alignment for 'Find Work' item */
+  left: 64%;
+  /* Pointing directly under Link #2 (Find Work) */
   transform: translateX(-50%) rotate(45deg);
   width: 16px;
   height: 16px;
@@ -261,6 +271,11 @@
   pointer-events: none;
   z-index: var(--z-dropdown);
   margin-top: 12px;
+}
+
+.navbar--sticky .navbar__mega,
+.navbar--sticky .navbar__dropdown {
+  top: calc(100% + 12px);
 }
 
 /* Arrow for standard dropdowns */
@@ -390,16 +405,23 @@
 
 .navbar__cta {
   font-size: var(--fs-sm) !important;
-  padding: var(--space-3) var(--space-6) !important;
+  padding: 10px 32px !important;
+  min-width: 120px;
+  justify-content: center;
   background: var(--color-accent) !important;
   color: var(--color-primary) !important;
-  font-weight: var(--fw-black) !important;
-  box-shadow: 0 4px 16px rgba(183, 201, 226, 0.4) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-radius: 100px !important;
+  box-shadow: 0 8px 20px rgba(183, 201, 226, 0.25) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .navbar__cta:hover {
   background: var(--color-white) !important;
-  box-shadow: 0 6px 24px rgba(183, 201, 226, 0.5) !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(183, 201, 226, 0.4) !important;
 }
 
 /* ── Hamburger ── */

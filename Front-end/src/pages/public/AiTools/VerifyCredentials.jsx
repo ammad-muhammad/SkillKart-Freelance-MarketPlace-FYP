@@ -32,6 +32,7 @@ export default function VerifyCredentials() {
             tl.from(".ai-hero__badge", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" })
               .from(".ai-hero__title", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, "-=0.3")
               .from(".ai-hero__sub", { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.5")
+              .from(".ai-hero-stat", { opacity: 0, y: 15, stagger: 0.08, duration: 0.4, ease: "power3.out" }, "-=0.3")
               .from(".ai-hero .ai-btn-primary", { opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.7)" }, "-=0.4");
 
             // Scroll Animations for sections - use more robust formTo
@@ -119,6 +120,12 @@ export default function VerifyCredentials() {
                         Instantly validate your skills, experience, and online presence to build
                         trust with high-ticket clients on SkillKart.
                     </p>
+                    <div className="ai-hero-stats" style={{ marginBottom: '2.5rem' }}>
+                        <span className="ai-hero-stat">✅ 100% Secure Analysis</span>
+                        <span className="ai-hero-stat">🛡️ Anti-Fraud Check</span>
+                        <span className="ai-hero-stat">📈 Trust Score Report</span>
+                        <span className="ai-hero-stat">✨ Profile Badge</span>
+                    </div>
                     <a href="#verify-tool" className="ai-btn-primary">Start Verification</a>
                 </div>
             </header>

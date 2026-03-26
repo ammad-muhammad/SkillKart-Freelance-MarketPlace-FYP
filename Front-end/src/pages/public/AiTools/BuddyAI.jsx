@@ -24,8 +24,9 @@ export default function BuddyAI() {
             const tl = gsap.timeline();
             tl.from(".ai-hero__badge", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" })
               .from(".ai-hero__title", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, "-=0.3")
-              .from(".ai-hero .ai-btn-primary", { opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.7)" }, "-=0.4")
-              .from(".ai-hero__sub", { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.5");
+              .from(".ai-hero__sub", { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.5")
+              .from(".ai-hero-stat", { opacity: 0, y: 15, stagger: 0.08, duration: 0.4, ease: "power3.out" }, "-=0.3")
+              .from(".ai-hero .ai-btn-primary", { opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.7)" }, "-=0.4");
 
             gsap.fromTo(".buddy-chat", 
                 { opacity: 0, y: 40 },
@@ -106,6 +107,12 @@ export default function BuddyAI() {
                         SkillKart Buddy helps you craft perfect proposals, set competitive rates, 
                         and navigate complex client communications with ease.
                     </p>
+                    <div className="ai-hero-stats">
+                        <span className="ai-hero-stat">🤖 24/7 Availability</span>
+                        <span className="ai-hero-stat">📝 Smart Proposals</span>
+                        <span className="ai-hero-stat">📊 Pricing Analysis</span>
+                        <span className="ai-hero-stat">⚡ Instant Responses</span>
+                    </div>
                 </div>
             </header>
 

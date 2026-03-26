@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Link } from 'react-router-dom';
 import './AboutSection.css';
+import AnimatedCounter from '../AnimatedCounter/AnimatedCounter';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -112,8 +114,8 @@ export default function AboutSection() {
               you with opportunities perfectly suited for your skillset.
             </p>
             <div className="about__header-btns">
-              <button className="btn-primary">Get Started</button>
-              <button className="btn-secondary">Learn More</button>
+              <Link to="/registration" className="btn-primary">Get Started</Link>
+              <Link to="/about" className="btn-secondary">Learn More</Link>
             </div>
           </div>
 
@@ -170,11 +172,10 @@ export default function AboutSection() {
           ))}
         </div>
 
-        {/* ── Numbers ── */}
         <div ref={numbersRef} className="about__numbers">
           {NUMBERS.map(n => (
             <div key={n.label} className="about__number-item">
-              <span className="about__number-val">{n.value}</span>
+              <AnimatedCounter value={n.value} />
               <span className="about__number-lbl">{n.label}</span>
             </div>
           ))}

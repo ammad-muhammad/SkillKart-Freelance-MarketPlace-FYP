@@ -166,17 +166,51 @@ export default function Navbar() {
   useEffect(() => {
     const onScroll = () => {
       const currentScrollY = window.scrollY;
-      setIsSticky(currentScrollY > 800);
-      if (currentScrollY > 600) {
-        setVisible(currentScrollY <= lastScrollY.current);
-      } else {
+      const isScrollingUp = currentScrollY < lastScrollY.current;
+      
+      // 1. At the very top: Show normal absolute navbar
+      if (currentScrollY < 120) {
+        setIsSticky(false);
         setVisible(true);
+      } 
+      // 2. Past the top: Show floating pill on SCROLL UP, Hide on SCROLL DOWN
+      else {
+        if (isScrollingUp) {
+          setIsSticky(true);
+          setVisible(true);
+        } else {
+          setVisible(false);
+        }
       }
+      
       lastScrollY.current = currentScrollY;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  /* ── Trigger animation every time sticky reveal occurs ── */
+  useEffect(() => {
+    if (visible && isSticky) {
+      gsap.fromTo(navRef.current,
+        { 
+          y: -100, 
+          opacity: 0, 
+          scale: 0.95,
+          filter: "blur(4px)"
+        },
+        { 
+          y: 0, 
+          opacity: 1, 
+          scale: 1, 
+          filter: "blur(0px)",
+          duration: 0.8, 
+          ease: "power4.out",
+          clearProps: "filter"
+        }
+      );
+    }
+  }, [visible, isSticky]);
 
   /* ── Close mobile menu on resize ── */
   useEffect(() => {
@@ -272,7 +306,7 @@ export default function Navbar() {
 
           {/* CTA */}
           <div ref={actionsRef} className="navbar__actions">
-            <a href="#" className="navbar__cta btn-primary">Get Started</a>
+            <Link to="/login" className="navbar__cta btn-primary">Login</Link>
           </div>
 
           {/* Hamburger */}
@@ -437,8 +471,8 @@ export default function Navbar() {
           ))}
 
           <div className="navbar__mobile-actions">
-            <a href="#" className="btn-secondary" style={{ justifyContent: 'center' }}>Sign In</a>
-            <a href="#" className="btn-primary"   style={{ justifyContent: 'center' }}>Get Started</a>
+            <Link to="/registration" className="btn-secondary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Register</Link>
+            <Link to="/login" className="btn-primary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Login</Link>
           </div>
         </div>
       </div>

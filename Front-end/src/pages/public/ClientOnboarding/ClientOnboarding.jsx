@@ -7,7 +7,8 @@ import {
     User, Mail, Phone, Upload, Globe, Building2, Briefcase,
     ChevronRight, ChevronLeft, CheckCircle2, Info, Lightbulb,
     Target, Zap, Clock, MessageSquare, Terminal, Layout, ShieldCheck,
-    Search, Trash2, Sliders, Settings, Sparkles, X, Plus
+    Search, Trash2, Sliders, Settings, Sparkles, X, Plus,
+    Rocket
 } from "lucide-react";
 import { toast } from "react-toastify";
 import "./ClientOnboarding.css";
