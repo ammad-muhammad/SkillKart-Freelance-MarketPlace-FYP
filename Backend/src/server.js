@@ -47,6 +47,17 @@ const startServer = async () => {
       console.log('⚠️  Supabase initialization failed, auth will use local only');
     }
     
+    // Check AI Service Health
+    console.log('🧠 Verifying AI Service connection...');
+    const { checkAIHealth } = require('./services/ai');
+    const aiHealth = await checkAIHealth();
+    if (aiHealth.status === 'success') {
+      console.log(`✅ AI Service connected (${aiHealth.provider})`);
+    } else {
+      console.log(`⚠️  AI Service failed to connect (${aiHealth.provider}): ${aiHealth.error}`);
+      console.log('⚠️  Proceeding without AI features');
+    }
+    
     // Start Express server
     server = app.listen(PORT, () => {
       console.log('========================================');

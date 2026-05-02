@@ -11,6 +11,9 @@ const {
   deletePortfolioItemValidation,
   searchProfilesValidation
 } = require('../validators/profile.validator');
+const cvController = require('../controllers/cv.controller');
+const { uploadSingle } = require('../middleware/upload.middleware');
+
 
 /**
  * Public routes
@@ -54,6 +57,14 @@ router.put('/profile/me',
   updateFreelancerProfileValidation,
   validate,
   freelancerController.updateProfile
+);
+
+// Parse CV
+router.post('/parse-cv',
+  authenticate,
+  requireRole('freelancer'),
+  uploadSingle('resume'),
+  cvController.parseCV
 );
 
 // Portfolio management

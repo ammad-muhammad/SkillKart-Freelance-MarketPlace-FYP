@@ -7,5 +7,8 @@ export const freelancersAPI = {
   updateProfile: (profileData) => client.put('/freelancers/profile/me', profileData),
   addPortfolio: (item) => client.post('/freelancers/portfolio', item),
   updatePortfolio: (itemId, item) => client.put(`/freelancers/portfolio/${itemId}`, item),
-  deletePortfolio: (itemId) => client.delete(`/freelancers/portfolio/${itemId}`)
+  deletePortfolio: (itemId) => client.delete(`/freelancers/portfolio/${itemId}`),
+  parseCV: (formData) => client.post('/freelancers/parse-cv', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 };

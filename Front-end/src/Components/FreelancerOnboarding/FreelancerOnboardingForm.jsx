@@ -19,13 +19,13 @@ import StepReview from "./StepReview";
 const TOTAL_STEPS = 8;
 
 const STEP_TITLES = [
+  { title: "Resume / CV", sub: "Upload your CV to auto-fill your profile or continue manually." },
   { title: "Basic Information", sub: "Tell clients who you are and what you offer." },
   { title: "Your Skills", sub: "Highlight your expertise to attract the right projects." },
   { title: "Languages", sub: "Let clients know how you can communicate with them." },
   { title: "Portfolio", sub: "Showcase your best work and impress potential clients." },
   { title: "Education", sub: "Add your academic background to build credibility." },
   { title: "Certifications", sub: "List your credentials and professional achievements." },
-  { title: "Resume / CV", sub: "Upload your resume for a complete professional profile." },
   { title: "Review & Submit", sub: "Everything look good? Submit your profile." },
 ];
 
@@ -49,6 +49,9 @@ const initialFormData = {
   resume: null,
   resumeName: "",
   resumeSize: "",
+  parsedData: null,
+  aiAnalysis: null,
+  isParsingCV: false,
 };
 
 const FreelancerOnboardingForm = () => {
@@ -63,7 +66,7 @@ const FreelancerOnboardingForm = () => {
   const validateStep = () => {
     const newErrors = {};
 
-    if (step === 1) {
+    if (step === 2) {
       if (!formData.title.trim()) newErrors.title = "Professional title is required.";
       if (!formData.bio.trim()) newErrors.bio = "Bio is required.";
       if (!formData.hourlyRate || isNaN(formData.hourlyRate) || Number(formData.hourlyRate) <= 0)
@@ -72,7 +75,7 @@ const FreelancerOnboardingForm = () => {
         newErrors.availability = "Please select your availability.";
     }
 
-    if (step === 2) {
+    if (step === 3) {
       if ((formData.skills || []).length === 0)
         newErrors.skills = "Add at least one skill.";
     }
@@ -228,49 +231,49 @@ const FreelancerOnboardingForm = () => {
                 className="fob-step-content"
               >
                 {step === 1 && (
-                  <StepBasicInfo
+                  <StepResume
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
                   />
                 )}
                 {step === 2 && (
-                  <StepSkills
+                  <StepBasicInfo
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
                   />
                 )}
                 {step === 3 && (
-                  <StepLanguages
+                  <StepSkills
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
                   />
                 )}
                 {step === 4 && (
-                  <StepPortfolio
+                  <StepLanguages
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
                   />
                 )}
                 {step === 5 && (
-                  <StepEducation
+                  <StepPortfolio
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
                   />
                 )}
                 {step === 6 && (
-                  <StepCertifications
+                  <StepEducation
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
                   />
                 )}
                 {step === 7 && (
-                  <StepResume
+                  <StepCertifications
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}

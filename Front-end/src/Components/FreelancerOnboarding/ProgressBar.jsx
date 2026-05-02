@@ -2,13 +2,13 @@ import React from "react";
 import { CheckCircle2 } from "lucide-react";
 
 const STEP_LABELS = [
+  "Resume",
   "Basic Info",
   "Skills",
   "Languages",
   "Portfolio",
   "Education",
   "Certifications",
-  "Resume",
   "Review",
 ];
 
@@ -33,20 +33,18 @@ const ProgressBar = ({ currentStep, totalSteps = 8 }) => {
           return (
             <div key={stepNum} className="fob-step-item">
               <div
-                className={`fob-step-node ${
-                  isActive
-                    ? "fob-step-node--active"
-                    : isCompleted
+                className={`fob-step-node ${isActive
+                  ? "fob-step-node--active"
+                  : isCompleted
                     ? "fob-step-node--completed"
                     : ""
-                }`}
+                  }`}
               >
                 {isCompleted ? <CheckCircle2 size={16} /> : stepNum}
               </div>
               <span
-                className={`fob-step-label ${
-                  isActive ? "fob-step-label--active" : ""
-                }`}
+                className={`fob-step-label ${isActive ? "fob-step-label--active" : ""
+                  }`}
               >
                 {label}
               </span>
