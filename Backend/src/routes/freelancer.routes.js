@@ -59,6 +59,15 @@ router.put('/profile/me',
   freelancerController.updateProfile
 );
 
+// Submit onboarding profile (Final Step)
+router.post('/profile/submit',
+  authenticate,
+  requireRole('freelancer'),
+  updateFreelancerProfileValidation,
+  validate,
+  freelancerController.submitOnboardingProfile
+);
+
 // Parse CV
 router.post('/parse-cv',
   authenticate,

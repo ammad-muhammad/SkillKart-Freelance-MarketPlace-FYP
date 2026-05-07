@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Rocket
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { freelancersAPI } from "../../api/freelancers";
 
 import ProgressBar from "./ProgressBar";
 import StepBasicInfo from "./StepBasicInfo";
@@ -62,13 +63,58 @@ const FreelancerOnboardingForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [direction, setDirection] = useState(1);
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+  const [draftData, setDraftData] = useState(null);
+
+  const DRAFT_KEY = "freelancer_onboarding_draft";
+
+  // Initial Load - Restore Draft Check
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed && parsed.formData) {
+          setDraftData(parsed);
+          setShowDraftPrompt(true);
+        }
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
+    }
+  }, []);
+
+  // Auto-Save Draft
+  useEffect(() => {
+    if (!showDraftPrompt && !submitted && Object.keys(formData).length > 0) {
+      // Don't save empty init form right away
+      if (formData.title !== "" || formData.skills.length > 0 || step > 1) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ formData, step }));
+      }
+    }
+  }, [formData, step, showDraftPrompt, submitted]);
+
+  const handleRestoreDraft = () => {
+    if (draftData) {
+      setFormData(draftData.formData);
+      setStep(draftData.step || 1);
+    }
+    setShowDraftPrompt(false);
+    toast.success("Welcome back! Your progress has been restored.");
+  };
+
+  const handleDiscardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setDraftData(null);
+    setShowDraftPrompt(false);
+  };
 
   const validateStep = () => {
     const newErrors = {};
 
     if (step === 2) {
-      if (!formData.title.trim()) newErrors.title = "Professional title is required.";
-      if (!formData.bio.trim()) newErrors.bio = "Bio is required.";
+      if (!formData.title?.trim()) newErrors.title = "Professional title is required.";
+      if (!formData.bio?.trim()) newErrors.bio = "Bio is required.";
       if (!formData.hourlyRate || isNaN(formData.hourlyRate) || Number(formData.hourlyRate) <= 0)
         newErrors.hourlyRate = "Enter a valid hourly rate.";
       if (!formData.availability)
@@ -78,6 +124,46 @@ const FreelancerOnboardingForm = () => {
     if (step === 3) {
       if ((formData.skills || []).length === 0)
         newErrors.skills = "Add at least one skill.";
+    }
+
+    if (step === 4) {
+      const languages = formData.languages || [];
+      languages.forEach((lang) => {
+        if (!lang.language?.trim() || !lang.proficiency) {
+          newErrors.languages = "Please complete all added languages or remove incomplete ones.";
+        }
+      });
+    }
+
+    if (step === 5) {
+      const portfolio = formData.portfolio || [];
+      if (portfolio.length === 0) {
+        // Soft warning, do not add to newErrors
+        toast.warn("Portfolio/projects are required for profile verification and visibility.", { autoClose: 6000 });
+      }
+      portfolio.forEach(item => {
+        if (!item.title?.trim() || !item.description?.trim()) {
+          newErrors.portfolio = "Please complete all added portfolio projects or remove incomplete ones.";
+        }
+      });
+    }
+
+    if (step === 6) {
+      const edu = formData.education || [];
+      edu.forEach(item => {
+        if (!item.institution?.trim() || !item.degree?.trim() || !item.startDate) {
+          newErrors.education = "Please complete all required education fields.";
+        }
+      });
+    }
+
+    if (step === 7) {
+      const cert = formData.certifications || [];
+      cert.forEach(item => {
+        if (!item.name?.trim() || !item.issuer?.trim()) {
+          newErrors.certifications = "Please complete all required certification fields.";
+        }
+      });
     }
 
     setErrors(newErrors);
@@ -107,13 +193,80 @@ const FreelancerOnboardingForm = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
-      console.log("FREELANCER ONBOARDING DATA:", formData);
-      setIsSubmitting(false);
+    try {
+      // Build clean payload
+      const payload = {
+        title: formData.title,
+        bio: formData.bio,
+        hourlyRate: Number(formData.hourlyRate) || 0,
+        availability: formData.availability,
+        skills: formData.skills,
+        languages: formData.languages,
+        portfolio: formData.portfolio,
+        education: formData.education,
+        certifications: formData.certifications,
+        aiAnalysis: formData.aiAnalysis // Pass AI analysis for smart gating
+      };
+
+      const response = await freelancersAPI.submitProfile(payload);
+
+      const { status } = response.data.data;
+      if (status === 'unverified') {
+        toast.info(
+          "Profile saved! Add a portfolio and complete all sections to get verified and become visible in search.",
+          { autoClose: 6000 }
+        );
+      } else {
+        toast.success("Profile verified successfully! You are now live.");
+      }
+
       setSubmitted(true);
-    }, 2000);
+      localStorage.removeItem(DRAFT_KEY); // Clear draft on success
+    } catch (error) {
+      console.error("Submission error:", error);
+
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        const newErrors = {};
+        let firstErrorStep = TOTAL_STEPS;
+
+        backendErrors.forEach(err => {
+          // err.field might be "portfolio[0].title", extract base "portfolio" for step mapping
+          const baseField = err.field.split('[')[0];
+
+          // Store both specific and base field errors so the UI can catch it
+          newErrors[baseField] = err.message;
+          newErrors[err.field] = err.message;
+
+          let errorStep = 8;
+          if (['resume'].includes(baseField)) errorStep = 1;
+          else if (['title', 'bio', 'hourlyRate', 'availability'].includes(baseField)) errorStep = 2;
+          else if (['skills'].includes(baseField)) errorStep = 3;
+          else if (['languages'].includes(baseField)) errorStep = 4;
+          else if (['portfolio'].includes(baseField)) errorStep = 5;
+          else if (['education'].includes(baseField)) errorStep = 6;
+          else if (['certifications'].includes(baseField)) errorStep = 7;
+
+          if (errorStep < firstErrorStep) firstErrorStep = errorStep;
+        });
+
+        setErrors(newErrors);
+
+        if (firstErrorStep < TOTAL_STEPS) {
+          setDirection(-1);
+          setStep(firstErrorStep);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        toast.error("Please fix the highlighted fields to submit your profile.");
+      } else {
+        toast.error(error.response?.data?.message || "Failed to submit profile. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const slideVariants = {
@@ -188,6 +341,75 @@ const FreelancerOnboardingForm = () => {
 
   return (
     <section className="fob-root">
+      {/* Draft Resume Modal */}
+      <AnimatePresence>
+        {showDraftPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)',
+              backdropFilter: 'blur(4px)', zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              style={{
+                background: '#fff', borderRadius: '16px', padding: '32px',
+                maxWidth: '400px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                textAlign: 'center'
+              }}
+            >
+              <div style={{
+                width: '64px', height: '64px', background: '#eff6ff', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 24px', color: '#3b82f6'
+              }}>
+                <CheckCircle2 size={32} />
+              </div>
+              <h3 style={{ margin: '0 0 12px', fontSize: '1.25rem', color: '#0f172a', fontWeight: 600 }}>
+                Resume your onboarding progress?
+              </h3>
+              <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                We noticed you left some unsaved changes. Would you like to pick up right where you left off?
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                    background: 'transparent', color: '#64748b', fontWeight: 600, cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  Start Fresh
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRestoreDraft}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
+                    background: '#3b82f6', color: '#fff', fontWeight: 600, cursor: 'pointer',
+                    transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#2563eb'}
+                  onMouseOut={(e) => e.target.style.background = '#3b82f6'}
+                >
+                  Resume
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fob-bg">
         <div className="fob-orb fob-orb--1" />
         <div className="fob-orb fob-orb--2" />

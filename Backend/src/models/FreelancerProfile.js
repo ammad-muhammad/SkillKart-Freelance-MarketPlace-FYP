@@ -36,7 +36,13 @@ const freelancerProfileSchema = new mongoose.Schema({
   },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   completedProjects: { type: Number, default: 0 },
-  totalEarnings: { type: Number, default: 0 }
+  totalEarnings: { type: Number, default: 0 },
+  verificationStatus: {
+    type: String,
+    enum: ['unverified', 'verified', 'pending'],
+    default: 'unverified'
+  },
+  aiClassification: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('FreelancerProfile', freelancerProfileSchema);

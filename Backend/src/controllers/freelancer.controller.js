@@ -47,6 +47,52 @@ const updateProfile = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Submit onboarding profile with quality gating
+ */
+const submitOnboardingProfile = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const updates = req.body;
+  
+  let profile = await FreelancerProfile.findOne({ userId });
+  
+  if (!profile) {
+    profile = new FreelancerProfile({ userId, ...updates });
+  } else {
+    Object.assign(profile, updates);
+  }
+
+  // Smart Gating Logic (Verification Status)
+  let status = 'verified';
+  
+  // 1. Structural Completeness Check
+  const hasBio = profile.bio && profile.bio.trim().length > 0;
+  const hasTitle = profile.title && profile.title.trim().length > 0;
+  const hasSkills = profile.skills && profile.skills.length > 0;
+  const hasPortfolio = profile.portfolio && profile.portfolio.length > 0;
+  
+  if (!hasBio || !hasTitle || !hasSkills || !hasPortfolio) {
+    status = 'unverified';
+  }
+
+  // 2. AI Quality Gate Check
+  if (updates.aiAnalysis) {
+    profile.aiClassification = updates.aiAnalysis.classification;
+    if (profile.aiClassification === 'Weak') {
+      status = 'unverified';
+    }
+  }
+
+  profile.verificationStatus = status;
+  
+  await profile.save();
+  
+  sendSuccess(res, {
+    message: status === 'verified' ? 'Profile verified successfully!' : 'Profile saved but marked unverified due to incomplete sections.',
+    data: { profile, status }
+  });
+});
+
+/**
  * Get freelancer by ID (public)
  */
 const getFreelancerById = asyncHandler(async (req, res) => {
@@ -72,7 +118,7 @@ const searchFreelancers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
   const { skills, minRate, maxRate, availability } = req.query;
   
-  const query = {};
+  const query = { verificationStatus: 'verified' };
   
   if (skills) {
     const skillsArray = skills.split(',').map(s => s.trim());
@@ -200,5 +246,6 @@ module.exports = {
   addPortfolioItem,
   updatePortfolioItem,
   deletePortfolioItem,
-  getStats
+  getStats,
+  submitOnboardingProfile
 };

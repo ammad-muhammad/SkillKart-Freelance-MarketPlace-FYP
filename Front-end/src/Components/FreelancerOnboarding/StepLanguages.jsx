@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, Plus, Trash2 } from "lucide-react";
 
-const PROFICIENCY_OPTIONS = ["Basic", "Conversational", "Fluent", "Native"];
+const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const StepLanguages = ({ formData, setFormData, errors }) => {
   const languages = formData.languages || [];
@@ -113,7 +113,7 @@ const StepLanguages = ({ formData, setFormData, errors }) => {
                     <option value="">Select proficiency</option>
                     {PROFICIENCY_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>
-                        {opt}
+                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
                       </option>
                     ))}
                   </select>
@@ -125,16 +125,15 @@ const StepLanguages = ({ formData, setFormData, errors }) => {
                   {PROFICIENCY_OPTIONS.map((opt) => (
                     <div
                       key={opt}
-                      className={`fob-proficiency-segment ${
-                        PROFICIENCY_OPTIONS.indexOf(opt) <=
+                      className={`fob-proficiency-segment ${PROFICIENCY_OPTIONS.indexOf(opt) <=
                         PROFICIENCY_OPTIONS.indexOf(lang.proficiency)
-                          ? "fob-proficiency-segment--filled"
-                          : ""
-                      }`}
+                        ? "fob-proficiency-segment--filled"
+                        : ""
+                        }`}
                     />
                   ))}
                   <span className="fob-proficiency-label">
-                    {lang.proficiency}
+                    {lang.proficiency.charAt(0).toUpperCase() + lang.proficiency.slice(1)}
                   </span>
                 </div>
               )}

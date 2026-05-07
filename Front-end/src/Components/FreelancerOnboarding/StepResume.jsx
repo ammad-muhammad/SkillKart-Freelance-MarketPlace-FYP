@@ -46,9 +46,9 @@ const StepResume = ({ formData, setFormData, errors }) => {
     try {
       const uploadData = new FormData();
       uploadData.append('resume', file);
-      
+
       const res = await freelancersAPI.parseCV(uploadData);
-      
+
       if (res.data && res.data.data) {
         setFormData((prev) => ({
           ...prev,
@@ -242,7 +242,7 @@ const StepResume = ({ formData, setFormData, errors }) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               style={{
-                position: 'fixed', top: '50%', left: '50%', x: '-50%', y: '-50%',
+                position: 'fixed', top: '10%', left: '50%', x: '-50%', y: '-50%',
                 width: '90%', maxWidth: '500px', backgroundColor: '#fff',
                 borderRadius: '16px', zIndex: 9999, overflow: 'hidden',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
