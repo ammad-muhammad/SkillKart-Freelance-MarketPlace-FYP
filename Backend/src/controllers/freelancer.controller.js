@@ -86,6 +86,9 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
   
   await profile.save();
   
+  // Update User model flag
+  await User.findByIdAndUpdate(userId, { isOnBoardingCompleted: true });
+  
   sendSuccess(res, {
     message: status === 'verified' ? 'Profile verified successfully!' : 'Profile saved but marked unverified due to incomplete sections.',
     data: { profile, status }

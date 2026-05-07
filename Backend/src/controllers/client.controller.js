@@ -1,5 +1,6 @@
 const ClientProfile = require('../models/ClientProfile');
 const ClientOnboardingDraft = require('../models/ClientOnboardingDraft');
+const User = require('../models/User');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
@@ -226,6 +227,9 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
   }
 
   await profile.save();
+
+  // Update User model flag
+  await User.findByIdAndUpdate(userId, { isOnBoardingCompleted: true });
 
   // Clear the draft
   await ClientOnboardingDraft.findOneAndDelete({ userId });

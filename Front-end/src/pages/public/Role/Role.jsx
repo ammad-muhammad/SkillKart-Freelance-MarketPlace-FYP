@@ -8,7 +8,7 @@ import "../../../Components/common/Hero/Hero.css";
 
 const Role = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, refreshAuth } = useAuth();
     const [role, setRole] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -30,12 +30,15 @@ const Role = () => {
             }
 
             if (['freelancer', 'client'].includes(user?.role)) {
-                const userRole =  user?.role;
-                const isOnboardingcompleted = user?.isOnBoardingCompleted
+                const userRole = user?.role;
+                const isOnboardingCompleted = user?.isOnBoardingCompleted;
+                
+                console.log(`🧭 Role redirect: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
+                
                 if (userRole === 'client') {
-                    isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
+                    isOnboardingCompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
                 } else if (userRole === 'freelancer') {
-                    isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+                    isOnboardingCompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
                 } else {
                     navigate('/404');
                 }
@@ -81,6 +84,7 @@ const Role = () => {
                 role: role
             });
 
+            await refreshAuth(); // Refresh local user state with the new role
             setSuccess("Registration successful! Redirecting...");
 
             // Redirect to OTP verification page after 2 seconds

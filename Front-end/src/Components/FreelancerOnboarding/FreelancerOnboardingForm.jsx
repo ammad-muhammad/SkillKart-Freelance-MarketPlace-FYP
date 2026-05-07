@@ -5,6 +5,7 @@ import {
   ChevronRight, ChevronLeft, CheckCircle2, Rocket
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useAuth } from "../../hooks/useAuth";
 import { freelancersAPI } from "../../api/freelancers";
 
 import ProgressBar from "./ProgressBar";
@@ -73,6 +74,7 @@ const FreelancerOnboardingForm = () => {
   const [direction, setDirection] = useState(1);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [draftData, setDraftData] = useState(null);
+  const { refreshAuth } = useAuth();
 
   const DRAFT_KEY = "freelancer_onboarding_draft";
 
@@ -234,6 +236,7 @@ const FreelancerOnboardingForm = () => {
       }
 
       setSubmitted(true);
+      await refreshAuth(); // Refresh user data to update isOnBoardingCompleted flag
       localStorage.removeItem(DRAFT_KEY); // Clear draft on success
     } catch (error) {
       console.error("Submission error:", error);

@@ -77,18 +77,21 @@ const AuthConsent = () => {
         // Send to backend
         const response = await handleSupabaseOAuth(accessToken, refreshToken);
 
-        console.log('✅ Authentication successful', response?.user);
+        console.log('✅ Authentication successful. User:', response?.data?.user);
+        
+        const user = response?.data?.user;
+        const userRole = user?.role;
+        const isOnboardingCompleted = user?.isOnBoardingCompleted;
 
-        const userRole = response?.data?.user?.role;
-        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted
+        console.log(`🧭 Redirecting: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
 
         // Navigate to different routes
-        if (userRole == "publicviewer") {
+        if (userRole === "publicviewer") {
           navigate('/role', { replace: true });
-        } else if (userRole == "client") {
-          isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
-        } else if (userRole == "freelancer") {
-          isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+        } else if (userRole === "client") {
+          isOnboardingCompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
+        } else if (userRole === "freelancer") {
+          isOnboardingCompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
         } else {
           navigate('/', { replace: true });
         }

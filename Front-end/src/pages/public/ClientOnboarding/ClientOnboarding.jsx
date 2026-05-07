@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { clientsAPI } from "../../../api/clients";
+import { useAuth } from "../../../hooks/useAuth";
 import "./ClientOnboarding.css";
 
 const ClientOnboarding = () => {
@@ -21,6 +22,7 @@ const ClientOnboarding = () => {
     const [searchCountry, setSearchCountry] = useState("");
     const [showDraftPrompt, setShowDraftPrompt] = useState(false);
     const [draftData, setDraftData] = useState(null);
+    const { refreshAuth } = useAuth();
 
     const DRAFT_KEY = "skillkart_client_onboarding_draft";
 
@@ -203,6 +205,7 @@ const ClientOnboarding = () => {
         try {
             await clientsAPI.submitOnboarding(formData);
             toast.success("Onboarding profile deployed successfully!");
+            await refreshAuth(); // Refresh user data locally
             setStep(6);
         } catch (error) {
             console.error("Onboarding submission error:", error);
