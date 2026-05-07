@@ -29,7 +29,34 @@ router.post('/register/user',
   authController.createUser
 );
 
-// login
+/**
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     summary: Login with email and password
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful, OTP sent to email
+ *       401:
+ *         description: Invalid credentials
+ */
 router.post('/login',
   authLimiter,
   loginValidation,

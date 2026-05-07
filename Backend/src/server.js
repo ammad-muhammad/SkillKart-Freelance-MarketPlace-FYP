@@ -26,11 +26,11 @@ const startServer = async () => {
   try {
     console.log('🚀 Starting Freelance Platform Backend...');
     console.log('========================================');
-    
+
     // Connect to MongoDB
     console.log('📦 Connecting to MongoDB...');
     await connectDB();
-    
+
     // Connect to Redis (optional)
     console.log('📦 Connecting to Redis...');
     try {
@@ -38,7 +38,7 @@ const startServer = async () => {
     } catch (error) {
       console.log('⚠️  Redis connection failed, continuing without cache');
     }
-    
+
     // Initialize Supabase (optional)
     console.log('📦 Initializing Supabase...');
     try {
@@ -46,7 +46,7 @@ const startServer = async () => {
     } catch (error) {
       console.log('⚠️  Supabase initialization failed, auth will use local only');
     }
-    
+
     // Check AI Service Health
     console.log('🧠 Verifying AI Service connection...');
     const { checkAIHealth } = require('./services/ai');
@@ -57,7 +57,7 @@ const startServer = async () => {
       console.log(`⚠️  AI Service failed to connect (${aiHealth.provider}): ${aiHealth.error}`);
       console.log('⚠️  Proceeding without AI features');
     }
-    
+
     // Start Express server
     server = app.listen(PORT, () => {
       console.log('========================================');
@@ -67,8 +67,9 @@ const startServer = async () => {
       console.log(`🔗 URL: http://localhost:${PORT}`);
       console.log(`💚 Health: http://localhost:${PORT}/health`);
       console.log(`📚 API: http://localhost:${PORT}/api/${config.apiVersion}`);
+      console.log(`📚 Swagger Docs: http://localhost:${PORT}/api/${config.apiVersion}/docs/`);
       console.log('========================================');
-      
+
       if (config.env === 'development') {
         console.log('\n💡 Development Tips:');
         console.log('   - API docs will be available once routes are mounted');
@@ -110,11 +111,11 @@ const startServer = async () => {
  */
 const gracefulShutdown = async (signal) => {
   console.log(`\n⚠️  ${signal} received, closing server gracefully...`);
-  
+
   if (server) {
     server.close(async () => {
       console.log('✓ HTTP server closed');
-      
+
       // Close database connections
       try {
         const mongoose = require('mongoose');

@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const config = require('./config');
+const { swaggerUi, specs } = require('./config/swagger');
 
 // Create Express app
 const app = express();
@@ -112,6 +113,9 @@ app.get('/', (req, res) => {
     documentation: '/api/v1/docs'
   });
 });
+
+// Swagger Documentation
+app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // =======================
 // API Routes
