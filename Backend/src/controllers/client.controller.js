@@ -1,4 +1,5 @@
 const ClientProfile = require('../models/ClientProfile');
+const ClientOnboardingDraft = require('../models/ClientOnboardingDraft');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
@@ -152,6 +153,89 @@ const getStats = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Save onboarding draft
+ */
+const saveDraft = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { formData, step } = req.body;
+
+  let draft = await ClientOnboardingDraft.findOne({ userId });
+
+  if (!draft) {
+    draft = new ClientOnboardingDraft({ userId, formData, step });
+  } else {
+    draft.formData = formData;
+    draft.step = step;
+  }
+
+  await draft.save();
+
+  sendSuccess(res, {
+    message: 'Draft saved successfully',
+    data: { draft }
+  });
+});
+
+/**
+ * Get onboarding draft
+ */
+const getDraft = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const draft = await ClientOnboardingDraft.findOne({ userId });
+
+  sendSuccess(res, {
+    message: 'Draft retrieved successfully',
+    data: { draft }
+  });
+});
+
+/**
+ * Submit onboarding profile
+ */
+const submitOnboardingProfile = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const data = req.body;
+
+  let profile = await ClientProfile.findOne({ userId });
+
+  const profileData = {
+    userId,
+    companyName: data.companyName,
+    companyType: data.companyType,
+    industryType: data.industryType,
+    customIndustry: data.customIndustry,
+    role: data.role,
+    location: { country: data.country },
+    isNewToHiring: data.isNewToHiring,
+    services: data.services,
+    techStack: data.techStack,
+    budgetRange: data.budgetRange,
+    hiringFrequency: data.hiringFrequency,
+    technicalUnderstanding: data.technicalUnderstanding,
+    urgency: data.urgency,
+    aiAssistance: data.aiAssistance,
+    onboardingStatus: 'completed',
+    verificationStatus: 'pending' // Mark as pending for admin review
+  };
+
+  if (!profile) {
+    profile = new ClientProfile(profileData);
+  } else {
+    Object.assign(profile, profileData);
+  }
+
+  await profile.save();
+
+  // Clear the draft
+  await ClientOnboardingDraft.findOneAndDelete({ userId });
+
+  sendSuccess(res, {
+    message: 'Onboarding completed successfully',
+    data: { profile }
+  });
+});
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -159,5 +243,8 @@ module.exports = {
   submitVerification,
   approveVerification,
   rejectVerification,
-  getStats
+  getStats,
+  saveDraft,
+  getDraft,
+  submitOnboardingProfile
 };

@@ -3,8 +3,12 @@ const mongoose = require('mongoose');
 const clientProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   companyName: String,
+  companyType: { type: String, enum: ['Individual', 'Startup', 'SME', 'Enterprise'] },
   companySize: String,
   industry: String,
+  industryType: String,
+  customIndustry: String,
+  role: String,
   website: String,
   description: String,
   location: {
@@ -12,10 +16,22 @@ const clientProfileSchema = new mongoose.Schema({
     city: String,
     address: String
   },
+  
+  // Onboarding Data
+  isNewToHiring: String,
+  services: [String],
+  techStack: [String],
+  budgetRange: String,
+  hiringFrequency: String,
+  technicalUnderstanding: { type: Number, min: 1, max: 10 },
+  urgency: String,
+  aiAssistance: { type: Boolean, default: true },
+  onboardingStatus: { type: String, enum: ['in-progress', 'completed'], default: 'in-progress' },
+
   verificationStatus: {
     type: String,
-    enum: ['pending', 'verified', 'rejected'],
-    default: 'pending'
+    enum: ['unverified', 'pending', 'verified', 'rejected'],
+    default: 'unverified'
   },
   verificationDocuments: [String],
   rating: { type: Number, default: 0, min: 0, max: 5 },

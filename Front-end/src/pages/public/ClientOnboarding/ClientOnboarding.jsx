@@ -11,6 +11,7 @@ import {
     Rocket
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { clientsAPI } from "../../../api/clients";
 import "./ClientOnboarding.css";
 
 const ClientOnboarding = () => {
@@ -18,6 +19,10 @@ const ClientOnboarding = () => {
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [searchCountry, setSearchCountry] = useState("");
+    const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+    const [draftData, setDraftData] = useState(null);
+
+    const DRAFT_KEY = "skillkart_client_onboarding_draft";
 
     const [formData, setFormData] = useState({
         // Step 1: Basic Info
@@ -55,6 +60,55 @@ const ClientOnboarding = () => {
         aiAssistance: true,
         termsAccepted: false
     });
+
+    // Initial Load - Check for draft in Backend
+    useEffect(() => {
+        const fetchDraft = async () => {
+            try {
+                const response = await clientsAPI.getOnboardingDraft();
+                if (response.data?.data?.draft) {
+                    setDraftData(response.data.data.draft);
+                    setShowDraftPrompt(true);
+                }
+            } catch (e) {
+                console.error("Failed to fetch client draft from backend", e);
+            }
+        };
+        fetchDraft();
+    }, []);
+
+    // Sync Draft to Backend on step change or significant changes
+    useEffect(() => {
+        if (!showDraftPrompt && step <= 5) {
+            const syncDraft = async () => {
+                try {
+                    await clientsAPI.saveOnboardingDraft({ formData, step });
+                } catch (e) {
+                    console.error("Failed to sync draft to backend", e);
+                }
+            };
+            
+            // Only sync if some data exists or step is > 1
+            if (formData.fullName !== "" || step > 1) {
+                syncDraft();
+            }
+        }
+    }, [step, showDraftPrompt]); // Sync on step change for robustness
+
+    const handleRestoreDraft = () => {
+        if (draftData) {
+            setFormData(draftData.formData);
+            setStep(draftData.step || 1);
+        }
+        setShowDraftPrompt(false);
+        toast.success("Welcome back! Your onboarding progress has been restored.");
+    };
+
+    const handleDiscardDraft = async () => {
+        // Option to clear from backend if we want, but for now just hide
+        setShowDraftPrompt(false);
+        setDraftData(null);
+    };
 
 
 
@@ -104,45 +158,68 @@ const ClientOnboarding = () => {
 
     const validateStep = () => {
         if (step === 1) {
-            if (!formData.fullName) { toast.warn("Full Name is required"); return false; }
-            if (!formData.workEmail) { toast.warn("Work Email is required"); return false; }
-            if (!formData.companyType) { toast.warn("Please select a Client Type"); return false; }
+            if (!formData.fullName.trim()) { toast.warn("Full Name is required"); return false; }
+            if (!formData.workEmail.trim()) { toast.warn("Work Email is required"); return false; }
+            if (!formData.companyType) { toast.warn("Please select an Organization Type"); return false; }
+            if (formData.companyType !== 'Individual' && !formData.companyName.trim()) {
+                toast.warn("Company Name is required for businesses");
+                return false;
+            }
         }
         if (step === 2) {
-            if (!formData.isNewToHiring) { toast.warn("Hiring Experience is required"); return false; }
-            if (formData.industryType === 'Other' && !formData.customIndustry) {
+            if (!formData.isNewToHiring) { toast.warn("Hiring Experience selection is required"); return false; }
+            if (!formData.industryType) { toast.warn("Please select your Primary Industry"); return false; }
+            if (formData.industryType === 'Other' && !formData.customIndustry.trim()) {
                 toast.warn("Please specify your industry");
                 return false;
             }
         }
+        if (step === 3) {
+            if (formData.services.length === 0) { toast.warn("Please select at least one expertise area"); return false; }
+            if (!formData.budgetRange) { toast.warn("Please select a Budget Allocation"); return false; }
+            if (!formData.hiringFrequency) { toast.warn("Please select an Engagement Type"); return false; }
+        }
+        if (step === 4) {
+            if (!formData.urgency) { toast.warn("Please define your project urgency"); return false; }
+        }
         if (step === 5 && !formData.termsAccepted) {
-            toast.warn("Please agree to the Terms & Conditions");
+            toast.warn("Please agree to the Terms & Conditions to proceed");
             return false;
         }
         return true;
     };
 
-    const handleFinish = (e) => {
+    const handleFinish = async (e) => {
         e.preventDefault();
         if (!validateStep()) return;
 
         setIsLoading(true);
-        setTimeout(() => {
-            console.log("FINAL CLIENT ONBOARDING DATA:", formData);
-            localStorage.removeItem("skillkart_client_onboarding_v2");
-            setIsLoading(false);
+        try {
+            await clientsAPI.submitOnboarding(formData);
+            toast.success("Onboarding profile deployed successfully!");
             setStep(6);
-        }, 2000);
+        } catch (error) {
+            console.error("Onboarding submission error:", error);
+            toast.error(error.response?.data?.message || "Failed to submit profile");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const isStepValid = () => {
         if (step === 1) {
-            return formData.fullName && formData.workEmail && formData.companyType;
+            const hasBasic = formData.fullName.trim() && formData.workEmail.trim() && formData.companyType;
+            if (formData.companyType === 'Individual') return hasBasic;
+            return hasBasic && formData.companyName.trim();
         }
         if (step === 2) {
-            const hasExperience = formData.isNewToHiring;
-            const hasIndustry = formData.industryType !== 'Other' || formData.customIndustry;
-            return hasExperience && hasIndustry;
+            return formData.isNewToHiring && formData.industryType && (formData.industryType !== 'Other' || formData.customIndustry.trim());
+        }
+        if (step === 3) {
+            return formData.services.length > 0 && formData.budgetRange && formData.hiringFrequency;
+        }
+        if (step === 4) {
+            return formData.urgency;
         }
         if (step === 5) {
             return formData.termsAccepted;
@@ -623,6 +700,71 @@ const ClientOnboarding = () => {
 
     return (
         <section className="onboarding">
+            {/* Draft Resume Modal */}
+            <AnimatePresence>
+                {showDraftPrompt && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)',
+                            backdropFilter: 'blur(4px)', zIndex: 99999,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            style={{
+                                background: '#fff', borderRadius: '24px', padding: '40px',
+                                maxWidth: '440px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                                textAlign: 'center'
+                            }}
+                        >
+                            <div style={{
+                                width: '72px', height: '72px', background: 'rgba(26, 111, 168, 0.1)', borderRadius: '20px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 28px', color: 'var(--onboard-accent-primary)'
+                            }}>
+                                <Rocket size={36} />
+                            </div>
+                            <h3 style={{ margin: '0 0 12px', fontSize: '1.5rem', color: '#0f172a', fontWeight: 800 }}>
+                                Resume Onboarding?
+                            </h3>
+                            <p style={{ margin: '0 0 32px', color: '#64748b', fontSize: '1rem', lineHeight: 1.6, fontWeight: '500' }}>
+                                We found your unfinished setup. Would you like to continue where you left off or start fresh?
+                            </p>
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                                <button
+                                    type="button"
+                                    onClick={handleDiscardDraft}
+                                    style={{
+                                        flex: 1, padding: '16px', borderRadius: '14px', border: '2px solid #e2e8f0',
+                                        background: 'transparent', color: '#64748b', fontWeight: '700', cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Start Fresh
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleRestoreDraft}
+                                    style={{
+                                        flex: 1, padding: '16px', borderRadius: '14px', border: 'none',
+                                        background: 'var(--onboard-accent-primary)', color: '#fff', fontWeight: '700', cursor: 'pointer',
+                                        transition: 'all 0.2s', boxShadow: '0 8px 16px rgba(26, 111, 168, 0.2)'
+                                    }}
+                                >
+                                    Resume
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="onboarding__bg">
                 <div className="onboarding__orb onboarding__orb--1" />
                 <div className="onboarding__orb onboarding__orb--2" />

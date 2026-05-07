@@ -37,6 +37,28 @@ router.post('/verification/submit',
   clientController.submitVerification
 );
 
+/**
+ * Onboarding flow routes
+ */
+
+// Get onboarding draft
+router.get('/onboarding/draft',
+  requireRole('client'),
+  clientController.getDraft
+);
+
+// Save onboarding draft
+router.post('/onboarding/draft',
+  requireRole('client'),
+  clientController.saveDraft
+);
+
+// Final onboarding submission
+router.post('/onboarding/submit',
+  requireRole('client'),
+  clientController.submitOnboardingProfile
+);
+
 // Get client by ID (Admin only)
 router.get('/:id',
   requireRole('admin', 'superadmin'),
