@@ -1,4 +1,7 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { clientsAPI } from '../api/clients';
+import { authAPI } from '../api/auth';
+import { useAuth } from '../hooks/useAuth';
 
 const ClientContext = createContext(null);
 
@@ -8,44 +11,34 @@ export const useClient = () => {
   return ctx;
 };
 
-const initialProfile = {
+const emptyProfile = {
   personalInfo: {
-    fullName: 'Sarah Mitchell',
-    username: 'sarahmitchell',
-    email: 'sarah.mitchell@techcorp.com',
-    phone: '+1 (555) 987-6543',
-    companyName: 'TechCorp Solutions',
-    industry: 'Software & Technology',
-    website: 'https://techcorp.io',
-    location: 'San Francisco, USA',
-    bio: 'We build cutting-edge SaaS products and love working with talented freelancers worldwide.',
+    fullName: '',
+    username: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    industry: '',
+    website: '',
+    location: '',
+    bio: '',
     avatar: null,
     companyLogo: null,
-    memberSince: 'March 2023',
+    memberSince: '',
   },
   preferences: {
-    preferredSkills: ['React', 'Node.js', 'UI/UX', 'Python'],
-    budgetRange: { min: 500, max: 5000 },
-    projectTypes: ['Web Development', 'Mobile App', 'Design'],
+    preferredSkills: [],
+    budgetRange: { min: 0, max: 0 },
+    projectTypes: [],
     remoteOnly: true,
-  },
-  notificationSettings: {
-    emailNotifications: true,
-    proposalAlerts: true,
-    messageAlerts: true,
-  },
-  securitySettings: {
-    twoFactorEnabled: false,
-    emailVerified: true,
-    recoveryEmail: 'sarah.backup@email.com',
-    recoveryPhone: '+1 (555) 111-2222',
   },
   stats: {
     totalProjects: 0,
-    activeProjects: 2,
-    freelancersHired: 8,
-    totalSpent: 12400,
+    activeProjects: 0,
+    freelancersHired: 0,
+    totalSpent: 0,
   },
+  verificationStatus: 'unverified'
 };
 
 const initialProjects = [
@@ -121,10 +114,76 @@ const initialSaved = [
 ];
 
 export const ClientProvider = ({ children }) => {
-  const [profile, setProfile] = useState(initialProfile);
-  const [projects, setProjects] = useState(initialProjects);
-  const [savedFreelancers, setSavedFreelancers] = useState(initialSaved);
+  const [profile, setProfile] = useState(emptyProfile);
+  const [projects, setProjects] = useState([]);
+  const [savedFreelancers, setSavedFreelancers] = useState([]);
   const [toasts, setToasts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+
+  // Fetch real profile on load or when auth changes
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'client') {
+      fetchProfile();
+    } else if (!isAuthenticated) {
+      setProfile(emptyProfile);
+      setProjects([]);
+    }
+  }, [isAuthenticated, user?.role]);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      // 1. Get Profile
+      const profileRes = await clientsAPI.getProfile();
+      const dbProfile = profileRes.data.data.profile;
+
+      // 2. Get User Info
+      const userRes = await authAPI.getCurrentUser();
+      const user = userRes.data.data.user;
+
+      // 3. Transform to UI format
+      const transformedProfile = {
+        personalInfo: {
+          fullName: `${user.firstName} ${user.lastName}`,
+          username: user.email.split('@')[0],
+          email: user.email,
+          phone: dbProfile.phone || '',
+          companyName: dbProfile.companyName || 'Not Set',
+          industry: dbProfile.industryType || 'Not Set',
+          website: dbProfile.website || '',
+          location: dbProfile.location?.country || dbProfile.timezone || 'Global',
+          bio: dbProfile.description || '',
+          avatar: user.profilePicture || null,
+          companyLogo: null, // Placeholder
+          memberSince: new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        },
+        preferences: {
+          preferredSkills: dbProfile.techStack || [],
+          budgetRange: { min: 0, max: 0 }, // Placeholder
+          projectTypes: dbProfile.services || [],
+          remoteOnly: true,
+        },
+        stats: {
+          totalProjects: dbProfile.totalProjectsPosted || 0,
+          activeProjects: 0, // Placeholder
+          freelancersHired: 0, // Placeholder
+          totalSpent: dbProfile.totalSpent || 0,
+        },
+        verificationStatus: dbProfile.verificationStatus || 'unverified'
+      };
+
+      setProfile(transformedProfile);
+
+      // 4. Fetch Projects (TODO: implement when backend project route exists)
+      // setProjects([]);
+
+    } catch (error) {
+      console.error("Failed to fetch client profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -195,6 +254,7 @@ export const ClientProvider = ({ children }) => {
         projects, addProject, updateProject, deleteProject,
         savedFreelancers, toggleSavedFreelancer,
         toasts, showToast,
+        loading, fetchProfile
       }}
     >
       {children}

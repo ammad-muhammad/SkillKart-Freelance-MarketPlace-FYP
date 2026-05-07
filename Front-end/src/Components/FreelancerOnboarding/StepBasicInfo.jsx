@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, AlignLeft, DollarSign, Clock, ChevronDown, Check,
-  Zap, Moon, FileText, XCircle
+  Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award
 } from "lucide-react";
 
 const AVAILABILITY_OPTIONS = [
@@ -205,6 +205,81 @@ const StepBasicInfo = ({ formData, setFormData, errors }) => {
             <span className="fob-avail-desc">{opt.desc}</span>
           </div>
         ))}
+      </div>
+
+      {/* Experience Level + Timezone row */}
+      <div className="fob-form-row" style={{ marginTop: '24px' }}>
+        <div className="fob-form-group">
+          <label className="fob-label">
+            <Award size={15} className="fob-label-icon" />
+            Experience Level*
+          </label>
+          <select
+            name="experienceLevel"
+            value={formData.experienceLevel}
+            onChange={handleChange}
+            className="fob-input"
+          >
+            <option value="Entry">Entry (0-2 years)</option>
+            <option value="Intermediate">Intermediate (2-5 years)</option>
+            <option value="Expert">Expert (5+ years)</option>
+          </select>
+        </div>
+
+        <div className="fob-form-group">
+          <label className="fob-label">
+            <Globe size={15} className="fob-label-icon" />
+            Timezone / Location*
+          </label>
+          <input
+            type="text"
+            name="timezone"
+            value={formData.timezone}
+            onChange={handleChange}
+            className="fob-input"
+            placeholder="e.g. GMT+5 (Pakistan) or New York"
+          />
+        </div>
+      </div>
+
+      {/* Social Links */}
+      <div className="fob-form-group" style={{ marginTop: '12px' }}>
+        <label className="fob-label">
+          <Link size={15} className="fob-label-icon" />
+          Social & Portfolio Links
+        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="fob-input-prefix-wrapper">
+            <span className="fob-input-prefix"><Github size={16} /></span>
+            <input
+              type="text"
+              value={formData.socialLinks?.github || ""}
+              onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, github: e.target.value } }))}
+              className="fob-input fob-input--prefixed"
+              placeholder="GitHub Profile URL"
+            />
+          </div>
+          <div className="fob-input-prefix-wrapper">
+            <span className="fob-input-prefix"><Linkedin size={16} /></span>
+            <input
+              type="text"
+              value={formData.socialLinks?.linkedin || ""}
+              onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, linkedin: e.target.value } }))}
+              className="fob-input fob-input--prefixed"
+              placeholder="LinkedIn Profile URL"
+            />
+          </div>
+          <div className="fob-input-prefix-wrapper">
+            <span className="fob-input-prefix"><Globe size={16} /></span>
+            <input
+              type="text"
+              value={formData.socialLinks?.website || ""}
+              onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, website: e.target.value } }))}
+              className="fob-input fob-input--prefixed"
+              placeholder="Personal Portfolio/Website"
+            />
+          </div>
+        </div>
       </div>
     </motion.div>
   );

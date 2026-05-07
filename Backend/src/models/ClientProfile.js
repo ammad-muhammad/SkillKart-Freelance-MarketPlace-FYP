@@ -27,7 +27,13 @@ const clientProfileSchema = new mongoose.Schema({
   urgency: String,
   aiAssistance: { type: Boolean, default: true },
   onboardingStatus: { type: String, enum: ['in-progress', 'completed'], default: 'in-progress' },
-
+  timezone: String,
+  socialLinks: {
+    linkedin: String,
+    twitter: String,
+    website: String
+  },
+  profileCompletion: { type: Number, default: 0 },
   verificationStatus: {
     type: String,
     enum: ['unverified', 'pending', 'verified', 'rejected'],

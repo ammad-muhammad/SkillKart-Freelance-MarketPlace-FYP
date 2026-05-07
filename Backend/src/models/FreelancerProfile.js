@@ -34,6 +34,15 @@ const freelancerProfileSchema = new mongoose.Schema({
     enum: ['full-time', 'part-time', 'contract', 'not-available'],
     default: 'full-time'
   },
+  timezone: String,
+  socialLinks: {
+    github: String,
+    linkedin: String,
+    twitter: String,
+    website: String
+  },
+  experienceLevel: { type: String, enum: ['Entry', 'Intermediate', 'Expert'], default: 'Entry' },
+  profileCompletion: { type: Number, default: 0 },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   completedProjects: { type: Number, default: 0 },
   totalEarnings: { type: Number, default: 0 },

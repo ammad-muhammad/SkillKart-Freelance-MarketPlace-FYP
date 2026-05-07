@@ -8,7 +8,7 @@ import {
     ChevronRight, ChevronLeft, CheckCircle2, Info, Lightbulb,
     Target, Zap, Clock, MessageSquare, Terminal, Layout, ShieldCheck,
     Search, Trash2, Sliders, Settings, Sparkles, X, Plus,
-    Rocket
+    Rocket, Github, Linkedin, Globe2
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { clientsAPI } from "../../../api/clients";
@@ -56,7 +56,13 @@ const ClientOnboarding = () => {
         urgency: "", // Flexible, 2 Weeks, 1 Month, Urgent
 
         // Step 5: Preferences
-        preferredCommunication: [], // Chat, Video Call, Email
+        // Additional for Dashboard
+        timezone: "",
+        socialLinks: {
+            linkedin: "",
+            twitter: "",
+            website: ""
+        },
         aiAssistance: true,
         termsAccepted: false
     });
@@ -87,7 +93,7 @@ const ClientOnboarding = () => {
                     console.error("Failed to sync draft to backend", e);
                 }
             };
-            
+
             // Only sync if some data exists or step is > 1
             if (formData.fullName !== "" || step > 1) {
                 syncDraft();
@@ -311,11 +317,11 @@ const ClientOnboarding = () => {
         }),
         option: (base, state) => ({
             ...base,
-            background: state.isSelected 
-                ? "rgba(26, 111, 168, 0.08)" 
-                : state.isFocused 
-                ? "rgba(4, 46, 76, 0.05)" 
-                : "transparent",
+            background: state.isSelected
+                ? "rgba(26, 111, 168, 0.08)"
+                : state.isFocused
+                    ? "rgba(4, 46, 76, 0.05)"
+                    : "transparent",
             color: "var(--onboard-accent-primary)",
             fontWeight: state.isSelected ? "700" : "600",
             cursor: "pointer",
@@ -440,6 +446,38 @@ const ClientOnboarding = () => {
                     </div>
                 </motion.div>
             )}
+
+            <div className="onboarding__form-row">
+                <div className="onboarding__form-group">
+                    <label className="onboarding__label">Timezone / Base Location</label>
+                    <div style={{ position: 'relative' }}>
+                        <Globe2 size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
+                        <input
+                            type="text"
+                            name="timezone"
+                            value={formData.timezone}
+                            onChange={handleChange}
+                            className="onboarding__input"
+                            style={{ paddingLeft: '40px' }}
+                            placeholder="e.g. GMT+5 (Pakistan)"
+                        />
+                    </div>
+                </div>
+                <div className="onboarding__form-group">
+                    <label className="onboarding__label">LinkedIn Profile (Optional)</label>
+                    <div style={{ position: 'relative' }}>
+                        <Linkedin size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
+                        <input
+                            type="text"
+                            value={formData.socialLinks.linkedin}
+                            onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, linkedin: e.target.value } }))}
+                            className="onboarding__input"
+                            style={{ paddingLeft: '40px' }}
+                            placeholder="linkedin.com/company/..."
+                        />
+                    </div>
+                </div>
+            </div>
         </motion.div>
     );
 
@@ -638,7 +676,7 @@ const ClientOnboarding = () => {
                 <div
                     style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}
                 >
-                    <div 
+                    <div
                         style={{
                             minWidth: '24px',
                             height: '24px',
@@ -658,7 +696,7 @@ const ClientOnboarding = () => {
                         {formData.termsAccepted && <CheckCircle2 size={16} color="white" />}
                     </div>
                     <label className="onboarding__label" style={{ lineHeight: 1.4, margin: 0, fontWeight: '500' }}>
-                        I agree to the <span 
+                        I agree to the <span
                             style={{ color: 'var(--onboard-accent-primary)', textDecoration: 'underline', cursor: 'pointer' }}
                             onClick={() => window.open('/services-agreement', '_blank')}
                         >Service Agreement</span> and understand that SkillKart ensures payment safety through Escrow.
@@ -670,16 +708,16 @@ const ClientOnboarding = () => {
 
     const renderSuccess = () => (
         <motion.div className="onboarding__success" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-            <div style={{ fontSize: '80px', marginBottom: '20px', display:'flex', justifyContent:'center' }}>
-              <Rocket size={72} style={{ color:'#1a6fa8' }} />
+            <div style={{ fontSize: '80px', marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+                <Rocket size={72} style={{ color: '#1a6fa8' }} />
             </div>
             <h1 className="onboarding__title">You're All Set!</h1>
             <p className="onboarding__subtitle">Your project ecosystem is being prepared. Our AI is already analyzing local and global talent for you.</p>
 
-            <motion.div 
-                initial={{ y: 20, opacity: 0 }} 
-                animate={{ y: 0, opacity: 1 }} 
-                transition={{ delay: 0.5 }} 
+            <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5 }}
                 className="onboarding__report-card"
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -692,7 +730,7 @@ const ClientOnboarding = () => {
                     <p style={{ color: 'var(--onboard-text-secondary)', margin: 0, fontSize: '15px', lineHeight: 1.6 }}>
                         Hello <b>{formData.fullName ? formData.fullName.split(' ')[0] : 'Client'}</b>, we've identified <b>12+ verified experts</b> in <b>{formData.services[0] || 'your field'}</b> who match your <b>{formData.budgetRange || 'your range'}</b> budget.
                     </p>
-                    <button className="onboarding__btn-next" style={{ alignSelf: 'flex-start' }} onClick={() => navigate("/")}>Go to Dashboard</button>
+                    <button className="onboarding__btn-next" style={{ alignSelf: 'flex-start' }} onClick={() => navigate("/client/dashboard")}>Go to Dashboard</button>
                 </div>
             </motion.div>
         </motion.div>

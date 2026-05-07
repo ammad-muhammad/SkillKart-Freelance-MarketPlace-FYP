@@ -13,11 +13,21 @@ const StatCard = ({ icon, value, label }) => (
 );
 
 const DashboardOverview = () => {
-  const { profile, gigs } = useFreelancer();
+  const { profile, gigs, loading } = useFreelancer();
   const { personalInfo, stats } = profile;
 
-  const initials = personalInfo.fullName
+  if (loading) {
+    return (
+      <div className="fl-loading-container">
+        <div className="fl-loader"></div>
+        <p>Syncing your dashboard...</p>
+      </div>
+    );
+  }
+
+  const initials = (personalInfo.fullName || 'User')
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .toUpperCase()
@@ -34,7 +44,7 @@ const DashboardOverview = () => {
     <div>
       {/* Header */}
       <div className="fl-page-header">
-        <h1 className="fl-page-title">Welcome back, {personalInfo.fullName.split(' ')[0]}!</h1>
+        <h1 className="fl-page-title">Welcome back, {(personalInfo.fullName || 'User').split(' ')[0]}!</h1>
         <p className="fl-page-sub">Here's an overview of your freelance activity.</p>
       </div>
 
@@ -148,6 +158,16 @@ const DashboardOverview = () => {
           margin-bottom: 0.2rem;
         }
         .fl-recent-gig__meta { font-size: 0.78rem; color: var(--color-text-light); }
+        
+        .fl-loading-container {
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          min-height: 400px; gap: 1rem; color: var(--color-text-light);
+        }
+        .fl-loader {
+          width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: var(--color-primary);
+          border-radius: 50%; animation: fl-spin 1s linear infinite;
+        }
+        @keyframes fl-spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

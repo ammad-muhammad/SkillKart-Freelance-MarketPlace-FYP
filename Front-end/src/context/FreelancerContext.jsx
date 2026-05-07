@@ -1,4 +1,7 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { freelancersAPI } from '../api/freelancers';
+import { authAPI } from '../api/auth';
+import { useAuth } from '../hooks/useAuth';
 
 const FreelancerContext = createContext(null);
 
@@ -8,44 +11,36 @@ export const useFreelancer = () => {
   return ctx;
 };
 
-const initialProfile = {
+const emptyProfile = {
   personalInfo: {
-    fullName: 'Alex Johnson',
-    username: 'alexjohnson',
-    email: 'alex.johnson@example.com',
-    phone: '+1 (555) 000-0000',
-    bio: 'Passionate full-stack developer with 5+ years of experience building scalable web apps.',
-    title: 'Full Stack Developer',
-    location: 'New York, USA',
-    memberSince: 'January 2022',
+    fullName: '',
+    username: '',
+    email: '',
+    phone: '',
+    bio: '',
+    title: '',
+    location: '',
+    memberSince: '',
     avatar: null,
-    experienceLevel: 'Expert',
-    education: 'B.Sc. Computer Science – MIT',
-    certifications: 'AWS Certified Developer, Google Cloud Professional',
+    experienceLevel: 'Entry',
+    education: '',
+    certifications: '',
   },
-  skills: ['React', 'Node.js', 'TypeScript', 'MongoDB', 'GraphQL'],
-  languages: ['English', 'Spanish'],
-  portfolioLinks: ['https://alexjohnson.dev', 'https://github.com/alexjohnson'],
+  skills: [],
+  languages: [],
+  portfolio: [],
   socialLinks: {
-    github: 'https://github.com/alexjohnson',
-    linkedin: 'https://linkedin.com/in/alexjohnson',
-    website: 'https://alexjohnson.dev',
+    github: '',
+    linkedin: '',
+    website: '',
   },
   stats: {
     totalGigs: 0,
-    activeOrders: 2,
-    completedOrders: 18,
-    profileViews: 342,
+    activeOrders: 0,
+    completedOrders: 0,
+    profileViews: 0,
   },
-  securitySettings: {
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    twoFactorEnabled: false,
-    emailVerified: true,
-    recoveryEmail: 'alex.backup@email.com',
-    recoveryPhone: '+1 (555) 111-1111',
-  },
+  verificationStatus: 'unverified'
 };
 
 const initialGigs = [
@@ -99,10 +94,75 @@ const initialSavedProjects = [
 ];
 
 export const FreelancerProvider = ({ children }) => {
-  const [profile, setProfile] = useState(initialProfile);
-  const [gigs, setGigs] = useState(initialGigs);
-  const [savedProjects, setSavedProjects] = useState(initialSavedProjects);
+  const [profile, setProfile] = useState(emptyProfile);
+  const [gigs, setGigs] = useState([]);
+  const [savedProjects, setSavedProjects] = useState([]);
   const [toasts, setToasts] = useState([]);
+  const [loading, setLoading] = useState(false); // Default to false, fetch will set true if needed
+  const { user, isAuthenticated } = useAuth();
+
+  // Fetch real profile on load or when auth changes
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'freelancer') {
+      fetchProfile();
+    } else if (!isAuthenticated) {
+      setProfile(emptyProfile);
+      setGigs([]);
+    }
+  }, [isAuthenticated, user?.role]);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      // 1. Get Profile
+      const profileRes = await freelancersAPI.getProfile();
+      const dbProfile = profileRes.data.data.profile;
+
+      // 2. Get User Info (for name, email, avatar)
+      const userRes = await authAPI.getCurrentUser();
+      const user = userRes.data.data.user;
+
+      // 3. Transform to UI format
+      const transformedProfile = {
+        personalInfo: {
+          fullName: `${user.firstName} ${user.lastName}`,
+          username: user.email.split('@')[0],
+          email: user.email,
+          phone: dbProfile.phone || '',
+          bio: dbProfile.bio || '',
+          title: dbProfile.title || '',
+          location: dbProfile.timezone || 'Global',
+          memberSince: new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          avatar: user.profilePicture || null,
+          experienceLevel: dbProfile.experienceLevel || 'Entry',
+          education: dbProfile.education?.[0]?.institution || '',
+          certifications: dbProfile.certifications?.[0]?.name || '',
+        },
+        skills: dbProfile.skills || [],
+        languages: dbProfile.languages?.map(l => l.language) || [],
+        portfolio: dbProfile.portfolio || [],
+        socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
+        stats: {
+          totalGigs: 0, // Will be updated by gigs fetch
+          activeOrders: 0, // Placeholder
+          completedOrders: dbProfile.completedProjects || 0,
+          profileViews: 0, // Placeholder
+        },
+        verificationStatus: dbProfile.verificationStatus || 'unverified'
+      };
+
+      setProfile(transformedProfile);
+      
+      // 4. Fetch Gigs (TODO: implement when backend gig route exists)
+      // For now keep empty or mock if needed, but the requirement says keep demo if DB not exists
+      // setGigs([]); 
+
+    } catch (error) {
+      console.error("Failed to fetch freelancer profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -177,7 +237,8 @@ export const FreelancerProvider = ({ children }) => {
         profile, setProfile, updateProfile, 
         gigs, addGig, updateGig, deleteGig, toggleGigStatus,
         savedProjects, toggleSavedProject,
-        toasts, showToast 
+        toasts, showToast,
+        loading, fetchProfile
       }}
     >
       {children}

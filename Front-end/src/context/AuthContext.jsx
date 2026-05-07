@@ -1,5 +1,5 @@
 // src/context/AuthContext.jsx
-import { createContext, useState, useEffect, useRef } from 'react';
+import { createContext, useState, useEffect, useRef, useMemo } from 'react';
 import { authAPI } from '../api/auth';
 import { tokenManager } from '../utils/tokenManager';
 import { toast } from 'react-toastify';
@@ -218,16 +218,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     loading,
     verifyOtp,
-    handleSupabaseOAuth, // ✅ Export OAuth handler
+    handleSupabaseOAuth,
     logout,
     isAuthenticated: !!user,
     getAccessToken: () => tokenManager.getAccessToken(),
     refreshAuth: checkAuth
-  };
+  }), [user, loading]);
 
   return (
     <AuthContext.Provider value={value}>

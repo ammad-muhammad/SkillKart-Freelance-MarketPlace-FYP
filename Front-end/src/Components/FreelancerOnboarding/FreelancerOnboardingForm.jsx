@@ -46,6 +46,14 @@ const initialFormData = {
   education: [],
   // Step 6
   certifications: [],
+  // Missing fields for dashboard
+  timezone: "",
+  experienceLevel: "Entry",
+  socialLinks: {
+    github: "",
+    linkedin: "",
+    website: "",
+  },
   // Step 7
   resume: null,
   resumeName: "",
@@ -207,6 +215,9 @@ const FreelancerOnboardingForm = () => {
         portfolio: formData.portfolio,
         education: formData.education,
         certifications: formData.certifications,
+        timezone: formData.timezone,
+        experienceLevel: formData.experienceLevel,
+        socialLinks: formData.socialLinks,
         aiAnalysis: formData.aiAnalysis // Pass AI analysis for smart gating
       };
 

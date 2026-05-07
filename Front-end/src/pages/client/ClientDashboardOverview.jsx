@@ -13,11 +13,20 @@ const StatCard = ({ icon, value, label }) => (
 );
 
 const ClientDashboardOverview = () => {
-  const { profile, projects } = useClient();
+  const { profile, projects, loading } = useClient();
   const { personalInfo, stats } = profile;
 
-  const initials = personalInfo.fullName
-    .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  if (loading) {
+    return (
+      <div className="cl-loading-container">
+        <div className="cl-loader"></div>
+        <p>Fetching your workspace...</p>
+      </div>
+    );
+  }
+
+  const initials = (personalInfo.fullName || 'User')
+    .split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const statsData = [
     { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects'      },
@@ -32,7 +41,7 @@ const ClientDashboardOverview = () => {
     <div>
       {/* Header */}
       <div className="cl-page-header">
-        <h1 className="cl-page-title">Welcome back, {personalInfo.fullName.split(' ')[0]}!</h1>
+        <h1 className="cl-page-title">Welcome back, {(personalInfo.fullName || 'User').split(' ')[0]}!</h1>
         <p className="cl-page-sub">Here's an overview of your client activity on SkillKart.</p>
       </div>
 
@@ -130,6 +139,16 @@ const ClientDashboardOverview = () => {
         }
         .cl-recent-proj__title { font-size: 0.875rem; font-weight: 600; color: var(--color-text-dark); margin-bottom: 0.2rem; }
         .cl-recent-proj__meta { font-size: 0.78rem; color: var(--color-text-light); }
+
+        .cl-loading-container {
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          min-height: 400px; gap: 1rem; color: var(--color-text-light);
+        }
+        .cl-loader {
+          width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: var(--color-primary);
+          border-radius: 50%; animation: cl-spin 1s linear infinite;
+        }
+        @keyframes cl-spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
