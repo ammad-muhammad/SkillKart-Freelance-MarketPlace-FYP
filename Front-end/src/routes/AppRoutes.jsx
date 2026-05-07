@@ -107,9 +107,23 @@ const AppRoutes = () => {
             {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
-            <Route path="/client/onboarding" element={<ClientOnboarding />} />
+            <Route
+              path="/client/onboarding"
+              element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ClientOnboarding />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/freelancer/onboarding" element={<FreelancerOnboarding />} />
+            <Route
+              path="/freelancer/onboarding"
+              element={
+                <ProtectedRoute allowedRoles={['freelancer']}>
+                  <FreelancerOnboarding />
+                </ProtectedRoute>
+              }
+            />
             {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
             {/* AI Tools */}
             <Route path="/ai/verify" element={<VerifyCredentials />} />
@@ -122,7 +136,14 @@ const AppRoutes = () => {
           </Route>
 
           {/* ================= FREELANCER ROUTES ================= */}
-          <Route path="/freelancer" element={<FreelancerLayout />}>
+          <Route
+            path="/freelancer"
+            element={
+              <ProtectedRoute allowedRoles={['freelancer']}>
+                <FreelancerLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Navigate to="/freelancer/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardOverview />} />
             <Route path="profile" element={<FreelancerProfile />} />
@@ -136,7 +157,14 @@ const AppRoutes = () => {
           </Route>
 
           {/* ================= CLIENT ROUTES ================= */}
-          <Route path="/client" element={<ClientLayout />}>
+          <Route
+            path="/client"
+            element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <ClientLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Navigate to="/client/dashboard" replace />} />
             <Route path="dashboard" element={<ClientDashboardOverview />} />
             <Route path="profile" element={<ClientProfile />} />

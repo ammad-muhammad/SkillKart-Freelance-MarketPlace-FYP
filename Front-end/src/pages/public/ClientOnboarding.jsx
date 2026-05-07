@@ -546,7 +546,7 @@ const ClientOnboarding = () => {
                     <p style={{ color: 'var(--onboard-text-secondary)', margin: 0, fontSize: '15px', lineHeight: 1.6 }}>
                         Hello <b>{formData.fullName ? formData.fullName.split(' ')[0] : 'Client'}</b>, we've identified <b>12+ verified experts</b> in <b>{formData.services[0] || 'your field'}</b> who match your <b>{formData.budgetRange || 'your range'}</b> budget.
                     </p>
-                    <button className="onboarding__btn-next" style={{ alignSelf: 'flex-start' }} onClick={() => navigate("/")}>Go to Dashboard</button>
+                    <button className="onboarding__btn-next" style={{ alignSelf: 'flex-start' }} onClick={() => navigate("/client/dashboard")}>Go to Dashboard</button>
                 </div>
             </motion.div>
         </motion.div>
