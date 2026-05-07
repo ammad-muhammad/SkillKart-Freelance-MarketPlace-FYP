@@ -26,7 +26,25 @@ router.get('/search',
   jobController.searchJobs
 );
 
-// List jobs (public - only open jobs)
+/**
+ * @swagger
+ * /api/v1/jobs:
+ *   get:
+ *     summary: List open jobs
+ *     tags: [Jobs]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of jobs retrieved successfully
+ */
 router.get('/',
   optionalAuth,
   listJobsValidation,
@@ -46,7 +64,35 @@ router.get('/:id',
  * Protected routes (Clients)
  */
 
-// Create job
+/**
+ * @swagger
+ * /api/v1/jobs:
+ *   post:
+ *     summary: Create a new job post
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - budget
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               budget:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Job created successfully
+ */
 router.post('/',
   authenticate,
   requireRole('client'),

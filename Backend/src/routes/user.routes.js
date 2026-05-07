@@ -25,7 +25,18 @@ router.use(authenticate);
  * User management routes (Admin/SuperAdmin only)
  */
 
-// List users
+/**
+ * @swagger
+ * /api/v1/users:
+ *   get:
+ *     summary: List all users (Admin/SuperAdmin)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users retrieved successfully
+ */
 router.get('/',
   requireRole('admin', 'superadmin'),
   listUsersValidation,
@@ -47,7 +58,24 @@ router.get('/stats',
   userController.getUserStats
 );
 
-// Get user by ID
+/**
+ * @swagger
+ * /api/v1/users/{id}:
+ *   get:
+ *     summary: Get user details by ID (Admin/SuperAdmin)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User details retrieved successfully
+ */
 router.get('/:id',
   requireRole('admin', 'superadmin'),
   getUserByIdValidation,

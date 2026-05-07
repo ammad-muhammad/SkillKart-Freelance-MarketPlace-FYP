@@ -17,13 +17,35 @@ router.use(authenticate);
  * Client profile routes
  */
 
-// Get own profile
+/**
+ * @swagger
+ * /api/v1/clients/profile/me:
+ *   get:
+ *     summary: Get my client profile
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ */
 router.get('/profile/me',
   requireRole('client'),
   clientController.getProfile
 );
 
-// Update profile
+/**
+ * @swagger
+ * /api/v1/clients/profile/me:
+ *   put:
+ *     summary: Update my client profile
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ */
 router.put('/profile/me',
   requireRole('client'),
   updateClientProfileValidation,
@@ -41,19 +63,48 @@ router.post('/verification/submit',
  * Onboarding flow routes
  */
 
-// Get onboarding draft
+/**
+ * @swagger
+ * /api/v1/clients/onboarding/draft:
+ *   get:
+ *     summary: Get onboarding draft
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Draft retrieved successfully
+ *   post:
+ *     summary: Save onboarding draft
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Draft saved successfully
+ */
 router.get('/onboarding/draft',
   requireRole('client'),
   clientController.getDraft
 );
 
-// Save onboarding draft
 router.post('/onboarding/draft',
   requireRole('client'),
   clientController.saveDraft
 );
 
-// Final onboarding submission
+/**
+ * @swagger
+ * /api/v1/clients/onboarding/submit:
+ *   post:
+ *     summary: Submit onboarding profile
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Onboarding completed successfully
+ */
 router.post('/onboarding/submit',
   requireRole('client'),
   clientController.submitOnboardingProfile

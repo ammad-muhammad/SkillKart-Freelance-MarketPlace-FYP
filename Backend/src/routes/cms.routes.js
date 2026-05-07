@@ -46,7 +46,18 @@ router.get('/search',
  * Protected routes (Content Editors, Admins)
  */
 
-// Create page
+/**
+ * @swagger
+ * /api/v1/cms:
+ *   post:
+ *     summary: Create a new CMS page
+ *     tags: [CMS]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Page created successfully
+ */
 router.post('/',
   authenticate,
   requirePermission('cms:create'),
@@ -82,7 +93,24 @@ router.put('/:pageId',
   cmsController.updatePage
 );
 
-// Publish page
+/**
+ * @swagger
+ * /api/v1/cms/{pageId}/publish:
+ *   post:
+ *     summary: Publish a CMS page
+ *     tags: [CMS]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: pageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Page published successfully
+ */
 router.post('/:pageId/publish',
   authenticate,
   requirePermission('cms:publish'),

@@ -16,7 +16,18 @@ router.use(requireRole('admin', 'superadmin'));
  * Admin management routes
  */
 
-// Create admin user (SuperAdmin only)
+/**
+ * @swagger
+ * /api/v1/admin/create-admin:
+ *   post:
+ *     summary: Create a new admin user (SuperAdmin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Admin user created successfully
+ */
 router.post('/create-admin',
   requireRole('superadmin'),
   createUserValidation,
@@ -29,7 +40,18 @@ router.put('/users/:id/password',
   adminController.resetUserPassword
 );
 
-// Get system statistics
+/**
+ * @swagger
+ * /api/v1/admin/stats/system:
+ *   get:
+ *     summary: Get overall system statistics
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System statistics retrieved successfully
+ */
 router.get('/stats/system',
   adminController.getSystemStats
 );

@@ -24,7 +24,18 @@ router.use(authenticate);
  * Proposal routes
  */
 
-// List proposals
+/**
+ * @swagger
+ * /api/v1/proposals:
+ *   get:
+ *     summary: List proposals
+ *     tags: [Proposals]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of proposals retrieved successfully
+ */
 router.get('/',
   listProposalsValidation,
   validate,
@@ -42,7 +53,35 @@ router.get('/:id',
  * Freelancer routes
  */
 
-// Create proposal
+/**
+ * @swagger
+ * /api/v1/proposals:
+ *   post:
+ *     summary: Submit a new proposal for a job
+ *     tags: [Proposals]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jobId
+ *               - bidAmount
+ *               - coverLetter
+ *             properties:
+ *               jobId:
+ *                 type: string
+ *               bidAmount:
+ *                 type: number
+ *               coverLetter:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Proposal submitted successfully
+ */
 router.post('/',
   requireRole('freelancer'),
   createProposalValidation,
