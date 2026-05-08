@@ -69,10 +69,10 @@ const FreelancerProfile = () => {
   const updatePortfolioLink = (i, val) =>
     setPortfolioLinks((prev) => prev.map((l, idx) => (idx === i ? val : l)));
 
-  const initials = (profile.personalInfo.fullName || 'FL')
+  const initials = (profile?.personalInfo?.fullName || 'FL')
     .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
-  const data = editing ? form : profile.personalInfo;
+  const data = editing ? form : (profile?.personalInfo || {});
 
   return (
     <div>
@@ -87,8 +87,8 @@ const FreelancerProfile = () => {
           {/* Avatar */}
           <div className="fl-profile-hero__avatar-wrap">
             <div className="fl-profile-hero__avatar">
-              {(editing ? form.avatar : profile.personalInfo.avatar) ? (
-                <img src={editing ? form.avatar : profile.personalInfo.avatar} alt="avatar" />
+              {(editing ? form.avatar : profile?.personalInfo?.avatar) ? (
+                <img src={editing ? form.avatar : profile?.personalInfo?.avatar} alt="avatar" />
               ) : (
                 <span>{initials}</span>
               )}
@@ -140,7 +140,7 @@ const FreelancerProfile = () => {
               {type === 'select' ? (
                 <CustomSelect
                   options={opts}
-                  value={editing ? form[key] : profile.personalInfo[key]}
+                  value={editing ? form[key] : profile?.personalInfo?.[key]}
                   onChange={(val) => setForm((p) => ({ ...p, [key]: val }))}
                   disabled={!editing}
                 />
@@ -148,7 +148,7 @@ const FreelancerProfile = () => {
                 <input
                   type={type || 'text'}
                   className="fl-input"
-                  value={editing ? form[key] || '' : profile.personalInfo[key] || ''}
+                  value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                   disabled={!editing}
                 />
@@ -162,7 +162,7 @@ const FreelancerProfile = () => {
             <textarea
               className="fl-textarea"
               maxLength={MAX_BIO}
-              value={editing ? form.bio || '' : profile.personalInfo.bio || ''}
+              value={editing ? form.bio || '' : profile?.personalInfo?.bio || ''}
               onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
               disabled={!editing}
               rows={4}
@@ -206,12 +206,12 @@ const FreelancerProfile = () => {
         <h3 className="fl-section-title">🗂️ Portfolio & Social Links</h3>
 
         <label className="fl-label" style={{ marginBottom: '0.6rem', display: 'block' }}>Portfolio Links</label>
-        {(editing ? portfolioLinks : profile.portfolioLinks).map((link, i) => (
+        {(editing ? portfolioLinks : (profile?.portfolioLinks || [])).map((link, i) => (
           <div key={i} className="fl-link-row">
             <input
               type="url"
               className="fl-input"
-              value={editing ? link : profile.portfolioLinks[i] || ''}
+              value={editing ? link : profile?.portfolioLinks?.[i] || ''}
               onChange={(e) => updatePortfolioLink(i, e.target.value)}
               disabled={!editing}
               placeholder="https://yourproject.com"
@@ -241,7 +241,7 @@ const FreelancerProfile = () => {
               <input
                 type="url"
                 className="fl-input"
-                value={editing ? socialLinks[key] || '' : profile.socialLinks[key] || ''}
+                value={editing ? socialLinks[key] || '' : profile?.socialLinks?.[key] || ''}
                 onChange={(e) => setSocialLinks((p) => ({ ...p, [key]: e.target.value }))}
                 disabled={!editing}
                 placeholder={`https://${key}.com/...`}

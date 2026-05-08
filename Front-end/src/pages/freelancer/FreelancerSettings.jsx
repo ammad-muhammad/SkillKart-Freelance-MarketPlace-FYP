@@ -6,10 +6,10 @@ import './FreelancerDashboard.css';
 const FreelancerSettings = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
   const [form, setForm] = useState({
-    username: profile.personalInfo.username,
-    email: profile.personalInfo.email,
-    recoveryEmail: profile.securitySettings.recoveryEmail,
-    recoveryPhone: profile.securitySettings.recoveryPhone,
+    username: profile?.personalInfo?.username || "",
+    email: profile?.personalInfo?.email || "",
+    recoveryEmail: profile?.securitySettings?.recoveryEmail || "",
+    recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
   });
   const [saving, setSaving] = useState(null);
   const [deleteModal, setDeleteModal] = useState(false);
@@ -41,7 +41,7 @@ const FreelancerSettings = () => {
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <label className="fl-label">Current Username</label>
-            <input className="fl-input" value={profile.personalInfo.username} disabled />
+            <input className="fl-input" value={profile?.personalInfo?.username || ""} disabled />
           </div>
           <div className="fl-form-group">
             <label className="fl-label">New Username</label>
@@ -56,7 +56,7 @@ const FreelancerSettings = () => {
         <div className="fl-actions">
           <button
             className={`fl-btn fl-btn--primary${saving === 'Username' ? ' fl-btn--loading' : ''}`}
-            disabled={saving === 'Username' || form.username === profile.personalInfo.username}
+            disabled={saving === 'Username' || form.username === profile?.personalInfo?.username}
             onClick={() => saveSection('personalInfo', { username: form.username }, 'Username')}
           >
             {saving === 'Username' ? 'Saving...' : 'Update Username'}
@@ -70,7 +70,7 @@ const FreelancerSettings = () => {
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <label className="fl-label">Current Email</label>
-            <input className="fl-input" value={profile.personalInfo.email} disabled />
+            <input className="fl-input" value={profile?.personalInfo?.email || ""} disabled />
           </div>
           <div className="fl-form-group">
             <label className="fl-label">New Email</label>
@@ -86,7 +86,7 @@ const FreelancerSettings = () => {
         <div className="fl-actions">
           <button
             className={`fl-btn fl-btn--primary${saving === 'Email' ? ' fl-btn--loading' : ''}`}
-            disabled={saving === 'Email' || form.email === profile.personalInfo.email}
+            disabled={saving === 'Email' || form.email === profile?.personalInfo?.email}
             onClick={() => saveSection('personalInfo', { email: form.email }, 'Email')}
           >
             {saving === 'Email' ? 'Saving...' : 'Update Email'}

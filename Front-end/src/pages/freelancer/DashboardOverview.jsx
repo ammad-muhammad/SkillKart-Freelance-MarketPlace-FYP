@@ -14,7 +14,8 @@ const StatCard = ({ icon, value, label }) => (
 
 const DashboardOverview = () => {
   const { profile, gigs, loading } = useFreelancer();
-  const { personalInfo, stats } = profile;
+  const personalInfo = profile?.personalInfo || {};
+  const stats = profile?.stats || { activeOrders: 0, completedOrders: 0, profileViews: 0 };
 
   if (loading) {
     return (
@@ -35,9 +36,9 @@ const DashboardOverview = () => {
 
   const statsData = [
     { icon: <Package size={20} />,     value: gigs.length,                              label: 'Total Gigs'       },
-    { icon: <Zap size={20} />,         value: stats.activeOrders,                       label: 'Active Orders'    },
-    { icon: <CheckCircle2 size={20} />, value: stats.completedOrders,                   label: 'Completed Orders' },
-    { icon: <Eye size={20} />,         value: stats.profileViews.toLocaleString(),      label: 'Profile Views'    },
+    { icon: <Zap size={20} />,         value: stats?.activeOrders || 0,                       label: 'Active Orders'    },
+    { icon: <CheckCircle2 size={20} />, value: stats?.completedOrders || 0,                   label: 'Completed Orders' },
+    { icon: <Eye size={20} />,         value: (stats?.profileViews || 0).toLocaleString(),    label: 'Profile Views'    },
   ];
 
   return (
@@ -52,7 +53,7 @@ const DashboardOverview = () => {
       <div className="fl-card fl-dashboard-hero" style={{ marginBottom: '1.5rem' }}>
         <div className="fl-dashboard-hero__inner">
           <div className="fl-dashboard-hero__avatar">
-            {personalInfo.avatar ? (
+            {personalInfo?.avatar ? (
               <img src={personalInfo.avatar} alt={personalInfo.fullName} />
             ) : (
               <span>{initials}</span>

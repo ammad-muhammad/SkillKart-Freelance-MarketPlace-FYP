@@ -12,11 +12,11 @@ const ClientProfile = () => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
-  const [form, setForm] = useState({ ...profile.personalInfo });
-  const [prefSkills, setPrefSkills] = useState(Array.isArray(profile.preferences.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
-  const [projTypes, setProjTypes] = useState(Array.isArray(profile.preferences.projectTypes) ? [...profile.preferences.projectTypes] : []);
-  const [budgetRange, setBudgetRange] = useState({ ...profile.preferences.budgetRange });
-  const [remoteOnly, setRemoteOnly] = useState(profile.preferences.remoteOnly);
+  const [form, setForm] = useState({ ...(profile?.personalInfo || {}) });
+  const [prefSkills, setPrefSkills] = useState(Array.isArray(profile?.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
+  const [projTypes, setProjTypes] = useState(Array.isArray(profile?.preferences?.projectTypes) ? [...profile.preferences.projectTypes] : []);
+  const [budgetRange, setBudgetRange] = useState({ ...(profile?.preferences?.budgetRange || {}) });
+  const [remoteOnly, setRemoteOnly] = useState(!!profile?.preferences?.remoteOnly);
   const avatarRef = useRef(null);
   const logoRef = useRef(null);
 
@@ -62,7 +62,7 @@ const ClientProfile = () => {
     );
   };
 
-  const initials = profile.personalInfo.fullName
+  const initials = (profile?.personalInfo?.fullName || 'CL')
     .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const data = editing ? form : profile.personalInfo;
@@ -82,8 +82,8 @@ const ClientProfile = () => {
             <div>
               <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Profile Photo</p>
               <div className="cl-avatar-circle">
-                {(editing ? form.avatar : profile.personalInfo.avatar) ? (
-                  <img src={editing ? form.avatar : profile.personalInfo.avatar} alt="avatar" />
+                {(editing ? form.avatar : profile?.personalInfo?.avatar) ? (
+                  <img src={editing ? form.avatar : profile?.personalInfo?.avatar} alt="avatar" />
                 ) : <span>{initials}</span>}
               </div>
               {editing && (
@@ -99,8 +99,8 @@ const ClientProfile = () => {
             <div>
               <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Company Logo</p>
               <div className="cl-logo-box">
-                {(editing ? form.companyLogo : profile.personalInfo.companyLogo) ? (
-                  <img src={editing ? form.companyLogo : profile.personalInfo.companyLogo} alt="logo" />
+                {(editing ? form.companyLogo : profile?.personalInfo?.companyLogo) ? (
+                  <img src={editing ? form.companyLogo : profile?.personalInfo?.companyLogo} alt="logo" />
                 ) : <span style={{ fontSize: '2rem' }}>🏢</span>}
               </div>
               {editing && (
@@ -149,7 +149,7 @@ const ClientProfile = () => {
               <input
                 type={type || 'text'}
                 className="cl-input"
-                value={editing ? form[key] || '' : profile.personalInfo[key] || ''}
+                value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                 disabled={!editing}
               />
@@ -161,7 +161,7 @@ const ClientProfile = () => {
               className="cl-textarea"
               maxLength={MAX_BIO}
               rows={4}
-              value={editing ? form.bio || '' : profile.personalInfo.bio || ''}
+              value={editing ? form.bio || '' : profile?.personalInfo?.bio || ''}
               onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
               disabled={!editing}
             />
@@ -180,7 +180,7 @@ const ClientProfile = () => {
             <TagInput tags={prefSkills} onChange={setPrefSkills} placeholder="e.g. React, Design..." />
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.25rem' }}>
-              {(Array.isArray(profile.preferences.preferredSkills) ? profile.preferences.preferredSkills : []).map((s) => (
+              {(Array.isArray(profile?.preferences?.preferredSkills) ? profile.preferences.preferredSkills : []).map((s) => (
                 <span key={s} className="cl-tag">{s}</span>
               ))}
             </div>
@@ -192,7 +192,7 @@ const ClientProfile = () => {
             <label className="cl-label">Budget Range (Min $)</label>
             <input
               type="number" className="cl-input"
-              value={editing ? budgetRange.min : profile.preferences.budgetRange.min}
+              value={editing ? budgetRange.min : profile?.preferences?.budgetRange?.min || 0}
               onChange={(e) => setBudgetRange((p) => ({ ...p, min: Number(e.target.value) }))}
               disabled={!editing}
             />
@@ -201,7 +201,7 @@ const ClientProfile = () => {
             <label className="cl-label">Budget Range (Max $)</label>
             <input
               type="number" className="cl-input"
-              value={editing ? budgetRange.max : profile.preferences.budgetRange.max}
+              value={editing ? budgetRange.max : profile?.preferences?.budgetRange?.max || 0}
               onChange={(e) => setBudgetRange((p) => ({ ...p, max: Number(e.target.value) }))}
               disabled={!editing}
             />
@@ -212,7 +212,7 @@ const ClientProfile = () => {
           <label className="cl-label">Project Types</label>
           <div className="cl-checkbox-group" style={{ marginTop: '0.4rem' }}>
             {PROJECT_TYPES.map((type) => {
-              const checked = (editing ? projTypes : profile.preferences.projectTypes).includes(type);
+              const checked = (editing ? projTypes : (profile?.preferences?.projectTypes || [])).includes(type);
               return (
                 <span
                   key={type}
@@ -233,7 +233,7 @@ const ClientProfile = () => {
             <span className="cl-toggle__desc">Only accept remote freelancer applications</span>
           </div>
           <div
-            className={`cl-toggle__switch${(editing ? remoteOnly : profile.preferences.remoteOnly) ? ' cl-toggle__switch--on' : ''}`}
+            className={`cl-toggle__switch${(editing ? remoteOnly : !!profile?.preferences?.remoteOnly) ? ' cl-toggle__switch--on' : ''}`}
             onClick={() => editing && setRemoteOnly((v) => !v)}
             style={{ cursor: editing ? 'pointer' : 'default' }}
           />

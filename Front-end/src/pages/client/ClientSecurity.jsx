@@ -29,8 +29,8 @@ const ClientSecurity = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(profile.securitySettings.twoFactorEnabled);
-  const [emailVerified, setEmailVerified] = useState(profile.securitySettings.emailVerified);
+  const [twoFactor, setTwoFactor] = useState(!!profile?.securitySettings?.twoFactorEnabled);
+  const [emailVerified, setEmailVerified] = useState(!!profile?.securitySettings?.emailVerified);
 
   const validate = () => {
     const e = {};

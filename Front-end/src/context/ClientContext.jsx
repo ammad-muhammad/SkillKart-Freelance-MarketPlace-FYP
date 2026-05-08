@@ -32,6 +32,17 @@ const emptyProfile = {
     projectTypes: [],
     remoteOnly: true,
   },
+  securitySettings: {
+    recoveryEmail: '',
+    recoveryPhone: '',
+    twoFactorEnabled: false,
+    emailVerified: false,
+  },
+  notificationSettings: {
+    emailNotifications: true,
+    proposalAlerts: true,
+    messageAlerts: true,
+  },
   stats: {
     totalProjects: 0,
     activeProjects: 0,

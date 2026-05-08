@@ -5,7 +5,7 @@ import './FreelancerDashboard.css';
 
 const FreelancerSecurity = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
-  const sec = profile.securitySettings;
+  const sec = profile?.securitySettings || {};
 
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
   const [pwErrors, setPwErrors] = useState({});
@@ -13,8 +13,8 @@ const FreelancerSecurity = () => {
   const [showPw, setShowPw] = useState(false);
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(sec.twoFactorEnabled);
-  const [emailVerified, setEmailVerified] = useState(sec.emailVerified);
+  const [twoFactor, setTwoFactor] = useState(!!sec.twoFactorEnabled);
+  const [emailVerified, setEmailVerified] = useState(!!sec.emailVerified);
 
   const validatePw = () => {
     const errs = {};
@@ -171,14 +171,14 @@ const FreelancerSecurity = () => {
             <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✉️</p>
             <p style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.4rem' }}>Reset Link Sent!</p>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)' }}>
-              We've sent a password reset link to <strong>{profile.personalInfo.email}</strong>.
+              We've sent a password reset link to <strong>{profile?.personalInfo?.email || ""}</strong>.
             </p>
             <button className="fl-btn fl-btn--primary" style={{ marginTop: '1.25rem' }} onClick={() => { setForgotModal(false); setForgotSent(false); }}>Done</button>
           </div>
         ) : (
           <>
             <p style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
-              A password reset link will be sent to your registered email: <strong>{profile.personalInfo.email}</strong>
+              A password reset link will be sent to your registered email: <strong>{profile?.personalInfo?.email || ""}</strong>
             </p>
             <div className="fl-actions" style={{ marginTop: 0 }}>
               <button className="fl-btn fl-btn--primary" onClick={sendForgot}>Send Reset Link</button>

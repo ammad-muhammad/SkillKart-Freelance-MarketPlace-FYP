@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, AlignLeft, DollarSign, Clock, ChevronDown, Check,
-  Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award
+  Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award, Link
 } from "lucide-react";
 
 const AVAILABILITY_OPTIONS = [

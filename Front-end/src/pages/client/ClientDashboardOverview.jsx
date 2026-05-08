@@ -14,7 +14,8 @@ const StatCard = ({ icon, value, label }) => (
 
 const ClientDashboardOverview = () => {
   const { profile, projects, loading } = useClient();
-  const { personalInfo, stats } = profile;
+  const personalInfo = profile?.personalInfo || {};
+  const stats = profile?.stats || { activeProjects: 0, freelancersHired: 0, totalSpent: 0 };
 
   if (loading) {
     return (
@@ -30,9 +31,9 @@ const ClientDashboardOverview = () => {
 
   const statsData = [
     { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects'      },
-    { icon: <Zap size={20} />,        value: stats.activeProjects,                      label: 'Active Projects'     },
-    { icon: <Users2 size={20} />,     value: stats.freelancersHired,                    label: 'Freelancers Hired'   },
-    { icon: <DollarSign size={20} />, value: `$${stats.totalSpent.toLocaleString()}`,  label: 'Total Spent'         },
+    { icon: <Zap size={20} />,        value: stats?.activeProjects || 0,                      label: 'Active Projects'     },
+    { icon: <Users2 size={20} />,     value: stats?.freelancersHired || 0,                    label: 'Freelancers Hired'   },
+    { icon: <DollarSign size={20} />, value: `$${(stats?.totalSpent || 0).toLocaleString()}`,  label: 'Total Spent'         },
   ];
 
   const recentProjects = projects.slice(0, 3);
@@ -49,7 +50,7 @@ const ClientDashboardOverview = () => {
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <div className="cl-dash-hero">
           <div className="cl-dash-hero__avatar">
-            {personalInfo.avatar ? (
+            {personalInfo?.avatar ? (
               <img src={personalInfo.avatar} alt={personalInfo.fullName} />
             ) : <span>{initials}</span>}
           </div>

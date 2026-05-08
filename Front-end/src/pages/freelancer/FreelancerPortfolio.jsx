@@ -15,13 +15,13 @@ const FreelancerPortfolio = () => {
       {/* Portfolio Links */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="fl-section-title">🔗 Portfolio Links</h3>
-        {profile.portfolioLinks.length === 0 ? (
+        {(profile?.portfolioLinks || []).length === 0 ? (
           <p style={{ color: 'var(--color-text-light)', fontSize: '0.875rem' }}>
             No portfolio links added yet. <Link to="/freelancer/profile" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>Add links →</Link>
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {profile.portfolioLinks.map((link, i) => (
+            {(profile?.portfolioLinks || []).map((link, i) => (
               <a
                 key={i}
                 href={link}

@@ -6,12 +6,12 @@ import './ClientDashboard.css';
 const ClientSettings = () => {
   const { profile, setProfile, showToast } = useClient();
   const [account, setAccount] = useState({
-    newUsername: profile.personalInfo.username,
-    newEmail: profile.personalInfo.email,
-    recoveryEmail: profile.securitySettings.recoveryEmail,
-    recoveryPhone: profile.securitySettings.recoveryPhone,
+    newUsername: profile?.personalInfo?.username || "",
+    newEmail: profile?.personalInfo?.email || "",
+    recoveryEmail: profile?.securitySettings?.recoveryEmail || "",
+    recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
   });
-  const [notifications, setNotifications] = useState({ ...profile.notificationSettings });
+  const [notifications, setNotifications] = useState({ ...(profile?.notificationSettings || {}) });
   const [deleteModal, setDeleteModal] = useState(false);
 
   const saveAccount = () => {
@@ -43,7 +43,7 @@ const ClientSettings = () => {
         <div className="cl-form-grid">
           <div className="cl-form-group">
             <label className="cl-label">Current Username</label>
-            <input className="cl-input" value={profile.personalInfo.username} disabled />
+            <input className="cl-input" value={profile?.personalInfo?.username || ""} disabled />
           </div>
           <div className="cl-form-group">
             <label className="cl-label">New Username</label>
@@ -60,7 +60,7 @@ const ClientSettings = () => {
         <div className="cl-form-grid">
           <div className="cl-form-group">
             <label className="cl-label">Current Email</label>
-            <input className="cl-input" value={profile.personalInfo.email} disabled />
+            <input className="cl-input" value={profile?.personalInfo?.email || ""} disabled />
           </div>
           <div className="cl-form-group">
             <label className="cl-label">New Email</label>

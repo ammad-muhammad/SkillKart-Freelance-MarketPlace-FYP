@@ -28,11 +28,22 @@ const emptyProfile = {
   },
   skills: [],
   languages: [],
-  portfolio: [],
+  portfolioLinks: [],
   socialLinks: {
     github: '',
     linkedin: '',
     website: '',
+  },
+  securitySettings: {
+    recoveryEmail: '',
+    recoveryPhone: '',
+    twoFactorEnabled: false,
+    emailVerified: false,
+  },
+  notificationSettings: {
+    emailNotifications: true,
+    proposalAlerts: true,
+    messageAlerts: true,
   },
   stats: {
     totalGigs: 0,
