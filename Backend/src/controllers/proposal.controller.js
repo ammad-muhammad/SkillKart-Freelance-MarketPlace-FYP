@@ -73,14 +73,21 @@ const getProposalById = asyncHandler(async (req, res) => {
  */
 const listProposals = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { jobId, status } = req.query;
+  const { jobId, status, freelancerId } = req.query;
   
   const query = {};
   if (jobId) query.jobId = jobId;
   if (status) query.status = status;
+  if (freelancerId) query.freelancerId = freelancerId;
+
+  // Security: If freelancer, only show their own proposals unless jobId is specified (even then, usually not allowed)
+  if (req.user.role === 'freelancer') {
+    query.freelancerId = req.user._id;
+  }
   
   const total = await Proposal.countDocuments(query);
   const proposals = await Proposal.find(query)
+    .populate('jobId', 'title category budget status')
     .populate('freelancerId', 'firstName lastName profilePicture rating')
     .skip(skip)
     .limit(limit)

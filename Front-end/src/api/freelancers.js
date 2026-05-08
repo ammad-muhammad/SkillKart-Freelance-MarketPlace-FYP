@@ -11,5 +11,7 @@ export const freelancersAPI = {
   parseCV: (formData) => client.post('/freelancers/parse-cv', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  submitProfile: (data) => client.post('/freelancers/profile/submit', data)
+  submitProfile: (data) => client.post('/freelancers/profile/submit', data),
+  getSavedJobs: () => client.get('/freelancers/saved-jobs'),
+  toggleSavedJob: (jobId) => client.post(`/freelancers/saved-jobs/${jobId}`)
 };

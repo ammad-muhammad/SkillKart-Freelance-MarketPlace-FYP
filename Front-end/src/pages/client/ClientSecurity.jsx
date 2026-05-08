@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useClient } from '../../context/ClientContext';
+import { authAPI } from '../../api/auth';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
 
@@ -20,7 +21,7 @@ const getStrength = (pwd) => {
 };
 
 const ClientSecurity = () => {
-  const { profile, setProfile, showToast } = useClient();
+  const { profile, updateProfile, showToast } = useClient();
   const [passwords, setPasswords] = useState({ current: '', newPwd: '', confirm: '' });
   const [showPwd, setShowPwd] = useState({ current: false, newPwd: false, confirm: false });
   const [errors, setErrors] = useState({});
@@ -44,19 +45,37 @@ const ClientSecurity = () => {
   const changePassword = async () => {
     if (!validate()) return;
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setPasswords({ current: '', newPwd: '', confirm: '' });
-    setSaving(false);
-    showToast('Password changed successfully!');
+    try {
+      await authAPI.changePassword({
+        currentPassword: passwords.current,
+        newPassword: passwords.newPwd
+      });
+      setPasswords({ current: '', newPwd: '', confirm: '' });
+      showToast('Password changed successfully!');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to change password', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggleSecurity = (key, value, setter) => {
+  const toggleSecurity = async (key, value, setter) => {
     setter(value);
-    setProfile((prev) => ({
-      ...prev,
-      securitySettings: { ...prev.securitySettings, [key]: value },
-    }));
-    showToast(`${key === 'twoFactorEnabled' ? '2FA' : 'Email verification'} ${value ? 'enabled' : 'disabled'}.`, 'info');
+    await updateProfile('securitySettings', { [key]: value }, false, true);
+  };
+
+  const sendForgot = async () => {
+    if (!forgotEmail) return;
+    setSaving(true);
+    try {
+      await authAPI.requestPasswordReset({ email: forgotEmail });
+      setForgotSent(true);
+      showToast('OTP sent to your email!');
+    } catch (error) {
+      showToast('Failed to send reset link', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const strength = getStrength(passwords.newPwd);
@@ -183,7 +202,7 @@ const ClientSecurity = () => {
               onChange={(e) => setForgotEmail(e.target.value)}
             />
             <div className="cl-actions" style={{ marginTop: '1rem' }}>
-              <button className="cl-btn cl-btn--primary" onClick={() => { if (forgotEmail) setForgotSent(true); }}>
+              <button className="cl-btn cl-btn--primary" onClick={sendForgot}>
                 Send Reset Link
               </button>
               <button className="cl-btn cl-btn--ghost" onClick={() => setForgotModal(false)}>Cancel</button>

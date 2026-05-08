@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useClient } from '../../context/ClientContext';
+import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import TagInput from '../freelancer/components/TagInput';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
@@ -8,7 +9,7 @@ const MAX_BIO = 600;
 const PROJECT_TYPES = ['Web Development', 'Mobile App', 'Design', 'Content Writing', 'Marketing', 'Data Science', 'DevOps'];
 
 const ClientProfile = () => {
-  const { profile, setProfile, showToast } = useClient();
+  const { profile, saveProfile, showToast } = useClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
@@ -31,29 +32,45 @@ const ClientProfile = () => {
 
   const save = async () => {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setProfile((prev) => ({
-      ...prev,
-      personalInfo: { ...prev.personalInfo, ...form },
-      preferences: {
-        ...prev.preferences,
-        preferredSkills: [...prefSkills],
-        projectTypes: [...projTypes],
-        budgetRange: { ...budgetRange },
-        remoteOnly,
-      },
-    }));
-    showToast('Profile updated successfully!');
-    setSaving(false);
-    setEditing(false);
+    try {
+      const updatedProfile = {
+        ...profile,
+        personalInfo: { ...profile.personalInfo, ...form },
+        preferences: {
+          ...profile.preferences,
+          preferredSkills: [...prefSkills],
+          projectTypes: [...projTypes],
+          budgetRange: { ...budgetRange },
+          remoteOnly,
+        },
+      };
+
+      const success = await saveProfile(updatedProfile);
+      if (success) {
+        setEditing(false);
+      }
+    } catch (error) {
+      console.error('Update failed:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleImage = (e, field) => {
+  const handleImage = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setForm((p) => ({ ...p, [field]: ev.target.result }));
-    reader.readAsDataURL(file);
+
+    setSaving(true);
+    try {
+      // For avatar, use 'client' role
+      const url = await apiUploadAvatar(file, 'client');
+      setForm((p) => ({ ...p, [field]: url }));
+      showToast('Image uploaded! Save profile to persist.');
+    } catch (error) {
+      showToast('Upload failed', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleProjType = (type) => {

@@ -238,27 +238,28 @@ const Step4 = ({ gig, set }) => {
   const bannerRef = useRef(null);
   const imagesRef = useRef(null);
 
-  const handleBanner = (e) => {
+  const handleBanner = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => set('media', { ...gig.media, banner: ev.target.result });
-    reader.readAsDataURL(file);
+    try {
+      const { uploadBanner } = await import('../../utils/uploadHelper');
+      const url = await uploadBanner(file);
+      set('media', { ...gig.media, banner: url });
+    } catch (error) {
+      console.error('Banner upload failed:', error);
+    }
   };
 
-  const handleImages = (e) => {
+  const handleImages = async (e) => {
     const files = Array.from(e.target.files);
-    const readers = files.map(
-      (file) =>
-        new Promise((res) => {
-          const r = new FileReader();
-          r.onload = (ev) => res(ev.target.result);
-          r.readAsDataURL(file);
-        })
-    );
-    Promise.all(readers).then((results) =>
-      set('media', { ...gig.media, images: [...gig.media.images, ...results].slice(0, 5) })
-    );
+    try {
+      const { uploadPortfolioImage } = await import('../../utils/uploadHelper');
+      const uploadPromises = files.map(file => uploadPortfolioImage(file));
+      const urls = await Promise.all(uploadPromises);
+      set('media', { ...gig.media, images: [...gig.media.images, ...urls].slice(0, 5) });
+    } catch (error) {
+      console.error('Images upload failed:', error);
+    }
   };
 
   const removeImage = (i) =>
@@ -509,10 +510,14 @@ const CreateGig = () => {
 
   const publish = async (isDraft = false) => {
     setPublishing(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    addGig({ ...gig, status: isDraft ? 'paused' : 'active' });
-    setPublishing(false);
-    navigate('/freelancer/gigs');
+    try {
+      await addGig({ ...gig, status: isDraft ? 'draft' : 'active' });
+      navigate('/freelancer/gigs');
+    } catch (error) {
+      console.error('Publish failed:', error);
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (

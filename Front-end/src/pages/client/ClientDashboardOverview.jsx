@@ -15,7 +15,11 @@ const StatCard = ({ icon, value, label }) => (
 const ClientDashboardOverview = () => {
   const { profile, projects, loading } = useClient();
   const personalInfo = profile?.personalInfo || {};
-  const stats = profile?.stats || { activeProjects: 0, freelancersHired: 0, totalSpent: 0 };
+  
+  // Real stats calculation
+  const openProjects = projects.filter(p => p.status === 'open').length;
+  const hiredCount = projects.filter(p => p.hiredFreelancer).length;
+  const totalSpent = profile?.stats?.totalSpent || 0;
 
   if (loading) {
     return (
@@ -31,9 +35,9 @@ const ClientDashboardOverview = () => {
 
   const statsData = [
     { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects'      },
-    { icon: <Zap size={20} />,        value: stats?.activeProjects || 0,                      label: 'Active Projects'     },
-    { icon: <Users2 size={20} />,     value: stats?.freelancersHired || 0,                    label: 'Freelancers Hired'   },
-    { icon: <DollarSign size={20} />, value: `$${(stats?.totalSpent || 0).toLocaleString()}`,  label: 'Total Spent'         },
+    { icon: <Zap size={20} />,        value: openProjects,                             label: 'Open Jobs'     },
+    { icon: <Users2 size={20} />,     value: hiredCount,                               label: 'Freelancers Hired'   },
+    { icon: <DollarSign size={20} />, value: `$${totalSpent.toLocaleString()}`,        label: 'Total Spent'         },
   ];
 
   const recentProjects = projects.slice(0, 3);

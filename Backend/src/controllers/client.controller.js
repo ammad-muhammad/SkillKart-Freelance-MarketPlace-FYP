@@ -1,9 +1,28 @@
 const ClientProfile = require('../models/ClientProfile');
 const ClientOnboardingDraft = require('../models/ClientOnboardingDraft');
 const User = require('../models/User');
+const { uploadProfilePicture } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+
+/**
+ * Calculate client profile completion
+ */
+const calculateCompletion = (profile, user = {}) => {
+  let score = 0;
+  const total = 7;
+  
+  if (profile.companyName) score++;
+  if (profile.industryType) score++;
+  if (profile.description) score++;
+  if (profile.location?.country) score++;
+  if (profile.website) score++;
+  if (user.profilePicture) score++;
+  if (profile.phone) score++;
+  
+  return Math.round((score / total) * 100);
+};
 
 /**
  * Get client profile
@@ -37,6 +56,10 @@ const updateProfile = asyncHandler(async (req, res) => {
   } else {
     Object.assign(profile, updates);
   }
+  
+  // Calculate completion
+  const user = await User.findById(userId);
+  profile.profileCompletion = calculateCompletion(profile, user);
   
   await profile.save();
   
@@ -226,6 +249,7 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
     Object.assign(profile, profileData);
   }
 
+  profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));
   await profile.save();
 
   // Update User model flag
@@ -240,6 +264,78 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Upload avatar
+ */
+const uploadAvatar = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
+  const fileUpload = await uploadProfilePicture(userId, req.file);
+  const user = await User.findByIdAndUpdate(userId, { profilePicture: fileUpload.url }, { new: true });
+
+  // Recalculate profile completion
+  const profile = await ClientProfile.findOne({ userId });
+  if (profile) {
+    profile.profileCompletion = calculateCompletion(profile, user);
+    await profile.save();
+  }
+
+  sendSuccess(res, {
+    message: 'Avatar uploaded successfully',
+    data: { url: fileUpload.url }
+  });
+});
+
+/**
+ * Toggle saved freelancer
+ */
+const toggleSavedFreelancer = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { freelancerId } = req.body;
+  
+  const profile = await ClientProfile.findOne({ userId });
+  if (!profile) throw new NotFoundError('Profile not found');
+  
+  const index = profile.savedFreelancers.indexOf(freelancerId);
+  if (index > -1) {
+    profile.savedFreelancers.splice(index, 1);
+  } else {
+    profile.savedFreelancers.push(freelancerId);
+  }
+  
+  await profile.save();
+  
+  sendSuccess(res, {
+    message: index > -1 ? 'Freelancer removed from saved' : 'Freelancer saved successfully',
+    data: { savedFreelancers: profile.savedFreelancers }
+  });
+});
+
+/**
+ * Get saved freelancers
+ */
+const getSavedFreelancers = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  const profile = await ClientProfile.findOne({ userId })
+    .populate({
+      path: 'savedFreelancers',
+      select: 'firstName lastName email profilePicture rating',
+      populate: { path: 'freelancerProfile' }
+    });
+    
+  if (!profile) throw new NotFoundError('Profile not found');
+  
+  sendSuccess(res, {
+    message: 'Saved freelancers retrieved successfully',
+    data: { savedFreelancers: profile.savedFreelancers }
+  });
+});
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -250,5 +346,8 @@ module.exports = {
   getStats,
   saveDraft,
   getDraft,
-  submitOnboardingProfile
+  submitOnboardingProfile,
+  uploadAvatar,
+  toggleSavedFreelancer,
+  getSavedFreelancers
 };

@@ -9,6 +9,7 @@ const clientProfileSchema = new mongoose.Schema({
   industryType: String,
   customIndustry: String,
   role: String,
+  phone: String,
   website: String,
   description: String,
   location: {
@@ -33,6 +34,11 @@ const clientProfileSchema = new mongoose.Schema({
     twitter: String,
     website: String
   },
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    proposalAlerts: { type: Boolean, default: true },
+    messageAlerts: { type: Boolean, default: true }
+  },
   profileCompletion: { type: Number, default: 0 },
   verificationStatus: {
     type: String,
@@ -42,7 +48,8 @@ const clientProfileSchema = new mongoose.Schema({
   verificationDocuments: [String],
   rating: { type: Number, default: 0, min: 0, max: 5 },
   totalProjectsPosted: { type: Number, default: 0 },
-  totalSpent: { type: Number, default: 0 }
+  totalSpent: { type: Number, default: 0 },
+  savedFreelancers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('ClientProfile', clientProfileSchema);

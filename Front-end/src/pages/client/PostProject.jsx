@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
+import { jobsAPI } from '../../api/jobs';
+import { uploadJobAttachment } from '../../utils/uploadHelper';
 import Stepper from '../freelancer/components/Stepper';
 import TagInput from '../freelancer/components/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
@@ -15,7 +17,7 @@ const CATEGORIES = [
 
 const PostProject = () => {
   const navigate = useNavigate();
-  const { addProject } = useClient();
+  const { fetchProfile, showToast } = useClient();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   
@@ -65,27 +67,60 @@ const PostProject = () => {
     updateForm({ referenceLinks: newLinks });
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    const newImages = [];
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        newImages.push(ev.target.result);
-        if (newImages.length === files.length) {
-          updateForm({ attachments: { ...form.attachments, images: [...form.attachments.images, ...newImages] } });
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setSaving(true);
+    try {
+      const uploadPromises = files.map(file => uploadJobAttachment(file));
+      const urls = await Promise.all(uploadPromises);
+      updateForm({ 
+        attachments: { 
+          ...form.attachments, 
+          images: [...form.attachments.images, ...urls] 
+        } 
+      });
+      showToast(`${files.length} image(s) uploaded successfully!`);
+    } catch (error) {
+      showToast('Failed to upload images', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const publish = async (isDraft = false) => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 1200));
-    addProject({ ...form, status: isDraft ? 'draft' : 'open' });
-    setSaving(false);
-    navigate('/client/projects');
+    try {
+      // Map to backend schema
+      const payload = {
+        title: form.title,
+        description: form.fullDescription || form.summary,
+        category: form.category,
+        skills: form.skills,
+        experienceLevel: form.experienceLevel.toLowerCase(),
+        budget: {
+          min: form.budget.min,
+          max: form.budget.max,
+          type: form.projectType
+        },
+        duration: form.duration,
+        deadline: form.deadline || null,
+        status: isDraft ? 'draft' : 'open',
+        attachments: form.attachments.images // URLs from Cloudinary
+      };
+
+      await jobsAPI.createJob(payload);
+      showToast(isDraft ? 'Project saved as draft!' : 'Project published successfully!');
+      
+      // Refresh profile to update project count in dashboard
+      await fetchProfile();
+      
+      navigate('/client/projects');
+    } catch (error) {
+      console.error('Publish failed:', error);
+      showToast(error.response?.data?.message || 'Failed to publish project', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderStep = () => {

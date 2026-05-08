@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { freelancersAPI } from '../api/freelancers';
 import { authAPI } from '../api/auth';
+import { gigsAPI } from '../api/gigs';
+import { proposalsAPI } from '../api/proposals';
 import { useAuth } from '../hooks/useAuth';
 
 const FreelancerContext = createContext(null);
@@ -54,86 +56,27 @@ const emptyProfile = {
   verificationStatus: 'unverified'
 };
 
-const initialGigs = [
-  {
-    id: 'gig-001',
-    title: 'I will build a full-stack React + Node.js web application',
-    category: 'Web Development',
-    subcategory: 'Full Stack',
-    skills: ['React', 'Node.js', 'MongoDB'],
-    shortDescription: 'Professional full-stack app with modern UI.',
-    fullDescription: 'I will develop a complete full-stack web application using React for the frontend and Node.js for the backend. The solution includes authentication, CRUD operations, and deployment-ready configuration.',
-    pricing: {
-      basic: { price: 150, delivery: 7, revisions: 2 },
-      standard: { price: 350, delivery: 14, revisions: 3 },
-      premium: { price: 700, delivery: 21, revisions: 5 },
-    },
-    faqs: [{ question: 'Will you deploy the app?', answer: 'Yes, I include a basic deployment setup.' }],
-    media: { banner: null, images: [], videoLink: '', portfolioLinks: [] },
-    status: 'active',
-    createdAt: '2024-11-10',
-  },
-  {
-    id: 'gig-002',
-    title: 'I will design a stunning UI/UX for your mobile app',
-    category: 'Design',
-    subcategory: 'UI/UX Design',
-    skills: ['Figma', 'Adobe XD', 'Prototyping'],
-    shortDescription: 'Pixel-perfect, user-friendly mobile UI designs.',
-    fullDescription: 'I create beautiful, functional mobile app UI designs in Figma. Includes user flows, wireframes, and high-fidelity mockups.',
-    pricing: {
-      basic: { price: 100, delivery: 5, revisions: 2 },
-      standard: { price: 250, delivery: 10, revisions: 4 },
-      premium: { price: 500, delivery: 20, revisions: 'Unlimited' },
-    },
-    faqs: [],
-    media: { banner: null, images: [], videoLink: '', portfolioLinks: [] },
-    status: 'active',
-    createdAt: '2025-01-05',
-  },
-];
-
-const initialSavedProjects = [
-  {
-    id: 'proj-001',
-    title: 'Build a Full-Stack SaaS Dashboard with React & Node',
-    category: 'Web Development',
-    budget: { min: 2000, max: 5000 },
-    duration: '1-3 months',
-    postedAt: '2026-02-15'
-  }
-];
-
 export const FreelancerProvider = ({ children }) => {
   const [profile, setProfile] = useState(emptyProfile);
   const [gigs, setGigs] = useState([]);
+  const [proposals, setProposals] = useState([]);
   const [savedProjects, setSavedProjects] = useState([]);
   const [toasts, setToasts] = useState([]);
-  const [loading, setLoading] = useState(false); // Default to false, fetch will set true if needed
+  const [loading, setLoading] = useState(true);
   const { user, isAuthenticated } = useAuth();
 
-  // Fetch real profile on load or when auth changes
-  useEffect(() => {
-    if (isAuthenticated && user?.role === 'freelancer') {
-      fetchProfile();
-    } else if (!isAuthenticated) {
-      setProfile(emptyProfile);
-      setGigs([]);
-    }
-  }, [isAuthenticated, user?.role]);
-
-  const fetchProfile = async () => {
-    setLoading(true);
+  const fetchFreelancerData = async () => {
     try {
-      // 1. Get Profile
-      const profileRes = await freelancersAPI.getProfile();
+      setLoading(true);
+      const [profileRes, gigsRes, savedRes, propRes] = await Promise.all([
+        freelancersAPI.getProfile(),
+        gigsAPI.listGigs({ freelancerId: user._id }),
+        freelancersAPI.getSavedJobs(),
+        proposalsAPI.listProposals({ freelancerId: user._id })
+      ]);
+
       const dbProfile = profileRes.data.data.profile;
-
-      // 2. Get User Info (for name, email, avatar)
-      const userRes = await authAPI.getCurrentUser();
-      const user = userRes.data.data.user;
-
-      // 3. Transform to UI format
+      
       const transformedProfile = {
         personalInfo: {
           fullName: `${user.firstName} ${user.lastName}`,
@@ -154,25 +97,38 @@ export const FreelancerProvider = ({ children }) => {
         portfolio: dbProfile.portfolio || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
         stats: {
-          totalGigs: 0, // Will be updated by gigs fetch
-          activeOrders: 0, // Placeholder
+          totalGigs: gigsRes.data.data.total || 0,
+          activeOrders: 0,
           completedOrders: dbProfile.completedProjects || 0,
-          profileViews: 0, // Placeholder
+          profileViews: 0,
         },
         verificationStatus: dbProfile.verificationStatus || 'unverified'
       };
 
       setProfile(transformedProfile);
-      
-      // 4. Fetch Gigs (TODO: implement when backend gig route exists)
-      // For now keep empty or mock if needed, but the requirement says keep demo if DB not exists
-      // setGigs([]); 
-
+      setGigs(gigsRes.data.data.items || []);
+      setSavedProjects(savedRes.data.data.savedJobs || []);
+      setProposals(propRes.data.data.items || []);
     } catch (error) {
-      console.error("Failed to fetch freelancer profile:", error);
+      console.error('Freelancer data fetch failed:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch real profile on load or when auth changes
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'freelancer') {
+      fetchFreelancerData();
+    } else if (!isAuthenticated) {
+      setProfile(emptyProfile);
+      setGigs([]);
+      setProposals([]);
+    }
+  }, [isAuthenticated, user?.role]);
+
+  const fetchProfile = async () => {
+    await fetchFreelancerData();
   };
 
   const showToast = (message, type = 'success') => {
@@ -181,7 +137,51 @@ export const FreelancerProvider = ({ children }) => {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
 
-  const updateProfile = (section, data, silent = false) => {
+  const saveProfile = async (updatedData = null) => {
+    setLoading(true);
+    try {
+      const currentProfile = updatedData || profile;
+      const { personalInfo, skills, languages, socialLinks, notificationSettings } = currentProfile;
+
+      const nameParts = (personalInfo.fullName || '').trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      await authAPI.updateMe({
+        firstName,
+        lastName,
+        phone: personalInfo.phone
+      });
+
+      const profilePayload = {
+        bio: personalInfo.bio,
+        title: personalInfo.title,
+        phone: personalInfo.phone,
+        skills,
+        languages: languages.map(l => ({ language: l, proficiency: 'fluent' })),
+        socialLinks,
+        notificationSettings,
+        experienceLevel: personalInfo.experienceLevel,
+        timezone: personalInfo.location,
+        portfolioLinks: currentProfile.portfolioLinks || []
+      };
+
+      await freelancersAPI.updateProfile(profilePayload);
+      await fetchFreelancerData();
+      
+      showToast('All changes saved to database!');
+      return true;
+    } catch (error) {
+      console.error("Save profile failed:", error);
+      showToast(error.response?.data?.message || 'Failed to save changes', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async (section, data, silent = false, persist = false) => {
+    let newProfile;
     setProfile((prev) => {
       let next;
       if (typeof data === 'function') {
@@ -191,69 +191,86 @@ export const FreelancerProvider = ({ children }) => {
       } else {
         next = { ...prev[section], ...data };
       }
-      return { ...prev, [section]: next };
+      newProfile = { ...prev, [section]: next };
+      return newProfile;
     });
-    if (!silent) showToast('Profile updated successfully!');
+
+    if (persist) {
+      await saveProfile(newProfile);
+    } else if (!silent) {
+      showToast('Profile updated (not yet saved to DB)');
+    }
   };
 
-  const addGig = (gig) => {
-    const newGig = { ...gig, id: `gig-${Date.now()}`, createdAt: new Date().toISOString().split('T')[0] };
-    setGigs((prev) => [...prev, newGig]);
-    setProfile((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, totalGigs: prev.stats.totalGigs + 1 },
-    }));
-    showToast('Gig published successfully! 🎉');
-    return newGig;
+  const addGig = async (gig) => {
+    setLoading(true);
+    try {
+      const res = await gigsAPI.createGig(gig);
+      await fetchFreelancerData();
+      showToast('Gig published successfully! 🎉');
+      return res.data.data.gig;
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to publish gig', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateGig = (id, data) => {
-    setGigs((prev) => prev.map((g) => (g.id === id ? { ...g, ...data } : g)));
-    showToast('Gig updated successfully!');
+  const updateGig = async (id, data) => {
+    setLoading(true);
+    try {
+      await gigsAPI.updateGig(id, data);
+      await fetchFreelancerData();
+      showToast('Gig updated successfully!');
+    } catch (error) {
+      showToast('Failed to update gig', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteGig = (id) => {
-    setGigs((prev) => prev.filter((g) => g.id !== id));
-    setProfile((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, totalGigs: Math.max(0, prev.stats.totalGigs - 1) },
-    }));
-    showToast('Gig deleted.', 'info');
+  const deleteGig = async (id) => {
+    setLoading(true);
+    try {
+      await gigsAPI.deleteGig(id);
+      await fetchFreelancerData();
+      showToast('Gig deleted.', 'info');
+    } catch (error) {
+      showToast('Failed to delete gig', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleGigStatus = (id) => {
-    setGigs((prev) =>
-      prev.map((g) =>
-        g.id === id ? { ...g, status: g.status === 'active' ? 'paused' : 'active' } : g
-      )
-    );
-  };
-
-  const toggleSavedProject = (project) => {
-    setSavedProjects(prev => {
-      const exists = prev.find(p => p.id === project.id);
-      if (exists) {
-        showToast('Project removed from saved.', 'info');
-        return prev.filter(p => p.id !== project.id);
-      } else {
-        showToast('Project saved successfully! 🔖');
-        return [...prev, project];
-      }
-    });
+  const toggleSavedProject = async (project) => {
+    try {
+      await freelancersAPI.toggleSavedJob(project._id || project.id);
+      await fetchFreelancerData();
+    } catch (error) {
+      showToast('Failed to save project', 'error');
+    }
   };
 
   return (
     <FreelancerContext.Provider
       value={{ 
-        profile, setProfile, updateProfile, 
-        gigs, addGig, updateGig, deleteGig, toggleGigStatus,
-        savedProjects, toggleSavedProject,
-        toasts, showToast,
-        loading, fetchProfile
+        profile,
+        gigs,
+        proposals,
+        savedProjects,
+        loading,
+        updateProfile,
+        toggleSavedProject,
+        refreshProfile: fetchFreelancerData,
+        addGig,
+        updateGig,
+        deleteGig,
+        toasts,
+        showToast,
+        saveProfile
       }}
     >
       {children}
     </FreelancerContext.Provider>
   );
 };
-

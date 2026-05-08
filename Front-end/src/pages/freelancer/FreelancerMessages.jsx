@@ -1,29 +1,76 @@
-import { useState } from 'react';
-import { useFreelancer } from '../../context/FreelancerContext';
-import '../client/ClientDashboard.css'; // Reusing client CSS for messages as it's the same UI pattern
-
-const MOCK_CHATS = [
-  { id: 1, name: 'Google (Mark)', lastMsg: 'The project proposal looks good. When can we start?', time: '9:45 AM', online: true, unread: 1 },
-  { id: 2, name: 'Meta (Sophia Chen)', lastMsg: 'I have shared the asset link for the UI development.', time: 'Yesterday', online: false, unread: 0 },
-  { id: 3, name: 'Sarah Miller', lastMsg: 'Can you please update the hero section?', time: 'Yesterday', online: true, unread: 0 },
-];
+import { useState, useEffect, useRef } from 'react';
+import { messagesAPI } from '../../api/messages';
+import { useAuth } from '../../hooks/useAuth';
+import { MessageSquare } from 'lucide-react';
+import '../client/ClientDashboard.css';
 
 const FreelancerMessages = () => {
-  const { profile } = useFreelancer();
-  const [activeChat, setActiveChat] = useState(MOCK_CHATS[0]);
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [msgInput, setMsgInput] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'Google (Mark)', text: 'Hello! Thanks for applying to the Full Stack position.', time: '9:30 AM' },
-    { id: 2, sender: 'You', text: 'Hi Mark, thanks for reaching out. I am excited to discuss the role!', time: '9:35 AM' },
-    { id: 3, sender: 'Google (Mark)', text: 'The project proposal looks good. When can we start?', time: '9:45 AM' },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const chatFeedRef = useRef(null);
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (!msgInput.trim()) return;
-    setMessages(prev => [...prev, { id: Date.now(), sender: 'You', text: msgInput, time: 'Now' }]);
-    setMsgInput('');
+  useEffect(() => {
+    fetchConversations();
+    const interval = setInterval(fetchConversations, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (activeChat) {
+      fetchMessages(activeChat._id);
+      const interval = setInterval(() => fetchMessages(activeChat._id), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [activeChat]);
+
+  useEffect(() => {
+    if (chatFeedRef.current) {
+      chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const fetchConversations = async () => {
+    try {
+      const res = await messagesAPI.getConversations();
+      setConversations(res.data.data);
+      if (!activeChat && res.data.data.length > 0) {
+        setActiveChat(res.data.data[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const fetchMessages = async (chatId) => {
+    try {
+      const res = await messagesAPI.getMessages(chatId);
+      setMessages(res.data.data);
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+    }
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!msgInput.trim() || !activeChat) return;
+
+    const recipient = activeChat.participants.find(p => p._id !== user._id);
+    try {
+      await messagesAPI.sendMessage(recipient._id, msgInput);
+      setMsgInput('');
+      fetchMessages(activeChat._id);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  if (loading) return <div className="fl-loading">Loading chats...</div>;
 
   return (
     <div className="fl-messages-page">
@@ -39,71 +86,101 @@ const FreelancerMessages = () => {
             <input type="text" placeholder="Search chats..." className="fl-input fl-input--sm" />
           </div>
           <div className="fl-chat-list__items">
-            {MOCK_CHATS.map(chat => (
-              <div 
-                key={chat.id} 
-                className={`fl-chat-item${activeChat.id === chat.id ? ' fl-chat-item--active' : ''}`}
-                onClick={() => setActiveChat(chat)}
-              >
-                <div className="fl-chat-item__avatar">
-                  <span>{chat.name.charAt(0)}</span>
-                  {chat.online && <div className="fl-chat-item__online" />}
-                </div>
-                <div className="fl-chat-item__info">
-                  <div className="fl-chat-item__top">
-                    <h4 className="fl-chat-item__name">{chat.name}</h4>
-                    <span className="fl-chat-item__time">{chat.time}</span>
+            {conversations.map(chat => {
+              const otherUser = chat.participants.find(p => p._id !== user._id);
+              const unread = chat.unreadCount?.[user._id] || 0;
+              return (
+                <div 
+                  key={chat._id} 
+                  className={`fl-chat-item${activeChat?._id === chat._id ? ' fl-chat-item--active' : ''}`}
+                  onClick={() => setActiveChat(chat)}
+                >
+                  <div className="fl-chat-item__avatar">
+                    {otherUser?.profilePicture ? (
+                      <img src={otherUser.profilePicture} alt="" />
+                    ) : (
+                      <span>{otherUser?.firstName?.charAt(0)}</span>
+                    )}
                   </div>
-                  <p className="fl-chat-item__last-msg">{chat.lastMsg}</p>
+                  <div className="fl-chat-item__info">
+                    <div className="fl-chat-item__top">
+                      <h4 className="fl-chat-item__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
+                      <span className="fl-chat-item__time">
+                        {chat.lastMessage ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p className="fl-chat-item__last-msg">{chat.lastMessage?.content || 'No messages yet'}</p>
+                  </div>
+                  {unread > 0 && <span className="fl-chat-item__unread">{unread}</span>}
                 </div>
-                {chat.unread > 0 && <span className="fl-chat-item__unread">{chat.unread}</span>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
 
         {/* Chat window */}
         <main className="fl-chat-window">
-          {/* Chat Header */}
-          <header className="fl-chat-window__header">
-            <div className="fl-chat-window__avatar">
-              <span>{activeChat.name.charAt(0)}</span>
-              {activeChat.online && <div className="fl-chat-window__online" />}
-            </div>
-            <div>
-              <h4 className="fl-chat-window__name">{activeChat.name}</h4>
-              <span className="fl-chat-window__status">{activeChat.online ? 'Online' : 'Offline'}</span>
-            </div>
-            <div className="fl-chat-window__actions">
-              <button className="fl-btn fl-btn--ghost fl-btn--sm">📞</button>
-              <button className="fl-btn fl-btn--ghost fl-btn--sm">🎥</button>
-            </div>
-          </header>
-
-          {/* Messages Feed */}
-          <div className="fl-chat-feed">
-            {messages.map(msg => (
-              <div key={msg.id} className={`fl-msg${msg.sender === 'You' ? ' fl-msg--own' : ''}`}>
-                <div className="fl-msg__bubble">
-                  {msg.text}
-                  <span className="fl-msg__time">{msg.time}</span>
+          {activeChat ? (
+            <>
+              {/* Chat Header */}
+              <header className="fl-chat-window__header">
+                {(() => {
+                  const otherUser = activeChat.participants.find(p => p._id !== user._id);
+                  return (
+                    <>
+                      <div className="fl-chat-window__avatar">
+                        {otherUser?.profilePicture ? (
+                          <img src={otherUser.profilePicture} alt="" />
+                        ) : (
+                          <span>{otherUser?.firstName?.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="fl-chat-window__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
+                        <span className="fl-chat-window__status">Active</span>
+                      </div>
+                    </>
+                  );
+                })()}
+                <div className="fl-chat-window__actions">
+                  <button className="fl-btn fl-btn--ghost fl-btn--sm">📞</button>
+                  <button className="fl-btn fl-btn--ghost fl-btn--sm">🎥</button>
                 </div>
-              </div>
-            ))}
-          </div>
+              </header>
 
-          {/* Message Input */}
-          <form className="fl-chat-input" onSubmit={sendMessage}>
-            <button type="button" className="fl-chat-input__attach">📎</button>
-            <input 
-              type="text" 
-              placeholder="Start typing..." 
-              value={msgInput}
-              onChange={e => setMsgInput(e.target.value)}
-              className="fl-input"
-            />
-            <button className="fl-btn fl-btn--primary">Send</button>
-          </form>
+              {/* Messages Feed */}
+              <div className="fl-chat-feed" ref={chatFeedRef}>
+                {messages.map(msg => (
+                  <div key={msg._id} className={`fl-msg${msg.sender._id === user._id ? ' fl-msg--own' : ''}`}>
+                    <div className="fl-msg__bubble">
+                      {msg.content}
+                      <span className="fl-msg__time">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Message Input */}
+              <form className="fl-chat-input" onSubmit={sendMessage}>
+                <button type="button" className="fl-chat-input__attach">📎</button>
+                <input 
+                  type="text" 
+                  placeholder="Start typing..." 
+                  value={msgInput}
+                  onChange={e => setMsgInput(e.target.value)}
+                  className="fl-input"
+                />
+                <button className="fl-btn fl-btn--primary">Send</button>
+              </form>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+              <MessageSquare size={48} style={{ marginBottom: '1rem' }} />
+              <p>Select a conversation to start chatting</p>
+            </div>
+          )}
         </main>
       </div>
 
@@ -136,7 +213,9 @@ const FreelancerMessages = () => {
           background: var(--gradient-primary); color: #fff;
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; position: relative; flex-shrink: 0;
+          overflow: hidden;
         }
+        .fl-chat-item__avatar img { width: 100%; height: 100%; object-fit: cover; }
         .fl-chat-item__online {
           position: absolute; bottom: 2px; right: -2px; width: 10px; height: 10px;
           border-radius: 50%; background: #22c55e; border: 2px solid #fff;
@@ -162,7 +241,9 @@ const FreelancerMessages = () => {
           background: var(--gradient-primary); color: #fff;
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; position: relative;
+          overflow: hidden;
         }
+        .fl-chat-window__avatar img { width: 100%; height: 100%; object-fit: cover; }
         .fl-chat-window__online {
           position: absolute; bottom: 0; right: -2px; width: 8px; height: 8px;
           border-radius: 50%; background: #22c55e; border: 2px solid #fff;

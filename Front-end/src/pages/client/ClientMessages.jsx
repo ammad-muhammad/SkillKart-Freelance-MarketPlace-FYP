@@ -1,31 +1,76 @@
-import { useState } from 'react';
-import { useClient } from '../../context/ClientContext';
+import { useState, useEffect, useRef } from 'react';
+import { messagesAPI } from '../../api/messages';
+import { useAuth } from '../../hooks/useAuth';
+import { MessageSquare } from 'lucide-react';
 import './ClientDashboard.css';
 
-const MOCK_CHATS = [
-  { id: 1, name: 'Alex Rivera', lastMsg: 'I have updated the design as requested.', time: '10:30 AM', online: true, unread: 2 },
-  { id: 2, name: 'Sophia Chen', lastMsg: 'What is the deadline for the logo?', time: 'Yesterday', online: false, unread: 0 },
-  { id: 3, name: 'Jordan Smith', lastMsg: 'Thanks, I will start working on it!', time: 'Yesterday', online: true, unread: 0 },
-  { id: 4, name: 'Lisa Ray', lastMsg: 'The invoice has been sent.', time: 'Monday', online: false, unread: 0 },
-];
-
 const ClientMessages = () => {
-  const { profile } = useClient();
-  const [activeChat, setActiveChat] = useState(MOCK_CHATS[0]);
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [msgInput, setMsgInput] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'Alex Rivera', text: 'Hi Sarah, I have some updates on the project.', time: '10:15 AM' },
-    { id: 2, sender: 'You', text: 'Great! Can you share the latest mockups?', time: '10:20 AM' },
-    { id: 3, sender: 'Alex Rivera', text: 'Yes, just sent them over.', time: '10:25 AM' },
-    { id: 4, sender: 'Alex Rivera', text: 'I have updated the design as requested.', time: '10:30 AM' },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const chatFeedRef = useRef(null);
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (!msgInput.trim()) return;
-    setMessages(prev => [...prev, { id: Date.now(), sender: 'You', text: msgInput, time: 'Now' }]);
-    setMsgInput('');
+  useEffect(() => {
+    fetchConversations();
+    const interval = setInterval(fetchConversations, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (activeChat) {
+      fetchMessages(activeChat._id);
+      const interval = setInterval(() => fetchMessages(activeChat._id), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [activeChat]);
+
+  useEffect(() => {
+    if (chatFeedRef.current) {
+      chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const fetchConversations = async () => {
+    try {
+      const res = await messagesAPI.getConversations();
+      setConversations(res.data.data);
+      if (!activeChat && res.data.data.length > 0) {
+        setActiveChat(res.data.data[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const fetchMessages = async (chatId) => {
+    try {
+      const res = await messagesAPI.getMessages(chatId);
+      setMessages(res.data.data);
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+    }
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!msgInput.trim() || !activeChat) return;
+
+    const recipient = activeChat.participants.find(p => p._id !== user._id);
+    try {
+      await messagesAPI.sendMessage(recipient._id, msgInput);
+      setMsgInput('');
+      fetchMessages(activeChat._id);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  if (loading) return <div className="cl-loading">Loading chats...</div>;
 
   return (
     <div className="cl-messages-page">
@@ -41,71 +86,101 @@ const ClientMessages = () => {
             <input type="text" placeholder="Search conversations..." className="cl-input cl-input--sm" />
           </div>
           <div className="cl-chat-list__items">
-            {MOCK_CHATS.map(chat => (
-              <div 
-                key={chat.id} 
-                className={`cl-chat-item${activeChat.id === chat.id ? ' cl-chat-item--active' : ''}`}
-                onClick={() => setActiveChat(chat)}
-              >
-                <div className="cl-chat-item__avatar">
-                  <span>{chat.name.charAt(0)}</span>
-                  {chat.online && <div className="cl-chat-item__online" />}
-                </div>
-                <div className="cl-chat-item__info">
-                  <div className="cl-chat-item__top">
-                    <h4 className="cl-chat-item__name">{chat.name}</h4>
-                    <span className="cl-chat-item__time">{chat.time}</span>
+            {conversations.map(chat => {
+              const otherUser = chat.participants.find(p => p._id !== user._id);
+              const unread = chat.unreadCount?.[user._id] || 0;
+              return (
+                <div 
+                  key={chat._id} 
+                  className={`cl-chat-item${activeChat?._id === chat._id ? ' cl-chat-item--active' : ''}`}
+                  onClick={() => setActiveChat(chat)}
+                >
+                  <div className="cl-chat-item__avatar">
+                    {otherUser?.profilePicture ? (
+                      <img src={otherUser.profilePicture} alt="" />
+                    ) : (
+                      <span>{otherUser?.firstName?.charAt(0)}</span>
+                    )}
                   </div>
-                  <p className="cl-chat-item__last-msg">{chat.lastMsg}</p>
+                  <div className="cl-chat-item__info">
+                    <div className="cl-chat-item__top">
+                      <h4 className="cl-chat-item__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
+                      <span className="cl-chat-item__time">
+                        {chat.lastMessage ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p className="cl-chat-item__last-msg">{chat.lastMessage?.content || 'No messages yet'}</p>
+                  </div>
+                  {unread > 0 && <span className="cl-chat-item__unread">{unread}</span>}
                 </div>
-                {chat.unread > 0 && <span className="cl-chat-item__unread">{chat.unread}</span>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
 
         {/* Chat window */}
         <main className="cl-chat-window">
-          {/* Chat Header */}
-          <header className="cl-chat-window__header">
-            <div className="cl-chat-window__avatar">
-              <span>{activeChat.name.charAt(0)}</span>
-              {activeChat.online && <div className="cl-chat-window__online" />}
-            </div>
-            <div>
-              <h4 className="cl-chat-window__name">{activeChat.name}</h4>
-              <span className="cl-chat-window__status">{activeChat.online ? 'Online' : 'Offline'}</span>
-            </div>
-            <div className="cl-chat-window__actions">
-              <button className="cl-btn cl-btn--ghost cl-btn--sm">📞</button>
-              <button className="cl-btn cl-btn--ghost cl-btn--sm">🎥</button>
-            </div>
-          </header>
-
-          {/* Messages Feed */}
-          <div className="cl-chat-feed">
-            {messages.map(msg => (
-              <div key={msg.id} className={`cl-msg${msg.sender === 'You' ? ' cl-msg--own' : ''}`}>
-                <div className="cl-msg__bubble">
-                  {msg.text}
-                  <span className="cl-msg__time">{msg.time}</span>
+          {activeChat ? (
+            <>
+              {/* Chat Header */}
+              <header className="cl-chat-window__header">
+                {(() => {
+                  const otherUser = activeChat.participants.find(p => p._id !== user._id);
+                  return (
+                    <>
+                      <div className="cl-chat-window__avatar">
+                        {otherUser?.profilePicture ? (
+                          <img src={otherUser.profilePicture} alt="" />
+                        ) : (
+                          <span>{otherUser?.firstName?.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="cl-chat-window__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
+                        <span className="cl-chat-window__status">Active</span>
+                      </div>
+                    </>
+                  );
+                })()}
+                <div className="cl-chat-window__actions">
+                  <button className="cl-btn cl-btn--ghost cl-btn--sm">📞</button>
+                  <button className="cl-btn cl-btn--ghost cl-btn--sm">🎥</button>
                 </div>
-              </div>
-            ))}
-          </div>
+              </header>
 
-          {/* Message Input */}
-          <form className="cl-chat-input" onSubmit={sendMessage}>
-            <button type="button" className="cl-chat-input__attach">📎</button>
-            <input 
-              type="text" 
-              placeholder="Type a message..." 
-              value={msgInput}
-              onChange={e => setMsgInput(e.target.value)}
-              className="cl-input"
-            />
-            <button className="cl-btn cl-btn--primary">Send</button>
-          </form>
+              {/* Messages Feed */}
+              <div className="cl-chat-feed" ref={chatFeedRef}>
+                {messages.map(msg => (
+                  <div key={msg._id} className={`cl-msg${msg.sender._id === user._id ? ' cl-msg--own' : ''}`}>
+                    <div className="cl-msg__bubble">
+                      {msg.content}
+                      <span className="cl-msg__time">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Message Input */}
+              <form className="cl-chat-input" onSubmit={sendMessage}>
+                <button type="button" className="cl-chat-input__attach">📎</button>
+                <input 
+                  type="text" 
+                  placeholder="Type a message..." 
+                  value={msgInput}
+                  onChange={e => setMsgInput(e.target.value)}
+                  className="cl-input"
+                />
+                <button className="cl-btn cl-btn--primary">Send</button>
+              </form>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+              <MessageSquare size={48} style={{ marginBottom: '1rem' }} />
+              <p>Select a conversation to start chatting</p>
+            </div>
+          )}
         </main>
       </div>
 
@@ -121,7 +196,6 @@ const ClientMessages = () => {
           overflow: hidden;
         }
         
-        /* Chat List */
         .cl-chat-list {
           width: 320px; border-right: 1px solid #e5edf5; background: #f8fafc;
           display: flex; flex-direction: column;
@@ -139,7 +213,9 @@ const ClientMessages = () => {
           background: var(--gradient-primary); color: #fff;
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; position: relative; flex-shrink: 0;
+          overflow: hidden;
         }
+        .cl-chat-item__avatar img { width: 100%; height: 100%; object-fit: cover; }
         .cl-chat-item__online {
           position: absolute; bottom: 2px; right: -2px; width: 10px; height: 10px;
           border-radius: 50%; background: #22c55e; border: 2px solid #fff;
@@ -158,7 +234,6 @@ const ClientMessages = () => {
           display: flex; align-items: center; justify-content: center;
         }
         
-        /* Chat Window */
         .cl-chat-window { flex: 1; display: flex; flex-direction: column; background: #fff; }
         .cl-chat-window__header { padding: 0.75rem 1.25rem; border-bottom: 1px solid #e5edf5; display: flex; align-items: center; gap: 0.85rem; }
         .cl-chat-window__avatar {
@@ -166,7 +241,9 @@ const ClientMessages = () => {
           background: var(--gradient-primary); color: #fff;
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; position: relative;
+          overflow: hidden;
         }
+        .cl-chat-window__avatar img { width: 100%; height: 100%; object-fit: cover; }
         .cl-chat-window__online {
           position: absolute; bottom: 0; right: -2px; width: 8px; height: 8px;
           border-radius: 50%; background: #22c55e; border: 2px solid #fff;

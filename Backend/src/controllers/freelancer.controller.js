@@ -1,8 +1,30 @@
 const FreelancerProfile = require('../models/FreelancerProfile');
 const User = require('../models/User');
+const { uploadProfilePicture, uploadPortfolioImage } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+
+/**
+ * Calculate profile completion percentage
+ */
+const calculateCompletion = (profile, user = {}) => {
+  let score = 0;
+  const total = 10;
+  
+  if (profile.bio) score++;
+  if (profile.title) score++;
+  if (profile.skills?.length > 0) score++;
+  if (profile.portfolio?.length > 0) score++;
+  if (profile.education?.length > 0) score++;
+  if (profile.certifications?.length > 0) score++;
+  if (profile.hourlyRate) score++;
+  if (user.profilePicture) score++;
+  if (profile.socialLinks?.linkedin) score++;
+  if (profile.phone) score++;
+  
+  return Math.round((score / total) * 100);
+};
 
 /**
  * Get freelancer profile
@@ -37,6 +59,10 @@ const updateProfile = asyncHandler(async (req, res) => {
   } else {
     Object.assign(profile, updates);
   }
+  
+  // Calculate completion
+  const user = await User.findById(userId);
+  profile.profileCompletion = calculateCompletion(profile, user);
   
   await profile.save();
   
@@ -83,6 +109,7 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
   }
 
   profile.verificationStatus = status;
+  profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));
   
   await profile.save();
   
@@ -241,6 +268,86 @@ const getStats = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Upload avatar
+ */
+const uploadAvatar = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
+  const fileUpload = await uploadProfilePicture(userId, req.file);
+  const user = await User.findByIdAndUpdate(userId, { profilePicture: fileUpload.url }, { new: true });
+
+  // Recalculate profile completion
+  const profile = await FreelancerProfile.findOne({ userId });
+  if (profile) {
+    profile.profileCompletion = calculateCompletion(profile, user);
+    await profile.save();
+  }
+
+  sendSuccess(res, {
+    message: 'Avatar uploaded successfully',
+    data: { url: fileUpload.url }
+  });
+});
+
+/**
+ * Toggle saved job
+ */
+const toggleSavedJob = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { jobId } = req.params;
+  
+  const profile = await FreelancerProfile.findOne({ userId });
+  if (!profile) throw new NotFoundError('Profile not found');
+  
+  const index = profile.savedJobs.indexOf(jobId);
+  if (index === -1) {
+    profile.savedJobs.push(jobId);
+  } else {
+    profile.savedJobs.splice(index, 1);
+  }
+  
+  await profile.save();
+  sendSuccess(res, { message: index === -1 ? 'Job saved' : 'Job unsaved' });
+});
+
+/**
+ * Get saved jobs
+ */
+const getSavedJobs = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const profile = await FreelancerProfile.findOne({ userId }).populate({
+    path: 'savedJobs',
+    populate: { path: 'clientId', select: 'firstName lastName profilePicture' }
+  });
+  
+  if (!profile) throw new NotFoundError('Profile not found');
+  
+  sendSuccess(res, { data: profile.savedJobs });
+});
+
+/**
+ * Upload portfolio media
+ */
+const uploadPortfolioMedia = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
+  const fileUpload = await uploadPortfolioImage(userId, req.file);
+  
+  sendSuccess(res, {
+    message: 'Portfolio image uploaded successfully',
+    data: { url: fileUpload.url }
+  });
+});
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -250,5 +357,9 @@ module.exports = {
   updatePortfolioItem,
   deletePortfolioItem,
   getStats,
-  submitOnboardingProfile
+  submitOnboardingProfile,
+  uploadAvatar,
+  uploadPortfolioMedia,
+  toggleSavedJob,
+  getSavedJobs
 };

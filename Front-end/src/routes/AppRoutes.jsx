@@ -21,6 +21,7 @@ import CreateGig from "../pages/freelancer/CreateGig";
 import FreelancerPortfolio from "../pages/freelancer/FreelancerPortfolio";
 import FreelancerMessages from "../pages/freelancer/FreelancerMessages";
 import FreelancerSavedProjects from "../pages/freelancer/FreelancerSavedProjects";
+import FreelancerProposals from "../pages/freelancer/FreelancerProposals";
 
 // Client Pages
 import ClientLayout from "../layouts/ClientLayout";
@@ -32,6 +33,7 @@ import ClientProjects from "../pages/client/ClientProjects";
 import ClientPostProject from "../pages/client/PostProject";
 import ClientSavedFreelancers from "../pages/client/ClientSavedFreelancers";
 import ClientMessages from "../pages/client/ClientMessages";
+import ReviewProposals from "../pages/client/ReviewProposals";
 
 // Public Pages
 import Home from "../pages/public/Home/Home";
@@ -56,6 +58,8 @@ import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
 import Community from "../pages/public/Community/Community";
 import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 import Categories from "../pages/public/Categories/Categories";
+import BrowseProjects from "../pages/public/BrowseProjects/BrowseProjects";
+import JobDetails from "../pages/public/JobDetails/JobDetails";
 
 //Sumair - work
 // import TermsAndConditions from "../pages/public/TermsAndConditions";
@@ -104,6 +108,8 @@ const AppRoutes = () => {
             <Route path="/community" element={<Community />} />
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/categories" element={<Categories />} />
+            <Route path="/browse-projects" element={<BrowseProjects />} />
+            <Route path="/jobs/:id" element={<JobDetails />} />
             {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
@@ -154,6 +160,7 @@ const AppRoutes = () => {
             <Route path="portfolio" element={<FreelancerPortfolio />} />
             <Route path="messages" element={<FreelancerMessages />} />
             <Route path="saved" element={<FreelancerSavedProjects />} />
+            <Route path="proposals" element={<FreelancerProposals />} />
           </Route>
 
           {/* ================= CLIENT ROUTES ================= */}
@@ -174,6 +181,7 @@ const AppRoutes = () => {
             <Route path="projects/create" element={<ClientPostProject />} />
             <Route path="saved" element={<ClientSavedFreelancers />} />
             <Route path="messages" element={<ClientMessages />} />
+            <Route path="projects/:jobId/proposals" element={<ReviewProposals />} />
           </Route>
 
           <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />

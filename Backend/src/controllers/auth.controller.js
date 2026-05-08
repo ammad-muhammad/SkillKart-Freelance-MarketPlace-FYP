@@ -185,6 +185,32 @@ const updateRole = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Update Current User Basic Info
+ */
+const updateMe = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { firstName, lastName, phone } = req.body;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { firstName, lastName, phone },
+    { new: true, runValidators: true }
+  ).select('-password');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  sendSuccess(res, {
+    message: 'Profile updated successfully',
+    data: { user: user.toAuthJSON() }
+  });
+});
+
 
 /**
  * Refresh Token
@@ -339,5 +365,6 @@ module.exports = {
   resendOTP,
   logout,
   supabaseAuth,
-  updateRole
+  updateRole,
+  updateMe
 };

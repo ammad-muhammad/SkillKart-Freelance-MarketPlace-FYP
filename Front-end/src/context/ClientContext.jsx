@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { clientsAPI } from '../api/clients';
 import { authAPI } from '../api/auth';
+import { jobsAPI } from '../api/jobs';
 import { useAuth } from '../hooks/useAuth';
 
 const ClientContext = createContext(null);
@@ -52,53 +53,6 @@ const emptyProfile = {
   verificationStatus: 'unverified'
 };
 
-const initialProjects = [
-  {
-    id: 'proj-001',
-    title: 'Build a Full-Stack SaaS Dashboard with React & Node',
-    category: 'Web Development',
-    subcategory: 'Full Stack',
-    skills: ['React', 'Node.js', 'MongoDB', 'REST API'],
-    experienceLevel: 'Expert',
-    projectType: 'fixed',
-    summary: 'Need a professional developer to build our internal SaaS dashboard.',
-    budget: { min: 2000, max: 5000 },
-    duration: '1-3 months',
-    deadline: '2026-05-01',
-    milestones: true,
-    fullDescription: 'We are looking for an experienced full-stack developer to build a comprehensive SaaS dashboard. The project includes user management, analytics, billing integration, and real-time data visualization.',
-    responsibilities: 'Frontend & backend development, API integration, testing',
-    deliverables: 'Fully functional dashboard, documentation, deployment',
-    referenceLinks: ['https://example-similar-project.com'],
-    faqs: [{ question: 'Is remote work allowed?', answer: 'Yes, 100% remote.' }],
-    attachments: { images: [], documents: [], links: [] },
-    status: 'open',
-    createdAt: '2026-02-15',
-  },
-  {
-    id: 'proj-002',
-    title: 'Design a Modern Mobile App UI for iOS & Android',
-    category: 'Design',
-    subcategory: 'UI/UX Design',
-    skills: ['Figma', 'Adobe XD', 'Prototyping', 'Mobile Design'],
-    experienceLevel: 'Intermediate',
-    projectType: 'fixed',
-    summary: 'Mobile app UI/UX design for fintech startup.',
-    budget: { min: 800, max: 2000 },
-    duration: '2-4 weeks',
-    deadline: '2026-04-01',
-    milestones: false,
-    fullDescription: 'Looking for a talented UI/UX designer to create modern, clean mobile app screens for our fintech application. Must have experience with financial app design.',
-    responsibilities: 'User research, wireframes, hi-fi mockups, prototype',
-    deliverables: 'Figma file, design system, prototype',
-    referenceLinks: [],
-    faqs: [],
-    attachments: { images: [], documents: [], links: [] },
-    status: 'in-progress',
-    createdAt: '2026-01-20',
-  },
-];
-
 const initialSaved = [
   {
     id: 1,
@@ -127,7 +81,7 @@ const initialSaved = [
 export const ClientProvider = ({ children }) => {
   const [profile, setProfile] = useState(emptyProfile);
   const [projects, setProjects] = useState([]);
-  const [savedFreelancers, setSavedFreelancers] = useState([]);
+  const [savedFreelancers, setSavedFreelancers] = useState(initialSaved);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(false);
   const { user, isAuthenticated } = useAuth();
@@ -151,34 +105,34 @@ export const ClientProvider = ({ children }) => {
 
       // 2. Get User Info
       const userRes = await authAPI.getCurrentUser();
-      const user = userRes.data.data.user;
+      const dbUser = userRes.data.data.user;
 
       // 3. Transform to UI format
       const transformedProfile = {
         personalInfo: {
-          fullName: `${user.firstName} ${user.lastName}`,
-          username: user.email.split('@')[0],
-          email: user.email,
+          fullName: `${dbUser.firstName} ${dbUser.lastName}`,
+          username: dbUser.email.split('@')[0],
+          email: dbUser.email,
           phone: dbProfile.phone || '',
           companyName: dbProfile.companyName || 'Not Set',
           industry: dbProfile.industryType || 'Not Set',
           website: dbProfile.website || '',
           location: dbProfile.location?.country || dbProfile.timezone || 'Global',
           bio: dbProfile.description || '',
-          avatar: user.profilePicture || null,
-          companyLogo: null, // Placeholder
-          memberSince: new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          avatar: dbUser.profilePicture || null,
+          companyLogo: null, 
+          memberSince: new Date(dbUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         },
         preferences: {
           preferredSkills: dbProfile.techStack || [],
-          budgetRange: { min: 0, max: 0 }, // Placeholder
+          budgetRange: { min: 0, max: 0 }, 
           projectTypes: dbProfile.services || [],
           remoteOnly: true,
         },
         stats: {
           totalProjects: dbProfile.totalProjectsPosted || 0,
-          activeProjects: 0, // Placeholder
-          freelancersHired: 0, // Placeholder
+          activeProjects: 0, 
+          freelancersHired: 0, 
           totalSpent: dbProfile.totalSpent || 0,
         },
         verificationStatus: dbProfile.verificationStatus || 'unverified'
@@ -186,11 +140,28 @@ export const ClientProvider = ({ children }) => {
 
       setProfile(transformedProfile);
 
-      // 4. Fetch Projects (TODO: implement when backend project route exists)
-      // setProjects([]);
+      // 4. Fetch Client's Projects
+      const jobsRes = await jobsAPI.listJobs({ clientId: dbUser._id });
+      const dbJobs = jobsRes.data.data.items || [];
+      
+      const transformedJobs = dbJobs.map(j => ({
+        id: j._id,
+        title: j.title,
+        category: j.category,
+        skills: j.skills,
+        experienceLevel: j.experienceLevel,
+        budget: j.budget,
+        summary: j.description.slice(0, 150) + (j.description.length > 150 ? '...' : ''),
+        status: j.status,
+        createdAt: new Date(j.createdAt).toLocaleDateString(),
+        deadline: j.deadline ? new Date(j.deadline).toLocaleDateString() : 'N/A',
+        duration: j.duration
+      }));
+
+      setProjects(transformedJobs);
 
     } catch (error) {
-      console.error("Failed to fetch client profile:", error);
+      console.error("Failed to fetch client profile/jobs:", error);
     } finally {
       setLoading(false);
     }
@@ -202,7 +173,49 @@ export const ClientProvider = ({ children }) => {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
 
-  const updateProfile = (section, data) => {
+  const saveProfile = async (updatedData = null) => {
+    setLoading(true);
+    try {
+      const currentProfile = updatedData || profile;
+      const { personalInfo, preferences, notificationSettings } = currentProfile;
+
+      const nameParts = (personalInfo.fullName || '').trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      await authAPI.updateMe({
+        firstName,
+        lastName,
+        phone: personalInfo.phone
+      });
+
+      const profilePayload = {
+        companyName: personalInfo.companyName,
+        industryType: personalInfo.industry,
+        website: personalInfo.website,
+        description: personalInfo.bio,
+        phone: personalInfo.phone,
+        location: { country: personalInfo.location },
+        techStack: preferences.preferredSkills,
+        services: preferences.projectTypes,
+        notificationSettings
+      };
+
+      await clientsAPI.updateProfile(profilePayload);
+      await fetchProfile();
+      showToast('All changes saved to database!');
+      return true;
+    } catch (error) {
+      console.error("Save client profile failed:", error);
+      showToast(error.response?.data?.message || 'Failed to save changes', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async (section, data, silent = false, persist = false) => {
+    let newProfile;
     setProfile((prev) => {
       let next;
       if (typeof data === 'function') {
@@ -212,37 +225,55 @@ export const ClientProvider = ({ children }) => {
       } else {
         next = { ...prev[section], ...data };
       }
-      return { ...prev, [section]: next };
+      newProfile = { ...prev, [section]: next };
+      return newProfile;
     });
+
+    if (persist) {
+      await saveProfile(newProfile);
+    } else if (!silent) {
+      showToast('Profile updated locally');
+    }
   };
 
-  const addProject = (project) => {
-    const newProject = {
-      ...project,
-      id: `proj-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setProjects((prev) => [...prev, newProject]);
-    setProfile((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, totalProjects: prev.stats.totalProjects + 1 },
-    }));
-    showToast('Project posted successfully! 🎉');
-    return newProject;
+  const addProject = async (project) => {
+    setLoading(true);
+    try {
+      const res = await jobsAPI.createJob(project);
+      await fetchProfile(); // Refresh list and stats
+      showToast('Project posted successfully! 🎉');
+      return res.data.data.job;
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to post project', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateProject = (id, data) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
-    showToast('Project updated successfully!');
+  const updateProject = async (id, data) => {
+    setLoading(true);
+    try {
+      await jobsAPI.updateJob(id, data);
+      await fetchProfile();
+      showToast('Project updated successfully!');
+    } catch (error) {
+      showToast('Failed to update project', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteProject = (id) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    setProfile((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, totalProjects: Math.max(0, prev.stats.totalProjects - 1) },
-    }));
-    showToast('Project deleted.', 'info');
+  const deleteProject = async (id) => {
+    setLoading(true);
+    try {
+      await jobsAPI.deleteJob(id);
+      await fetchProfile();
+      showToast('Project deleted.', 'info');
+    } catch (error) {
+      showToast('Failed to delete project', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleSavedFreelancer = (freelancer) => {
@@ -265,7 +296,7 @@ export const ClientProvider = ({ children }) => {
         projects, addProject, updateProject, deleteProject,
         savedFreelancers, toggleSavedFreelancer,
         toasts, showToast,
-        loading, fetchProfile
+        loading, fetchProfile, saveProfile
       }}
     >
       {children}

@@ -42,26 +42,7 @@ router.get('/search',
   freelancerController.searchFreelancers
 );
 
-/**
- * @swagger
- * /api/v1/freelancers/{id}:
- *   get:
- *     summary: Get freelancer by ID
- *     tags: [Freelancers]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Freelancer retrieved successfully
- */
-router.get('/:id',
-  optionalAuth,
-  freelancerController.getFreelancerById
-);
+
 
 /**
  * @swagger
@@ -157,6 +138,21 @@ router.post('/parse-cv',
   cvController.parseCV
 );
 
+// Upload profile picture
+router.post('/upload/avatar',
+  authenticate,
+  requireRole('freelancer'),
+  uploadSingle('avatar'),
+  freelancerController.uploadAvatar
+);
+
+router.post('/upload/portfolio',
+  authenticate,
+  requireRole('freelancer'),
+  uploadSingle('image'),
+  freelancerController.uploadPortfolioMedia
+);
+
 // Portfolio management
 router.post('/portfolio',
   authenticate,
@@ -180,6 +176,40 @@ router.delete('/portfolio/:itemId',
   deletePortfolioItemValidation,
   validate,
   freelancerController.deletePortfolioItem
+);
+
+// Saved jobs
+router.get('/saved-jobs',
+  authenticate,
+  requireRole('freelancer'),
+  freelancerController.getSavedJobs
+);
+
+router.post('/saved-jobs/:jobId',
+  authenticate,
+  requireRole('freelancer'),
+  freelancerController.toggleSavedJob
+);
+
+/**
+ * @swagger
+ * /api/v1/freelancers/{id}:
+ *   get:
+ *     summary: Get freelancer by ID
+ *     tags: [Freelancers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Freelancer retrieved successfully
+ */
+router.get('/:id',
+  optionalAuth,
+  freelancerController.getFreelancerById
 );
 
 module.exports = router;

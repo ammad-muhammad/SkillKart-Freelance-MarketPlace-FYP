@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import TagInput from './components/TagInput';
 import Modal from './components/Modal';
@@ -8,7 +9,7 @@ import './FreelancerDashboard.css';
 const MAX_BIO = 600;
 
 const FreelancerProfile = () => {
-  const { profile, setProfile, showToast } = useFreelancer();
+  const { profile, saveProfile, showToast } = useFreelancer();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
@@ -33,21 +34,19 @@ const FreelancerProfile = () => {
   const save = async () => {
     setSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 900));
-      // Use the functional update to ensure we have the most recent 'prev' state
-      setProfile((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          personalInfo: { ...(prev.personalInfo || {}), ...(form || {}) },
-          skills: Array.isArray(skills) ? [...skills] : [],
-          languages: Array.isArray(languages) ? [...languages] : [],
-          portfolioLinks: Array.isArray(portfolioLinks) ? [...portfolioLinks] : [],
-          socialLinks: { ...(prev.socialLinks || {}), ...(socialLinks || {}) },
-        };
-      });
-      showToast('Profile updated successfully!');
-      setEditing(false);
+      const updatedProfile = {
+        ...profile,
+        personalInfo: { ...profile.personalInfo, ...form },
+        skills: [...skills],
+        languages: [...languages],
+        portfolioLinks: [...portfolioLinks],
+        socialLinks: { ...profile.socialLinks, ...socialLinks }
+      };
+
+      const success = await saveProfile(updatedProfile);
+      if (success) {
+        setEditing(false);
+      }
     } catch (err) {
       console.error('Update failed:', err);
       showToast('Update failed. Please try again.', 'error');
@@ -56,12 +55,20 @@ const FreelancerProfile = () => {
     }
   };
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setForm((p) => ({ ...p, avatar: ev.target.result }));
-    reader.readAsDataURL(file);
+
+    setSaving(true);
+    try {
+      const url = await apiUploadAvatar(file, 'freelancer');
+      setForm((p) => ({ ...p, avatar: url }));
+      showToast('Photo uploaded! Save to persist changes.');
+    } catch (error) {
+      showToast('Upload failed', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addPortfolioLink = () => setPortfolioLinks((prev) => [...prev, '']);

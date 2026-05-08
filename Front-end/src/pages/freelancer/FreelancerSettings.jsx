@@ -18,14 +18,13 @@ const FreelancerSettings = () => {
 
   const saveSection = async (section, data, label) => {
     setSaving(label);
-    await new Promise((r) => setTimeout(r, 800));
-    if (section === 'personalInfo') {
-      updateProfile('personalInfo', data);
-    } else {
-      updateProfile('securitySettings', data);
+    try {
+      await updateProfile(section, data, false, true);
+    } catch (error) {
+      console.error(`Failed to save ${label}:`, error);
+    } finally {
+      setSaving(null);
     }
-    setSaving(null);
-    showToast(`${label} updated!`);
   };
 
   return (

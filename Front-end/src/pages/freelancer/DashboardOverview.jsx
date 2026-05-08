@@ -13,9 +13,12 @@ const StatCard = ({ icon, value, label }) => (
 );
 
 const DashboardOverview = () => {
-  const { profile, gigs, loading } = useFreelancer();
+  const { profile, gigs, proposals, loading } = useFreelancer();
   const personalInfo = profile?.personalInfo || {};
-  const stats = profile?.stats || { activeOrders: 0, completedOrders: 0, profileViews: 0 };
+  
+  // Real stats calculation
+  const activeProposals = proposals.filter(p => p.status === 'pending').length;
+  const acceptedProposals = proposals.filter(p => p.status === 'accepted').length;
 
   if (loading) {
     return (
@@ -36,9 +39,9 @@ const DashboardOverview = () => {
 
   const statsData = [
     { icon: <Package size={20} />,     value: gigs.length,                              label: 'Total Gigs'       },
-    { icon: <Zap size={20} />,         value: stats?.activeOrders || 0,                       label: 'Active Orders'    },
-    { icon: <CheckCircle2 size={20} />, value: stats?.completedOrders || 0,                   label: 'Completed Orders' },
-    { icon: <Eye size={20} />,         value: (stats?.profileViews || 0).toLocaleString(),    label: 'Profile Views'    },
+    { icon: <Zap size={20} />,         value: activeProposals,                          label: 'Active Bids'    },
+    { icon: <CheckCircle2 size={20} />, value: acceptedProposals,                        label: 'Accepted' },
+    { icon: <Eye size={20} />,         value: (profile?.stats?.profileViews || 0).toLocaleString(),    label: 'Profile Views'    },
   ];
 
   return (

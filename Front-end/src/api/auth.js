@@ -22,6 +22,9 @@ export const authAPI = {
   getCurrentUser: () =>
     client.get('/auth/me'),
 
+  updateMe: (userData) =>
+    client.put('/auth/me', userData),
+
   updateRole: (role) =>
     client.put('/auth/role/change', role),
 

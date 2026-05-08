@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { Bot, Users, Star, CheckCircle2 } from 'lucide-react';
 import './Hero.css';
@@ -128,22 +129,25 @@ export default function Hero() {
             ))}
           </div>
 
+
+
+
           {/* ── CTA row ── */}
           <div ref={btnRowRef} className="hero__btns">
-            <a href="#" className="hero__btn-main">
+            <Link to="/browse-freelancers" className="hero__btn-main">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
                   stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
               </svg>
               Find Talent
-            </a>
-            <a href="#" className="hero__btn-outline">
+            </Link>
+            <Link to="/browse-projects" className="hero__btn-outline">
               Start Freelancing
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2"
                   strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </a>
+            </Link>
           </div>
 
           {/* ── Social proof ── */}

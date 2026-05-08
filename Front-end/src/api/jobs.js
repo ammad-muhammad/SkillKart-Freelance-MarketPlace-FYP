@@ -1,11 +1,31 @@
 import client from './client';
 
 export const jobsAPI = {
-  list: (params) => client.get('/jobs', { params }),
-  search: (query) => client.get('/jobs/search', { params: { q: query } }),
-  getById: (id) => client.get(`/jobs/${id}`),
-  create: (jobData) => client.post('/jobs', jobData),
-  update: (id, jobData) => client.put(`/jobs/${id}`, jobData),
-  close: (id) => client.post(`/jobs/${id}/close`),
-  delete: (id) => client.delete(`/jobs/${id}`)
+  // Create a new job post
+  createJob: (jobData) => 
+    client.post('/jobs', jobData),
+
+  // List all jobs (with optional filters)
+  listJobs: (params) => 
+    client.get('/jobs', { params }),
+
+  // Get job by ID
+  getJobById: (id) => 
+    client.get(`/jobs/${id}`),
+
+  // Search jobs
+  searchJobs: (params) => 
+    client.get('/jobs/search', { params }),
+
+  // Update job
+  updateJob: (id, jobData) => 
+    client.put(`/jobs/${id}`, jobData),
+
+  // Close job
+  closeJob: (id, reason) => 
+    client.post(`/jobs/${id}/close`, { reason }),
+
+  // Delete job
+  deleteJob: (id) => 
+    client.delete(`/jobs/${id}`)
 };

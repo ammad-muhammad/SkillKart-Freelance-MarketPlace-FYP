@@ -2,6 +2,7 @@ const Job = require('../models/Job');
 const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+const cloudinaryService = require('../services/upload.service');
 
 /**
  * Create job
@@ -13,7 +14,7 @@ const createJob = asyncHandler(async (req, res) => {
   const job = new Job({
     ...jobData,
     clientId,
-    status: 'draft'
+    status: jobData.status || 'open'
   });
   
   await job.save();
@@ -67,9 +68,10 @@ const getJobById = asyncHandler(async (req, res) => {
  */
 const listJobs = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { status, category, skills, experienceLevel, budgetType } = req.query;
+  const { status, category, skills, experienceLevel, budgetType, clientId } = req.query;
   
   const query = {};
+  if (clientId) query.clientId = clientId;
   if (status) query.status = status;
   if (category) query.category = category;
   if (experienceLevel) query.experienceLevel = experienceLevel;
@@ -153,6 +155,19 @@ const closeJob = asyncHandler(async (req, res) => {
   });
 });
 
+const uploadAttachment = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
+  const result = await cloudinaryService.uploadToCloudinary(req.file, 'skillkart/jobs/attachments');
+
+  sendSuccess(res, {
+    message: 'Attachment uploaded successfully',
+    data: { url: result.secure_url }
+  });
+});
+
 module.exports = {
   createJob,
   updateJob,
@@ -160,5 +175,6 @@ module.exports = {
   listJobs,
   searchJobs,
   deleteJob,
-  closeJob
+  closeJob,
+  uploadAttachment
 };

@@ -118,6 +118,9 @@ const ClientProjects = () => {
                     className="cl-status-select"
                   />
                   <div className="cl-proj-card__btns">
+                    <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
+                      👥 View Proposals ({proj.proposals?.length || 0})
+                    </Link>
                     <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => setEditingProject({...proj})}>✏ Edit</button>
                     <button
                       className="cl-btn cl-btn--danger cl-btn--sm"

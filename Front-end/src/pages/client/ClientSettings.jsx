@@ -14,20 +14,19 @@ const ClientSettings = () => {
   const [notifications, setNotifications] = useState({ ...(profile?.notificationSettings || {}) });
   const [deleteModal, setDeleteModal] = useState(false);
 
-  const saveAccount = () => {
-    setProfile((prev) => ({
-      ...prev,
-      personalInfo: { ...prev.personalInfo, username: account.newUsername, email: account.newEmail },
-      securitySettings: { ...prev.securitySettings, recoveryEmail: account.recoveryEmail, recoveryPhone: account.recoveryPhone },
-    }));
-    showToast('Account settings updated!');
+  const saveAccount = async () => {
+    try {
+      await updateProfile('personalInfo', { username: account.newUsername, email: account.newEmail }, true);
+      await updateProfile('securitySettings', { recoveryEmail: account.recoveryEmail, recoveryPhone: account.recoveryPhone }, false, true);
+    } catch (error) {
+      console.error('Failed to save account settings:', error);
+    }
   };
 
-  const toggleNotif = (key) => {
+  const toggleNotif = async (key) => {
     const updated = { ...notifications, [key]: !notifications[key] };
     setNotifications(updated);
-    setProfile((prev) => ({ ...prev, notificationSettings: updated }));
-    showToast(`${key === 'emailNotifications' ? 'Email notifications' : key === 'proposalAlerts' ? 'Proposal alerts' : 'Message alerts'} ${updated[key] ? 'enabled' : 'disabled'}.`, 'info');
+    await updateProfile('notificationSettings', updated, false, true);
   };
 
   return (

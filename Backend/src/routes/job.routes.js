@@ -14,6 +14,9 @@ const {
   closeJobValidation
 } = require('../validators/job.validator');
 
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 /**
  * Public routes
  */
@@ -126,6 +129,14 @@ router.delete('/:id',
   deleteJobValidation,
   validate,
   jobController.deleteJob
+);
+
+// Upload attachment
+router.post('/upload/attachment',
+  authenticate,
+  requireRole('client'),
+  upload.single('file'),
+  jobController.uploadAttachment
 );
 
 module.exports = router;

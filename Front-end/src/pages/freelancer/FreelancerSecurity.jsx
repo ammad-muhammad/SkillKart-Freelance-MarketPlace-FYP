@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { authAPI } from '../../api/auth';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -28,32 +29,44 @@ const FreelancerSecurity = () => {
     const errs = validatePw();
     if (Object.keys(errs).length) { setPwErrors(errs); return; }
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    updateProfile('securitySettings', { currentPassword: '', newPassword: '' });
-    setPwForm({ current: '', newPw: '', confirm: '' });
-    setPwErrors({});
-    setSaving(false);
-    showToast('Password changed successfully!');
+    try {
+      await authAPI.changePassword({
+        currentPassword: pwForm.current,
+        newPassword: pwForm.newPw
+      });
+      setPwForm({ current: '', newPw: '', confirm: '' });
+      setPwErrors({});
+      showToast('Password changed successfully!');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to change password', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleTwoFactor = async () => {
     const next = !twoFactor;
     setTwoFactor(next);
-    updateProfile('securitySettings', { twoFactorEnabled: next });
-    showToast(`Two-factor authentication ${next ? 'enabled' : 'disabled'}.`, next ? 'success' : 'info');
+    await updateProfile('securitySettings', { twoFactorEnabled: next }, false, true);
   };
 
   const toggleEmailVerified = async () => {
     const next = !emailVerified;
     setEmailVerified(next);
-    updateProfile('securitySettings', { emailVerified: next });
-    showToast(`Email verification ${next ? 'enabled' : 'disabled'}.`, next ? 'success' : 'info');
+    await updateProfile('securitySettings', { emailVerified: next }, false, true);
   };
 
   const sendForgot = async () => {
-    await new Promise((r) => setTimeout(r, 800));
-    setForgotSent(true);
-    showToast('Password reset link sent to your email!');
+    setSaving(true);
+    try {
+      await authAPI.requestPasswordReset({ email: profile?.personalInfo?.email });
+      setForgotSent(true);
+      showToast('OTP sent to your email!');
+    } catch (error) {
+      showToast('Failed to send reset link', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

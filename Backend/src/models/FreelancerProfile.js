@@ -4,8 +4,10 @@ const freelancerProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   bio: String,
   title: String,
+  phone: String,
   hourlyRate: Number,
   skills: [String],
+  portfolioLinks: [String],
   portfolio: [{
     title: String,
     description: String,
@@ -42,6 +44,11 @@ const freelancerProfileSchema = new mongoose.Schema({
     website: String
   },
   experienceLevel: { type: String, enum: ['Entry', 'Intermediate', 'Expert'], default: 'Entry' },
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    proposalAlerts: { type: Boolean, default: true },
+    messageAlerts: { type: Boolean, default: true }
+  },
   profileCompletion: { type: Number, default: 0 },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   completedProjects: { type: Number, default: 0 },
@@ -51,7 +58,8 @@ const freelancerProfileSchema = new mongoose.Schema({
     enum: ['unverified', 'verified', 'pending'],
     default: 'unverified'
   },
-  aiClassification: { type: String }
+  aiClassification: { type: String },
+  savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('FreelancerProfile', freelancerProfileSchema);

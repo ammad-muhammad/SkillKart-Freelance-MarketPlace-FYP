@@ -331,6 +331,11 @@ router.get('/me',
   authController.getCurrentUser
 );
 
+router.put('/me',
+  authenticate,
+  authController.updateMe
+);
+
 // Change Role
 router.put('/role/change',
   authenticate,

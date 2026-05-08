@@ -4,6 +4,7 @@ const clientController = require('../controllers/client.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
+const { uploadSingle } = require('../middleware/upload.middleware');
 const {
   updateClientProfileValidation
 } = require('../validators/profile.validator');
@@ -57,6 +58,13 @@ router.put('/profile/me',
 router.post('/verification/submit',
   requireRole('client'),
   clientController.submitVerification
+);
+
+// Upload profile picture
+router.post('/upload/avatar',
+  requireRole('client'),
+  uploadSingle('avatar'),
+  clientController.uploadAvatar
 );
 
 /**
@@ -137,5 +145,8 @@ router.get('/stats/overview',
   requireRole('admin', 'superadmin'),
   clientController.getStats
 );
+
+router.post('/saved-freelancers', clientController.toggleSavedFreelancer);
+router.get('/saved-freelancers', clientController.getSavedFreelancers);
 
 module.exports = router;
