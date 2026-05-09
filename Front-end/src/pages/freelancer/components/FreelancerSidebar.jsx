@@ -63,7 +63,12 @@ const FreelancerSidebar = () => {
             <span className="fl-sidebar__online-dot" />
           </div>
           <div className="fl-sidebar__user-info">
-            <p className="fl-sidebar__name">{fullName}</p>
+            <p className="fl-sidebar__name">
+              {fullName}
+              {profile.verificationStatus === 'verified' && (
+                <span className="fl-verified-badge" title="Verified Expert">✓</span>
+              )}
+            </p>
             <p className="fl-sidebar__title">{title}</p>
           </div>
         </div>

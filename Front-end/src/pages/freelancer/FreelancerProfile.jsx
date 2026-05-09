@@ -191,7 +191,11 @@ const FreelancerProfile = () => {
               <TagInput tags={skills} onChange={setSkills} placeholder="e.g. React, Node.js" />
             ) : (
               <div className="fl-tags-display">
-                {(Array.isArray(profile.skills) ? profile.skills : []).map((s) => <span key={s} className="fl-tag">{s}</span>)}
+                {(Array.isArray(profile.skills) ? profile.skills : []).map((s, idx) => {
+                  const name = typeof s === 'string' ? s : s?.name;
+                  if (!name) return null;
+                  return <span key={`${name}-${idx}`} className="fl-tag">{name}</span>;
+                })}
               </div>
             )}
           </div>
@@ -201,7 +205,11 @@ const FreelancerProfile = () => {
               <TagInput tags={languages} onChange={setLanguages} placeholder="e.g. English" />
             ) : (
               <div className="fl-tags-display">
-                {(Array.isArray(profile.languages) ? profile.languages : []).map((l) => <span key={l} className="fl-tag">{l}</span>)}
+                {(Array.isArray(profile.languages) ? profile.languages : []).map((l, idx) => {
+                  const name = typeof l === 'string' ? l : l?.language || l?.name;
+                  if (!name) return null;
+                  return <span key={`${name}-${idx}`} className="fl-tag">{name}</span>;
+                })}
               </div>
             )}
           </div>
@@ -214,7 +222,7 @@ const FreelancerProfile = () => {
 
         <label className="fl-label" style={{ marginBottom: '0.6rem', display: 'block' }}>Portfolio Links</label>
         {(editing ? portfolioLinks : (profile?.portfolioLinks || [])).map((link, i) => (
-          <div key={i} className="fl-link-row">
+          <div key={`portfolio-${i}`} className="fl-link-row">
             <input
               type="url"
               className="fl-input"

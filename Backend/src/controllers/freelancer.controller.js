@@ -54,10 +54,29 @@ const updateProfile = asyncHandler(async (req, res) => {
   
   let profile = await FreelancerProfile.findOne({ userId });
   
+  // Handle skills transformation if they come as strings
+  if (updates.skills && Array.isArray(updates.skills)) {
+    const transformedSkills = updates.skills.map(skill => {
+      if (typeof skill === 'string') {
+        const existing = profile?.skills?.find(s => s.name === skill);
+        return existing ? {
+          name: existing.name,
+          level: existing.level,
+          isVerified: existing.isVerified,
+          verificationScore: existing.verificationScore,
+          lastTestedAt: existing.lastTestedAt,
+          expiresAt: existing.expiresAt
+        } : { name: skill, level: 'Beginner', isVerified: false };
+      }
+      return skill;
+    });
+    updates.skills = transformedSkills;
+  }
+
   if (!profile) {
     profile = new FreelancerProfile({ userId, ...updates });
   } else {
-    Object.assign(profile, updates);
+    profile.set(updates);
   }
   
   // Calculate completion
@@ -81,10 +100,21 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
   
   let profile = await FreelancerProfile.findOne({ userId });
   
+  // Handle skills transformation if they come as strings
+  if (updates.skills && Array.isArray(updates.skills)) {
+    updates.skills = updates.skills.map(skill => {
+      if (typeof skill === 'string') {
+        const existing = profile?.skills?.find(s => s.name === skill);
+        return existing || { name: skill, level: 'Beginner', isVerified: false };
+      }
+      return skill;
+    });
+  }
+
   if (!profile) {
     profile = new FreelancerProfile({ userId, ...updates });
   } else {
-    Object.assign(profile, updates);
+    profile.set(updates);
   }
 
   // Smart Gating Logic (Verification Status)
@@ -146,31 +176,41 @@ const getFreelancerById = asyncHandler(async (req, res) => {
  */
 const searchFreelancers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { skills, minRate, maxRate, availability } = req.query;
+  const { skills, minRate, maxRate, availability, isVerified, sortBy } = req.query;
   
-  const query = { verificationStatus: 'verified' };
+  const query = {};
   
   if (skills) {
-    const skillsArray = skills.split(',').map(s => s.trim());
-    query.skills = { $in: skillsArray };
+    query['skills.name'] = { $in: Array.isArray(skills) ? skills : skills.split(',') };
   }
   
   if (minRate || maxRate) {
     query.hourlyRate = {};
-    if (minRate) query.hourlyRate.$gte = parseFloat(minRate);
-    if (maxRate) query.hourlyRate.$lte = parseFloat(maxRate);
+    if (minRate) query.hourlyRate.$gte = Number(minRate);
+    if (maxRate) query.hourlyRate.$lte = Number(maxRate);
   }
   
   if (availability) {
     query.availability = availability;
   }
+
+  if (isVerified === 'true') {
+    query.verificationStatus = 'verified';
+  }
+
+  // Sorting logic
+  let sort = { 'verificationStatus': -1, 'skills.verificationScore': -1 }; // Default: prioritize experts
+  if (sortBy === 'rate_asc') sort = { hourlyRate: 1 };
+  if (sortBy === 'rate_desc') sort = { hourlyRate: -1 };
   
-  const total = await FreelancerProfile.countDocuments(query);
-  const profiles = await FreelancerProfile.find(query)
-    .populate('userId', 'firstName lastName email profilePicture')
-    .skip(skip)
-    .limit(limit)
-    .sort({ rating: -1 });
+  const [profiles, total] = await Promise.all([
+    FreelancerProfile.find(query)
+      .populate('userId', 'firstName lastName profilePicture')
+      .sort(sort)
+      .limit(limit)
+      .skip(skip),
+    FreelancerProfile.countDocuments(query)
+  ]);
   
   sendPaginated(res, {
     data: profiles,

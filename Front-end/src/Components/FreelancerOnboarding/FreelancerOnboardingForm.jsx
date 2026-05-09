@@ -341,10 +341,10 @@ const FreelancerOnboardingForm = () => {
               </motion.div>
               <button
                 className="fob-btn-next"
-                onClick={() => navigate("/freelancer/dashboard")}
+                onClick={() => navigate("/freelancer/skill-test")}
               >
                 <Rocket size={18} />
-                Go to Dashboard
+                Start Skill Verification
               </button>
             </motion.div>
           </div>

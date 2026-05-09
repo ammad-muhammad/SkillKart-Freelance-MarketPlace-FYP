@@ -136,6 +136,7 @@ const jobRoutes = require('./routes/job.routes');
 const proposalRoutes = require('./routes/proposal.routes');
 const gigRoutes = require('./routes/gig.routes');
 const messageRoutes = require('./routes/message.routes');
+const skillTestRoutes = require('./routes/skillTest.routes');
 
 // Mount routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
@@ -150,6 +151,7 @@ app.use(`${API_PREFIX}/jobs`, jobRoutes);
 app.use(`${API_PREFIX}/proposals`, proposalRoutes);
 app.use(`${API_PREFIX}/gigs`, gigRoutes);
 app.use(`${API_PREFIX}/messages`, messageRoutes);
+app.use(`${API_PREFIX}/skill-tests`, skillTestRoutes);
 
 // Webhook routes (no API prefix)
 const supabaseWebhook = require('./webhooks/supabase.webhook');

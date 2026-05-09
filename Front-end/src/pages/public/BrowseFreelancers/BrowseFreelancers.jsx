@@ -71,7 +71,7 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
                     <div className="bf-card__role">{role}</div>
                     {isVerified && (
                         <div className="bf-card__verified">
-                            <span>✓</span> AI Verified
+                            <span>✓</span> Verified Expert
                         </div>
                     )}
                 </div>
@@ -162,7 +162,22 @@ export default function BrowseFreelancers() {
             };
             const { data } = await freelancersAPI.search(params);
             if (!isMounted.current) return;
-            setFreelancers(data?.data?.freelancers ?? []);
+            setFreelancers((data?.data?.items || []).map(p => ({
+                id: p.userId?._id,
+                name: `${p.userId?.firstName} ${p.userId?.lastName}`,
+                avatar: p.userId?.profilePicture ? <img src={p.userId.profilePicture} /> : (p.userId?.firstName?.[0] || 'U'),
+                avatarBg: 'var(--color-primary-light)',
+                role: p.title,
+                bio: p.bio,
+                skills: p.skills?.map(s => s.name) || [],
+                rating: p.rating || 0,
+                reviewCount: 0,
+                hourlyRate: p.hourlyRate,
+                currency: 'USD',
+                isVerified: p.verificationStatus === 'verified',
+                isOnline: true,
+                location: p.timezone || 'Global'
+            })));
             setTotal(data?.data?.total ?? 0);
         } catch {
             /* silently keep / refresh from mock */

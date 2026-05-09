@@ -95,10 +95,26 @@
 .fl-sidebar__name {
   font-size: 0.875rem;
   font-weight: 700;
+  font-weight: 700;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 1rem;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fl-verified-badge {
+  background: #3b82f6;
+  color: white;
+  font-size: 0.65rem;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 800;
 }
 
 .fl-sidebar__title {

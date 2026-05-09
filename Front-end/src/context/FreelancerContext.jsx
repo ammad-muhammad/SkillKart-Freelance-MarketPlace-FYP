@@ -29,6 +29,7 @@ const emptyProfile = {
     certifications: '',
   },
   skills: [],
+  verifiedSkills: [],
   languages: [],
   portfolioLinks: [],
   socialLinks: {
@@ -92,7 +93,8 @@ export const FreelancerProvider = ({ children }) => {
           education: dbProfile.education?.[0]?.institution || '',
           certifications: dbProfile.certifications?.[0]?.name || '',
         },
-        skills: dbProfile.skills || [],
+        skills: (dbProfile.skills || []).map(s => s.name),
+        verifiedSkills: dbProfile.skills || [],
         languages: dbProfile.languages?.map(l => l.language) || [],
         portfolio: dbProfile.portfolio || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },

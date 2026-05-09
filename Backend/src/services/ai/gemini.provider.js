@@ -90,6 +90,95 @@ ${text}
       throw new Error('Failed to parse CV with Gemini API');
     }
   }
+
+  async generateSkillTest(skills, count = 50) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+
+    const prompt = `
+Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
+Generate exactly ${count} deep, challenging technical questions.
+IMPORTANT: 
+1. Paraphrase questions if they have been asked before.
+2. Ensure high variation in question styles (scenario-based, conceptual, troubleshooting).
+3. Do not repeat the same question set across different attempts.
+4. Focus on deep technical expertise that cannot be easily guessed.
+
+Output ONLY a JSON array of objects:
+[
+  {
+    "question": "The technical question text...",
+    "skill": "The skill this question belongs to",
+    "category": "Theory/Practical/Code/etc"
+  },
+  ...
+]
+`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error("Gemini Test Gen Error:", error);
+      if (error.status === 429 || error.message?.includes('429')) {
+        const aiError = new Error('AI Service is temporarily overloaded. Please try again in a few minutes.');
+        aiError.statusCode = 429;
+        throw aiError;
+      }
+      throw new Error('Failed to generate skill test');
+    }
+  }
+
+  async evaluateSkillTest(questionsAndAnswers) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+
+    const prompt = `
+Evaluate the following technical test answers. 
+For each answer, provide:
+1. A score from 0 to 1 (0.5 means partially correct, 1 means perfect).
+2. A brief evaluation feedback.
+
+Input Data:
+${JSON.stringify(questionsAndAnswers, null, 2)}
+
+Output ONLY a JSON object:
+{
+  "evaluations": [
+    {
+      "score": 0.9,
+      "aiEvaluation": "Correct explanation of the concept..."
+    },
+    ...
+  ],
+  "overallFeedback": "Summary of performance...",
+  "averageScore": 0.85
+}
+`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error("Gemini Evaluation Error:", error);
+      if (error.status === 429 || error.message?.includes('429')) {
+        const aiError = new Error('AI Evaluation service is temporarily at capacity. Your progress is saved, please try submitting again later.');
+        aiError.statusCode = 429;
+        throw aiError;
+      }
+      throw new Error('Failed to evaluate skill test');
+    }
+  }
 }
 
 module.exports = GeminiProvider;

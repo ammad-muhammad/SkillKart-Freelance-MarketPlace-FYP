@@ -22,6 +22,7 @@ import FreelancerPortfolio from "../pages/freelancer/FreelancerPortfolio";
 import FreelancerMessages from "../pages/freelancer/FreelancerMessages";
 import FreelancerSavedProjects from "../pages/freelancer/FreelancerSavedProjects";
 import FreelancerProposals from "../pages/freelancer/FreelancerProposals";
+import SkillTest from "../pages/freelancer/SkillTest";
 
 // Client Pages
 import ClientLayout from "../layouts/ClientLayout";
@@ -161,6 +162,7 @@ const AppRoutes = () => {
             <Route path="messages" element={<FreelancerMessages />} />
             <Route path="saved" element={<FreelancerSavedProjects />} />
             <Route path="proposals" element={<FreelancerProposals />} />
+            <Route path="skill-test" element={<SkillTest />} />
           </Route>
 
           {/* ================= CLIENT ROUTES ================= */}

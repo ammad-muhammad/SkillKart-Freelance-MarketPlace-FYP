@@ -6,7 +6,14 @@ const freelancerProfileSchema = new mongoose.Schema({
   title: String,
   phone: String,
   hourlyRate: Number,
-  skills: [String],
+  skills: [{
+    name: String,
+    level: { type: String, enum: ['Beginner', 'Intermediate', 'Expert'], default: 'Beginner' },
+    isVerified: { type: Boolean, default: false },
+    verificationScore: { type: Number, default: 0 },
+    lastTestedAt: Date,
+    expiresAt: Date
+  }],
   portfolioLinks: [String],
   portfolio: [{
     title: String,

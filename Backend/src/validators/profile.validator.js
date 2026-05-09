@@ -24,7 +24,8 @@ const updateFreelancerProfileValidation = [
     .optional()
     .isArray().withMessage('Skills must be an array'),
 
-  body('skills.*')
+  body('skills.*.name')
+    .optional()
     .trim()
     .isLength({ min: 2, max: 50 }).withMessage('Each skill must be 2-50 characters'),
 
