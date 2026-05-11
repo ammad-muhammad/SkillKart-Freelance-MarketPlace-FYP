@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { jobsAPI } from '../../api/jobs';
+import { useClient } from '../../context/ClientContext';
 import { 
   User, CheckCircle2, XCircle, Clock, 
   DollarSign, MessageSquare, ChevronLeft,
@@ -12,6 +13,7 @@ import './ReviewProposals.css';
 
 export default function ReviewProposals() {
   const { jobId } = useParams();
+  const { fetchProfile } = useClient();
   const [job, setJob] = useState(null);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,8 @@ export default function ReviewProposals() {
     try {
       await proposalsAPI.acceptProposal(id, message);
       toast.success('Proposal accepted! Freelancer notified.');
-      fetchData(); // Refresh
+      await fetchProfile(); // Sync global state
+      fetchData(); // Refresh local view
     } catch (error) {
       toast.error('Failed to accept proposal.');
     } finally {
@@ -61,7 +64,8 @@ export default function ReviewProposals() {
     try {
       await proposalsAPI.rejectProposal(id, reason);
       toast.success('Proposal rejected.');
-      fetchData(); // Refresh
+      await fetchProfile(); // Sync global state
+      fetchData(); // Refresh local view
     } catch (error) {
       toast.error('Failed to reject proposal.');
     } finally {

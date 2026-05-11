@@ -97,65 +97,74 @@ export const ClientProvider = ({ children }) => {
   }, [isAuthenticated, user?.role]);
 
   const fetchProfile = async () => {
+    if (!user?._id) return;
+    
     setLoading(true);
     try {
       // 1. Get Profile
       const profileRes = await clientsAPI.getProfile();
       const dbProfile = profileRes.data.data.profile;
 
-      // 2. Get User Info
-      const userRes = await authAPI.getCurrentUser();
-      const dbUser = userRes.data.data.user;
-
-      // 3. Transform to UI format
+      // 2. Transform to UI format with safety checks
       const transformedProfile = {
         personalInfo: {
-          fullName: `${dbUser.firstName} ${dbUser.lastName}`,
-          username: dbUser.email.split('@')[0],
-          email: dbUser.email,
-          phone: dbProfile.phone || '',
-          companyName: dbProfile.companyName || 'Not Set',
-          industry: dbProfile.industryType || 'Not Set',
-          website: dbProfile.website || '',
-          location: dbProfile.location?.country || dbProfile.timezone || 'Global',
-          bio: dbProfile.description || '',
-          avatar: dbUser.profilePicture || null,
-          companyLogo: null, 
-          memberSince: new Date(dbUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          fullName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Loading...',
+          username: user?.username || user?.email?.split('@')[0] || 'user',
+          email: user?.email || '',
+          phone: dbProfile?.phone || '',
+          companyName: dbProfile?.companyName || 'Not Set',
+          industry: dbProfile?.industryType || 'Not Set',
+          website: dbProfile?.website || '',
+          location: dbProfile?.location?.country || dbProfile?.timezone || 'Global',
+          bio: dbProfile?.description || '',
+          avatar: user?.profilePicture || null,
+          memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently',
         },
         preferences: {
-          preferredSkills: dbProfile.techStack || [],
-          budgetRange: { min: 0, max: 0 }, 
-          projectTypes: dbProfile.services || [],
+          preferredSkills: dbProfile?.techStack || [],
+          budgetRange: dbProfile?.budgetRange || { min: 0, max: 0 }, 
+          projectTypes: dbProfile?.services || [],
           remoteOnly: true,
         },
+        securitySettings: {
+          recoveryEmail: dbProfile?.recoveryEmail || '',
+          recoveryPhone: dbProfile?.recoveryPhone || '',
+          twoFactorEnabled: false,
+          emailVerified: user?.isEmailVerified || false,
+        },
+        notificationSettings: dbProfile?.notificationSettings || {
+          emailNotifications: true,
+          proposalAlerts: true,
+          messageAlerts: true,
+        },
         stats: {
-          totalProjects: dbProfile.totalProjectsPosted || 0,
+          totalProjects: dbProfile?.totalProjectsPosted || 0,
           activeProjects: 0, 
           freelancersHired: 0, 
-          totalSpent: dbProfile.totalSpent || 0,
+          totalSpent: dbProfile?.totalSpent || 0,
         },
-        verificationStatus: dbProfile.verificationStatus || 'unverified'
+        verificationStatus: dbProfile?.verificationStatus || 'unverified'
       };
 
       setProfile(transformedProfile);
 
-      // 4. Fetch Client's Projects
-      const jobsRes = await jobsAPI.listJobs({ clientId: dbUser._id });
-      const dbJobs = jobsRes.data.data.items || [];
+      // 3. Fetch Client's Projects using ownership-restricted API
+      const jobsRes = await jobsAPI.getMyProjects();
+      const dbJobs = Array.isArray(jobsRes.data.data) ? jobsRes.data.data : [];
       
       const transformedJobs = dbJobs.map(j => ({
         id: j._id,
         title: j.title,
         category: j.category,
-        skills: j.skills,
+        skills: j.skills || [],
         experienceLevel: j.experienceLevel,
         budget: j.budget,
-        summary: j.description.slice(0, 150) + (j.description.length > 150 ? '...' : ''),
+        summary: j.description ? (j.description.slice(0, 150) + (j.description.length > 150 ? '...' : '')) : '',
         status: j.status,
         createdAt: new Date(j.createdAt).toLocaleDateString(),
         deadline: j.deadline ? new Date(j.deadline).toLocaleDateString() : 'N/A',
-        duration: j.duration
+        duration: j.duration,
+        proposals: j.proposals || []
       }));
 
       setProjects(transformedJobs);
@@ -173,21 +182,29 @@ export const ClientProvider = ({ children }) => {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
 
-  const saveProfile = async (updatedData = null) => {
+  const saveProfile = async (updatedData = null, options = { skipFetch: false }) => {
     setLoading(true);
     try {
       const currentProfile = updatedData || profile;
-      const { personalInfo, preferences, notificationSettings } = currentProfile;
+      const { personalInfo, preferences, notificationSettings, securitySettings } = currentProfile;
 
       const nameParts = (personalInfo.fullName || '').trim().split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
-      await authAPI.updateMe({
-        firstName,
-        lastName,
-        phone: personalInfo.phone
-      });
+      // Only update user basic info if it actually changed
+      const hasUserChanges = 
+        firstName !== user?.firstName || 
+        lastName !== user?.lastName || 
+        personalInfo.phone !== user?.phone;
+
+      if (hasUserChanges) {
+        await authAPI.updateMe({
+          firstName,
+          lastName,
+          phone: personalInfo.phone
+        });
+      }
 
       const profilePayload = {
         companyName: personalInfo.companyName,
@@ -198,42 +215,60 @@ export const ClientProvider = ({ children }) => {
         location: { country: personalInfo.location },
         techStack: preferences.preferredSkills,
         services: preferences.projectTypes,
-        notificationSettings
+        budgetRange: preferences.budgetRange,
+        notificationSettings,
+        recoveryEmail: securitySettings.recoveryEmail,
+        recoveryPhone: securitySettings.recoveryPhone,
+        username: personalInfo.username,
+        email: personalInfo.email
       };
 
       await clientsAPI.updateProfile(profilePayload);
-      await fetchProfile();
+      
+      if (!options.skipFetch) {
+        await fetchProfile();
+      }
+      
       showToast('All changes saved to database!');
-      return true;
+      return { success: true };
     } catch (error) {
       console.error("Save client profile failed:", error);
-      showToast(error.response?.data?.message || 'Failed to save changes', 'error');
-      return false;
+      const message = error.response?.data?.message || 'Failed to save changes';
+      const errors = error.response?.data?.errors || null;
+      
+      showToast(message, 'error');
+      return { success: false, message, errors };
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProfile = async (section, data, silent = false, persist = false) => {
-    let newProfile;
-    setProfile((prev) => {
-      let next;
-      if (typeof data === 'function') {
-        next = data(prev[section]);
-      } else if (Array.isArray(data) || typeof data !== 'object' || data === null) {
-        next = data;
-      } else {
-        next = { ...prev[section], ...data };
-      }
-      newProfile = { ...prev, [section]: next };
-      return newProfile;
+  const updateMultipleSections = async (updates, silent = false, persist = false, options = {}) => {
+    // We use a functional update to get the latest profile state
+    let finalProfile;
+    setProfile(prev => {
+      const next = { ...prev };
+      Object.keys(updates).forEach(section => {
+        next[section] = {
+          ...next[section],
+          ...updates[section]
+        };
+      });
+      finalProfile = next;
+      return next;
     });
 
     if (persist) {
-      await saveProfile(newProfile);
+      // Small delay to ensure state has set, or better, use the calculated finalProfile
+      return await saveProfile(finalProfile, options);
     } else if (!silent) {
       showToast('Profile updated locally');
     }
+    return { success: true };
+  };
+
+  const updateProfile = async (section, data, silent = false, persist = false, options = {}) => {
+    return await updateMultipleSections({ [section]: data }, silent, persist, options);
   };
 
   const addProject = async (project) => {
@@ -292,7 +327,7 @@ export const ClientProvider = ({ children }) => {
   return (
     <ClientContext.Provider
       value={{
-        profile, setProfile, updateProfile,
+        profile, setProfile, updateProfile, updateMultipleSections,
         projects, addProject, updateProject, deleteProject,
         savedFreelancers, toggleSavedFreelancer,
         toasts, showToast,

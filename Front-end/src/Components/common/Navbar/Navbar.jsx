@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import './Navbar.css';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, MessageSquareCode, UserSearch, Calculator, Newspaper, Users, HelpCircle, Search, FileEdit, Zap } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuth';
 
 /* ── Nav data ── */
 const NAV_ITEMS = [
@@ -131,7 +132,10 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const { isAuthenticated, logout, user } = useAuth();
   const lastScrollY = useRef(0);
+
+  const dashboardLink = user?.role === 'client' ? '/client/dashboard' : '/freelancer/dashboard';
 
   const navRef = useRef(null);
   const logoRef = useRef(null);
@@ -306,7 +310,14 @@ export default function Navbar() {
 
           {/* CTA */}
           <div ref={actionsRef} className="navbar__actions">
-            <Link to="/login" className="navbar__cta btn-primary">Login</Link>
+            {isAuthenticated ? (
+              <>
+                <Link to={dashboardLink} className="navbar__cta btn-secondary">Dashboard</Link>
+                <button onClick={logout} className="navbar__cta btn-primary">Logout</button>
+              </>
+            ) : (
+              <Link to="/login" className="navbar__cta btn-primary">Login</Link>
+            )}
           </div>
 
           {/* Hamburger */}
@@ -471,8 +482,16 @@ export default function Navbar() {
           ))}
 
           <div className="navbar__mobile-actions">
-            <Link to="/registration" className="btn-secondary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Register</Link>
-            <Link to="/login" className="btn-primary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Login</Link>
+            {!isAuthenticated && (
+              <Link to="/registration" className="btn-secondary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Register</Link>
+            )}
+            {isAuthenticated ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                <button onClick={() => { logout(); closeMobile(); }} className="btn-primary" style={{ justifyContent: 'center' }}>Logout</button>
+              </div>
+            ) : (
+              <Link to="/login" className="btn-primary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Login</Link>
+            )}
           </div>
         </div>
       </div>

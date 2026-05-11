@@ -5,9 +5,13 @@ export const jobsAPI = {
   createJob: (jobData) => 
     client.post('/jobs', jobData),
 
-  // List all jobs (with optional filters)
+  // List public marketplace jobs
   listJobs: (params) => 
     client.get('/jobs', { params }),
+
+  // Get client's own projects
+  getMyProjects: (params) =>
+    client.get('/jobs/my-projects', { params }),
 
   // Get job by ID
   getJobById: (id) => 

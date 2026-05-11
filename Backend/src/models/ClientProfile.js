@@ -22,7 +22,10 @@ const clientProfileSchema = new mongoose.Schema({
   isNewToHiring: String,
   services: [String],
   techStack: [String],
-  budgetRange: String,
+  budgetRange: {
+    min: { type: Number, default: 0 },
+    max: { type: Number, default: 0 }
+  },
   hiringFrequency: String,
   technicalUnderstanding: { type: Number, min: 1, max: 10 },
   urgency: String,
@@ -39,6 +42,8 @@ const clientProfileSchema = new mongoose.Schema({
     proposalAlerts: { type: Boolean, default: true },
     messageAlerts: { type: Boolean, default: true }
   },
+  recoveryEmail: String,
+  recoveryPhone: String,
   profileCompletion: { type: Number, default: 0 },
   verificationStatus: {
     type: String,

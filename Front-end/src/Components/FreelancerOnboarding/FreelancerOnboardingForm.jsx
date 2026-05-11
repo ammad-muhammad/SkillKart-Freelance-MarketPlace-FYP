@@ -37,6 +37,8 @@ const initialFormData = {
   bio: "",
   hourlyRate: "",
   availability: "",
+  profilePic: null,
+  profilePicUrl: "",
   // Step 2
   skills: [],
   // Step 3
@@ -117,6 +119,21 @@ const FreelancerOnboardingForm = () => {
     localStorage.removeItem(DRAFT_KEY);
     setDraftData(null);
     setShowDraftPrompt(false);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please upload an image file");
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        profilePic: file,
+        profilePicUrl: URL.createObjectURL(file)
+      }));
+    }
   };
 
   const validateStep = () => {
@@ -478,6 +495,7 @@ const FreelancerOnboardingForm = () => {
                     formData={formData}
                     setFormData={setFormData}
                     errors={errors}
+                    handleImageUpload={handleImageUpload}
                   />
                 )}
                 {step === 3 && (

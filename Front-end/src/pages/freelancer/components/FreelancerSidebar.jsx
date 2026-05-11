@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../../context/FreelancerContext';
+import { useAuth } from '../../../hooks/useAuth';
 import './FreelancerSidebar.css';
 
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
 const FreelancerSidebar = () => {
   const [open, setOpen] = useState(false);
   const { profile } = useFreelancer();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const { fullName, title, avatar } = profile.personalInfo;
 
@@ -94,7 +96,7 @@ const FreelancerSidebar = () => {
         <div className="fl-sidebar__footer">
           <button
             className="fl-sidebar__logout"
-            onClick={() => { setOpen(false); navigate('/'); }}
+            onClick={() => { setOpen(false); logout(); }}
           >
             <span>🚪</span>
             <span>Logout</span>

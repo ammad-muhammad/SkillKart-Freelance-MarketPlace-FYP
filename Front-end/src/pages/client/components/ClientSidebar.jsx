@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useClient } from '../../../context/ClientContext';
+import { useAuth } from '../../../hooks/useAuth';
 import './ClientSidebar.css';
 
 const NAV_ITEMS = [
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
 const ClientSidebar = () => {
   const [open, setOpen] = useState(false);
   const { profile } = useClient();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const { fullName, companyName, avatar } = profile.personalInfo;
 
@@ -88,7 +90,7 @@ const ClientSidebar = () => {
         <div className="cl-sidebar__footer">
           <button
             className="cl-sidebar__logout"
-            onClick={() => { setOpen(false); navigate('/'); }}
+            onClick={() => { setOpen(false); logout(); }}
           >
             <span>🚪</span>
             <span>Logout</span>

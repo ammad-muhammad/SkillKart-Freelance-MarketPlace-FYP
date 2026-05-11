@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, AlignLeft, DollarSign, Clock, ChevronDown, Check,
-  Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award, Link
+  Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award, Link,
+  User, Upload, Globe2
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { timezones, getCurrentTimezone } from "../../utils/timezones";
 
 const AVAILABILITY_OPTIONS = [
   { value: "full-time",     label: "Full Time",     desc: "40+ hrs/week",     Icon: Zap       },
@@ -93,11 +96,22 @@ const CustomDropdown = ({ value, onChange, placeholder = "Select an option", opt
 };
 
 /* ── Step Component ───────────────────────────────────────────── */
-const StepBasicInfo = ({ formData, setFormData, errors }) => {
+const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => {
+  const { user } = useAuth();
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  useEffect(() => {
+    if (!formData.timezone) {
+      setFormData(prev => ({
+        ...prev,
+        timezone: getCurrentTimezone()?.label || ''
+      }));
+    }
+  }, []);
 
   return (
     <motion.div
@@ -106,6 +120,25 @@ const StepBasicInfo = ({ formData, setFormData, errors }) => {
       exit={{ opacity: 0, x: -30 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
+      {/* Profile Picture Upload - Hidden for Supabase Users */}
+      {user?.authProvider !== 'supabase' && (
+        <div className="fob-profile-pic-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+          <div className="fob-avatar-container" style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
+            {formData.profilePicUrl ? (
+              <img src={formData.profilePicUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={40} color="#94a3b8" />
+            )}
+            <label style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, cursor: 'pointer', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
+              <Upload size={24} />
+              <span style={{ fontSize: '12px', fontWeight: '600', marginTop: '4px' }}>Upload</span>
+              <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
+            </label>
+          </div>
+          <span className="fob-label" style={{ marginTop: '12px', marginBottom: '4px' }}>Profile Picture</span>
+          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>PNG or JPG, max 5MB</p>
+        </div>
+      )}
       {/* Professional Title */}
       <div className="fob-form-group">
         <label className="fob-label">
@@ -231,14 +264,17 @@ const StepBasicInfo = ({ formData, setFormData, errors }) => {
             <Globe size={15} className="fob-label-icon" />
             Timezone / Location*
           </label>
-          <input
-            type="text"
+          <select
             name="timezone"
             value={formData.timezone}
             onChange={handleChange}
             className="fob-input"
-            placeholder="e.g. GMT+5 (Pakistan) or New York"
-          />
+          >
+            <option value="">Select Timezone</option>
+            {timezones.map(tz => (
+              <option key={tz.value} value={tz.label}>{tz.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 

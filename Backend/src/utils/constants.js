@@ -65,7 +65,8 @@ const JOB_STATUS = {
   IN_PROGRESS: 'in-progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
-  CLOSED: 'closed'
+  CLOSED: 'closed',
+  EXPIRED: 'expired'
 };
 
 // Proposal Status

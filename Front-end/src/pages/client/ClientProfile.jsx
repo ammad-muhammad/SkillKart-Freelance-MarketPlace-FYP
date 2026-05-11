@@ -18,6 +18,7 @@ const ClientProfile = () => {
   const [projTypes, setProjTypes] = useState(Array.isArray(profile?.preferences?.projectTypes) ? [...profile.preferences.projectTypes] : []);
   const [budgetRange, setBudgetRange] = useState({ ...(profile?.preferences?.budgetRange || {}) });
   const [remoteOnly, setRemoteOnly] = useState(!!profile?.preferences?.remoteOnly);
+  const [errors, setErrors] = useState({});
   const avatarRef = useRef(null);
   const logoRef = useRef(null);
 
@@ -27,6 +28,7 @@ const ClientProfile = () => {
     setProjTypes(Array.isArray(profile.preferences.projectTypes) ? [...profile.preferences.projectTypes] : []);
     setBudgetRange({ ...profile.preferences.budgetRange });
     setRemoteOnly(profile.preferences.remoteOnly);
+    setErrors({});
     setEditing(true);
   };
 
@@ -45,9 +47,40 @@ const ClientProfile = () => {
         },
       };
 
-      const success = await saveProfile(updatedProfile);
-      if (success) {
+      if (budgetRange.min > budgetRange.max && budgetRange.max !== 0) {
+        showToast('Minimum budget cannot be greater than maximum budget', 'error');
+        setSaving(false);
+        return;
+      }
+
+
+      const result = await saveProfile(updatedProfile);
+      if (result.success) {
         setEditing(false);
+        setErrors({});
+      } else if (result.errors) {
+        // Map backend errors to local state
+        const newErrors = {};
+        if (Array.isArray(result.errors)) {
+          result.errors.forEach(err => {
+            if (typeof err === 'object' && err.field) {
+              // Structured validation error from express-validator
+              newErrors[err.field] = err.message;
+            } else if (typeof err === 'string') {
+              // Raw string error (e.g. Mongoose CastError)
+              const pathMatch = err.match(/at path \\"(.+)\\"/);
+              if (pathMatch) {
+                newErrors[pathMatch[1]] = err;
+              } else {
+                newErrors.global = err;
+              }
+            }
+          });
+        } else if (typeof result.errors === 'object') {
+          // Direct object mapping
+          Object.assign(newErrors, result.errors);
+        }
+        setErrors(newErrors);
       }
     } catch (error) {
       console.error('Update failed:', error);
@@ -165,11 +198,12 @@ const ClientProfile = () => {
               <label className="cl-label">{label}</label>
               <input
                 type={type || 'text'}
-                className="cl-input"
+                className={`cl-input${errors[key] ? ' cl-input--error' : ''}`}
                 value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                 disabled={!editing}
               />
+              {editing && errors[key] && <span className="cl-error">⚠ {errors[key]}</span>}
             </div>
           ))}
           <div className="cl-form-group full">
@@ -208,7 +242,7 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label">Budget Range (Min $)</label>
             <input
-              type="number" className="cl-input"
+              type="number" className={`cl-input${errors.budgetRange ? ' cl-input--error' : ''}`}
               value={editing ? budgetRange.min : profile?.preferences?.budgetRange?.min || 0}
               onChange={(e) => setBudgetRange((p) => ({ ...p, min: Number(e.target.value) }))}
               disabled={!editing}
@@ -217,12 +251,13 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label">Budget Range (Max $)</label>
             <input
-              type="number" className="cl-input"
+              type="number" className={`cl-input${errors.budgetRange ? ' cl-input--error' : ''}`}
               value={editing ? budgetRange.max : profile?.preferences?.budgetRange?.max || 0}
               onChange={(e) => setBudgetRange((p) => ({ ...p, max: Number(e.target.value) }))}
               disabled={!editing}
             />
           </div>
+          {editing && errors.budgetRange && <div className="cl-error" style={{ gridColumn: 'span 2' }}>⚠ {errors.budgetRange}</div>}
         </div>
 
         <div className="cl-form-group" style={{ marginBottom: '1.25rem' }}>
@@ -255,6 +290,12 @@ const ClientProfile = () => {
             style={{ cursor: editing ? 'pointer' : 'default' }}
           />
         </div>
+
+        {editing && errors.global && (
+          <div className="cl-error-banner" style={{ marginTop: '1rem' }}>
+            ⚠ {errors.global}
+          </div>
+        )}
       </div>
 
       {/* Actions */}

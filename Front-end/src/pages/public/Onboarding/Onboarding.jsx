@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth';
 import '../ClientOnboarding/ClientOnboarding.css'; // Importing the new beautiful design variables!
 
 // Reusing the robust layout of ClientOnboarding but adapting for the general onboarding steps
@@ -15,6 +16,7 @@ const Onboarding = () => {
     const [step, setStep] = useState(1);
     const [role, setRole] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const { user } = useAuth();
     
     // OTP State
     const [otp, setOtp] = useState(['', '', '', '', '']);
@@ -42,6 +44,19 @@ const Onboarding = () => {
         else if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && /[^A-Za-z0-9]/.test(pwd)) setPasswordStrength('strong');
         else setPasswordStrength('medium');
     }, [formData.password]);
+
+    // Pre-fill user info if already authenticated
+    useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                firstName: prev.firstName || user.firstName || '',
+                lastName: prev.lastName || user.lastName || '',
+                email: prev.email || user.email || '',
+                username: prev.username || user.username || ''
+            }));
+        }
+    }, [user]);
 
     useEffect(() => {
         let timer;

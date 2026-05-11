@@ -13,6 +13,7 @@ import {
 import { toast } from "react-toastify";
 import { clientsAPI } from "../../../api/clients";
 import { useAuth } from "../../../hooks/useAuth";
+import { timezones, getCurrentTimezone } from "../../../utils/timezones";
 import "./ClientOnboarding.css";
 
 const ClientOnboarding = () => {
@@ -22,7 +23,7 @@ const ClientOnboarding = () => {
     const [searchCountry, setSearchCountry] = useState("");
     const [showDraftPrompt, setShowDraftPrompt] = useState(false);
     const [draftData, setDraftData] = useState(null);
-    const { refreshAuth } = useAuth();
+    const { refreshAuth, user } = useAuth();
 
     const DRAFT_KEY = "skillkart_client_onboarding_draft";
 
@@ -102,6 +103,18 @@ const ClientOnboarding = () => {
             }
         }
     }, [step, showDraftPrompt]); // Sync on step change for robustness
+
+    // Pre-fill user info if available
+    useEffect(() => {
+        if (user && !showDraftPrompt) {
+            setFormData(prev => ({
+                ...prev,
+                fullName: prev.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                workEmail: prev.workEmail || user.email || '',
+                timezone: prev.timezone || getCurrentTimezone()?.label || ''
+            }));
+        }
+    }, [user, showDraftPrompt]);
 
     const handleRestoreDraft = () => {
         if (draftData) {
@@ -369,24 +382,26 @@ const ClientOnboarding = () => {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
         >
-            <div className="onboarding__profile-pic">
-                <div className="onboarding__avatar-container">
-                    <div className="onboarding__avatar">
-                        {formData.profilePicUrl ? (
-                            <img src={formData.profilePicUrl} className="onboarding__avatar-img" alt="Profile" />
-                        ) : (
-                            <User size={40} color="var(--onboard-accent-primary)" />
-                        )}
-                        <label className="onboarding__avatar-overlay">
-                            <Upload size={28} />
-                            <span>Upload</span>
-                            <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
-                        </label>
+            {user?.authProvider !== 'supabase' && (
+                <div className="onboarding__profile-pic">
+                    <div className="onboarding__avatar-container">
+                        <div className="onboarding__avatar">
+                            {formData.profilePicUrl ? (
+                                <img src={formData.profilePicUrl} className="onboarding__avatar-img" alt="Profile" />
+                            ) : (
+                                <User size={40} color="var(--onboard-accent-primary)" />
+                            )}
+                            <label className="onboarding__avatar-overlay">
+                                <Upload size={28} />
+                                <span>Upload</span>
+                                <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
+                            </label>
+                        </div>
                     </div>
+                    <span className="onboarding__label" style={{ marginBottom: '4px' }}>Professional Avatar</span>
+                    <p className="onboarding__upload-hint">PNG, JPG up to 5MB</p>
                 </div>
-                <span className="onboarding__label" style={{ marginBottom: '4px' }}>Professional Avatar</span>
-                <p className="onboarding__upload-hint">PNG, JPG up to 5MB</p>
-            </div>
+            )}
 
             <div className="onboarding__form-row">
                 <div className="onboarding__form-group">
@@ -454,15 +469,19 @@ const ClientOnboarding = () => {
                 <div className="onboarding__form-group">
                     <label className="onboarding__label">Timezone / Base Location</label>
                     <div style={{ position: 'relative' }}>
-                        <Globe2 size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
-                        <input
-                            type="text"
-                            name="timezone"
-                            value={formData.timezone}
-                            onChange={handleChange}
-                            className="onboarding__input"
-                            style={{ paddingLeft: '40px' }}
-                            placeholder="e.g. GMT+5 (Pakistan)"
+                        <Select
+                            options={timezones}
+                            value={formData.timezone ? timezones.find(t => t.label === formData.timezone) : null}
+                            onChange={(val) => setFormData(p => ({ ...p, timezone: val ? val.label : '' }))}
+                            styles={customStyles}
+                            placeholder="Select Timezone"
+                            classNamePrefix="skillkart-select"
+                            isSearchable={true}
+                            maxMenuHeight={220}
+                            menuShouldScrollIntoView={true}
+                            components={{ Control: CustomControl }}
+                            menuPortalTarget={document.body}
+                            menuPlacement="bottom"
                         />
                     </div>
                 </div>

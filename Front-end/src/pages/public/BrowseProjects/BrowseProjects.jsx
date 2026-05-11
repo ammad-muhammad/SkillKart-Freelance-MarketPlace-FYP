@@ -94,8 +94,9 @@ export default function BrowseProjects() {
       };
       
       const res = await (query ? jobsAPI.searchJobs(params) : jobsAPI.listJobs(params));
-      setJobs(res.data.data.items || []);
-      setTotal(res.data.data.total || 0);
+      const responseData = res.data;
+      setJobs(Array.isArray(responseData.data) ? responseData.data : []);
+      setTotal(responseData.meta?.pagination?.total || 0);
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
     } finally {

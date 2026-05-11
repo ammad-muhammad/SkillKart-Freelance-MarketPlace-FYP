@@ -166,7 +166,43 @@ const updateClientProfileValidation = [
     .isArray().withMessage('Verification documents must be an array'),
 
   body('verificationDocuments.*')
-    .isURL().withMessage('Each document must be a valid URL')
+    .isURL().withMessage('Each document must be a valid URL'),
+
+  body('budgetRange')
+    .optional()
+    .isObject().withMessage('Budget range must be an object'),
+
+  body('budgetRange.min')
+    .optional()
+    .isNumeric().withMessage('Minimum budget must be a number'),
+
+  body('budgetRange.max')
+    .optional()
+    .isNumeric().withMessage('Maximum budget must be a number'),
+
+  body('notificationSettings')
+    .optional()
+    .isObject().withMessage('Notification settings must be an object'),
+
+  body('notificationSettings.emailNotifications')
+    .optional()
+    .isBoolean().withMessage('Email notifications must be a boolean'),
+
+  body('notificationSettings.proposalAlerts')
+    .optional()
+    .isBoolean().withMessage('Proposal alerts must be a boolean'),
+
+  body('notificationSettings.messageAlerts')
+    .optional()
+    .isBoolean().withMessage('Message alerts must be a boolean'),
+
+  body('recoveryEmail')
+    .optional({ values: 'falsy' })
+    .isEmail().withMessage('Invalid recovery email format'),
+
+  body('recoveryPhone')
+    .optional({ values: 'falsy' })
+    .isLength({ max: 20 }).withMessage('Recovery phone too long')
 ];
 
 // Add portfolio item validation

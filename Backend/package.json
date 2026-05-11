@@ -4,7 +4,7 @@
   "description": "Complete freelance platform backend with multi-auth, RBAC, CMS, job posting, and proposals",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "nodemon src/server.js",
     "dev": "nodemon src/server.js",
     "setup:superadmin": "node scripts/setupSuperAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1",

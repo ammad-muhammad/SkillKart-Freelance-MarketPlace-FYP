@@ -25,6 +25,36 @@ const calculateCompletion = (profile, user = {}) => {
 };
 
 /**
+ * Transform budget string to object { min, max }
+ * Handles formats like "$20k+", "$10k - $20k", etc.
+ */
+const transformBudget = (budget) => {
+  if (typeof budget === 'object' && budget !== null) return budget;
+  if (typeof budget !== 'string') return { min: 0, max: 0 };
+
+  const clean = budget.replace(/[$,]/g, '').toLowerCase();
+  
+  // Case: "20k+"
+  if (clean.includes('+')) {
+    const val = parseInt(clean.replace('k', '000'));
+    return { min: val || 0, max: 0 };
+  }
+  
+  // Case: "10k - 20k"
+  if (clean.includes('-')) {
+    const parts = clean.split('-').map(p => {
+      let val = p.trim();
+      if (val.includes('k')) val = val.replace('k', '000');
+      return parseInt(val) || 0;
+    });
+    return { min: parts[0] || 0, max: parts[1] || 0 };
+  }
+
+  // Fallback
+  return { min: 0, max: 0 };
+};
+
+/**
  * Get client profile
  */
 const getProfile = asyncHandler(async (req, res) => {
@@ -52,13 +82,51 @@ const updateProfile = asyncHandler(async (req, res) => {
   let profile = await ClientProfile.findOne({ userId });
   
   if (!profile) {
-    profile = new ClientProfile({ userId, ...updates });
-  } else {
-    Object.assign(profile, updates);
+    profile = new ClientProfile({ userId });
+  }
+
+  // Explicit mapping to prevent unsafe assignment
+  const allowedFields = [
+    'companyName', 'companyType', 'companySize', 'industry', 'industryType', 
+    'role', 'phone', 'website', 'description', 'location', 
+    'techStack', 'services', 'hiringFrequency', 'technicalUnderstanding', 
+    'urgency', 'aiAssistance', 'notificationSettings', 
+    'recoveryEmail', 'recoveryPhone'
+  ];
+
+  // Update associated User fields if present
+  const user = await User.findById(userId);
+  if (!user) throw new NotFoundError('User not found');
+
+  let userUpdated = false;
+  if (updates.username && updates.username.trim() !== "" && updates.username !== user.username) {
+    const existing = await User.findOne({ username: updates.username, _id: { $ne: userId } });
+    if (existing) return res.status(400).json({ success: false, message: 'Username already taken' });
+    user.username = updates.username.trim();
+    userUpdated = true;
+  }
+
+  if (updates.email && updates.email.trim() !== "" && updates.email !== user.email) {
+    const existing = await User.findOne({ email: updates.email, _id: { $ne: userId } });
+    if (existing) return res.status(400).json({ success: false, message: 'Email already in use' });
+    user.email = updates.email.trim().toLowerCase();
+    userUpdated = true;
+  }
+
+  if (userUpdated) await user.save();
+
+  allowedFields.forEach(field => {
+    if (updates[field] !== undefined) {
+      profile[field] = updates[field];
+    }
+  });
+
+  // Special handling for budgetRange
+  if (updates.budgetRange !== undefined) {
+    profile.budgetRange = transformBudget(updates.budgetRange);
   }
   
   // Calculate completion
-  const user = await User.findById(userId);
   profile.profileCompletion = calculateCompletion(profile, user);
   
   await profile.save();
@@ -230,23 +298,26 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
     industryType: data.industryType,
     customIndustry: data.customIndustry,
     role: data.role,
-    location: { country: data.country },
+    location: data.location || { country: data.country },
     isNewToHiring: data.isNewToHiring,
     services: data.services,
     techStack: data.techStack,
-    budgetRange: data.budgetRange,
+    budgetRange: transformBudget(data.budgetRange),
     hiringFrequency: data.hiringFrequency,
     technicalUnderstanding: data.technicalUnderstanding,
     urgency: data.urgency,
     aiAssistance: data.aiAssistance,
     onboardingStatus: 'completed',
-    verificationStatus: 'pending' // Mark as pending for admin review
+    verificationStatus: 'pending'
   };
 
   if (!profile) {
     profile = new ClientProfile(profileData);
   } else {
-    Object.assign(profile, profileData);
+    // Explicit mapping instead of Object.assign
+    Object.keys(profileData).forEach(key => {
+      profile[key] = profileData[key];
+    });
   }
 
   profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));

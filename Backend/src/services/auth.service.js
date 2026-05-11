@@ -168,7 +168,7 @@ const createOrUpdateFromOAuth = async (oauthData) => {
   if (user) {
     user.authProvider = provider;
     user.oauthId = providerId;
-    if (profilePicture) user.profilePicture = profilePicture;
+    if (profilePicture && !user.profilePicture) user.profilePicture = profilePicture;
     user.isEmailVerified = true;
     user.emailVerifiedAt = user.emailVerifiedAt || new Date();
     await user.save();
@@ -238,7 +238,7 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
   } else {
     // Update existing user
     user.supabaseId = supabaseId;
-    user.profilePicture = user_metadata?.avatar_url || user_metadata?.picture || user.profilePicture;
+    user.profilePicture = user.profilePicture || user_metadata?.avatar_url || user_metadata?.picture;
     user.isEmailVerified = true;
     user.isSyncedToSupabase = true;
     user.lastSyncedAt = new Date();

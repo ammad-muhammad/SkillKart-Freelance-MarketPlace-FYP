@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
 
 const ClientSettings = () => {
-  const { profile, setProfile, showToast } = useClient();
+  const { user } = useAuth();
+  const { profile, updateProfile, updateMultipleSections, showToast } = useClient();
+  const isEmailUser = user?.authProvider === 'email';
   const [account, setAccount] = useState({
     newUsername: profile?.personalInfo?.username || "",
     newEmail: profile?.personalInfo?.email || "",
@@ -12,21 +15,71 @@ const ClientSettings = () => {
     recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
   });
   const [notifications, setNotifications] = useState({ ...(profile?.notificationSettings || {}) });
+  const [errors, setErrors] = useState({});
+
+  // Sync state when profile is loaded/updated
+  useEffect(() => {
+    if (profile) {
+      setAccount({
+        newUsername: profile.personalInfo?.username || "",
+        newEmail: profile.personalInfo?.email || "",
+        recoveryEmail: profile.securitySettings?.recoveryEmail || "",
+        recoveryPhone: profile.securitySettings?.recoveryPhone || "",
+      });
+      setNotifications({ ...(profile.notificationSettings || {}) });
+    }
+  }, [profile]);
+
   const [deleteModal, setDeleteModal] = useState(false);
 
+
   const saveAccount = async () => {
+    setErrors({});
     try {
-      await updateProfile('personalInfo', { username: account.newUsername, email: account.newEmail }, true);
-      await updateProfile('securitySettings', { recoveryEmail: account.recoveryEmail, recoveryPhone: account.recoveryPhone }, false, true);
+      const updates = {
+        personalInfo: { 
+          username: account.newUsername?.trim() || profile?.personalInfo?.username, 
+          email: account.newEmail?.trim() || profile?.personalInfo?.email 
+        },
+        securitySettings: { recoveryEmail: account.recoveryEmail, recoveryPhone: account.recoveryPhone }
+      };
+
+      const res = await updateMultipleSections(updates, false, true, { skipFetch: true });
+      
+      const processErrors = (res, target) => {
+        if (res && !res.success && res.errors) {
+          if (Array.isArray(res.errors)) {
+            res.errors.forEach(err => {
+              if (typeof err === 'object' && err.field) target[err.field] = err.message;
+              else if (typeof err === 'string') {
+                const pathMatch = err.match(/at path \\"(.+)\\"/);
+                target[pathMatch ? pathMatch[1] : 'global'] = err;
+              }
+            });
+          } else if (typeof res.errors === 'object') {
+            Object.assign(target, res.errors);
+          }
+        }
+      };
+
+      const combinedErrors = {};
+      processErrors(res, combinedErrors);
+      
+      if (Object.keys(combinedErrors).length > 0) {
+        setErrors(combinedErrors);
+      }
     } catch (error) {
       console.error('Failed to save account settings:', error);
     }
   };
 
   const toggleNotif = async (key) => {
-    const updated = { ...notifications, [key]: !notifications[key] };
-    setNotifications(updated);
-    await updateProfile('notificationSettings', updated, false, true);
+    setNotifications(prev => {
+      const updated = { ...prev, [key]: !prev[key] };
+      // Call updateProfile with the newly calculated state and skip redundant re-fetch
+      updateProfile('notificationSettings', updated, false, true, { skipFetch: true });
+      return updated;
+    });
   };
 
   return (
@@ -46,8 +99,9 @@ const ClientSettings = () => {
           </div>
           <div className="cl-form-group">
             <label className="cl-label">New Username</label>
-            <input className="cl-input" value={account.newUsername}
+            <input className={`cl-input${errors.newUsername ? ' cl-input--error' : ''}`} value={account.newUsername}
               onChange={(e) => setAccount((p) => ({ ...p, newUsername: e.target.value }))} />
+            {errors.newUsername && <span className="cl-error">⚠ {errors.newUsername}</span>}
           </div>
         </div>
         <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
@@ -63,32 +117,38 @@ const ClientSettings = () => {
           </div>
           <div className="cl-form-group">
             <label className="cl-label">New Email</label>
-            <input type="email" className="cl-input" value={account.newEmail}
+            <input type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
               onChange={(e) => setAccount((p) => ({ ...p, newEmail: e.target.value }))} />
+            {errors.newEmail && <span className="cl-error">⚠ {errors.newEmail}</span>}
           </div>
         </div>
         <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
           Update Email
         </button>
 
-        <div className="cl-divider" />
-
-        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-primary)' }}>🔁 Recovery Options</h4>
-        <div className="cl-form-grid">
-          <div className="cl-form-group">
-            <label className="cl-label">Recovery Email</label>
-            <input type="email" className="cl-input" value={account.recoveryEmail}
-              onChange={(e) => setAccount((p) => ({ ...p, recoveryEmail: e.target.value }))} />
-          </div>
-          <div className="cl-form-group">
-            <label className="cl-label">Recovery Phone</label>
-            <input className="cl-input" value={account.recoveryPhone}
-              onChange={(e) => setAccount((p) => ({ ...p, recoveryPhone: e.target.value }))} />
-          </div>
-        </div>
-        <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
-          Save Recovery Options
-        </button>
+        {isEmailUser && (
+          <>
+            <div className="cl-divider" />
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-primary)' }}>🔁 Recovery Options</h4>
+            <div className="cl-form-grid">
+              <div className="cl-form-group">
+                <label className="cl-label">Recovery Email</label>
+                <input type="email" className={`cl-input${errors.recoveryEmail ? ' cl-input--error' : ''}`} value={account.recoveryEmail}
+                  onChange={(e) => setAccount((p) => ({ ...p, recoveryEmail: e.target.value }))} />
+                {errors.recoveryEmail && <span className="cl-error">⚠ {errors.recoveryEmail}</span>}
+              </div>
+              <div className="cl-form-group">
+                <label className="cl-label">Recovery Phone</label>
+                <input className={`cl-input${errors.recoveryPhone ? ' cl-input--error' : ''}`} value={account.recoveryPhone}
+                  onChange={(e) => setAccount((p) => ({ ...p, recoveryPhone: e.target.value }))} />
+                {errors.recoveryPhone && <span className="cl-error">⚠ {errors.recoveryPhone}</span>}
+              </div>
+            </div>
+            <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
+              Save Recovery Options
+            </button>
+          </>
+        )}
       </div>
 
       {/* Notification Settings */}

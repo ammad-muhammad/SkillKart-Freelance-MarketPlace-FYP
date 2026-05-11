@@ -75,8 +75,12 @@
   font-size: 0.72rem; color: var(--color-text-light);
   text-align: right; margin-top: 0.2rem;
 }
-.cl-input--error { border-color: #ef4444 !important; }
-.cl-error { font-size: 0.75rem; color: #ef4444; margin-top: 0.25rem; font-weight: 600; }
+.cl-input--error { border-color: #ef4444 !important; background: #fef2f2 !important; }
+.cl-error { font-size: 0.72rem; color: #ef4444; margin-top: 0.25rem; font-weight: 600; display: block; }
+.cl-error-banner { 
+  padding: 0.75rem 1rem; background: #fef2f2; border: 1.5px solid #fecaca; 
+  border-radius: 10px; color: #b91c1c; font-size: 0.8rem; font-weight: 600; 
+}
 
 /* ── Buttons ── */
 .cl-btn {

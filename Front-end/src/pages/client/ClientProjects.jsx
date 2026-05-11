@@ -6,7 +6,7 @@ import TagInput from '../freelancer/components/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import './ClientDashboard.css';
 
-const STATUS_FILTERS = ['all', 'open', 'in-progress', 'completed'];
+const STATUS_FILTERS = ['all', 'open', 'in-progress', 'completed', 'expired', 'closed'];
 
 const ClientProjects = () => {
   const { projects, deleteProject, updateProject, showToast } = useClient();
@@ -16,7 +16,7 @@ const ClientProjects = () => {
 
   const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter);
 
-  const statusOptions = ['open', 'in-progress', 'completed'];
+  const statusOptions = ['open', 'in-progress', 'completed', 'expired', 'closed'];
 
   const handleStatusChange = (id, status) => {
     updateProject(id, { status });
@@ -82,7 +82,11 @@ const ClientProjects = () => {
                   </p>
                 </div>
                 <span className={`cl-badge cl-badge--${proj.status}`}>
-                  {proj.status === 'open' ? '🟢 Open' : proj.status === 'in-progress' ? '🔵 In Progress' : '✅ Completed'}
+                  {proj.status === 'open' ? '🟢 Open' : 
+                   proj.status === 'in-progress' ? '🔵 In Progress' : 
+                   proj.status === 'completed' ? '✅ Completed' :
+                   proj.status === 'expired' ? '⏰ Expired' : 
+                   '⚪ Closed'}
                 </span>
               </div>
 
@@ -212,7 +216,7 @@ const ClientProjects = () => {
         .cl-proj-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
         .cl-proj-card__title { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.2rem; }
         .cl-proj-card__meta { font-size: 0.78rem; color: var(--color-text-light); }
-        .cl-proj-card__summary { font-size: 0.875rem; color: var(--color-text-mid); line-height: 1.5; }
+        .cl-proj-card__summary { font-size: 0.875rem; color: var(--color-text-mid); line-height: 1.5; overflow-wrap: break-word;word-break: break-word;}
         .cl-proj-card__footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; border-top: 1px solid #f0f4f8; padding-top: 0.75rem; margin-top: 0.25rem; }
         .cl-proj-card__actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
         .cl-proj-card__btns { display: flex; gap: 0.4rem; }

@@ -55,6 +55,13 @@ router.get('/',
   jobController.listJobs
 );
 
+// Get client's own projects (Must be before /:id)
+router.get('/my-projects',
+  authenticate,
+  requireRole('client'),
+  jobController.getMyProjects
+);
+
 // Get job by ID (public)
 router.get('/:id',
   optionalAuth,
@@ -62,10 +69,6 @@ router.get('/:id',
   validate,
   jobController.getJobById
 );
-
-/**
- * Protected routes (Clients)
- */
 
 /**
  * @swagger

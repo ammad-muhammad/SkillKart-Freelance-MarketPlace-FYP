@@ -107,17 +107,28 @@ const acceptProposal = asyncHandler(async (req, res) => {
   if (!proposal) {
     throw new NotFoundError('Proposal not found');
   }
-  
+
+  const job = await Job.findById(proposal.jobId);
+  if (!job) throw new NotFoundError('Job not found');
+  if (job.status !== 'open') {
+    return res.status(400).json({ success: false, message: `Cannot accept proposal. Job is already ${job.status}` });
+  }
+
   proposal.status = 'accepted';
   proposal.clientResponse = message;
   proposal.respondedAt = new Date();
   await proposal.save();
   
-  // Update job
-  await Job.findByIdAndUpdate(proposal.jobId, {
-    status: 'in-progress',
-    hiredFreelancer: proposal.freelancerId
-  });
+  // Update job: move to in-progress and assign freelancer
+  job.status = 'in-progress';
+  job.hiredFreelancer = proposal.freelancerId;
+  await job.save();
+
+  // Automatically reject other pending proposals
+  await Proposal.updateMany(
+    { jobId: job._id, _id: { $ne: proposal._id }, status: 'pending' },
+    { $set: { status: 'rejected', clientResponse: 'Position filled', respondedAt: new Date() } }
+  );
   
   sendSuccess(res, {
     message: 'Proposal accepted successfully',

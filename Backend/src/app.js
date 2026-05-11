@@ -228,11 +228,12 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // MongoDB CastError (invalid ObjectId)
+  // MongoDB CastError (invalid ObjectId or type mismatch)
   if (err.name === 'CastError') {
     return res.status(400).json({
       success: false,
-      message: 'Invalid ID format'
+      message: `Invalid value for ${err.path}: ${err.value}`,
+      errors: [err.message]
     });
   }
 

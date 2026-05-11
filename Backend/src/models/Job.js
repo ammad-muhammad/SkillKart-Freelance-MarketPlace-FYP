@@ -15,8 +15,8 @@ const jobSchema = new mongoose.Schema({
   duration: String,
   status: {
     type: String,
-    enum: ['draft', 'open', 'in-progress', 'completed', 'cancelled'],
-    default: 'draft'
+    enum: ['draft', 'open', 'in-progress', 'completed', 'cancelled', 'expired', 'closed'],
+    default: 'open'
   },
   attachments: [String],
   proposals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' }],
