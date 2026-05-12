@@ -8,8 +8,7 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
   },
   password: {
     type: String,
@@ -39,8 +38,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['superadmin', 'admin', 'contenteditor', 'freelancer', 'client', 'publicviewer'],
     default: 'publicviewer',
-    required: true,
-    index: true
+    required: true
   },
 
   // Authentication Methods
@@ -53,8 +51,10 @@ const userSchema = new mongoose.Schema({
   // Supabase Integration
   supabaseId: {
     type: String,
-    sparse: true,
-    index: true
+    index: {
+      unique: true,
+      partialFilterExpression: { supabaseId: { $type: 'string' } }
+    }
   },
   isSyncedToSupabase: {
     type: Boolean,
@@ -202,8 +202,7 @@ const userSchema = new mongoose.Schema({
 
 // Indexes for performance
 userSchema.index({ email: 1, role: 1 });
-// Create unique partial index for supabaseId - only enforces uniqueness when value is not null
-userSchema.index({ supabaseId: 1 }, { unique: true, partialFilterExpression: { supabaseId: { $type: 'string' } } });
+// Create unique partial index for oauthId - only enforces uniqueness when value is not null
 userSchema.index({ oauthId: 1, authProvider: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ isActive: 1, isBlocked: 1 });

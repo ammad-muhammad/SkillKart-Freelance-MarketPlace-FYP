@@ -56,7 +56,7 @@ const otpSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    index: true
+    index: { expireAfterSeconds: 0 }
   },
 
   attempts: {
@@ -88,9 +88,6 @@ const otpSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
-
-// Index for auto-deletion of expired OTPs
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Compound index for faster lookups
 otpSchema.index({ email: 1, purpose: 1, isVerified: 1 });
