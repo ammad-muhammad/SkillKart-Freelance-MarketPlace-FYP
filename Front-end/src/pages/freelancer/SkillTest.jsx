@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, ChevronRight, CheckCircle2, AlertCircle, Timer, Award, Save } from 'lucide-react';
+import { Brain, ChevronRight, CheckCircle2, AlertCircle, Timer, Award } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { skillTestAPI } from '../../api/skillTest';
 import { useFreelancer } from '../../context/FreelancerContext';
@@ -16,30 +16,36 @@ const SkillTest = () => {
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const [skills, setSkills] = useState([]);
   
-  const autoSaveTimer = useRef(null);
+
 
   useEffect(() => {
     fetchTest();
-    return () => clearTimeout(autoSaveTimer.current);
   }, []);
 
-  const fetchTest = async () => {
+  const fetchTest = async (force = false) => {
     try {
       setLoading(true);
-      const res = await skillTestAPI.generateTest();
-      const { questions: qList, answers: savedAnswers, skills: sList } = res.data.data;
+      const res = await skillTestAPI.generateTest(force);
+      console.log("[SkillTest] API Response:", res.data);
       
+      // The data is nested as res.data.data (from sendSuccess)
+      const testData = res.data.data;
+      const qList = testData?.questions || [];
+      const sList = testData?.skills || [];
+
+      if (qList.length === 0) {
+        console.warn("[SkillTest] Received empty question list");
+      }
+
       setQuestions(qList);
       setSkills(sList);
-      
-      if (savedAnswers) {
-        setAnswers(savedAnswers);
-      }
+      setCurrentIndex(0);
+      setAnswers({});
     } catch (error) {
+      console.error("[SkillTest] Fetch Error:", error);
       const msg = error.response?.data?.message || 'Failed to load skill test. Please check your connection.';
       toast.error(msg);
     } finally {
@@ -48,28 +54,10 @@ const SkillTest = () => {
   };
 
   const handleAnswerChange = (val) => {
-    const newAnswers = {
-      ...answers,
+    setAnswers(prev => ({
+      ...prev,
       [currentIndex]: val
-    };
-    setAnswers(newAnswers);
-
-    // Auto-save logic (debounced)
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      saveProgress(newAnswers);
-    }, 2000);
-  };
-
-  const saveProgress = async (currentAnswers) => {
-    setSaving(true);
-    try {
-      await skillTestAPI.saveProgress(currentAnswers);
-    } catch (error) {
-      console.error('Failed to auto-save progress');
-    } finally {
-      setSaving(false);
-    }
+    }));
   };
 
   const handleNext = () => {
@@ -154,7 +142,7 @@ const SkillTest = () => {
                   ? " You're very close! Reach 80% to earn the Expert badge." 
                   : " Take some time to improve your skills and retake the test for a better ranking."}
               </p>
-              <button onClick={() => window.location.reload()} className="st-btn-retry">
+              <button onClick={() => { setResult(null); fetchTest(true); }} className="st-btn-retry">
                 Retake to Improve Ranking
               </button>
               <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
@@ -163,6 +151,38 @@ const SkillTest = () => {
             </div>
           )}
         </motion.div>
+      </div>
+    );
+  }
+
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="st-page">
+        <div className="st-header">
+          <div className="st-header-left">
+            <Brain className="st-logo-icon" />
+            <div>
+              <h1>Skill Verification Test</h1>
+              <p>No questions generated</p>
+            </div>
+          </div>
+        </div>
+        <div className="st-content">
+          <div className="st-question-card" style={{ textAlign: 'center', padding: '3rem' }}>
+            <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 1rem' }} />
+            <h2>Failed to load test questions</h2>
+            <p style={{ color: 'var(--color-text-mid)', marginTop: '0.5rem', maxWidth: '400px', margin: '0.5rem auto 0' }}>
+              We couldn't generate the verification test at this time. This is likely due to high AI service demand or network issues.
+            </p>
+            <button 
+              className="st-btn-submit" 
+              style={{ marginTop: '2rem', display: 'inline-flex', width: 'auto' }}
+              onClick={() => navigate('/freelancer/dashboard')}
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -181,12 +201,7 @@ const SkillTest = () => {
           </div>
         </div>
         <div className="st-header-right">
-          {saving && (
-            <div className="st-saving-indicator">
-              <Save size={14} className="spin" />
-              <span>Auto-saving...</span>
-            </div>
-          )}
+
           <div className="st-timer">
             <Timer size={18} />
             <span>Anti-Gaming Active</span>

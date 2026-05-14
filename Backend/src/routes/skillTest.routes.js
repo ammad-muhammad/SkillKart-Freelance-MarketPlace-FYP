@@ -8,7 +8,6 @@ router.use(authenticate);
 router.use(requireRole('freelancer'));
 
 router.get('/generate', skillTestController.generateTest);
-router.post('/save-progress', skillTestController.saveProgress);
 router.post('/submit', skillTestController.submitTest);
 router.get('/history', skillTestController.getTestHistory);
 

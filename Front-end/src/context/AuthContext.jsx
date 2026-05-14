@@ -11,6 +11,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const inactivityTimeout = useRef(null);
   const isCheckingAuth = useRef(false);
+  const lastCheckedAuth = useRef(0);
+  const AUTH_CHECK_THROTTLE = 60 * 1000; // Only check once per minute on visibility/online
 
   useEffect(() => {
     checkAuth();
@@ -78,9 +80,11 @@ export const AuthProvider = ({ children }) => {
 
   const handleOnline = async () => {
     console.log('Connection restored');
-    if (tokenManager.hasValidToken()) {
+    const now = Date.now();
+    if (tokenManager.hasValidToken() && (now - lastCheckedAuth.current > AUTH_CHECK_THROTTLE)) {
       try {
         await authAPI.getCurrentUser();
+        lastCheckedAuth.current = now;
       } catch (error) {
         logout('Session invalid after reconnection');
       }
@@ -98,9 +102,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const handleVisibilityChange = async () => {
-    if (!document.hidden && tokenManager.hasValidToken()) {
+    const now = Date.now();
+    if (!document.hidden && tokenManager.hasValidToken() && (now - lastCheckedAuth.current > AUTH_CHECK_THROTTLE)) {
       try {
         await authAPI.getCurrentUser();
+        lastCheckedAuth.current = now;
       } catch (error) {
         logout('Session expired');
       }
@@ -113,8 +119,13 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/login';
   };
 
-  const checkAuth = async () => {
+  const checkAuth = async (force = false) => {
     if (isCheckingAuth.current) {
+      return;
+    }
+    
+    const now = Date.now();
+    if (!force && user && (now - lastCheckedAuth.current < AUTH_CHECK_THROTTLE)) {
       return;
     }
     
@@ -139,6 +150,7 @@ export const AuthProvider = ({ children }) => {
       
       const { data } = await authAPI.getCurrentUser();
       setUser(data.data.user);
+      lastCheckedAuth.current = Date.now();
     } catch (error) {
       console.error('Auth check failed:', error);
       

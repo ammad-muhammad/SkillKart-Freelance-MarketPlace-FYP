@@ -99,11 +99,13 @@ ${text}
     const prompt = `
 Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
 Generate exactly ${count} questions. The difficulty should be moderate (not too hard, not too easy).
+CRITICAL: These questions MUST be completely fresh, unique, and different from previous attempts. (Random Context ID: ${skills.join('-')}-${Date.now()})
 IMPORTANT: 
-1. Mix Multiple Choice Questions (MCQs) and Short Text Input questions. Roughly half should be MCQs and half text input.
-2. For MCQs, provide exactly 4 options. Include the "options" array in the output object.
-3. For Text Input, the question should be answerable in a few sentences.
-4. Paraphrase questions if they have been asked before and ensure variation in question styles.
+1. DISTRIBUTION: You MUST generate exactly ${count} questions. 
+2. MCQs MANDATORY: At least 20 out of 25 (or 80%) of these questions MUST be Multiple Choice Questions (type: "mcq").
+3. FORMAT: For MCQs, provide exactly 4 options and a "correctAnswer". 
+4. SHORT ANSWER: Only the remaining 5 questions should be text-based (type: "text").
+5. VARIATION: Ensure questions are technical and diverse. (Seed: ${Date.now()})
 
 Output ONLY a JSON array of objects.
 Use this format:
@@ -112,6 +114,7 @@ Use this format:
     "type": "mcq",
     "question": "The technical question text...",
     "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": "The exact string of the correct option",
     "skill": "The skill this question belongs to",
     "category": "Theory/Practical/Code/etc"
   },

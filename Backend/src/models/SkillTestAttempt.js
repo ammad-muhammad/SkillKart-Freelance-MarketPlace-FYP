@@ -5,12 +5,16 @@ const skillTestAttemptSchema = new mongoose.Schema({
   skillsTested: [String],
   questions: [{
     question: String,
+    skill: String,
     category: String,
+    type: { type: String }, // 'mcq' or 'text'
+    options: [String],
+    correctAnswer: String, // Store the correct answer for MCQs
     userAnswer: String,
     aiEvaluation: String,
     score: Number // 0 to 1
   }],
-  answers: { type: Map, of: String, default: {} }, // Partial answers storage
+
   totalScore: { type: Number },
   passed: { type: Boolean },
   status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },

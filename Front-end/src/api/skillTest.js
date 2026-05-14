@@ -2,16 +2,12 @@ import client from './client';
 
 export const skillTestAPI = {
   // Generate a new skill test
-  generateTest: () => 
-    client.get('/skill-tests/generate'),
+  generateTest: (force = false) => 
+    client.get(`/skill-tests/generate${force ? '?force=true' : ''}`),
 
   // Submit test answers
   submitTest: (answers) => 
     client.post('/skill-tests/submit', { answers }),
-
-  // Save partial progress
-  saveProgress: (answers) =>
-    client.post('/skill-tests/save-progress', { answers }),
 
   // Get test history
   getHistory: () => 
