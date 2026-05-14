@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
+import { authAPI } from '../../api/auth';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -15,7 +16,10 @@ const FreelancerSettings = () => {
     recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
   });
   const [saving, setSaving] = useState(null);
-  const [deleteModal, setDeleteModal] = useState(false);
+  const [deactivateModal, setDeactivateModal] = useState(false);
+  const [deactivateStep, setDeactivateStep] = useState(1);
+  const [deactivateOtp, setDeactivateOtp] = useState('');
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
 
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
@@ -27,6 +31,34 @@ const FreelancerSettings = () => {
       console.error(`Failed to save ${label}:`, error);
     } finally {
       setSaving(null);
+    }
+  };
+
+  const handleRequestDeactivate = async () => {
+    setDeactivateLoading(true);
+    try {
+      await authAPI.requestDeactivation();
+      setDeactivateStep(2);
+      showToast('OTP sent to your email for deactivation.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Cannot deactivate account.', 'error');
+      setDeactivateModal(false);
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
+  const handleConfirmDeactivate = async () => {
+    if (!deactivateOtp) return;
+    setDeactivateLoading(true);
+    try {
+      await authAPI.confirmDeactivation(deactivateOtp);
+      showToast('Account deactivated successfully.', 'success');
+      window.location.href = '/login';
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
+    } finally {
+      setDeactivateLoading(false);
     }
   };
 
@@ -145,33 +177,62 @@ const FreelancerSettings = () => {
       <div className="fl-card">
         <h3 className="fl-section-title" style={{ color: '#dc2626', borderColor: '#fecaca' }}>⚠️ Danger Zone</h3>
         <div className="fl-danger-zone">
-          <p className="fl-danger-zone__title">Delete Account</p>
+          <p className="fl-danger-zone__title">Deactivate Account</p>
           <p className="fl-danger-zone__desc">
-            Permanently delete your account and all associated data. This action is irreversible.
+            Temporarily disable your account. Your profile will not be shown to any user. You can reactivate it later by logging in and verifying your email.
           </p>
-          <button className="fl-btn fl-btn--danger" onClick={() => setDeleteModal(true)}>
-            🗑 Delete My Account
+          <button className="fl-btn fl-btn--danger" onClick={() => { setDeactivateStep(1); setDeactivateOtp(''); setDeactivateModal(true); }}>
+            Deactivate My Account
           </button>
         </div>
       </div>
 
-      <Modal open={deleteModal} title="Delete Account" onClose={() => setDeleteModal(false)} danger>
-        <p style={{ marginBottom: '1rem' }}>
-          This will permanently delete your account and all your data including gigs, orders, and profile info.
-          <strong> This cannot be undone.</strong>
-        </p>
-        <p style={{ marginBottom: '1.25rem', color: '#dc2626', fontWeight: 600 }}>
-          Are you absolutely sure?
-        </p>
-        <div className="fl-actions" style={{ marginTop: 0 }}>
-          <button
-            className="fl-btn fl-btn--danger"
-            onClick={() => { setDeleteModal(false); showToast('Account deletion simulated.', 'info'); }}
-          >
-            Yes, Delete Account
-          </button>
-          <button className="fl-btn fl-btn--ghost" onClick={() => setDeleteModal(false)}>Cancel</button>
-        </div>
+      <Modal open={deactivateModal} title="Deactivate Account" onClose={() => setDeactivateModal(false)} danger>
+        {deactivateStep === 1 ? (
+          <>
+            <p style={{ marginBottom: '1rem' }}>
+              Deactivating your account will hide your profile from clients and other freelancers.
+              <strong> You cannot deactivate if you have active in-progress jobs.</strong>
+            </p>
+            <p style={{ marginBottom: '1.25rem', color: '#dc2626', fontWeight: 600 }}>
+              Are you sure you want to deactivate your account?
+            </p>
+            <div className="fl-actions" style={{ marginTop: 0 }}>
+              <button
+                className={`fl-btn fl-btn--danger${deactivateLoading ? ' fl-btn--loading' : ''}`}
+                onClick={handleRequestDeactivate}
+                disabled={deactivateLoading}
+              >
+                {deactivateLoading ? 'Checking...' : 'Yes, Send OTP'}
+              </button>
+              <button className="fl-btn fl-btn--ghost" onClick={() => setDeactivateModal(false)}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ marginBottom: '1rem' }}>
+              Please enter the OTP sent to your email to confirm deactivation.
+            </p>
+            <div className="fl-form-group">
+              <input
+                className="fl-input"
+                placeholder="Enter OTP"
+                value={deactivateOtp}
+                onChange={(e) => setDeactivateOtp(e.target.value)}
+              />
+            </div>
+            <div className="fl-actions" style={{ marginTop: '1rem' }}>
+              <button
+                className={`fl-btn fl-btn--danger${deactivateLoading ? ' fl-btn--loading' : ''}`}
+                onClick={handleConfirmDeactivate}
+                disabled={deactivateLoading || !deactivateOtp}
+              >
+                {deactivateLoading ? 'Deactivating...' : 'Confirm Deactivation'}
+              </button>
+              <button className="fl-btn fl-btn--ghost" onClick={() => setDeactivateModal(false)}>Cancel</button>
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );

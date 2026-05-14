@@ -15,7 +15,6 @@ const ClientProfile = () => {
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
   const [form, setForm] = useState({ ...(profile?.personalInfo || {}) });
   const [prefSkills, setPrefSkills] = useState(Array.isArray(profile?.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
   const [projTypes, setProjTypes] = useState(Array.isArray(profile?.preferences?.projectTypes) ? [...profile.preferences.projectTypes] : []);
@@ -311,22 +310,10 @@ const ClientProfile = () => {
             {saving ? 'Saving...' : '✔ Save Changes'}
           </button>
           <button className="cl-btn cl-btn--ghost" onClick={() => setEditing(false)}>Cancel</button>
-          <button className="cl-btn cl-btn--danger" style={{ marginLeft: 'auto' }} onClick={() => setDeleteModal(true)}>
-            🗑 Delete Account
-          </button>
         </div>
       )}
 
-      {/* Delete Modal */}
-      <Modal open={deleteModal} title="Delete Account" onClose={() => setDeleteModal(false)} danger>
-        <p>Are you sure you want to permanently delete your account? This action cannot be undone.</p>
-        <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
-          <button className="cl-btn cl-btn--danger" onClick={() => { setDeleteModal(false); showToast('Account deletion simulated.', 'info'); }}>
-            Yes, Delete
-          </button>
-          <button className="cl-btn cl-btn--ghost" onClick={() => setDeleteModal(false)}>Cancel</button>
-        </div>
-      </Modal>
+
 
       <style>{`
         .cl-profile-hero { display: flex; align-items: flex-start; gap: 1.75rem; flex-wrap: wrap; }

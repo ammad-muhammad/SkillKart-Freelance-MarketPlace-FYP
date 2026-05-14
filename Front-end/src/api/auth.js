@@ -38,5 +38,11 @@ export const authAPI = {
     client.post('/auth/password/reset/request', { email }),
 
   resetPassword: (email, otp, newPassword) =>
-    client.post('/auth/password/reset', { email, otp, newPassword })
+    client.post('/auth/password/reset', { email, otp, newPassword }),
+
+  requestDeactivation: () =>
+    client.post('/auth/deactivate/request'),
+
+  confirmDeactivation: (otp) =>
+    client.post('/auth/deactivate/confirm', { otp })
 };

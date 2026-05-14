@@ -32,7 +32,10 @@ const ClientSecurity = () => {
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
+  const [deactivateModal, setDeactivateModal] = useState(false);
+  const [deactivateStep, setDeactivateStep] = useState(1);
+  const [deactivateOtp, setDeactivateOtp] = useState('');
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [twoFactor, setTwoFactor] = useState(!!profile?.securitySettings?.twoFactorEnabled);
   const [emailVerified, setEmailVerified] = useState(!!profile?.securitySettings?.emailVerified);
 
@@ -59,6 +62,34 @@ const ClientSecurity = () => {
       showToast(error.response?.data?.message || 'Failed to change password', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRequestDeactivate = async () => {
+    setDeactivateLoading(true);
+    try {
+      await authAPI.requestDeactivation();
+      setDeactivateStep(2);
+      showToast('OTP sent to your email for deactivation.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Cannot deactivate account.', 'error');
+      setDeactivateModal(false);
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
+  const handleConfirmDeactivate = async () => {
+    if (!deactivateOtp) return;
+    setDeactivateLoading(true);
+    try {
+      await authAPI.confirmDeactivation(deactivateOtp);
+      showToast('Account deactivated successfully.', 'success');
+      window.location.href = '/login';
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
+    } finally {
+      setDeactivateLoading(false);
     }
   };
 
@@ -210,8 +241,8 @@ const ClientSecurity = () => {
           <button className="cl-btn cl-btn--ghost" onClick={() => showToast('Logged out from all devices (simulated).', 'info')}>
             🚪 Logout from All Devices
           </button>
-          <button className="cl-btn cl-btn--danger" onClick={() => setDeleteModal(true)}>
-            🗑 Delete Account
+          <button className="cl-btn cl-btn--danger" onClick={() => { setDeactivateStep(1); setDeactivateOtp(''); setDeactivateModal(true); }}>
+            🗑 Deactivate Account
           </button>
         </div>
       </div>
@@ -250,15 +281,53 @@ const ClientSecurity = () => {
         )}
       </Modal>
 
-      {/* Delete Modal */}
-      <Modal open={deleteModal} title="Delete Account" onClose={() => setDeleteModal(false)} danger>
-        <p>Are you sure you want to permanently delete your account?</p>
-        <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
-          <button className="cl-btn cl-btn--danger" onClick={() => { setDeleteModal(false); showToast('Account deletion simulated.', 'info'); }}>
-            Yes, Delete
-          </button>
-          <button className="cl-btn cl-btn--ghost" onClick={() => setDeleteModal(false)}>Cancel</button>
-        </div>
+      {/* Deactivate Modal */}
+      <Modal open={deactivateModal} title="Deactivate Account" onClose={() => setDeactivateModal(false)} danger>
+        {deactivateStep === 1 ? (
+          <>
+            <p style={{ marginBottom: '1rem' }}>
+              Deactivating your account will hide your profile from freelancers and the public.
+              <strong> You cannot deactivate if you have open or active jobs.</strong>
+            </p>
+            <p style={{ marginBottom: '1.25rem', color: '#dc2626', fontWeight: 600 }}>
+              Are you sure you want to deactivate your account?
+            </p>
+            <div className="cl-actions" style={{ marginTop: 0 }}>
+              <button
+                className={`cl-btn cl-btn--danger${deactivateLoading ? ' cl-btn--loading' : ''}`}
+                onClick={handleRequestDeactivate}
+                disabled={deactivateLoading}
+              >
+                {deactivateLoading ? 'Checking...' : 'Yes, Send OTP'}
+              </button>
+              <button className="cl-btn cl-btn--ghost" onClick={() => setDeactivateModal(false)}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ marginBottom: '1rem' }}>
+              Please enter the OTP sent to your email to confirm deactivation.
+            </p>
+            <div className="cl-form-group">
+              <input
+                className="cl-input"
+                placeholder="Enter OTP"
+                value={deactivateOtp}
+                onChange={(e) => setDeactivateOtp(e.target.value)}
+              />
+            </div>
+            <div className="cl-actions" style={{ marginTop: '1rem' }}>
+              <button
+                className={`cl-btn cl-btn--danger${deactivateLoading ? ' cl-btn--loading' : ''}`}
+                onClick={handleConfirmDeactivate}
+                disabled={deactivateLoading || !deactivateOtp}
+              >
+                {deactivateLoading ? 'Deactivating...' : 'Confirm Deactivation'}
+              </button>
+              <button className="cl-btn cl-btn--ghost" onClick={() => setDeactivateModal(false)}>Cancel</button>
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );

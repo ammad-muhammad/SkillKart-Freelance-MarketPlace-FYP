@@ -32,6 +32,7 @@ const otpSchema = new mongoose.Schema({
       'sensitive_operation',
       'login',
       'account_deletion',
+      'account_deactivation',
       'payment_verification'
     ],
     required: true,

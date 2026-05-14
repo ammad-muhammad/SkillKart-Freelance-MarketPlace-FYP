@@ -4,6 +4,7 @@ const otpService = require('../services/otp.service');
 const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const User = require('../models/User');
+const Job = require('../models/Job');
 /**
  * createUser: create user and send otp
  */
@@ -351,6 +352,56 @@ const supabaseAuth = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Request Account Deactivation
+ */
+const requestDeactivation = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const user = req.user;
+
+  if (user.role === 'freelancer') {
+    // Check for active jobs where hired
+    const activeJobs = await Job.countDocuments({ hiredFreelancer: userId, status: 'in-progress' });
+    if (activeJobs > 0) {
+      return sendError(res, { statusCode: 400, message: 'You have active in-progress jobs. Please complete or cancel them before deactivating your account.' });
+    }
+  } else if (user.role === 'client') {
+    // Check for active jobs created by client
+    const activeJobs = await Job.countDocuments({ clientId: userId, status: { $in: ['open', 'in-progress'] } });
+    if (activeJobs > 0) {
+      return sendError(res, { statusCode: 400, message: 'You have open or in-progress jobs. Please complete or close them before deactivating your account.' });
+    }
+  }
+
+  // Generate and send OTP for deactivation
+  await otpService.generateAndSendOTP(user.email, 'account_deactivation');
+
+  sendSuccess(res, {
+    message: 'Deactivation OTP sent to your email'
+  });
+});
+
+/**
+ * Confirm Account Deactivation
+ */
+const confirmDeactivation = asyncHandler(async (req, res) => {
+  const { otp } = req.body;
+  const user = req.user;
+
+  // Verify OTP
+  const otpResult = await otpService.verifyOTP(user.email, otp, 'account_deactivation');
+  if (!otpResult.valid) {
+    return sendError(res, { statusCode: 400, message: otpResult.message });
+  }
+
+  // Deactivate account
+  await User.findByIdAndUpdate(user._id, { isActive: false });
+
+  sendSuccess(res, {
+    message: 'Account successfully deactivated'
+  });
+});
+
 module.exports = {
   createUser,
   login,
@@ -366,5 +417,7 @@ module.exports = {
   logout,
   supabaseAuth,
   updateRole,
-  updateMe
+  updateMe,
+  requestDeactivation,
+  confirmDeactivation
 };

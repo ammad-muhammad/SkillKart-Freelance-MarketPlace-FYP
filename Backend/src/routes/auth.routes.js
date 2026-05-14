@@ -362,4 +362,15 @@ router.post('/supabase-auth',
   authController.supabaseAuth
 );
 
+// Account Deactivation
+router.post('/deactivate/request',
+  authenticate,
+  authController.requestDeactivation
+);
+
+router.post('/deactivate/confirm',
+  authenticate,
+  authController.confirmDeactivation
+);
+
 module.exports = router;
