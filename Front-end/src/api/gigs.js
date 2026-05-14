@@ -5,9 +5,13 @@ export const gigsAPI = {
   createGig: (gigData) => 
     client.post('/gigs', gigData),
 
-  // List gigs
+  // List public gigs (Marketplace)
   listGigs: (params) => 
     client.get('/gigs', { params }),
+
+  // List my own gigs (Freelancer Dashboard)
+  listMyGigs: (params) => 
+    client.get('/gigs/my-gigs', { params }),
 
   // Update gig
   updateGig: (id, gigData) => 

@@ -3,6 +3,12 @@
  * Centralized constants for the entire application
  */
 
+// Feature Flags
+const FEATURE_FLAGS = {
+  PUBLIC_GIGS: true,
+  PUBLIC_PROJECTS: true,
+};
+
 // User Roles
 const USER_ROLES = {
   SUPER_ADMIN: 'superadmin',
@@ -287,6 +293,7 @@ const SUCCESS_MESSAGES = {
 };
 
 module.exports = {
+  FEATURE_FLAGS,
   USER_ROLES,
   ROLE_HIERARCHY,
   AUTH_PROVIDERS,

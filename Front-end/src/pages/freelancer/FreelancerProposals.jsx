@@ -23,7 +23,7 @@ export default function FreelancerProposals() {
       // Backend listProposals allows jobId and status. 
       // I should check if backend handles freelancerId or 'me'
       const res = await proposalsAPI.listProposals({ freelancerId: user._id });
-      setProposals(res.data.data.items || []);
+      setProposals(res.data.data || []);
     } catch (error) {
       console.error('Failed to fetch proposals:', error);
       toast.error('Failed to load your proposals.');

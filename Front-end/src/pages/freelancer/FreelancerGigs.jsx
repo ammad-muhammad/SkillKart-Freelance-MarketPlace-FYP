@@ -35,15 +35,15 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
         <div className="fl-gig-card__actions">
           <button
             className={`fl-btn fl-btn--sm fl-btn--${gig.status === 'active' ? 'ghost' : 'outline'}`}
-            onClick={() => onToggleStatus(gig.id)}
+            onClick={() => onToggleStatus(gig._id)}
             title={gig.status === 'active' ? 'Pause Gig' : 'Activate Gig'}
           >
             {gig.status === 'active' ? '⏸' : '▶'}
           </button>
-          <Link to={`/freelancer/gigs/edit/${gig.id}`} className="fl-btn fl-btn--sm fl-btn--outline">
+          <Link to={`/freelancer/gigs/edit/${gig._id}`} className="fl-btn fl-btn--sm fl-btn--outline">
             ✏
           </Link>
-          <button className="fl-btn fl-btn--sm fl-btn--danger" onClick={() => onDelete(gig.id)}>
+          <button className="fl-btn fl-btn--sm fl-btn--danger" onClick={() => onDelete(gig._id)}>
             🗑
           </button>
         </div>
@@ -104,7 +104,7 @@ const FreelancerGigs = () => {
         <div className="fl-gig-grid">
           {filtered.map((gig) => (
             <GigCard
-              key={gig.id}
+              key={gig._id}
               gig={gig}
               onDelete={setDeleteTarget}
               onToggleStatus={toggleGigStatus}

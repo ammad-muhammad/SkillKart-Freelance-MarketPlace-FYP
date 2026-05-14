@@ -71,7 +71,7 @@ export const FreelancerProvider = ({ children }) => {
       setLoading(true);
       const [profileRes, gigsRes, savedRes, propRes] = await Promise.all([
         freelancersAPI.getProfile(),
-        gigsAPI.listGigs({ freelancerId: user._id }),
+        gigsAPI.listMyGigs(),
         freelancersAPI.getSavedJobs(),
         proposalsAPI.listProposals({ freelancerId: user._id })
       ]);
@@ -99,7 +99,7 @@ export const FreelancerProvider = ({ children }) => {
         portfolio: dbProfile.portfolio || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
         stats: {
-          totalGigs: gigsRes.data.data.total || 0,
+          totalGigs: gigsRes.data.meta?.pagination?.total || (gigsRes.data.data?.length || 0),
           activeOrders: 0,
           completedOrders: dbProfile.completedProjects || 0,
           profileViews: 0,
@@ -107,10 +107,13 @@ export const FreelancerProvider = ({ children }) => {
         verificationStatus: dbProfile.verificationStatus || 'unverified'
       };
 
+      console.log("[FreelancerContext] Gigs Response:", gigsRes.data);
+      console.log("[FreelancerContext] Proposals Response:", propRes.data);
+
       setProfile(transformedProfile);
-      setGigs(gigsRes.data.data.items || []);
+      setGigs(gigsRes.data.data || []);
       setSavedProjects(savedRes.data.data.savedJobs || []);
-      setProposals(propRes.data.data.items || []);
+      setProposals(propRes.data.data || []);
     } catch (error) {
       console.error('Freelancer data fetch failed:', error);
     } finally {
@@ -244,6 +247,19 @@ export const FreelancerProvider = ({ children }) => {
     }
   };
 
+  const toggleGigStatus = async (id) => {
+    setLoading(true);
+    try {
+      await gigsAPI.toggleStatus(id);
+      await fetchFreelancerData();
+      showToast('Gig status updated!');
+    } catch (error) {
+      showToast('Failed to update gig status', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleSavedProject = async (project) => {
     try {
       await freelancersAPI.toggleSavedJob(project._id || project.id);
@@ -267,6 +283,7 @@ export const FreelancerProvider = ({ children }) => {
         addGig,
         updateGig,
         deleteGig,
+        toggleGigStatus,
         toasts,
         showToast,
         saveProfile

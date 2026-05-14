@@ -9,6 +9,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Public routes
 router.get('/', gigController.listGigs);
 
+// Owner routes
+router.get('/my-gigs', 
+  authenticate, 
+  requireRole('freelancer'), 
+  gigController.listMyGigs
+);
+
 // Protected routes (Freelancers)
 router.post('/', 
   authenticate, 

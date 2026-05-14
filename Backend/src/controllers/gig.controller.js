@@ -64,6 +64,24 @@ const listGigs = asyncHandler(async (req, res) => {
 });
 
 /**
+ * List My Gigs (Freelancer Dashboard)
+ */
+const listMyGigs = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = parsePagination(req.query);
+  const freelancerId = req.user._id;
+  
+  const query = { freelancerId };
+  
+  const total = await Gig.countDocuments(query);
+  const gigs = await Gig.find(query)
+    .skip(skip)
+    .limit(limit)
+    .sort({ createdAt: -1 });
+  
+  sendPaginated(res, { data: gigs, page, limit, total });
+});
+
+/**
  * Delete Gig
  */
 const deleteGig = asyncHandler(async (req, res) => {
@@ -119,6 +137,7 @@ module.exports = {
   createGig,
   updateGig,
   listGigs,
+  listMyGigs,
   deleteGig,
   toggleStatus,
   uploadBanner
