@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import TagInput from './components/TagInput';
@@ -10,6 +11,8 @@ const MAX_BIO = 600;
 
 const FreelancerProfile = () => {
   const { profile, saveProfile, showToast } = useFreelancer();
+  const { user } = useAuth();
+  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
@@ -157,7 +160,7 @@ const FreelancerProfile = () => {
                   className="fl-input"
                   value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                  disabled={!editing}
+                  disabled={!editing || (key === 'email' && isSupabaseUser)}
                 />
               )}
             </div>

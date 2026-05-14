@@ -1,0 +1,13 @@
+{
+  "name": "skillkart-root",
+  "version": "1.0.0",
+  "description": "Root package to manage and run both Backend and Front-end concurrently",
+  "scripts": {
+    "start": "concurrently \"npm run dev --prefix Backend\" \"npm run dev --prefix Front-end\"",
+    "dev": "npm start",
+    "install:all": "npm install && npm install --prefix Backend && npm install --prefix Front-end"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

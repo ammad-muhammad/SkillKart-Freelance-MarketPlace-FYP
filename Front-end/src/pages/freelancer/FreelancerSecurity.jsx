@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
 const FreelancerSecurity = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
+  const { user } = useContext(AuthContext);
+  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const sec = profile?.securitySettings || {};
 
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
@@ -77,6 +80,28 @@ const FreelancerSecurity = () => {
       </div>
 
       {/* Change Password */}
+      {isSupabaseUser ? (
+        <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
+          <h3 className="fl-section-title">🔑 Account Information</h3>
+          <div className="fl-form-grid">
+            <div className="fl-form-group">
+              <label className="fl-label">Email Address</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  className="fl-input"
+                  value={user?.email || profile?.personalInfo?.email || ''}
+                  readOnly
+                  disabled
+                />
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginTop: '0.5rem' }}>
+                You logged in via an external provider. Password updates are disabled.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
         <h3 className="fl-section-title">🔑 Change Password</h3>
         <div className="fl-form-grid">
@@ -149,8 +174,10 @@ const FreelancerSecurity = () => {
           </button>
         </div>
       </div>
+      )}
 
       {/* 2FA / Toggles */}
+      {!isSupabaseUser && (
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
         <h3 className="fl-section-title">🛡️ Security Options</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -176,6 +203,7 @@ const FreelancerSecurity = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Forgot Password Modal */}
       <Modal open={forgotModal} title="Reset Password" onClose={() => { setForgotModal(false); setForgotSent(false); }}>

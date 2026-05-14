@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { useAuth } from '../../hooks/useAuth';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
 const FreelancerSettings = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
+  const { user } = useAuth();
+  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [form, setForm] = useState({
     username: profile?.personalInfo?.username || "",
     email: profile?.personalInfo?.email || "",
@@ -65,32 +68,36 @@ const FreelancerSettings = () => {
 
       {/* Change Email */}
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-        <h3 className="fl-section-title">📧 Change Email</h3>
+        <h3 className="fl-section-title">📧 {isSupabaseUser ? "Email Address" : "Change Email"}</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <label className="fl-label">Current Email</label>
             <input className="fl-input" value={profile?.personalInfo?.email || ""} disabled />
           </div>
-          <div className="fl-form-group">
-            <label className="fl-label">New Email</label>
-            <input
-              type="email"
-              className="fl-input"
-              value={form.email}
-              onChange={(e) => set('email', e.target.value)}
-              placeholder="Enter new email"
-            />
+          {!isSupabaseUser && (
+            <div className="fl-form-group">
+              <label className="fl-label">New Email</label>
+              <input
+                type="email"
+                className="fl-input"
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+                placeholder="Enter new email"
+              />
+            </div>
+          )}
+        </div>
+        {!isSupabaseUser && (
+          <div className="fl-actions">
+            <button
+              className={`fl-btn fl-btn--primary${saving === 'Email' ? ' fl-btn--loading' : ''}`}
+              disabled={saving === 'Email' || form.email === profile?.personalInfo?.email}
+              onClick={() => saveSection('personalInfo', { email: form.email }, 'Email')}
+            >
+              {saving === 'Email' ? 'Saving...' : 'Update Email'}
+            </button>
           </div>
-        </div>
-        <div className="fl-actions">
-          <button
-            className={`fl-btn fl-btn--primary${saving === 'Email' ? ' fl-btn--loading' : ''}`}
-            disabled={saving === 'Email' || form.email === profile?.personalInfo?.email}
-            onClick={() => saveSection('personalInfo', { email: form.email }, 'Email')}
-          >
-            {saving === 'Email' ? 'Saving...' : 'Update Email'}
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Recovery Info */}

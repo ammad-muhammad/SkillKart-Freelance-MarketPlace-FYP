@@ -8,6 +8,7 @@ const ClientSettings = () => {
   const { user } = useAuth();
   const { profile, updateProfile, updateMultipleSections, showToast } = useClient();
   const isEmailUser = user?.authProvider === 'email';
+  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [account, setAccount] = useState({
     newUsername: profile?.personalInfo?.username || "",
     newEmail: profile?.personalInfo?.email || "",
@@ -115,16 +116,20 @@ const ClientSettings = () => {
             <label className="cl-label">Current Email</label>
             <input className="cl-input" value={profile?.personalInfo?.email || ""} disabled />
           </div>
-          <div className="cl-form-group">
-            <label className="cl-label">New Email</label>
-            <input type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
-              onChange={(e) => setAccount((p) => ({ ...p, newEmail: e.target.value }))} />
-            {errors.newEmail && <span className="cl-error">⚠ {errors.newEmail}</span>}
-          </div>
+          {!isSupabaseUser && (
+            <div className="cl-form-group">
+              <label className="cl-label">New Email</label>
+              <input type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
+                onChange={(e) => setAccount((p) => ({ ...p, newEmail: e.target.value }))} />
+              {errors.newEmail && <span className="cl-error">⚠ {errors.newEmail}</span>}
+            </div>
+          )}
         </div>
-        <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
-          Update Email
-        </button>
+        {!isSupabaseUser && (
+          <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
+            Update Email
+          </button>
+        )}
 
         {isEmailUser && (
           <>

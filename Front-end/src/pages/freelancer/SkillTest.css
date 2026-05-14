@@ -147,6 +147,40 @@
   background: white;
 }
 
+.st-mcq-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.st-mcq-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fcfdfe;
+}
+
+.st-mcq-option:hover {
+  border-color: #cbd5e1;
+}
+
+.st-mcq-option.selected {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.st-mcq-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
 .st-hint {
   margin-top: 12px;
   font-size: 0.85rem;

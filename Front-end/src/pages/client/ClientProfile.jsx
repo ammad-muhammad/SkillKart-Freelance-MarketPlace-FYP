@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useClient } from '../../context/ClientContext';
+import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import TagInput from '../freelancer/components/TagInput';
 import Modal from '../freelancer/components/Modal';
@@ -10,6 +11,8 @@ const PROJECT_TYPES = ['Web Development', 'Mobile App', 'Design', 'Content Writi
 
 const ClientProfile = () => {
   const { profile, saveProfile, showToast } = useClient();
+  const { user } = useAuth();
+  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
@@ -201,7 +204,7 @@ const ClientProfile = () => {
                 className={`cl-input${errors[key] ? ' cl-input--error' : ''}`}
                 value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                disabled={!editing}
+                disabled={!editing || (key === 'email' && isSupabaseUser)}
               />
               {editing && errors[key] && <span className="cl-error">⚠ {errors[key]}</span>}
             </div>

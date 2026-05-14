@@ -209,13 +209,32 @@ const SkillTest = () => {
             <h2 className="st-q-text">{currentQuestion.question}</h2>
             
             <div className="st-input-wrap">
-              <textarea 
-                placeholder="Type your technical response..."
-                value={answers[currentIndex] || ''}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                rows={6}
-              />
-              <p className="st-hint">Don't copy-paste. AI detects paraphrasing and AI-generated content.</p>
+              {currentQuestion.type === 'mcq' && currentQuestion.options ? (
+                <div className="st-mcq-options">
+                  {currentQuestion.options.map((opt, idx) => (
+                    <label key={idx} className={`st-mcq-option ${answers[currentIndex] === opt ? 'selected' : ''}`}>
+                      <input 
+                        type="radio" 
+                        name={`question-${currentIndex}`} 
+                        value={opt}
+                        checked={answers[currentIndex] === opt}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                      />
+                      <span>{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <textarea 
+                    placeholder="Type your technical response..."
+                    value={answers[currentIndex] || ''}
+                    onChange={(e) => handleAnswerChange(e.target.value)}
+                    rows={6}
+                  />
+                  <p className="st-hint">Don't copy-paste. AI detects paraphrasing and AI-generated content.</p>
+                </>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

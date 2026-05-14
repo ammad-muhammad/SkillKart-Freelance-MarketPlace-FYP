@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useClient } from '../../context/ClientContext';
+import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
@@ -22,6 +23,8 @@ const getStrength = (pwd) => {
 
 const ClientSecurity = () => {
   const { profile, updateProfile, showToast } = useClient();
+  const { user } = useContext(AuthContext);
+  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [passwords, setPasswords] = useState({ current: '', newPwd: '', confirm: '' });
   const [showPwd, setShowPwd] = useState({ current: false, newPwd: false, confirm: false });
   const [errors, setErrors] = useState({});
@@ -89,6 +92,28 @@ const ClientSecurity = () => {
       </div>
 
       {/* Change Password */}
+      {isSupabaseUser ? (
+        <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
+          <h3 className="cl-section-title">🔑 Account Information</h3>
+          <div style={{ maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="cl-form-group">
+              <label className="cl-label">Email Address</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  className="cl-input"
+                  value={user?.email || profile?.personalInfo?.email || ''}
+                  readOnly
+                  disabled
+                />
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginTop: '0.5rem' }}>
+                You logged in via an external provider. Password updates are disabled.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="cl-section-title">🔑 Change Password</h3>
         <div style={{ maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -147,8 +172,10 @@ const ClientSecurity = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Security Toggles */}
+      {!isSupabaseUser && (
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="cl-section-title">🛡️ Security Options</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -174,6 +201,7 @@ const ClientSecurity = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Danger Zone */}
       <div className="cl-card">

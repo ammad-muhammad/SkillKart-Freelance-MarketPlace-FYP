@@ -98,21 +98,29 @@ ${text}
 
     const prompt = `
 Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
-Generate exactly ${count} deep, challenging technical questions.
+Generate exactly ${count} questions. The difficulty should be moderate (not too hard, not too easy).
 IMPORTANT: 
-1. Paraphrase questions if they have been asked before.
-2. Ensure high variation in question styles (scenario-based, conceptual, troubleshooting).
-3. Do not repeat the same question set across different attempts.
-4. Focus on deep technical expertise that cannot be easily guessed.
+1. Mix Multiple Choice Questions (MCQs) and Short Text Input questions. Roughly half should be MCQs and half text input.
+2. For MCQs, provide exactly 4 options. Include the "options" array in the output object.
+3. For Text Input, the question should be answerable in a few sentences.
+4. Paraphrase questions if they have been asked before and ensure variation in question styles.
 
-Output ONLY a JSON array of objects:
+Output ONLY a JSON array of objects.
+Use this format:
 [
   {
+    "type": "mcq",
     "question": "The technical question text...",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
     "skill": "The skill this question belongs to",
     "category": "Theory/Practical/Code/etc"
   },
-  ...
+  {
+    "type": "text",
+    "question": "The technical question text...",
+    "skill": "The skill this question belongs to",
+    "category": "Theory/Practical/Code/etc"
+  }
 ]
 `;
 
