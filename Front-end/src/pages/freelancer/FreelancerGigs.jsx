@@ -40,9 +40,9 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
           >
             {gig.status === 'active' ? '⏸' : '▶'}
           </button>
-          <Link to={`/freelancer/gigs/edit/${gig._id}`} className="fl-btn fl-btn--sm fl-btn--outline">
+          <button className="fl-btn fl-btn--sm fl-btn--outline" onClick={() => onEdit(gig)}>
             ✏
-          </Link>
+          </button>
           <button className="fl-btn fl-btn--sm fl-btn--danger" onClick={() => onDelete(gig._id)}>
             🗑
           </button>
@@ -53,14 +53,48 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
 );
 
 const FreelancerGigs = () => {
-  const { gigs, deleteGig, toggleGigStatus } = useFreelancer();
+  const { gigs, deleteGig, toggleGigStatus, updateGig } = useFreelancer();
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
   const [filter, setFilter] = useState('all');
+
+  // Form state for editing
+  const [formData, setFormData] = useState({
+    title: '',
+    shortDescription: '',
+    skills: '',
+    price: 0
+  });
 
   const filtered = gigs.filter((g) => filter === 'all' || g.status === filter);
 
   const confirmDelete = () => {
     if (deleteTarget) { deleteGig(deleteTarget); setDeleteTarget(null); }
+  };
+
+  const handleEditClick = (gig) => {
+    setEditTarget(gig);
+    setFormData({
+      title: gig.title,
+      shortDescription: gig.shortDescription,
+      skills: gig.skills.join(', '),
+      price: gig.pricing?.basic?.price || 0
+    });
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    const updatedData = {
+      title: formData.title,
+      shortDescription: formData.shortDescription,
+      skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
+      'pricing.basic.price': formData.price
+    };
+    
+    const success = await updateGig(editTarget._id, updatedData);
+    if (success !== false) {
+      setEditTarget(null);
+    }
   };
 
   return (
@@ -108,10 +142,57 @@ const FreelancerGigs = () => {
               gig={gig}
               onDelete={setDeleteTarget}
               onToggleStatus={toggleGigStatus}
+              onEdit={handleEditClick}
             />
           ))}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal open={!!editTarget} title="Edit Gig" onClose={() => setEditTarget(null)}>
+        <form onSubmit={handleUpdate} className="fl-edit-form">
+          <div className="fl-form-group">
+            <label>Gig Title</label>
+            <input 
+              type="text" 
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              required 
+            />
+          </div>
+          <div className="fl-form-group">
+            <label>Short Description</label>
+            <textarea 
+              value={formData.shortDescription}
+              onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
+              rows={3}
+              required 
+            />
+          </div>
+          <div className="fl-form-group">
+            <label>Skills (comma separated)</label>
+            <input 
+              type="text" 
+              value={formData.skills}
+              onChange={(e) => setFormData({...formData, skills: e.target.value})}
+              required 
+            />
+          </div>
+          <div className="fl-form-group">
+            <label>Price ($)</label>
+            <input 
+              type="number" 
+              value={formData.price}
+              onChange={(e) => setFormData({...formData, price: e.target.value})}
+              required 
+            />
+          </div>
+          <div className="fl-actions" style={{ marginTop: '1.5rem' }}>
+            <button type="submit" className="fl-btn fl-btn--primary">Save Changes</button>
+            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setEditTarget(null)}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal open={!!deleteTarget} title="Delete Gig" onClose={() => setDeleteTarget(null)} danger>
@@ -180,6 +261,14 @@ const FreelancerGigs = () => {
         .fl-gig-card__price-label { font-size: 0.72rem; color: var(--color-text-light); display: block; }
         .fl-gig-card__price-value { font-size: 1.1rem; font-weight: 800; color: var(--color-primary); }
         .fl-gig-card__actions { display: flex; gap: 0.4rem; }
+        .fl-edit-form { padding: 0.5rem 0; }
+        .fl-form-group { margin-bottom: 1rem; }
+        .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.4rem; }
+        .fl-form-group input, .fl-form-group textarea {
+          width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0;
+          font-size: 0.9rem; transition: border-color 0.2s;
+        }
+        .fl-form-group input:focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); }
         .fl-empty-message { text-align: center; padding: 3rem 2rem; }
         @media (max-width: 600px) {
           .fl-gig-grid { grid-template-columns: 1fr; }

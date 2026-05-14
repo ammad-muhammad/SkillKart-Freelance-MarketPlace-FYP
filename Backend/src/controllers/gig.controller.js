@@ -123,13 +123,14 @@ const uploadBanner = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
-  const result = await cloudinaryService.uploadFile(req.file.buffer, {
-    folder: 'skillkart/gigs/banners'
-  });
+  const result = await cloudinaryService.uploadToCloudinary(req.file, 'skillkart/gigs/banners');
 
   sendSuccess(res, {
     message: 'Banner uploaded successfully',
-    data: { url: result.secure_url }
+    data: { 
+      url: result.secure_url,
+      public_id: result.public_id
+    }
   });
 });
 

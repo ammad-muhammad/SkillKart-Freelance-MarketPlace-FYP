@@ -82,3 +82,19 @@ export const uploadJobAttachment = async (file) => {
 
   return data.data.url;
 };
+
+/**
+ * Upload a gig banner image.
+ * @param {File} file - The image file to upload
+ * @returns {Promise<string>} The Cloudinary URL
+ */
+export const uploadBanner = async (file) => {
+  const formData = new FormData();
+  formData.append('banner', file);
+
+  const { data } = await client.post('/gigs/upload/banner', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
+  return data.data.url;
+};
