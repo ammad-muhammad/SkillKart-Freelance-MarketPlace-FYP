@@ -48,6 +48,10 @@ const emptyProfile = {
     proposalAlerts: true,
     messageAlerts: true,
   },
+  securitySettings: {
+    recoveryEmail: '',
+    recoveryPhone: '',
+  },
   stats: {
     totalGigs: 0,
     activeOrders: 0,
@@ -101,6 +105,7 @@ export const FreelancerProvider = ({ children }) => {
         portfolio: dbProfile.portfolio || [],
         portfolioLinks: dbProfile.portfolioLinks || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
+        securitySettings: dbProfile.securitySettings || { recoveryEmail: '', recoveryPhone: '' },
         stats: {
           totalGigs: gigsRes.data.meta?.pagination?.total || (gigsRes.data.data?.length || 0),
           activeOrders: 0,
@@ -171,6 +176,7 @@ export const FreelancerProvider = ({ children }) => {
         languages: languages.map(l => ({ language: l, proficiency: 'fluent' })),
         socialLinks,
         notificationSettings,
+        securitySettings: currentProfile.securitySettings || {},
         experienceLevel: personalInfo.experienceLevel,
         timezone: personalInfo.location,
         education: personalInfo.education || [],

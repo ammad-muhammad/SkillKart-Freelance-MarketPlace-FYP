@@ -59,6 +59,10 @@ const freelancerProfileSchema = new mongoose.Schema({
     proposalAlerts: { type: Boolean, default: true },
     messageAlerts: { type: Boolean, default: true }
   },
+  securitySettings: {
+    recoveryEmail: String,
+    recoveryPhone: String
+  },
   profileCompletion: { type: Number, default: 0 },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   completedProjects: { type: Number, default: 0 },

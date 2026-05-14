@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api/auth';
@@ -10,11 +10,23 @@ const FreelancerSettings = () => {
   const { user } = useAuth();
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [form, setForm] = useState({
-    username: profile?.personalInfo?.username || "",
-    email: profile?.personalInfo?.email || "",
-    recoveryEmail: profile?.securitySettings?.recoveryEmail || "",
-    recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
+    username: "",
+    email: "",
+    recoveryEmail: "",
+    recoveryPhone: "",
   });
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        username: profile?.personalInfo?.username || "",
+        email: profile?.personalInfo?.email || "",
+        recoveryEmail: profile?.securitySettings?.recoveryEmail || "",
+        recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
+      });
+    }
+  }, [profile]);
+
   const [saving, setSaving] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState(false);
   const [deactivateStep, setDeactivateStep] = useState(1);
