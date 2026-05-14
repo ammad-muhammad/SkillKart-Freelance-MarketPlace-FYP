@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
-import TagInput from '../freelancer/components/TagInput';
+import TagInput from '../../Components/common/TagInput/TagInput';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
 

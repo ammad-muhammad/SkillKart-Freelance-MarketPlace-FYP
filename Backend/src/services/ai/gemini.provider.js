@@ -190,6 +190,44 @@ Output ONLY a JSON object:
       throw new Error('Failed to evaluate skill test');
     }
   }
+
+  async validateSkill(input) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+
+    const prompt = `
+You are a professional skills classifier. Your task is to validate if a given string is a valid professional skill (technical, soft, or industry-specific).
+
+Input: "${input}"
+
+Rules:
+1. Determine if it's a real professional skill. 
+2. If it's a common typo or variation (e.g., "reactjs"), normalize it (e.g., "React.js").
+3. If it's valid, provide 3 related professional skill suggestions.
+4. If it's invalid (garbage, random letters, non-professional), mark it as invalid and suggest 3 common professional skills.
+
+Output ONLY valid JSON:
+{
+  "valid": boolean,
+  "skill": "Normalized Name or Original if no normalization needed",
+  "suggestions": ["Skill 1", "Skill 2", "Skill 3"],
+  "message": "Brief reason if invalid, otherwise null"
+}
+`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error("Gemini Skill Validation Error:", error);
+      throw new Error('Failed to validate skill with AI');
+    }
+  }
 }
 
 module.exports = GeminiProvider;

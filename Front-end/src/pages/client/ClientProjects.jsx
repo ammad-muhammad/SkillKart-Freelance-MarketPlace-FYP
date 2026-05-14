@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import Modal from '../freelancer/components/Modal';
-import TagInput from '../freelancer/components/TagInput';
+import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import './ClientDashboard.css';
 

@@ -1,6 +1,8 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, Plus, Trash2 } from "lucide-react";
+import TagInput from "../common/TagInput/TagInput";
+import { LANGUAGES } from "../../data/languages";
 
 const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
@@ -91,14 +93,12 @@ const StepLanguages = ({ formData, setFormData, errors }) => {
               <div className="fob-form-row">
                 <div className="fob-form-group">
                   <label className="fob-label">Language*</label>
-                  <input
-                    type="text"
-                    value={lang.language}
-                    onChange={(e) =>
-                      updateLanguage(index, "language", e.target.value)
-                    }
-                    className="fob-input"
-                    placeholder="e.g. English, Urdu, French"
+                  <TagInput 
+                    tags={lang.language ? [lang.language] : []}
+                    onChange={(newTags) => updateLanguage(index, "language", newTags[0] || "")}
+                    options={LANGUAGES}
+                    placeholder="Select language..."
+                    showHint={false}
                   />
                 </div>
                 <div className="fob-form-group">

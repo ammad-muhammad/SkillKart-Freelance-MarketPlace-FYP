@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import Stepper from './components/Stepper';
-import TagInput from './components/TagInput';
+import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import './FreelancerDashboard.css';
 import './CreateGig.css';

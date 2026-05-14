@@ -181,6 +181,43 @@ Output ONLY a JSON object. Do not output anything else.
       throw new Error('Failed to evaluate skill test with Claude');
     }
   }
+
+  async validateSkill(input) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not set');
+    }
+
+    const prompt = `
+      You are a professional skills validator.
+      Analyze the following skill input: "${input}"
+      
+      Tasks:
+      1. Determine if it's a valid professional skill (e.g., "React", "Accounting", "Python").
+      2. If it's a variation (e.g., "reactjs"), normalize it to the standard professional name (e.g., "React.js").
+      3. If it's invalid (e.g., "asdf", "cool guy", "random sentence"), mark as valid: false and provide a reason.
+      4. Provide a list of 3-5 closely related professional skills as suggestions.
+
+      Output ONLY valid JSON. Do not output anything else.
+      {
+        "valid": true/false,
+        "skill": "Normalized Name",
+        "message": "Reason if invalid or empty",
+        "suggestions": ["Skill 1", "Skill 2", "Skill 3"]
+      }
+    `;
+
+    try {
+      const response = await this.anthropic.messages.create({
+        model: this.model,
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      return this._parseJSON(response.content[0].text);
+    } catch (error) {
+      console.error("Claude Skill Validation Error:", error);
+      throw new Error('Failed to validate skill with Claude');
+    }
+  }
 }
 
 module.exports = ClaudeProvider;

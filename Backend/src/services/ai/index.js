@@ -66,6 +66,18 @@ class RouterAIProvider extends AIProvider {
     }
     throw new Error('All AI providers are currently unavailable. Please try again later.');
   }
+
+  async validateSkill(input) {
+    for (const provider of this.providers) {
+      try {
+        const result = await provider.instance.validateSkill(input);
+        if (result) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for validateSkill:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
 }
 
 let activeProviderInstance = null;

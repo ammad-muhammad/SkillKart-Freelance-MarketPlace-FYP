@@ -4,7 +4,7 @@ import { useClient } from '../../context/ClientContext';
 import { jobsAPI } from '../../api/jobs';
 import { uploadJobAttachment } from '../../utils/uploadHelper';
 import Stepper from '../freelancer/components/Stepper';
-import TagInput from '../freelancer/components/TagInput';
+import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import './ClientDashboard.css';
 import './PostProject.css';

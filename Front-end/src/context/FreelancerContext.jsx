@@ -48,10 +48,6 @@ const emptyProfile = {
     proposalAlerts: true,
     messageAlerts: true,
   },
-  securitySettings: {
-    recoveryEmail: '',
-    recoveryPhone: '',
-  },
   stats: {
     totalGigs: 0,
     activeOrders: 0,

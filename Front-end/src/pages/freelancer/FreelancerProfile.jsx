@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom';
 import { 
   Plus, Trash2, Edit3, Briefcase, Award, GraduationCap, MapPin, 
   DollarSign, Clock, Globe, Github, Linkedin, ExternalLink,
-  ChevronDown, Calendar, FileText, Check, X, User
+  ChevronDown, Calendar, FileText, Check, X, User, Link as LinkIcon
 } from 'lucide-react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { timezones } from '../../utils/timezones';
-import TagInput from './components/TagInput';
+import { LANGUAGES } from '../../data/languages';
+import TagInput from '../../Components/common/TagInput/TagInput';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -436,7 +437,7 @@ const FreelancerProfile = () => {
           <div className="fl-form-group">
             <label className="fl-label">Languages</label>
             {editing ? (
-              <TagInput tags={languages} onChange={setLanguages} placeholder="e.g. English" />
+              <TagInput tags={languages} onChange={setLanguages} options={LANGUAGES} placeholder="Select languages..." showHint={false} />
             ) : (
               <div className="fl-tags-display">
                 {(Array.isArray(profile.languages) ? profile.languages : []).map((l, idx) => {
@@ -483,7 +484,7 @@ const FreelancerProfile = () => {
 
       {/* Legacy Links & Socials */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="fl-section-title"><Link icon size={18} /> Portfolio & Social Links</h3>
+        <h3 className="fl-section-title"><LinkIcon size={18} /> Portfolio & Social Links</h3>
 
         <div className="fl-form-group full">
           <label className="fl-label" style={{ marginBottom: '0.6rem' }}>External Portfolio Links</label>
