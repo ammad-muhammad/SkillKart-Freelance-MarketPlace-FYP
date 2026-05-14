@@ -10,8 +10,9 @@ const { BadRequestError, NotFoundError } = require('../utils/apiError');
  */
 const generateTest = asyncHandler(async (req, res) => {
   const userId = req.user._id;
+  const { skill: specificSkill } = req.query; // Optional specific skill
 
-  console.log(`[SkillTest] Generating COMPLETELY NEW test for user ${userId}`);
+  console.log(`[SkillTest] Generating test for user ${userId}. Specific Skill: ${specificSkill || 'None (Baseline Mixed)'}`);
 
   // 1. ALWAYS delete any existing pending test to ensure a fresh start
   // This satisfies the requirement that we never resume old/stale sessions
@@ -21,26 +22,36 @@ const generateTest = asyncHandler(async (req, res) => {
   const profile = await FreelancerProfile.findOne({ userId }).lean();
   if (!profile) throw new NotFoundError('Freelancer profile not found');
 
-  // Identify ALL skills that need testing (not verified as Expert)
-  const skillsToTest = profile.skills
-    .filter(s => !s.isVerified)
-    .map(s => s.name);
+  let skillsToTest = [];
+  let questionCount = 25;
 
-  console.log(`[SkillTest] Skills identified for testing: ${skillsToTest.join(', ')}`);
+  if (specificSkill) {
+    // Individual Skill Test mode
+    const skillExists = profile.skills.some(s => s.name.toLowerCase() === specificSkill.toLowerCase());
+    if (!skillExists) throw new BadRequestError(`Skill '${specificSkill}' not found in your profile`);
+    
+    skillsToTest = [specificSkill];
+    questionCount = 20; // 20 questions for a single skill
+  } else {
+    // Initial Baseline Mixed Test mode
+    skillsToTest = profile.skills
+      .filter(s => !s.isVerified)
+      .map(s => s.name);
+
+    if (skillsToTest.length === 0) {
+      // If all verified, but they want a mixed test? Just use all skills.
+      skillsToTest = profile.skills.map(s => s.name);
+    }
+    
+    questionCount = 50; // Requirement: 50 questions for initial baseline
+  }
 
   if (skillsToTest.length === 0) {
-    return sendSuccess(res, { 
-      message: 'All your skills are already verified as Expert!', 
-      data: { questions: [], skills: [] } 
-    });
+    throw new BadRequestError('No skills found to test. Please add skills to your profile first.');
   }
 
   const ai = getAIProvider();
-  
-  // Requirement: Minimum 25 questions, 70-80% MCQs
-  const questionCount = Math.min(Math.max(skillsToTest.length * 8, 25), 50);
-
-  console.log(`[SkillTest] AI generating ${questionCount} questions for user ${userId}...`);
+  console.log(`[SkillTest] AI generating ${questionCount} questions for: ${skillsToTest.join(', ')}`);
   
   let rawQuestions = [];
   let attempts = 0;

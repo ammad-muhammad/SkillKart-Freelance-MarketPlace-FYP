@@ -101,9 +101,11 @@ const DashboardOverview = () => {
           <h3 className="fl-section-title" style={{ margin: 0 }}>
             <Award size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Skill Verification Center
           </h3>
-          <Link to="/freelancer/skill-test" className="fl-btn fl-btn--outline fl-btn--sm">
-            {profile.verifiedSkills?.length > 0 ? 'Retake Test' : 'Start Verification'}
-          </Link>
+          {!profile.verifiedSkills?.length && (
+            <Link to="/freelancer/skill-test" className="fl-btn fl-btn--primary fl-btn--sm">
+              Start Baseline Test
+            </Link>
+          )}
         </div>
         
         <div className="fl-skill-grid">
@@ -111,9 +113,18 @@ const DashboardOverview = () => {
             <div key={skill._id || skill.name} className="fl-skill-item">
               <div className="fl-skill-item__header">
                 <span className="fl-skill-name">{skill.name}</span>
-                <span className={`fl-skill-level fl-skill-level--${skill.level.toLowerCase()}`}>
-                  {skill.level}
-                </span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <span className={`fl-skill-level fl-skill-level--${skill.level.toLowerCase()}`}>
+                    {skill.level}
+                  </span>
+                  <Link 
+                    to={`/freelancer/skill-test?skill=${encodeURIComponent(skill.name)}`} 
+                    className="fl-skill-action-btn"
+                    title={skill.isVerified ? 'Retake to improve rank' : 'Take test to verify'}
+                  >
+                    {skill.isVerified ? '↺ Retake' : '▶ Take Test'}
+                  </Link>
+                </div>
               </div>
               <div className="fl-skill-progress-bg">
                 <div 
@@ -129,7 +140,7 @@ const DashboardOverview = () => {
           ))}
           {(!profile.verifiedSkills || profile.verifiedSkills.length === 0) && (
             <div className="fl-empty-state">
-              <p>No skills verified yet. Take the test to unlock expert status!</p>
+              <p>No skills verified yet. Take the baseline test to unlock expert status!</p>
             </div>
           )}
         </div>
@@ -253,6 +264,20 @@ const DashboardOverview = () => {
           justify-content: space-between;
           align-items: center;
           font-size: 0.75rem;
+        }
+        .fl-skill-action-btn {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: var(--color-primary);
+          text-decoration: none;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background: rgba(26, 111, 168, 0.05);
+          transition: all 0.2s;
+        }
+        .fl-skill-action-btn:hover {
+          background: var(--color-primary);
+          color: #fff;
         }
         .fl-skill-score { color: var(--color-text-mid); font-weight: 600; }
         .fl-skill-verified { color: #10b981; font-weight: 700; }

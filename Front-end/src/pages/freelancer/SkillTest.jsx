@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ChevronRight, CheckCircle2, AlertCircle, Timer, Award } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -9,6 +9,8 @@ import './SkillTest.css';
 
 const SkillTest = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const specificSkill = searchParams.get('skill');
   const { refreshProfile } = useFreelancer();
   
   const [questions, setQuestions] = useState([]);
@@ -22,13 +24,13 @@ const SkillTest = () => {
 
 
   useEffect(() => {
-    fetchTest();
-  }, []);
+    fetchTest(specificSkill);
+  }, [specificSkill]);
 
-  const fetchTest = async (force = false) => {
+  const fetchTest = async (skill = null, force = false) => {
     try {
       setLoading(true);
-      const res = await skillTestAPI.generateTest(force);
+      const res = await skillTestAPI.generateTest(skill, force);
       console.log("[SkillTest] API Response:", res.data);
       
       // The data is nested as res.data.data (from sendSuccess)
@@ -162,15 +164,15 @@ const SkillTest = () => {
           <div className="st-header-left">
             <Brain className="st-logo-icon" />
             <div>
-              <h1>Skill Verification Test</h1>
-              <p>No questions generated</p>
+              <h1>{specificSkill ? `${specificSkill} Verification` : 'Baseline Skill Test'}</h1>
+              <p>{specificSkill ? `Prove your expertise in ${specificSkill}` : 'Initial mixed evaluation of your core skills'}</p>
             </div>
           </div>
         </div>
         <div className="st-content">
           <div className="st-question-card" style={{ textAlign: 'center', padding: '3rem' }}>
             <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 1rem' }} />
-            <h2>Failed to load test questions</h2>
+            <h2>{specificSkill ? `Failed to load ${specificSkill} test` : 'Failed to load test questions'}</h2>
             <p style={{ color: 'var(--color-text-mid)', marginTop: '0.5rem', maxWidth: '400px', margin: '0.5rem auto 0' }}>
               We couldn't generate the verification test at this time. This is likely due to high AI service demand or network issues.
             </p>
@@ -196,8 +198,8 @@ const SkillTest = () => {
         <div className="st-header-left">
           <Brain className="st-logo-icon" />
           <div>
-            <h1>Skill Verification Test</h1>
-            <p>Prove your expertise: {skills.join(', ')}</p>
+            <h1>{specificSkill ? `${specificSkill} Verification` : 'Skill Verification Test'}</h1>
+            <p>{specificSkill ? `Focusing on ${specificSkill} expertise` : `Prove your expertise: ${skills.join(', ')}`}</p>
           </div>
         </div>
         <div className="st-header-right">
