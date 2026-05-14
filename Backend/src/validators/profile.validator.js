@@ -49,7 +49,7 @@ const updateFreelancerProfileValidation = [
     .isLength({ max: 500 }).withMessage('Portfolio description must not exceed 500 characters'),
 
   body('portfolio.*.url')
-    .optional()
+    .optional({ values: 'falsy' })
     .isURL().withMessage('Invalid portfolio URL'),
 
   body('education')
@@ -98,7 +98,7 @@ const updateFreelancerProfileValidation = [
     .isISO8601().withMessage('Invalid issue date format'),
 
   body('certifications.*.url')
-    .optional()
+    .optional({ values: 'falsy' })
     .isURL().withMessage('Invalid certification URL'),
 
   body('languages')
@@ -218,7 +218,7 @@ const addPortfolioItemValidation = [
     .isLength({ max: 500 }).withMessage('Description must not exceed 500 characters'),
 
   body('url')
-    .optional()
+    .optional({ values: 'falsy' })
     .isURL().withMessage('Invalid URL format'),
 
   body('images')
@@ -246,7 +246,7 @@ const updatePortfolioItemValidation = [
     .isLength({ max: 500 }).withMessage('Description must not exceed 500 characters'),
 
   body('url')
-    .optional()
+    .optional({ values: 'falsy' })
     .isURL().withMessage('Invalid URL format'),
 
   body('images')

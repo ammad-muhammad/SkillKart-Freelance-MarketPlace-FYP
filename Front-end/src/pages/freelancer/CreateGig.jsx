@@ -291,7 +291,7 @@ const Step4 = ({ gig, set }) => {
             <div className="fl-upload-zone__placeholder">
               <span style={{ fontSize: '2.5rem' }}>🖼️</span>
               <p>Click to upload banner image</p>
-              <span style={{ fontSize: '0.75rem' }}>PNG, JPG up to 5MB · Recommended: 1200×628</span>
+              <span style={{ fontSize: '0.75rem' }}>WEBP, PNG, JPG up to 5MB · Recommended: 1200×628</span>
             </div>
           )}
         </div>

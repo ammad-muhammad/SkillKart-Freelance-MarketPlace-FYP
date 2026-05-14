@@ -136,7 +136,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             </label>
           </div>
           <span className="fob-label" style={{ marginTop: '12px', marginBottom: '4px' }}>Profile Picture</span>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>PNG or JPG, max 5MB</p>
+          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>WEBP, PNG or JPG, max 5MB</p>
         </div>
       )}
       {/* Professional Title */}
