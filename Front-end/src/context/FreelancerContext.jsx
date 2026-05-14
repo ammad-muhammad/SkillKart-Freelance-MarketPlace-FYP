@@ -97,6 +97,7 @@ export const FreelancerProvider = ({ children }) => {
         verifiedSkills: dbProfile.skills || [],
         languages: dbProfile.languages?.map(l => l.language) || [],
         portfolio: dbProfile.portfolio || [],
+        portfolioLinks: dbProfile.portfolioLinks || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
         stats: {
           totalGigs: gigsRes.data.meta?.pagination?.total || (gigsRes.data.data?.length || 0),
@@ -168,6 +169,7 @@ export const FreelancerProvider = ({ children }) => {
         notificationSettings,
         experienceLevel: personalInfo.experienceLevel,
         timezone: personalInfo.location,
+        portfolio: currentProfile.portfolio || [],
         portfolioLinks: currentProfile.portfolioLinks || []
       };
 
@@ -269,6 +271,51 @@ export const FreelancerProvider = ({ children }) => {
     }
   };
 
+  const addPortfolioItem = async (item) => {
+    setLoading(true);
+    try {
+      await freelancersAPI.addPortfolio(item);
+      await fetchFreelancerData();
+      showToast('Portfolio item added! 🚀');
+      return true;
+    } catch (error) {
+      showToast('Failed to add portfolio item', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePortfolioItem = async (id, item) => {
+    setLoading(true);
+    try {
+      await freelancersAPI.updatePortfolio(id, item);
+      await fetchFreelancerData();
+      showToast('Portfolio item updated!');
+      return true;
+    } catch (error) {
+      showToast('Failed to update portfolio item', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePortfolioItem = async (id) => {
+    setLoading(true);
+    try {
+      await freelancersAPI.deletePortfolio(id);
+      await fetchFreelancerData();
+      showToast('Portfolio item removed.', 'info');
+      return true;
+    } catch (error) {
+      showToast('Failed to delete portfolio item', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <FreelancerContext.Provider
       value={{ 
@@ -284,6 +331,9 @@ export const FreelancerProvider = ({ children }) => {
         updateGig,
         deleteGig,
         toggleGigStatus,
+        addPortfolioItem,
+        updatePortfolioItem,
+        deletePortfolioItem,
         toasts,
         showToast,
         saveProfile
