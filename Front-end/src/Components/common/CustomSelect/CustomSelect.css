@@ -51,9 +51,24 @@
     height: 48px;
 }
 
-.csel__trigger:hover {
+.csel__trigger:hover:not(:disabled) {
     border-color: var(--csel-border-hover);
     background: #fafbfc;
+}
+
+.csel__trigger:disabled {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.csel__trigger:disabled .csel__value {
+    color: #94a3b8;
+}
+
+.csel__trigger:disabled .csel__chevron {
+    color: #cbd5e1;
 }
 
 .csel--open .csel__trigger {

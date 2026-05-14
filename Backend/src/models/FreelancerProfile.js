@@ -26,13 +26,16 @@ const freelancerProfileSchema = new mongoose.Schema({
     degree: String,
     field: String,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    description: String
   }],
   certifications: [{
     name: String,
     issuer: String,
     issueDate: Date,
-    url: String
+    expiryDate: Date,
+    url: String,
+    credentialId: String
   }],
   languages: [{
     language: String,

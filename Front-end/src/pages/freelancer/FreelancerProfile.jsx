@@ -1,9 +1,15 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { 
+  Plus, Trash2, Edit3, Briefcase, Award, GraduationCap, MapPin, 
+  DollarSign, Clock, Globe, Github, Linkedin, ExternalLink,
+  ChevronDown, Calendar, FileText, Check, X, User
+} from 'lucide-react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import { timezones } from '../../utils/timezones';
 import TagInput from './components/TagInput';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
@@ -20,6 +26,8 @@ const FreelancerProfile = () => {
   const [form, setForm] = useState(profile?.personalInfo ? { ...profile.personalInfo } : {});
   const [skills, setSkills] = useState(Array.isArray(profile?.skills) ? [...profile.skills] : []);
   const [languages, setLanguages] = useState(Array.isArray(profile?.languages) ? [...profile.languages] : []);
+  const [education, setEducation] = useState(Array.isArray(profile?.personalInfo?.education) ? [...profile.personalInfo.education] : []);
+  const [certifications, setCertifications] = useState(Array.isArray(profile?.personalInfo?.certifications) ? [...profile.personalInfo.certifications] : []);
   const [portfolioLinks, setPortfolioLinks] = useState(Array.isArray(profile?.portfolioLinks) ? [...profile.portfolioLinks] : []);
   const [socialLinks, setSocialLinks] = useState(profile?.socialLinks ? { ...profile.socialLinks } : {});
   const fileRef = useRef(null);
@@ -28,6 +36,8 @@ const FreelancerProfile = () => {
     setForm({ ...profile.personalInfo });
     setSkills(Array.isArray(profile.skills) ? [...profile.skills] : []);
     setLanguages(Array.isArray(profile.languages) ? [...profile.languages] : []);
+    setEducation(Array.isArray(profile.personalInfo.education) ? [...profile.personalInfo.education] : []);
+    setCertifications(Array.isArray(profile.personalInfo.certifications) ? [...profile.personalInfo.certifications] : []);
     setPortfolioLinks(Array.isArray(profile.portfolioLinks) ? [...profile.portfolioLinks] : []);
     setSocialLinks({ ...profile.socialLinks });
     setEditing(true);
@@ -40,7 +50,12 @@ const FreelancerProfile = () => {
     try {
       const updatedProfile = {
         ...profile,
-        personalInfo: { ...profile.personalInfo, ...form },
+        personalInfo: { 
+          ...profile.personalInfo, 
+          ...form,
+          education: [...education],
+          certifications: [...certifications]
+        },
         skills: [...skills],
         languages: [...languages],
         portfolioLinks: [...portfolioLinks],
@@ -117,23 +132,25 @@ const FreelancerProfile = () => {
           {/* Info */}
           <div className="fl-profile-hero__info">
             <h2 className="fl-profile-hero__name">{data.fullName}</h2>
-            <p className="fl-profile-hero__title">{data.title}</p>
+            <p className="fl-profile-hero__title">{data.title || 'Professional Freelancer'}</p>
             <div className="fl-profile-hero__meta">
-              <span>📍 {data.location}</span>
-              <span>🗓️ {data.memberSince}</span>
-              <span>⭐ 4.9 (47 reviews)</span>
+              <span><MapPin size={14} /> {data.location || 'Remote'}</span>
+              <span><DollarSign size={14} /> ${data.hourlyRate || '0'}/hr</span>
+              <span><Clock size={14} /> {data.availability || 'Not Set'}</span>
             </div>
           </div>
 
           {!editing && (
-            <button className="fl-btn fl-btn--primary" onClick={startEdit}>✏ Edit Profile</button>
+            <button className="fl-btn fl-btn--primary" onClick={startEdit} style={{ gap: '8px', display: 'flex', alignItems: 'center' }}>
+              <Edit3 size={16} /> Edit Profile
+            </button>
           )}
         </div>
       </div>
 
       {/* Personal Info */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="fl-section-title">👤 Personal Information</h3>
+        <h3 className="fl-section-title"><User size={18} /> Personal Information</h3>
         <div className="fl-form-grid">
           {[
             { key: 'fullName', label: 'Full Name' },
@@ -141,10 +158,20 @@ const FreelancerProfile = () => {
             { key: 'email', label: 'Email', type: 'email' },
             { key: 'phone', label: 'Phone' },
             { key: 'title', label: 'Professional Title' },
-            { key: 'location', label: 'Location' },
+            { key: 'hourlyRate', label: 'Hourly Rate (USD)', type: 'number' },
+            { 
+              key: 'location', 
+              label: 'Location (Timezone)', 
+              type: 'select', 
+              opts: timezones.map(tz => tz.label)
+            },
+            { 
+              key: 'availability', 
+              label: 'Availability', 
+              type: 'select', 
+              opts: ['full-time', 'part-time', 'contract', 'not-available'] 
+            },
             { key: 'experienceLevel', label: 'Experience Level', type: 'select', opts: ['Entry', 'Intermediate', 'Expert'] },
-            { key: 'education', label: 'Education' },
-            { key: 'certifications', label: 'Certifications' },
           ].map(({ key, label, type, opts }) => (
             <div key={key} className="fl-form-group">
               <label className="fl-label">{label}</label>
@@ -162,6 +189,7 @@ const FreelancerProfile = () => {
                   value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                   disabled={!editing || (key === 'email' && isSupabaseUser)}
+                  placeholder={label}
                 />
               )}
             </div>
@@ -169,7 +197,7 @@ const FreelancerProfile = () => {
 
           {/* Bio */}
           <div className="fl-form-group full">
-            <label className="fl-label">Bio</label>
+            <label className="fl-label">Professional Bio</label>
             <textarea
               className="fl-textarea"
               maxLength={MAX_BIO}
@@ -177,11 +205,213 @@ const FreelancerProfile = () => {
               onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
               disabled={!editing}
               rows={4}
+              placeholder="Tell clients about your expertise..."
             />
             {editing && (
               <span className="fl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Education Section */}
+      <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 className="fl-section-title" style={{ marginBottom: 0 }}><GraduationCap size={18} /> Education</h3>
+          {editing && (
+            <button 
+              className="fl-btn fl-btn--ghost fl-btn--sm" 
+              onClick={() => setEducation([...education, { institution: '', degree: '', field: '', startDate: '', endDate: '', description: '' }])}
+              style={{ gap: '6px', display: 'flex', alignItems: 'center' }}
+            >
+              <Plus size={14} /> Add Education
+            </button>
+          )}
+        </div>
+
+        <div className="fl-nested-list">
+          {(editing ? education : (profile?.personalInfo?.education || [])).map((edu, i) => (
+            <div key={`edu-${i}`} className="fl-nested-item">
+              {editing ? (
+                <div className="fl-form-grid">
+                  <div className="fl-form-group">
+                    <label className="fl-label">Institution</label>
+                    <input className="fl-input" value={edu.institution} onChange={(e) => {
+                      const newEdu = [...education];
+                      newEdu[i].institution = e.target.value;
+                      setEducation(newEdu);
+                    }} placeholder="University Name" />
+                  </div>
+                  <div className="fl-form-group">
+                    <label className="fl-label">Degree</label>
+                    <input className="fl-input" value={edu.degree} onChange={(e) => {
+                      const newEdu = [...education];
+                      newEdu[i].degree = e.target.value;
+                      setEducation(newEdu);
+                    }} placeholder="Bachelor's, Master's, etc." />
+                  </div>
+                  <div className="fl-form-group">
+                    <label className="fl-label">Field of Study</label>
+                    <input className="fl-input" value={edu.field} onChange={(e) => {
+                      const newEdu = [...education];
+                      newEdu[i].field = e.target.value;
+                      setEducation(newEdu);
+                    }} placeholder="Computer Science, Business, etc." />
+                  </div>
+                  <div className="fl-form-row">
+                    <div className="fl-form-group">
+                      <label className="fl-label">Start Date</label>
+                      <input type="date" className="fl-input" value={edu.startDate ? new Date(edu.startDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                        const newEdu = [...education];
+                        newEdu[i].startDate = e.target.value;
+                        setEducation(newEdu);
+                      }} />
+                    </div>
+                    <div className="fl-form-group">
+                      <label className="fl-label">End Date</label>
+                      <input type="date" className="fl-input" value={edu.endDate ? new Date(edu.endDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                        const newEdu = [...education];
+                        newEdu[i].endDate = e.target.value;
+                        setEducation(newEdu);
+                      }} />
+                    </div>
+                  </div>
+                  <div className="fl-form-group full">
+                    <label className="fl-label">Description (Optional)</label>
+                    <textarea className="fl-textarea" rows={2} value={edu.description} onChange={(e) => {
+                      const newEdu = [...education];
+                      newEdu[i].description = e.target.value;
+                      setEducation(newEdu);
+                    }} placeholder="Describe your achievements..." />
+                  </div>
+                  <button className="fl-btn fl-btn--danger fl-btn--sm" onClick={() => setEducation(education.filter((_, idx) => idx !== i))} style={{ alignSelf: 'flex-start' }}>
+                    <Trash2 size={14} /> Remove Entry
+                  </button>
+                </div>
+              ) : (
+                <div className="fl-display-item">
+                  <div className="fl-display-item__icon"><GraduationCap size={20} /></div>
+                  <div className="fl-display-item__content">
+                    <h4 className="fl-display-item__title">{edu.degree} in {edu.field}</h4>
+                    <p className="fl-display-item__subtitle">{edu.institution}</p>
+                    <p className="fl-display-item__date">
+                      <Calendar size={12} /> {edu.startDate ? new Date(edu.startDate).getFullYear() : ''} — {edu.endDate ? new Date(edu.endDate).getFullYear() : 'Present'}
+                    </p>
+                    {edu.description && <p className="fl-display-item__text">{edu.description}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {(editing ? education : (profile?.personalInfo?.education || [])).length === 0 && (
+            <p className="fl-no-data">No education history added.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Certifications Section */}
+      <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 className="fl-section-title" style={{ marginBottom: 0 }}><Award size={18} /> Certifications</h3>
+          {editing && (
+            <button 
+              className="fl-btn fl-btn--ghost fl-btn--sm" 
+              onClick={() => setCertifications([...certifications, { name: '', issuer: '', issueDate: '', expiryDate: '', url: '', credentialId: '' }])}
+              style={{ gap: '6px', display: 'flex', alignItems: 'center' }}
+            >
+              <Plus size={14} /> Add Certification
+            </button>
+          )}
+        </div>
+
+        <div className="fl-nested-list">
+          {(editing ? certifications : (profile?.personalInfo?.certifications || [])).map((cert, i) => (
+            <div key={`cert-${i}`} className="fl-nested-item">
+              {editing ? (
+                <div className="fl-form-grid">
+                  <div className="fl-form-group">
+                    <label className="fl-label">Certification Name</label>
+                    <input className="fl-input" value={cert.name} onChange={(e) => {
+                      const newCert = [...certifications];
+                      newCert[i].name = e.target.value;
+                      setCertifications(newCert);
+                    }} placeholder="e.g. AWS Certified Solutions Architect" />
+                  </div>
+                  <div className="fl-form-group">
+                    <label className="fl-label">Issuing Organization</label>
+                    <input className="fl-input" value={cert.issuer} onChange={(e) => {
+                      const newCert = [...certifications];
+                      newCert[i].issuer = e.target.value;
+                      setCertifications(newCert);
+                    }} placeholder="e.g. Amazon Web Services" />
+                  </div>
+                  <div className="fl-form-row">
+                    <div className="fl-form-group">
+                      <label className="fl-label">Issue Date</label>
+                      <input type="date" className="fl-input" value={cert.issueDate ? new Date(cert.issueDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                        const newCert = [...certifications];
+                        newCert[i].issueDate = e.target.value;
+                        setCertifications(newCert);
+                      }} />
+                    </div>
+                    <div className="fl-form-group">
+                      <label className="fl-label">Expiry Date (Optional)</label>
+                      <input type="date" className="fl-input" value={cert.expiryDate ? new Date(cert.expiryDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                        const newCert = [...certifications];
+                        newCert[i].expiryDate = e.target.value;
+                        setCertifications(newCert);
+                      }} />
+                    </div>
+                  </div>
+                  <div className="fl-form-group">
+                    <label className="fl-label">Credential ID (Optional)</label>
+                    <input className="fl-input" value={cert.credentialId} onChange={(e) => {
+                      const newCert = [...certifications];
+                      newCert[i].credentialId = e.target.value;
+                      setCertifications(newCert);
+                    }} placeholder="Credential ID or Serial Number" />
+                  </div>
+                  <div className="fl-form-group">
+                    <label className="fl-label">Certificate URL (Optional)</label>
+                    <input type="url" className="fl-input" value={cert.url} onChange={(e) => {
+                      const newCert = [...certifications];
+                      newCert[i].url = e.target.value;
+                      setCertifications(newCert);
+                    }} placeholder="https://..." />
+                  </div>
+                  <button className="fl-btn fl-btn--danger fl-btn--sm" onClick={() => setCertifications(certifications.filter((_, idx) => idx !== i))} style={{ alignSelf: 'flex-start' }}>
+                    <Trash2 size={14} /> Remove Entry
+                  </button>
+                </div>
+              ) : (
+                <div className="fl-display-item">
+                  <div className="fl-display-item__icon"><Award size={20} /></div>
+                  <div className="fl-display-item__content">
+                    <h4 className="fl-display-item__title">{cert.name}</h4>
+                    <p className="fl-display-item__subtitle">{cert.issuer}</p>
+                    <div className="fl-display-item__meta-row">
+                      <span className="fl-display-item__date">
+                        <Calendar size={12} /> Issued: {cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : 'N/A'}
+                      </span>
+                      {cert.expiryDate && (
+                        <span className="fl-display-item__date">
+                          <Clock size={12} /> Expires: {new Date(cert.expiryDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    {cert.url && (
+                      <a href={cert.url} target="_blank" rel="noopener noreferrer" className="fl-btn fl-btn--ghost fl-btn--xs" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <ExternalLink size={12} /> View Certificate
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {(editing ? certifications : (profile?.personalInfo?.certifications || [])).length === 0 && (
+            <p className="fl-no-data">No certifications added.</p>
+          )}
         </div>
       </div>
 
@@ -253,7 +483,7 @@ const FreelancerProfile = () => {
 
       {/* Legacy Links & Socials */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="fl-section-title">🗂️ Portfolio & Social Links</h3>
+        <h3 className="fl-section-title"><Link icon size={18} /> Portfolio & Social Links</h3>
 
         <div className="fl-form-group full">
           <label className="fl-label" style={{ marginBottom: '0.6rem' }}>External Portfolio Links</label>
@@ -269,13 +499,13 @@ const FreelancerProfile = () => {
                   placeholder="https://behance.net/yourname"
                 />
                 {editing && (
-                  <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}>✕</button>
+                  <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}><Trash2 size={14} /></button>
                 )}
               </div>
             ))}
             {editing && (
-              <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ alignSelf: 'flex-start' }} onClick={addPortfolioLink}>
-                ＋ Add Link
+              <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ alignSelf: 'flex-start', gap: '4px', display: 'flex', alignItems: 'center' }} onClick={addPortfolioLink}>
+                <Plus size={14} /> Add Link
               </button>
             )}
           </div>
@@ -286,12 +516,12 @@ const FreelancerProfile = () => {
         <label className="fl-label" style={{ marginBottom: '1rem', display: 'block' }}>Social Profiles</label>
         <div className="fl-form-grid">
           {[
-            { key: 'github', label: 'GitHub', icon: '🐙' },
-            { key: 'linkedin', label: 'LinkedIn', icon: '💼' },
-            { key: 'website', label: 'Website', icon: '🌐' },
-          ].map(({ key, label, icon }) => (
+            { key: 'github', label: 'GitHub', Icon: Github },
+            { key: 'linkedin', label: 'LinkedIn', Icon: Linkedin },
+            { key: 'website', label: 'Website', Icon: Globe },
+          ].map(({ key, label, Icon }) => (
             <div key={key} className="fl-form-group">
-              <label className="fl-label">{icon} {label}</label>
+              <label className="fl-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Icon size={14} /> {label}</label>
               <input
                 type="url"
                 className="fl-input"
@@ -343,6 +573,38 @@ const FreelancerProfile = () => {
         .fl-link-row { display: flex; gap: 0.5rem; align-items: center; }
         .fl-divider { height: 1px; background: #edf2f7; }
         .fl-no-data { text-align: center; color: #94a3b8; font-size: 0.9rem; }
+
+        .fl-nested-list { display: flex; flexDirection: column; gap: 1.25rem; }
+        .fl-nested-item { 
+          padding: 1.25rem; 
+          background: #f8fafc; 
+          border-radius: 16px; 
+          border: 1px solid #e2e8f0; 
+        }
+        .fl-display-item { display: flex; gap: 1rem; }
+        .fl-display-item__icon { 
+          width: 40px; height: 40px; 
+          border-radius: 10px; 
+          background: #fff; 
+          border: 1px solid #e2e8f0; 
+          display: flex; align-items: center; justify-content: center; 
+          color: var(--color-primary);
+          flex-shrink: 0;
+        }
+        .fl-display-item__content { flex: 1; }
+        .fl-display-item__title { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+        .fl-display-item__subtitle { font-size: 0.9rem; font-weight: 500; color: #475569; margin-bottom: 6px; }
+        .fl-display-item__date { 
+          font-size: 0.8rem; color: #64748b; 
+          display: flex; align-items: center; gap: 4px; 
+          margin-bottom: 8px;
+        }
+        .fl-display-item__meta-row { display: flex; gap: 1rem; }
+        .fl-display-item__text { font-size: 0.875rem; color: #475569; line-height: 1.5; margin: 0; }
+
+        .fl-section-title { display: flex; align-items: center; gap: 10px; }
+        .fl-form-row { display: flex; gap: 1rem; }
+        .fl-form-row .fl-form-group { flex: 1; }
       `}</style>
 
       {/* Actions */}

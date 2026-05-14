@@ -21,6 +21,7 @@ export default function CustomSelect({
     compact = false,
     className = '',
     id,
+    disabled = false,
 }) {
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -60,16 +61,16 @@ export default function CustomSelect({
     return (
         <div
             ref={rootRef}
-            className={`csel${open ? ' csel--open' : ''}${compact ? ' csel--compact' : ''}${className ? ` ${className}` : ''}`}
+            className={`csel${open ? ' csel--open' : ''}${compact ? ' csel--compact' : ''}${className ? ` ${className}` : ''}${disabled ? ' csel--disabled' : ''}`}
         >
-            {/* Trigger */}
             <button
                 id={id}
                 type="button"
                 className="csel__trigger"
-                onClick={() => setOpen(o => !o)}
+                onClick={() => !disabled && setOpen(o => !o)}
                 aria-haspopup="listbox"
                 aria-expanded={open}
+                disabled={disabled}
             >
                 <span className={`csel__value${!selected ? ' csel__value--placeholder' : ''}`}>
                     {selected ? selected.label : placeholder}
