@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
@@ -219,35 +220,70 @@ const FreelancerProfile = () => {
         </div>
       </div>
 
-      {/* Portfolio Links */}
+      {/* Portfolio Projects (Rich) */}
+      <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 className="fl-section-title" style={{ marginBottom: 0 }}>📂 Portfolio Projects</h3>
+          <Link to="/freelancer/portfolio" className="fl-btn fl-btn--ghost fl-btn--sm">Manage All</Link>
+        </div>
+        
+        {(profile?.portfolio || []).length === 0 ? (
+          <p className="fl-no-data" style={{ padding: '1rem 0' }}>No portfolio projects added yet. Showcase your work in the Portfolio tab.</p>
+        ) : (
+          <div className="fl-mini-portfolio-grid">
+            {profile.portfolio.slice(0, 3).map((item, i) => (
+              <div key={item._id || i} className="fl-mini-p-card">
+                <div className="fl-mini-p-card__img">
+                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} /> : <span>🖼️</span>}
+                </div>
+                <div className="fl-mini-p-card__info">
+                  <h4 className="fl-mini-p-card__title">{item.title}</h4>
+                  <p className="fl-mini-p-card__desc">{item.description}</p>
+                </div>
+              </div>
+            ))}
+            {profile.portfolio.length > 3 && (
+              <Link to="/freelancer/portfolio" className="fl-mini-p-card fl-mini-p-card--more">
+                <span>+{profile.portfolio.length - 3} More</span>
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Legacy Links & Socials */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="fl-section-title">🗂️ Portfolio & Social Links</h3>
 
-        <label className="fl-label" style={{ marginBottom: '0.6rem', display: 'block' }}>Portfolio Links</label>
-        {(editing ? portfolioLinks : (profile?.portfolioLinks || [])).map((link, i) => (
-          <div key={`portfolio-${i}`} className="fl-link-row">
-            <input
-              type="url"
-              className="fl-input"
-              value={editing ? link : profile?.portfolioLinks?.[i] || ''}
-              onChange={(e) => updatePortfolioLink(i, e.target.value)}
-              disabled={!editing}
-              placeholder="https://yourproject.com"
-            />
+        <div className="fl-form-group full">
+          <label className="fl-label" style={{ marginBottom: '0.6rem' }}>External Portfolio Links</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {(editing ? portfolioLinks : (profile?.portfolioLinks || [])).map((link, i) => (
+              <div key={`portfolio-${i}`} className="fl-link-row">
+                <input
+                  type="url"
+                  className="fl-input"
+                  value={editing ? link : profile?.portfolioLinks?.[i] || ''}
+                  onChange={(e) => updatePortfolioLink(i, e.target.value)}
+                  disabled={!editing}
+                  placeholder="https://behance.net/yourname"
+                />
+                {editing && (
+                  <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}>✕</button>
+                )}
+              </div>
+            ))}
             {editing && (
-              <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}>✕</button>
+              <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ alignSelf: 'flex-start' }} onClick={addPortfolioLink}>
+                ＋ Add Link
+              </button>
             )}
           </div>
-        ))}
-        {editing && (
-          <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ marginTop: '0.5rem' }} onClick={addPortfolioLink}>
-            ＋ Add Portfolio Link
-          </button>
-        )}
+        </div>
 
-        <div className="fl-divider" />
+        <div className="fl-divider" style={{ margin: '1.5rem 0' }} />
 
-        <label className="fl-label" style={{ marginBottom: '0.75rem', display: 'block' }}>Social Links</label>
+        <label className="fl-label" style={{ marginBottom: '1rem', display: 'block' }}>Social Profiles</label>
         <div className="fl-form-grid">
           {[
             { key: 'github', label: 'GitHub', icon: '🐙' },
@@ -262,12 +298,52 @@ const FreelancerProfile = () => {
                 value={editing ? socialLinks[key] || '' : profile?.socialLinks?.[key] || ''}
                 onChange={(e) => setSocialLinks((p) => ({ ...p, [key]: e.target.value }))}
                 disabled={!editing}
-                placeholder={`https://${key}.com/...`}
+                placeholder={`https://${key}.com/your-profile`}
               />
             </div>
           ))}
         </div>
       </div>
+
+      <style>{`
+        .fl-mini-portfolio-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 1rem;
+        }
+        .fl-mini-p-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.2s;
+        }
+        .fl-mini-p-card__img {
+          height: 100px;
+          background: #edf2f7;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+        }
+        .fl-mini-p-card__img img { width: 100%; height: 100%; object-fit: cover; }
+        .fl-mini-p-card__info { padding: 0.75rem; }
+        .fl-mini-p-card__title { font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.25rem; }
+        .fl-mini-p-card__desc { font-size: 0.75rem; color: #64748b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .fl-mini-p-card--more {
+          display: flex; align-items: center; justify-content: center;
+          background: var(--gradient-primary); color: #fff;
+          font-weight: 700; text-decoration: none;
+        }
+        .fl-mini-p-card--more:hover { transform: scale(1.02); opacity: 0.9; }
+        
+        .fl-link-row { display: flex; gap: 0.5rem; align-items: center; }
+        .fl-divider { height: 1px; background: #edf2f7; }
+        .fl-no-data { text-align: center; color: #94a3b8; font-size: 0.9rem; }
+      `}</style>
 
       {/* Actions */}
       {editing && (
