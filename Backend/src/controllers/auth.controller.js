@@ -1,6 +1,5 @@
-//controlers/auth.controller
 const authService = require('../services/auth.service');
-const { handleLoginAlert } = authService;
+const { handleLoginAlert, handlePasswordChangeAlert } = authService;
 const otpService = require('../services/otp.service');
 const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
@@ -244,6 +243,12 @@ const changePassword = asyncHandler(async (req, res) => {
 
   await authService.changePassword(userId, currentPassword, newPassword);
 
+  // Trigger password change alert
+  handlePasswordChangeAlert(req.user, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+
   sendSuccess(res, {
     message: 'Password changed successfully'
   });
@@ -286,6 +291,15 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
 
   await authService.resetPassword(email, newPassword);
+
+  // Trigger password change alert
+  const user = await User.findOne({ email });
+  if (user) {
+    handlePasswordChangeAlert(user, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+  }
 
   sendSuccess(res, {
     message: 'Password reset successful'

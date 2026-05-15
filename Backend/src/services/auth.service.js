@@ -4,7 +4,7 @@ const { AuthenticationError, NotFoundError } = require('../utils/apiError');
 const bcrypt = require('bcryptjs');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const ClientProfile = require('../models/ClientProfile');
-const { sendLoginAlertEmail } = require('./email.service');
+const { sendLoginAlertEmail, sendPasswordChangeAlertEmail } = require('./email.service');
 
 /**
  * Register new user with email/password
@@ -299,16 +299,23 @@ const handleLoginAlert = async (user, method, reqDetails = {}) => {
   try {
     const { ip, userAgent } = reqDetails;
     
+    const targetId = user.id || user._id;
+    if (!targetId) {
+      console.warn('⚠️ handleLoginAlert: No User ID provided');
+      return;
+    }
+
     // 1. Fetch Profile based on role
     let profile = null;
     if (user.role === 'freelancer') {
-      profile = await FreelancerProfile.findOne({ userId: user._id });
+      profile = await FreelancerProfile.findOne({ userId: targetId });
     } else if (user.role === 'client') {
-      profile = await ClientProfile.findOne({ userId: user._id });
+      profile = await ClientProfile.findOne({ userId: targetId });
     }
 
-    // 2. Check if login alerts are enabled (default to true if profile exists)
-    const laEnabled = profile?.securitySettings?.loginAlerts !== false;
+    // 2. Strict Check: Only send if explicitly true (defaults to true if profile exists but setting missing)
+    const laEnabled = profile?.securitySettings?.loginAlerts === true || 
+                     (profile && profile.securitySettings?.loginAlerts === undefined);
 
     if (laEnabled) {
       const uap = require('ua-parser-js');
@@ -337,6 +344,57 @@ const handleLoginAlert = async (user, method, reqDetails = {}) => {
   }
 };
 
+/**
+ * Handle Password Change Alert Email
+ */
+const handlePasswordChangeAlert = async (user, reqDetails = {}) => {
+  try {
+    const { ip, userAgent } = reqDetails;
+    
+    // Only applies to email/password users
+    if (user.authProvider !== 'email') return;
+
+    const targetId = user.id || user._id;
+    if (!targetId) return;
+
+    // 1. Fetch Profile based on role
+    let profile = null;
+    if (user.role === 'freelancer') {
+      profile = await FreelancerProfile.findOne({ userId: targetId });
+    } else if (user.role === 'client') {
+      profile = await ClientProfile.findOne({ userId: targetId });
+    }
+
+    // 2. Strict Check: Only send if explicitly true (defaults to true if profile exists but setting missing)
+    const paEnabled = profile?.securitySettings?.passwordChangeAlerts === true ||
+                     (profile && profile.securitySettings?.passwordChangeAlerts === undefined);
+
+    if (paEnabled) {
+      const uap = require('ua-parser-js');
+      const parser = new uap(userAgent);
+      const ua = parser.getResult();
+      
+      const details = {
+        time: new Date().toLocaleString('en-US', { 
+          timeZone: 'UTC',
+          dateStyle: 'full', 
+          timeStyle: 'long' 
+        }) + ' UTC',
+        browser: `${ua.browser.name || 'Unknown Browser'} ${ua.browser.version || ''}`,
+        device: `${ua.os.name || 'Unknown OS'} ${ua.device.model || ''}`,
+        ip: ip || 'Unknown IP'
+      };
+
+      // Send email (async)
+      sendPasswordChangeAlertEmail(user.email, details)
+        .then(() => console.log(`🚀 Password change alert email sent to ${user.email}`))
+        .catch(err => console.error(`❌ Failed to send password change alert:`, err.message));
+    }
+  } catch (error) {
+    console.error('⚠️ handlePasswordChangeAlert error:', error.message);
+  }
+};
+
 module.exports = {
   registerWithEmail,
   loginWithEmail,
@@ -347,5 +405,6 @@ module.exports = {
   verifyEmail,
   createOrUpdateFromOAuth,
   authenticateWithSupabase,
-  handleLoginAlert
+  handleLoginAlert,
+  handlePasswordChangeAlert
 };
