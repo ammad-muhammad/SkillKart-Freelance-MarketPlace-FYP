@@ -35,43 +35,52 @@ const login = asyncHandler(async (req, res) => {
   try {
     // Step 1: Verify credentials
     const result = await authService.loginWithEmail(email, password);
+    const user = await User.findById(result.user);
 
-    // Step 2: Send OTP in background (don't wait for email)
-    otpService.generateAndSendOTP(email, 'email_verification')
-      .then(() => console.log("✅ OTP sent successfully"))
-      .catch(err => console.error("⚠️ OTP send failed:", err.message));
+    // Step 2: Check 2FA setting
+    const is2FAEnabled = await authService.checkTwoFactorEnabled(user._id, user.role);
 
-    const responseData = {
-      message: 'Credentials verified. OTP sent to your email.',
-      data: {
-        userId: result.user,
-        email: email,
-        valid: result.valid
-      }
-    };
+    if (is2FAEnabled) {
+      // Send OTP in background
+      otpService.generateAndSendOTP(email, 'email_verification')
+        .then(() => console.log("✅ 2FA OTP sent successfully"))
+        .catch(err => console.error("⚠️ 2FA OTP send failed:", err.message));
 
-    console.log("📤 Response payload:", responseData);
+      return res.status(200).json({
+        success: true,
+        message: 'Credentials verified. 2FA OTP sent to your email.',
+        data: {
+          userId: result.user,
+          email: email,
+          requires2FA: true
+        }
+      });
+    }
+
+    // Step 3: Direct Login (2FA Disabled)
+    const tokens = require('../utils/jwt').generateTokenPair(user);
     
-    // Use res.json directly to ensure it works
-    res.status(200).json({
+    // Trigger login alert
+    handleLoginAlert(user, 'Email/Password (2FA Disabled)', {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    return res.status(200).json({
       success: true,
-      ...responseData
+      message: 'Login successful',
+      data: {
+        tokens,
+        user: user.toAuthJSON(),
+        requires2FA: false
+      }
     });
 
   } catch (error) {
-    // Handle authentication errors
     if (error.name === 'AuthenticationError') {
-      return res.status(401).json({
-        success: false,
-        message: error.message || 'Invalid credentials'
-      });
+      return res.status(401).json({ success: false, message: error.message || 'Invalid credentials' });
     }
-    
-    // Handle other errors
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Login failed'
-    });
+    return res.status(500).json({ success: false, message: error.message || 'Login failed' });
   }
 });
 

@@ -43,7 +43,7 @@ const clientProfileSchema = new mongoose.Schema({
     messageAlerts: { type: Boolean, default: true }
   },
   securitySettings: {
-    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorEnabled: { type: Boolean, default: true },
     loginAlerts: { type: Boolean, default: true },
     passwordChangeAlerts: { type: Boolean, default: true },
     recoveryEmail: String,

@@ -395,6 +395,21 @@ const handlePasswordChangeAlert = async (user, reqDetails = {}) => {
   }
 };
 
+/**
+ * Check if 2FA is enabled for a user
+ */
+const checkTwoFactorEnabled = async (userId, role) => {
+  let profile = null;
+  if (role === 'freelancer') {
+    profile = await FreelancerProfile.findOne({ userId });
+  } else if (role === 'client') {
+    profile = await ClientProfile.findOne({ userId });
+  }
+  
+  // Default to true for email/password users if profile exists, otherwise respect setting
+  return profile?.securitySettings?.twoFactorEnabled !== false;
+};
+
 module.exports = {
   registerWithEmail,
   loginWithEmail,
@@ -406,5 +421,6 @@ module.exports = {
   createOrUpdateFromOAuth,
   authenticateWithSupabase,
   handleLoginAlert,
-  handlePasswordChangeAlert
+  handlePasswordChangeAlert,
+  checkTwoFactorEnabled
 };

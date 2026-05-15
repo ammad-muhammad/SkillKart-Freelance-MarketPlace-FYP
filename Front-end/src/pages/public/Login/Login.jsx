@@ -13,7 +13,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const Login = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, handleLoginResponse } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({ email: "", password: "" });
     const [isLoading, setIsLoading] = useState(false);
@@ -61,14 +61,30 @@ const Login = () => {
 
         try {
             const response = await authAPI.login(formData.email, formData.password);
-            setSuccess("OTP sent to your email! Redirecting...");
-            sessionStorage.setItem('OTPEmail', formData.email);
-            sessionStorage.setItem('registrationType', 'login');
+            const { requires2FA, email } = await handleLoginResponse(response.data);
 
-            setTimeout(() => {
-                navigate('/otp-verification');
-            }, 1500);
+            if (requires2FA) {
+                setSuccess("OTP sent to your email! Redirecting...");
+                sessionStorage.setItem('OTPEmail', email);
+                sessionStorage.setItem('registrationType', 'login');
+                setTimeout(() => navigate('/otp-verification'), 1500);
+            } else {
+                setSuccess("Login successful! Redirecting...");
+                
+                // Role-based redirect logic (same as OTP.jsx)
+                const userRole = response.data.data.user.role;
+                const isOnboardingCompleted = response.data.data.user.isOnBoardingCompleted;
 
+                setTimeout(() => {
+                    if (userRole === 'client') {
+                        isOnboardingCompleted ? navigate('/client/dashboard') : navigate('/client/onboarding');
+                    } else if (userRole === 'freelancer') {
+                        isOnboardingCompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding');
+                    } else {
+                        navigate('/');
+                    }
+                }, 1500);
+            }
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please check your credentials.';
             setError(errorMessage);
@@ -225,7 +241,7 @@ const Login = () => {
                                                 <path d="M12 2a10 10 0 0 1 10 10" />
                                             </svg>
                                         </div>
-                                        Sending OTP...
+                                        Signing in...
                                     </>
                                 ) : (
                                     <>

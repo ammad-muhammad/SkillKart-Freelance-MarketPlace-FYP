@@ -167,6 +167,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const handleLoginResponse = async (loginData) => {
+    try {
+      const { data } = loginData;
+      
+      // If 2FA is required, we don't have tokens yet
+      if (data.requires2FA) {
+        return { requires2FA: true, email: data.email };
+      }
+
+      // If direct login (2FA disabled), set tokens and user
+      if (data.tokens) {
+        tokenManager.setTokens(
+          data.tokens.accessToken,
+          data.tokens.refreshToken
+        );
+        setUser(data.user);
+        toast.success(`Welcome back, ${data.user.firstName || data.user.email}!`);
+        return { requires2FA: false };
+      }
+      
+      return { requires2FA: false };
+    } catch (error) {
+      console.error('Error handling login response:', error);
+      throw error;
+    }
+  };
+
   const verifyOtp = async (email, otp) => {
     try {
       const { data } = await authAPI.verifyOTP(email, otp);
@@ -234,6 +261,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     verifyOtp,
+    handleLoginResponse,
     handleSupabaseOAuth,
     logout,
     isAuthenticated: !!user,
