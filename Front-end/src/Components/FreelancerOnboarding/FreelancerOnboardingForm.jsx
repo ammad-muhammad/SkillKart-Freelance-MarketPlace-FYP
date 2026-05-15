@@ -32,6 +32,9 @@ const STEP_TITLES = [
 ];
 
 const initialFormData = {
+  // Personal Details (Pre-filled from OAuth if available)
+  firstName: "",
+  lastName: "",
   // Step 1
   title: "",
   bio: "",
@@ -76,9 +79,30 @@ const FreelancerOnboardingForm = () => {
   const [direction, setDirection] = useState(1);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [draftData, setDraftData] = useState(null);
-  const { refreshAuth } = useAuth();
+  const { user, refreshAuth } = useAuth();
 
   const DRAFT_KEY = "freelancer_onboarding_draft";
+
+  // OAuth Pre-fill logic
+  useEffect(() => {
+    if (user && !showDraftPrompt) {
+      setFormData(prev => {
+        const updates = {};
+        
+        // Autofill Name if empty
+        if (!prev.firstName && user.firstName) updates.firstName = user.firstName;
+        if (!prev.lastName && user.lastName) updates.lastName = user.lastName;
+        
+        // Autofill Profile Picture if empty
+        if (!prev.profilePicUrl && user.profilePicture) updates.profilePicUrl = user.profilePicture;
+        
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
+    }
+  }, [user, showDraftPrompt]);
 
   // Initial Load - Restore Draft Check
   useEffect(() => {
@@ -121,18 +145,48 @@ const FreelancerOnboardingForm = () => {
     setShowDraftPrompt(false);
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
         toast.error("Please upload an image file");
         return;
       }
+
+      // 1. Show local preview immediately
+      const localUrl = URL.createObjectURL(file);
       setFormData(prev => ({
         ...prev,
         profilePic: file,
-        profilePicUrl: URL.createObjectURL(file)
+        profilePicUrl: localUrl
       }));
+
+      // 2. Upload immediately to get permanent URL
+      try {
+        const avatarData = new FormData();
+        avatarData.append('avatar', file);
+        
+        toast.info("Uploading profile picture...");
+        const avatarRes = await freelancersAPI.uploadAvatar(avatarData);
+        const permanentUrl = avatarRes.data.data.url;
+
+        // 3. Update with permanent URL
+        setFormData(prev => ({
+          ...prev,
+          profilePic: null, // Clear file object after successful upload
+          profilePicUrl: permanentUrl
+        }));
+        toast.success("Profile picture uploaded!");
+      } catch (error) {
+        console.error("Avatar upload error:", error);
+        toast.error("Failed to upload profile picture. Please try again.");
+        // Revert to null if upload failed
+        setFormData(prev => ({
+          ...prev,
+          profilePic: null,
+          profilePicUrl: ""
+        }));
+      }
     }
   };
 
@@ -140,6 +194,8 @@ const FreelancerOnboardingForm = () => {
     const newErrors = {};
 
     if (step === 2) {
+      if (!formData.firstName?.trim()) newErrors.firstName = "First name is required.";
+      if (!formData.lastName?.trim()) newErrors.lastName = "Last name is required.";
       if (!formData.title?.trim()) newErrors.title = "Professional title is required.";
       if (!formData.bio?.trim()) newErrors.bio = "Bio is required.";
       if (!formData.hourlyRate || isNaN(formData.hourlyRate) || Number(formData.hourlyRate) <= 0)
@@ -155,11 +211,15 @@ const FreelancerOnboardingForm = () => {
 
     if (step === 4) {
       const languages = formData.languages || [];
-      languages.forEach((lang) => {
-        if (!lang.language?.trim() || !lang.proficiency) {
-          newErrors.languages = "Please complete all added languages or remove incomplete ones.";
-        }
-      });
+      if (languages.length === 0) {
+        newErrors.languages = "Please add at least one language.";
+      } else {
+        languages.forEach((lang) => {
+          if (!lang.language?.trim() || !lang.proficiency) {
+            newErrors.languages = "Please complete all added languages or remove incomplete ones.";
+          }
+        });
+      }
     }
 
     if (step === 5) {
@@ -223,21 +283,53 @@ const FreelancerOnboardingForm = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      // 1. Upload Profile Picture if exists as a File
+      let profilePicUrl = formData.profilePicUrl;
+      if (formData.profilePic instanceof File) {
+        const avatarData = new FormData();
+        avatarData.append('avatar', formData.profilePic);
+        const avatarRes = await freelancersAPI.uploadAvatar(avatarData);
+        profilePicUrl = avatarRes.data.data.url;
+      }
+
+      // 2. Upload Portfolio Images if they are Files
+      const processedPortfolio = await Promise.all((formData.portfolio || []).map(async (project) => {
+        const uploadedImages = await Promise.all((project.images || []).map(async (img) => {
+          if (img instanceof File) {
+            const mediaData = new FormData();
+            mediaData.append('image', img);
+            const mediaRes = await freelancersAPI.uploadPortfolioMedia(mediaData);
+            return mediaRes.data.data.url;
+          }
+          return img; // Already a URL
+        }));
+
+        return {
+          ...project,
+          images: uploadedImages
+        };
+      }));
+
       // Build clean payload
       const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         title: formData.title,
         bio: formData.bio,
         hourlyRate: Number(formData.hourlyRate) || 0,
         availability: formData.availability,
         skills: formData.skills,
-        languages: formData.languages,
-        portfolio: formData.portfolio,
+        languages: (formData.languages || []).map(l => ({
+          language: typeof l.language === 'object' ? (l.language.name || l.language.language || "") : l.language,
+          proficiency: l.proficiency
+        })),
+        portfolio: processedPortfolio,
         education: formData.education,
         certifications: formData.certifications,
         timezone: formData.timezone,
         experienceLevel: formData.experienceLevel,
         socialLinks: formData.socialLinks,
-        aiAnalysis: formData.aiAnalysis // Pass AI analysis for smart gating
+        aiAnalysis: formData.aiAnalysis
       };
 
       const response = await freelancersAPI.submitProfile(payload);
@@ -273,12 +365,13 @@ const FreelancerOnboardingForm = () => {
 
           let errorStep = 8;
           if (['resume'].includes(baseField)) errorStep = 1;
-          else if (['title', 'bio', 'hourlyRate', 'availability'].includes(baseField)) errorStep = 2;
+          else if (['firstName', 'lastName', 'title', 'bio', 'hourlyRate', 'availability'].includes(baseField)) errorStep = 2;
           else if (['skills'].includes(baseField)) errorStep = 3;
           else if (['languages'].includes(baseField)) errorStep = 4;
           else if (['portfolio'].includes(baseField)) errorStep = 5;
           else if (['education'].includes(baseField)) errorStep = 6;
           else if (['certifications'].includes(baseField)) errorStep = 7;
+          else if (['socialLinks', 'timezone', 'experienceLevel'].includes(baseField)) errorStep = 2; // Basic/Professional info
 
           if (errorStep < firstErrorStep) firstErrorStep = errorStep;
         });

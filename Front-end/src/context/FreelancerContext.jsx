@@ -54,7 +54,17 @@ const emptyProfile = {
     completedOrders: 0,
     profileViews: 0,
   },
-  verificationStatus: 'unverified'
+  verificationStatus: 'unverified',
+  verificationDetails: {
+    emailVerified: false,
+    onboardingCompleted: false,
+    profileCompleted: false,
+    allSkillTestsPassed: false,
+    identityVerified: false,
+    paymentMethodAdded: false,
+    portfolioReviewed: false,
+    phoneVerified: false
+  }
 };
 
 export const FreelancerProvider = ({ children }) => {
@@ -97,7 +107,7 @@ export const FreelancerProvider = ({ children }) => {
         },
         skills: (dbProfile.skills || []).map(s => s.name),
         verifiedSkills: dbProfile.skills || [],
-        languages: dbProfile.languages?.map(l => l.language) || [],
+        languages: dbProfile.languages || [],
         portfolio: dbProfile.portfolio || [],
         portfolioLinks: dbProfile.portfolioLinks || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
@@ -108,7 +118,8 @@ export const FreelancerProvider = ({ children }) => {
           completedOrders: dbProfile.completedProjects || 0,
           profileViews: 0,
         },
-        verificationStatus: dbProfile.verificationStatus || 'unverified'
+        verificationStatus: dbProfile.verificationStatus || 'unverified',
+        verificationDetails: dbProfile.verificationDetails || emptyProfile.verificationDetails
       };
 
       console.log("[FreelancerContext] Gigs Response:", gigsRes.data);
@@ -169,7 +180,10 @@ export const FreelancerProvider = ({ children }) => {
         hourlyRate: personalInfo.hourlyRate,
         availability: personalInfo.availability,
         skills,
-        languages: languages.map(l => ({ language: l, proficiency: 'fluent' })),
+        languages: (languages || []).map(l => ({
+          language: typeof l === 'object' ? (l.language || l.name || "") : l,
+          proficiency: typeof l === 'object' ? (l.proficiency || 'fluent') : 'fluent'
+        })),
         socialLinks,
         notificationSettings,
         securitySettings: currentProfile.securitySettings || {},

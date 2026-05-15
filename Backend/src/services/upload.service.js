@@ -37,6 +37,22 @@ const uploadToCloudinary = async (file, folder = 'uploads') => {
 };
 
 /**
+ * Upload an external URL to Cloudinary (Mirroring)
+ */
+const uploadFromUrl = async (url, folder = 'uploads') => {
+  try {
+    const result = await cloudinary.uploader.upload(url, {
+      folder,
+      resource_type: 'auto'
+    });
+    return result;
+  } catch (error) {
+    console.error('Cloudinary mirror failed:', error);
+    return null;
+  }
+};
+
+/**
  * Upload profile picture
  */
 const uploadProfilePicture = async (userId, file) => {
@@ -144,6 +160,7 @@ const getUserFiles = async (userId, fileType = null) => {
 
 module.exports = {
   uploadToCloudinary,
+  uploadFromUrl,
   uploadProfilePicture,
   uploadCV,
   uploadPortfolioImage,

@@ -210,16 +210,31 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
 
   console.log('🔐 Supabase OAuth:', provider, '-', email);
 
+  const { uploadFromUrl } = require('./upload.service');
+
   // Find user by supabaseId or email
   let user = await User.findOne({ $or: [{ supabaseId }, { email }] });
 
+  // Function to mirror avatar if it's from Google
+  const mirrorAvatar = async (rawUrl) => {
+    if (rawUrl && rawUrl.includes('googleusercontent.com')) {
+      console.log('🔄 Mirroring Google avatar to Cloudinary...');
+      const mirrored = await uploadFromUrl(rawUrl, 'profile-pictures');
+      return mirrored ? mirrored.secure_url : rawUrl;
+    }
+    return rawUrl;
+  };
+
   if (!user) {
+    const rawAvatar = user_metadata?.avatar_url || user_metadata?.picture;
+    const finalAvatar = await mirrorAvatar(rawAvatar);
+
     // Create new user
     user = new User({
       email,
       firstName: user_metadata?.full_name?.split(' ')[0] || user_metadata?.name?.split(' ')[0] || '',
       lastName: user_metadata?.full_name?.split(' ').slice(1).join(' ') || user_metadata?.name?.split(' ').slice(1).join(' ') || '',
-      profilePicture: user_metadata?.avatar_url || user_metadata?.picture,
+      profilePicture: finalAvatar,
       supabaseId,
       authProvider: provider,
       googleId: provider === 'google' ? user_metadata?.provider_id || user_metadata?.sub : undefined,
@@ -238,7 +253,15 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
   } else {
     // Update existing user
     user.supabaseId = supabaseId;
-    user.profilePicture = user.profilePicture || user_metadata?.avatar_url || user_metadata?.picture;
+    
+    // Mirror avatar if it's currently a Google URL or missing
+    const currentAvatar = user.profilePicture;
+    const incomingAvatar = user_metadata?.avatar_url || user_metadata?.picture;
+    
+    if (!currentAvatar || currentAvatar.includes('googleusercontent.com')) {
+      user.profilePicture = await mirrorAvatar(incomingAvatar || currentAvatar);
+    }
+
     user.isEmailVerified = true;
     user.isSyncedToSupabase = true;
     user.lastSyncedAt = new Date();

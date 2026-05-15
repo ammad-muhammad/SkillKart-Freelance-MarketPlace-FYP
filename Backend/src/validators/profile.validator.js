@@ -22,7 +22,8 @@ const updateFreelancerProfileValidation = [
 
   body('skills')
     .optional()
-    .isArray().withMessage('Skills must be an array'),
+    .isArray().withMessage('Skills must be an array')
+    .custom((value) => value.length >= 1).withMessage('At least one skill is required'),
 
   body('skills.*.name')
     .optional()
@@ -103,7 +104,8 @@ const updateFreelancerProfileValidation = [
 
   body('languages')
     .optional()
-    .isArray().withMessage('Languages must be an array'),
+    .isArray().withMessage('Languages must be an array')
+    .custom((value) => value.length >= 1).withMessage('At least one language is required'),
 
   body('languages.*.language')
     .optional()
@@ -202,7 +204,22 @@ const updateClientProfileValidation = [
 
   body('recoveryPhone')
     .optional({ values: 'falsy' })
-    .isLength({ max: 20 }).withMessage('Recovery phone too long')
+    .isLength({ max: 20 }).withMessage('Recovery phone too long'),
+
+  body('languages')
+    .optional()
+    .isArray().withMessage('Languages must be an array')
+    .custom((value) => value.length >= 1).withMessage('At least one language is required'),
+
+  body('languages.*.language')
+    .optional()
+    .trim()
+    .isLength({ max: 50 }).withMessage('Language name too long'),
+
+  body('languages.*.proficiency')
+    .optional()
+    .isIn(['basic', 'conversational', 'fluent', 'native'])
+    .withMessage('Invalid proficiency level')
 ];
 
 // Add portfolio item validation

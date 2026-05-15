@@ -4,6 +4,7 @@ const SkillTestAttempt = require('../models/SkillTestAttempt');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError, NotFoundError } = require('../utils/apiError');
+const { syncFreelancerVerification } = require('../services/verification.service');
 
 /**
  * Generate a new skill test or resume existing one
@@ -218,13 +219,10 @@ const submitTest = asyncHandler(async (req, res) => {
       }
     });
 
-    // Update overall verification status if at least one skill is verified expert
-    const hasExpertSkill = profile.skills.some(s => s.isVerified && s.level === 'Expert');
-    if (hasExpertSkill) {
-      profile.verificationStatus = 'verified';
-    }
-
     await profile.save();
+    
+    // Sync verification status checklist
+    await syncFreelancerVerification(userId);
   }
 
   sendSuccess(res, {

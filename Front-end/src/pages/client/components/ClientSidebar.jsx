@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useClient } from '../../../context/ClientContext';
 import { useAuth } from '../../../hooks/useAuth';
+import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import './ClientSidebar.css';
 
 const NAV_ITEMS = [
@@ -55,7 +56,10 @@ const ClientSidebar = () => {
         {/* Avatar */}
         <div className="cl-sidebar__avatar-wrap">
           <div className="cl-sidebar__avatar">
-            {avatar ? <img src={avatar} alt={fullName} /> : <span>{initials}</span>}
+            <UserAvatar 
+              src={avatar}
+              fullName={fullName}
+            />
             <span className="cl-sidebar__online-dot" />
           </div>
           <div className="cl-sidebar__user-info">

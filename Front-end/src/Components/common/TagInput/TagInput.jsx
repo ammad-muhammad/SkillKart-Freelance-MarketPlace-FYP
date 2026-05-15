@@ -33,15 +33,23 @@ const TagInput = ({
 
   // Suggestions logic
   useEffect(() => {
+    if (isStatic && input.trim().length === 0 && showSuggestions) {
+      const currentTagNames = tags.map(t => (typeof t === 'string' ? t : (t?.name || t?.language || '')).toLowerCase());
+      const filtered = options.filter(opt => !currentTagNames.includes(opt.toLowerCase()));
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+      return;
+    }
+
     if (input.trim().length < 1) {
       setSuggestions([]);
-      setShowSuggestions(false);
+      if (!isStatic) setShowSuggestions(false);
       return;
     }
 
     if (isStatic) {
       // Static local filtering
-      const currentTagNames = tags.map(t => (typeof t === 'string' ? t : t.name).toLowerCase());
+      const currentTagNames = tags.map(t => (typeof t === 'string' ? t : (t?.name || t?.language || '')).toLowerCase());
       const filtered = options.filter(opt => 
         opt.toLowerCase().includes(input.toLowerCase()) && 
         !currentTagNames.includes(opt.toLowerCase())
@@ -71,13 +79,13 @@ const TagInput = ({
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [input, tags, options, isStatic]);
+  }, [input, tags, options, isStatic, showSuggestions]);
 
   const addTag = async (val) => {
     const trimmed = val.trim();
     if (!trimmed) return;
 
-    const currentTagNames = tags.map(t => (typeof t === 'string' ? t : t.name).toLowerCase());
+    const currentTagNames = tags.map(t => (typeof t === 'string' ? t : (t?.name || t?.language || '')).toLowerCase());
     
     // Check if already exists
     if (currentTagNames.includes(trimmed.toLowerCase())) {
@@ -147,7 +155,7 @@ const TagInput = ({
         <div className="fl-tag-list">
           {tags.map((tag, idx) => {
             if (!tag) return null;
-            const name = typeof tag === 'string' ? tag : (tag.name || tag.language);
+            const name = typeof tag === 'string' ? tag : (tag?.name || tag?.language || '');
             return (
               <span key={`${name}-${idx}`} className="fl-tag-chip">
                 {name}
@@ -164,6 +172,8 @@ const TagInput = ({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKey}
+              onFocus={() => isStatic && setShowSuggestions(true)}
+              onClick={() => isStatic && setShowSuggestions(true)}
               placeholder={tags.length === 0 ? placeholder : ''}
               className="fl-tag-input__field"
               disabled={loading}

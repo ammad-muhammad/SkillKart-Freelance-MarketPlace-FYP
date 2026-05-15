@@ -60,6 +60,10 @@ const freelancerProfileSchema = new mongoose.Schema({
     messageAlerts: { type: Boolean, default: true }
   },
   securitySettings: {
+    twoFactorEnabled: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
+    loginAlerts: { type: Boolean, default: true },
+    passwordChangeAlerts: { type: Boolean, default: true },
     recoveryEmail: String,
     recoveryPhone: String
   },
@@ -67,6 +71,16 @@ const freelancerProfileSchema = new mongoose.Schema({
   rating: { type: Number, default: 0, min: 0, max: 5 },
   completedProjects: { type: Number, default: 0 },
   totalEarnings: { type: Number, default: 0 },
+  verificationDetails: {
+    emailVerified: { type: Boolean, default: false },
+    onboardingCompleted: { type: Boolean, default: false },
+    profileCompleted: { type: Boolean, default: false },
+    allSkillTestsPassed: { type: Boolean, default: false },
+    identityVerified: { type: Boolean, default: false },
+    paymentMethodAdded: { type: Boolean, default: false },
+    portfolioReviewed: { type: Boolean, default: false },
+    phoneVerified: { type: Boolean, default: false }
+  },
   verificationStatus: {
     type: String,
     enum: ['unverified', 'verified', 'pending'],

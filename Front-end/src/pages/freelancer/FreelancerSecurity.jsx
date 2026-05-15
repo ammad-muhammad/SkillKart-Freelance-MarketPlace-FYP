@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
@@ -19,6 +19,16 @@ const FreelancerSecurity = () => {
   const [forgotSent, setForgotSent] = useState(false);
   const [twoFactor, setTwoFactor] = useState(!!sec.twoFactorEnabled);
   const [emailVerified, setEmailVerified] = useState(!!sec.emailVerified);
+  const [loginAlerts, setLoginAlerts] = useState(!!sec.loginAlerts);
+  const [passwordAlerts, setPasswordAlerts] = useState(!!sec.passwordChangeAlerts);
+
+  // Sync state with profile data
+  useEffect(() => {
+    setTwoFactor(!!profile?.securitySettings?.twoFactorEnabled);
+    setEmailVerified(!!profile?.securitySettings?.emailVerified);
+    setLoginAlerts(!!profile?.securitySettings?.loginAlerts);
+    setPasswordAlerts(!!profile?.securitySettings?.passwordChangeAlerts);
+  }, [profile?.securitySettings]);
 
   const validatePw = () => {
     const errs = {};
@@ -57,6 +67,18 @@ const FreelancerSecurity = () => {
     const next = !emailVerified;
     setEmailVerified(next);
     await updateProfile('securitySettings', { emailVerified: next }, false, true);
+  };
+
+  const toggleLoginAlerts = async () => {
+    const next = !loginAlerts;
+    setLoginAlerts(next);
+    await updateProfile('securitySettings', { loginAlerts: next }, false, true);
+  };
+
+  const togglePasswordAlerts = async () => {
+    const next = !passwordAlerts;
+    setPasswordAlerts(next);
+    await updateProfile('securitySettings', { passwordChangeAlerts: next }, false, true);
   };
 
   const sendForgot = async () => {
@@ -199,6 +221,26 @@ const FreelancerSecurity = () => {
             <div
               className={`fl-toggle__switch${emailVerified ? ' fl-toggle__switch--on' : ''}`}
               onClick={toggleEmailVerified}
+            />
+          </div>
+          <div className="fl-toggle">
+            <div className="fl-toggle__info">
+              <span className="fl-toggle__label">🔔 Login Alerts</span>
+              <span className="fl-toggle__desc">Get notified whenever someone logs into your account.</span>
+            </div>
+            <div
+              className={`fl-toggle__switch${loginAlerts ? ' fl-toggle__switch--on' : ''}`}
+              onClick={toggleLoginAlerts}
+            />
+          </div>
+          <div className="fl-toggle">
+            <div className="fl-toggle__info">
+              <span className="fl-toggle__label">🛡️ Password Change Alerts</span>
+              <span className="fl-toggle__desc">Get notified immediately if your password is changed.</span>
+            </div>
+            <div
+              className={`fl-toggle__switch${passwordAlerts ? ' fl-toggle__switch--on' : ''}`}
+              onClick={togglePasswordAlerts}
             />
           </div>
         </div>

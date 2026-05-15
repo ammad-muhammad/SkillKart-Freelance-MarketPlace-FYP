@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
@@ -38,6 +38,15 @@ const ClientSecurity = () => {
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [twoFactor, setTwoFactor] = useState(!!profile?.securitySettings?.twoFactorEnabled);
   const [emailVerified, setEmailVerified] = useState(!!profile?.securitySettings?.emailVerified);
+  const [loginAlerts, setLoginAlerts] = useState(!!profile?.securitySettings?.loginAlerts);
+  const [passwordAlerts, setPasswordAlerts] = useState(!!profile?.securitySettings?.passwordChangeAlerts);
+  
+  useEffect(() => {
+    setTwoFactor(!!profile?.securitySettings?.twoFactorEnabled);
+    setEmailVerified(!!profile?.securitySettings?.emailVerified);
+    setLoginAlerts(!!profile?.securitySettings?.loginAlerts);
+    setPasswordAlerts(!!profile?.securitySettings?.passwordChangeAlerts);
+  }, [profile?.securitySettings]);
 
   const validate = () => {
     const e = {};
@@ -228,6 +237,26 @@ const ClientSecurity = () => {
             <div
               className={`cl-toggle__switch${emailVerified ? ' cl-toggle__switch--on' : ''}`}
               onClick={() => toggleSecurity('emailVerified', !emailVerified, setEmailVerified)}
+            />
+          </div>
+          <div className="cl-toggle">
+            <div className="cl-toggle__info">
+              <span className="cl-toggle__label">🔔 Login Alerts</span>
+              <span className="cl-toggle__desc">Get notified whenever someone logs into your account.</span>
+            </div>
+            <div
+              className={`cl-toggle__switch${loginAlerts ? ' cl-toggle__switch--on' : ''}`}
+              onClick={() => toggleSecurity('loginAlerts', !loginAlerts, setLoginAlerts)}
+            />
+          </div>
+          <div className="cl-toggle">
+            <div className="cl-toggle__info">
+              <span className="cl-toggle__label">🛡️ Password Change Alerts</span>
+              <span className="cl-toggle__desc">Get notified immediately if your password is changed.</span>
+            </div>
+            <div
+              className={`cl-toggle__switch${passwordAlerts ? ' cl-toggle__switch--on' : ''}`}
+              onClick={() => toggleSecurity('passwordChangeAlerts', !passwordAlerts, setPasswordAlerts)}
             />
           </div>
         </div>

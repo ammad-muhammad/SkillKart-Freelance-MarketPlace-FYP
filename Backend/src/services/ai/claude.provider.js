@@ -188,20 +188,30 @@ Output ONLY a JSON object. Do not output anything else.
     }
 
     const prompt = `
-      You are a professional skills validator.
-      Analyze the following skill input: "${input}"
+      You are a professional skills classifier for SkillKart, a digital freelancing platform.
+      Your task is to validate if a given string is a valid DIGITAL or PROFESSIONAL skill relevant to online freelancing.
+
+      Allowed Categories: Software/Web/Mobile Development, UI/UX Design, Graphic Design, Video Editing, Content Writing, SEO, Digital Marketing, Data Science, AI/ML, Cybersecurity, Cloud/DevOps, Business/Virtual Assistance, No-Code/Automation, Finance/Accounting, Professional online services.
+
+      Strict Rejection Rules:
+      - Reject HOBBIES (e.g., Cooking, Traveling).
+      - Reject SPORTS/PHYSICAL ACTIVITIES (e.g., Cricket, Football, Swimming, Skating).
+      - Reject ENTERTAINMENT-ONLY skills (e.g., Dancing, Magic tricks).
+      - Reject UNRELATED REAL-WORLD activities (e.g., Driving).
+
+      Input: "${input}"
       
       Tasks:
-      1. Determine if it's a valid professional skill (e.g., "React", "Accounting", "Python").
+      1. Determine if it's a valid professional/digital skill.
       2. If it's a variation (e.g., "reactjs"), normalize it to the standard professional name (e.g., "React.js").
-      3. If it's invalid (e.g., "asdf", "cool guy", "random sentence"), mark as valid: false and provide a reason.
-      4. Provide a list of 3-5 closely related professional skills as suggestions.
+      3. If it's invalid (non-digital, hobby, sport, or garbage), mark as valid: false and provide a reason.
+      4. Provide a list of 3-5 closely related professional digital skills as suggestions.
 
       Output ONLY valid JSON. Do not output anything else.
       {
         "valid": true/false,
         "skill": "Normalized Name",
-        "message": "Reason if invalid or empty",
+        "message": "Reason if invalid (e.g. 'SkillKart only accepts professional digital/tech skills. This appears to be a hobby or physical activity.')",
         "suggestions": ["Skill 1", "Skill 2", "Skill 3"]
       }
     `;

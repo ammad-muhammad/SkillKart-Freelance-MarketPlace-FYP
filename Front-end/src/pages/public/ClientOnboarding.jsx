@@ -10,7 +10,11 @@ import {
     Search, Trash2, Sliders, Settings, Sparkles, X, Plus
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { LANGUAGES } from "../../data/languages";
+import TagInput from "../../Components/common/TagInput/TagInput";
 import "./ClientOnboarding.css";
+
+const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const ClientOnboarding = () => {
     const navigate = useNavigate();
@@ -53,6 +57,7 @@ const ClientOnboarding = () => {
 
             // Step 5: Preferences
             preferredCommunication: [], // Chat, Video Call, Email
+            languages: [],
             aiAssistance: true,
             termsAccepted: false
         };
@@ -113,6 +118,7 @@ const ClientOnboarding = () => {
             if (!formData.fullName) { toast.warn("Full Name is required"); return false; }
             if (!formData.workEmail) { toast.warn("Work Email is required"); return false; }
             if (!formData.companyType) { toast.warn("Please select a Client Type"); return false; }
+            if ((formData.languages || []).length === 0) { toast.warn("Please add at least one language"); return false; }
         }
         if (step === 2) {
             if (!formData.isNewToHiring) { toast.warn("Hiring Experience is required"); return false; }
@@ -143,7 +149,7 @@ const ClientOnboarding = () => {
 
     const isStepValid = () => {
         if (step === 1) {
-            return formData.fullName && formData.workEmail && formData.companyType;
+            return formData.fullName && formData.workEmail && formData.companyType && (formData.languages || []).length > 0;
         }
         if (step === 2) {
             const hasExperience = formData.isNewToHiring;
@@ -308,6 +314,71 @@ const ClientOnboarding = () => {
                     </div>
                 </motion.div>
             )}
+
+            <div className="onboarding__form-group" style={{ marginTop: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <label className="onboarding__label">Languages You Speak*</label>
+                    <button 
+                        type="button" 
+                        className="onboarding__add-btn"
+                        onClick={() => setFormData(p => ({ 
+                            ...p, 
+                            languages: [...(p.languages || []), { language: "", proficiency: "fluent" }] 
+                        }))}
+                        style={{ fontSize: '12px', padding: '4px 10px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '8px', color: 'var(--onboard-accent-primary)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                    >
+                        <Plus size={14} /> Add Language
+                    </button>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {(formData.languages || []).map((lang, idx) => (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'end', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
+                                <label className="onboarding__label" style={{ fontSize: '11px', opacity: 0.7 }}>Language</label>
+                                <TagInput 
+                                    tags={lang.language ? [lang.language] : []}
+                                    onChange={(tags) => {
+                                        const newList = [...formData.languages];
+                                        newList[idx].language = tags[0] || "";
+                                        setFormData(p => ({ ...p, languages: newList }));
+                                    }}
+                                    options={LANGUAGES}
+                                    placeholder="Select..."
+                                    showHint={false}
+                                />
+                            </div>
+                            <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
+                                <label className="onboarding__label" style={{ fontSize: '11px', opacity: 0.7 }}>Proficiency</label>
+                                <select 
+                                    className="onboarding__select" 
+                                    style={{ padding: '8px 12px' }}
+                                    value={lang.proficiency}
+                                    onChange={(e) => {
+                                        const newList = [...formData.languages];
+                                        newList[idx].proficiency = e.target.value;
+                                        setFormData(p => ({ ...p, languages: newList }));
+                                    }}
+                                >
+                                    {PROFICIENCY_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setFormData(p => ({ ...p, languages: p.languages.filter((_, i) => i !== idx) }))}
+                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '8px', padding: '8px', color: '#ef4444', cursor: 'pointer' }}
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ))}
+                    {(formData.languages || []).length === 0 && (
+                        <p style={{ fontSize: '13px', color: '#ef4444', textAlign: 'center', margin: '10px 0' }}>⚠ Please add at least one language you communicate in.</p>
+                    )}
+                </div>
+            </div>
         </motion.div>
     );
 

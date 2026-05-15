@@ -12,6 +12,12 @@ export const freelancersAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   submitProfile: (data) => client.post('/freelancers/profile/submit', data),
+  uploadPortfolioMedia: (formData) => client.post('/freelancers/portfolio/media', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  uploadAvatar: (formData) => client.post('/freelancers/profile/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   getSavedJobs: () => client.get('/freelancers/saved-jobs'),
   toggleSavedJob: (jobId) => client.post(`/freelancers/saved-jobs/${jobId}`)
 };

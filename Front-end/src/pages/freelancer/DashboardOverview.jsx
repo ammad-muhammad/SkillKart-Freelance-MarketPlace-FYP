@@ -84,16 +84,44 @@ const DashboardOverview = () => {
         ))}
       </div>
 
-      {/* Quick Actions */}
+      {/* Verification Progress Checklist */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="fl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions</h3>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--primary">＋ Create New Gig</Link>
-          <Link to="/freelancer/gigs" className="fl-btn fl-btn--ghost">View My Gigs</Link>
-          <Link to="/freelancer/profile" className="fl-btn fl-btn--ghost">Update Profile</Link>
-          <Link to="/freelancer/settings" className="fl-btn fl-btn--ghost">Account Settings</Link>
+        <h3 className="fl-section-title">
+          <CheckCircle2 size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Verification Progress
+        </h3>
+        <div className="fl-verification-checklist">
+          {[
+            { key: 'emailVerified', label: 'Email Verification', required: true },
+            { key: 'profileCompleted', label: 'Profile Completion (Bio, Title, Skills)', required: true },
+            { key: 'onboardingCompleted', label: 'Onboarding Flow Completed', required: true },
+            { key: 'allSkillTestsPassed', label: 'Skill Verification (Tests Passed)', required: true },
+            { key: 'identityVerified', label: 'Identity Verification', required: false },
+            { key: 'paymentMethodAdded', label: 'Payment Method Linked', required: false },
+          ].map((item) => {
+            const isCompleted = profile.verificationDetails?.[item.key];
+            return (
+              <div key={item.key} className={`fl-check-item ${isCompleted ? 'fl-check-item--done' : ''}`}>
+                <span className="fl-check-icon">
+                  {isCompleted ? <CheckCircle2 size={18} fill="#10b981" color="#fff" /> : <div className="fl-check-circle" />}
+                </span>
+                <span className="fl-check-label">
+                  {item.label}
+                  {item.required && !isCompleted && <span className="fl-check-tag">Required</span>}
+                  {!item.required && <span className="fl-check-tag fl-check-tag--optional">Upcoming</span>}
+                </span>
+              </div>
+            );
+          })}
         </div>
+        
+        {profile.verificationStatus !== 'verified' && (
+          <div className="fl-verification-notice">
+            <p>Your profile is currently <strong>{profile.verificationStatus}</strong>. Complete all required steps above to unlock full platform features and expert badges.</p>
+          </div>
+        )}
       </div>
+
+      {/* Quick Actions */}
 
       {/* Skill Verification Center */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
@@ -293,6 +321,70 @@ const DashboardOverview = () => {
           border-radius: 50%; animation: fl-spin 1s linear infinite;
         }
         @keyframes fl-spin { to { transform: rotate(360deg); } }
+
+        .fl-verification-checklist {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 1rem;
+          margin: 1.5rem 0;
+        }
+        .fl-check-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem 1rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+        }
+        .fl-check-item--done {
+          background: rgba(16, 185, 129, 0.05);
+          border-color: rgba(16, 185, 129, 0.2);
+        }
+        .fl-check-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+        }
+        .fl-check-circle {
+          width: 18px; height: 18px;
+          border: 2px solid #cbd5e1;
+          border-radius: 50%;
+        }
+        .fl-check-label {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--color-text-mid);
+          display: flex;
+          flex-direction: column;
+        }
+        .fl-check-item--done .fl-check-label {
+          color: #065f46;
+        }
+        .fl-check-tag {
+          font-size: 0.65rem;
+          font-weight: 700;
+          color: #ef4444;
+          text-transform: uppercase;
+          margin-top: 2px;
+        }
+        .fl-check-tag--optional {
+          color: #64748b;
+        }
+        .fl-verification-notice {
+          margin-top: 1rem;
+          padding: 0.75rem 1rem;
+          background: #fffbeb;
+          border-left: 4px solid #f59e0b;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          color: #92400e;
+        }
+        .fl-verification-notice strong {
+          text-transform: capitalize;
+        }
       `}</style>
     </div>
   );

@@ -12,10 +12,12 @@ import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { timezones } from '../../utils/timezones';
 import { LANGUAGES } from '../../data/languages';
 import TagInput from '../../Components/common/TagInput/TagInput';
+import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
 const MAX_BIO = 600;
+const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const FreelancerProfile = () => {
   const { profile, saveProfile, showToast } = useFreelancer();
@@ -49,6 +51,18 @@ const FreelancerProfile = () => {
   const save = async () => {
     setSaving(true);
     try {
+      if (skills.length < 1) {
+        showToast('At least one skill is required', 'error');
+        setSaving(false);
+        return;
+      }
+
+      if (languages.length < 1) {
+        showToast('At least one language is required', 'error');
+        setSaving(false);
+        return;
+      }
+
       const updatedProfile = {
         ...profile,
         personalInfo: { 
@@ -58,7 +72,10 @@ const FreelancerProfile = () => {
           certifications: [...certifications]
         },
         skills: [...skills],
-        languages: [...languages],
+        languages: languages.map(l => ({
+          language: typeof l.language === 'object' ? (l.language.name || l.language.language || "") : l.language,
+          proficiency: l.proficiency
+        })),
         portfolioLinks: [...portfolioLinks],
         socialLinks: { ...profile.socialLinks, ...socialLinks }
       };
@@ -114,11 +131,11 @@ const FreelancerProfile = () => {
           {/* Avatar */}
           <div className="fl-profile-hero__avatar-wrap">
             <div className="fl-profile-hero__avatar">
-              {(editing ? form.avatar : profile?.personalInfo?.avatar) ? (
-                <img src={editing ? form.avatar : profile?.personalInfo?.avatar} alt="avatar" />
-              ) : (
-                <span>{initials}</span>
-              )}
+              <UserAvatar 
+                src={editing ? form.avatar : profile?.personalInfo?.avatar}
+                fullName={data.fullName}
+                size="xl"
+              />
             </div>
             {editing && (
               <>
@@ -421,9 +438,12 @@ const FreelancerProfile = () => {
         <h3 className="fl-section-title">🛠️ Skills & Languages</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
-            <label className="fl-label">Skills (press Enter to add)</label>
+            <label className="fl-label">Skills (press Enter to add)*</label>
             {editing ? (
-              <TagInput tags={skills} onChange={setSkills} placeholder="e.g. React, Node.js" />
+              <>
+                <TagInput tags={skills} onChange={setSkills} placeholder="e.g. React, Node.js" />
+                {skills.length === 0 && <span className="fl-error">⚠ At least one skill is required</span>}
+              </>
             ) : (
               <div className="fl-tags-display">
                 {(Array.isArray(profile.skills) ? profile.skills : []).map((s, idx) => {
@@ -434,19 +454,79 @@ const FreelancerProfile = () => {
               </div>
             )}
           </div>
-          <div className="fl-form-group">
-            <label className="fl-label">Languages</label>
-            {editing ? (
-              <TagInput tags={languages} onChange={setLanguages} options={LANGUAGES} placeholder="Select languages..." showHint={false} />
-            ) : (
-              <div className="fl-tags-display">
-                {(Array.isArray(profile.languages) ? profile.languages : []).map((l, idx) => {
-                  const name = typeof l === 'string' ? l : l?.language || l?.name;
-                  if (!name) return null;
-                  return <span key={`${name}-${idx}`} className="fl-tag">{name}</span>;
-                })}
-              </div>
-            )}
+          <div className="fl-form-group fl-form-group--full">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <label className="fl-label">Languages You Speak*</label>
+              {editing && (
+                <button 
+                  type="button" 
+                  className="fl-btn fl-btn--ghost fl-btn--sm"
+                  onClick={() => setLanguages([...languages, { language: '', proficiency: 'fluent' }])}
+                >
+                  <Plus size={14} /> Add Language
+                </button>
+              )}
+            </div>
+
+            <div className="fl-languages-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {editing ? (
+                languages.map((lang, idx) => (
+                  <div key={idx} className="fl-dynamic-item" style={{ background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.6 }}>Language #{idx + 1}</span>
+                      <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setLanguages(languages.filter((_, i) => i !== idx))}>
+                        <Trash2 size={12} /> Remove
+                      </button>
+                    </div>
+                    <div className="fl-form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                      <div className="fl-form-group">
+                        <label className="fl-label">Language</label>
+                        <TagInput 
+                          tags={lang.language ? [lang.language] : []} 
+                          onChange={(tags) => {
+                            const newList = [...languages];
+                            newList[idx].language = tags[0] || "";
+                            setLanguages(newList);
+                          }} 
+                          options={LANGUAGES}
+                          placeholder="Select..." 
+                          showHint={false}
+                        />
+                      </div>
+                      <div className="fl-form-group">
+                        <label className="fl-label">Proficiency</label>
+                        <select 
+                          className="fl-input" 
+                          value={lang.proficiency}
+                          onChange={(e) => {
+                            const newList = [...languages];
+                            newList[idx].proficiency = e.target.value;
+                            setLanguages(newList);
+                          }}
+                        >
+                          {PROFICIENCY_OPTIONS.map(opt => (
+                            <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="fl-tags-display">
+                  {(Array.isArray(profile.languages) ? profile.languages : []).map((l, idx) => {
+                    const name = typeof l === 'string' ? l : (l?.language || 'Unknown');
+                    const proficiency = typeof l === 'string' ? 'fluent' : (l?.proficiency || 'fluent');
+                    return (
+                      <span key={idx} className="fl-tag fl-tag--alt">
+                        {name} ({proficiency})
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {editing && languages.length === 0 && <p className="fl-error" style={{ margin: 0 }}>⚠ At least one language is required</p>}
+            </div>
           </div>
         </div>
       </div>

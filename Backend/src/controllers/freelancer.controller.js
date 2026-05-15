@@ -4,6 +4,7 @@ const { uploadProfilePicture, uploadPortfolioImage } = require('../services/uplo
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+const { syncFreelancerVerification } = require('../services/verification.service');
 
 /**
  * Calculate profile completion percentage
@@ -38,10 +39,14 @@ const getProfile = asyncHandler(async (req, res) => {
     // Create empty profile
     profile = await FreelancerProfile.create({ userId });
   }
+
+  // Always sync verification details before returning profile
+  await syncFreelancerVerification(userId);
+  const updatedProfile = await FreelancerProfile.findOne({ userId });
   
   sendSuccess(res, {
     message: 'Profile retrieved successfully',
-    data: { profile }
+    data: { profile: updatedProfile }
   });
 });
 
@@ -138,17 +143,26 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
     }
   }
 
-  profile.verificationStatus = status;
   profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));
-  
   await profile.save();
   
-  // Update User model flag
-  await User.findByIdAndUpdate(userId, { isOnBoardingCompleted: true });
+  // Update User model flag and personal info
+  const userUpdates = { isOnBoardingCompleted: true };
+  if (updates.firstName) userUpdates.firstName = updates.firstName;
+  if (updates.lastName) userUpdates.lastName = updates.lastName;
+  
+  await User.findByIdAndUpdate(userId, userUpdates);
+
+  // Modular Verification Sync
+  const verification = await syncFreelancerVerification(userId);
   
   sendSuccess(res, {
-    message: status === 'verified' ? 'Profile verified successfully!' : 'Profile saved but marked unverified due to incomplete sections.',
-    data: { profile, status }
+    message: verification.isVerified ? 'Profile verified successfully!' : 'Profile saved. Complete required steps (Skill tests, Email) to get verified.',
+    data: { 
+      profile: await FreelancerProfile.findOne({ userId }), 
+      status: verification.verificationStatus,
+      verificationDetails: verification.details
+    }
   });
 });
 

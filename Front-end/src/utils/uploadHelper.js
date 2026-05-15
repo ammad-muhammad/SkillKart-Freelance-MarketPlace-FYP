@@ -16,7 +16,7 @@ export const uploadAvatar = async (file, role = 'freelancer') => {
 
   const endpoint = role === 'client'
     ? '/clients/upload/avatar'
-    : '/freelancers/upload/avatar';
+    : '/freelancers/profile/avatar';
 
   const { data } = await client.post(endpoint, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -34,7 +34,7 @@ export const uploadPortfolioImage = async (file) => {
   const formData = new FormData();
   formData.append('image', file);
 
-  const { data } = await client.post('/freelancers/upload/portfolio', formData, {
+  const { data } = await client.post('/freelancers/portfolio/media', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 

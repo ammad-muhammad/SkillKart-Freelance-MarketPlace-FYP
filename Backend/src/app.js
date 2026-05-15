@@ -197,12 +197,18 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Validation errors
+  // Validation errors (Mongoose or Custom)
   if (err.name === 'ValidationError') {
+    // If it's a Mongoose error, it has an 'errors' object where values have 'message'
+    // If it's our Custom ValidationError, it has an 'errors' array of objects with 'field' and 'message'
+    const formattedErrors = Array.isArray(err.errors) 
+      ? err.errors 
+      : Object.values(err.errors).map(e => ({ field: e.path, message: e.message }));
+
     return res.status(400).json({
       success: false,
-      message: 'Validation error',
-      errors: Object.values(err.errors).map(e => e.message)
+      message: err.message || 'Validation error',
+      errors: formattedErrors
     });
   }
 

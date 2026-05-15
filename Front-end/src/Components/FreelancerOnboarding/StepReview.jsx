@@ -59,10 +59,27 @@ const StepReview = ({ formData, onEditStep }) => {
       </div>
 
       {/* Basic Info */}
-      <Section icon={User} title="Basic Information" onEdit={() => onEditStep(1)}>
+      <Section icon={User} title="Basic Information" onEdit={() => onEditStep(2)}>
         <div className="fob-review-grid">
+          <div className="fob-review-field fob-review-field--full" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', background: '#f1f5f9', flexShrink: 0 }}>
+              {formData.profilePicUrl ? (
+                <img src={formData.profilePicUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                  <User size={24} />
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="fob-review-field-label">Full Name</span>
+              <span className="fob-review-field-value" style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                {formData.firstName || formData.lastName ? `${formData.firstName} ${formData.lastName}` : <em className="fob-review-empty">Not provided</em>}
+              </span>
+            </div>
+          </div>
           <div className="fob-review-field">
-            <span className="fob-review-field-label">Title</span>
+            <span className="fob-review-field-label">Professional Title</span>
             <span className="fob-review-field-value">
               {formData.title || <em className="fob-review-empty">Not provided</em>}
             </span>
@@ -93,7 +110,7 @@ const StepReview = ({ formData, onEditStep }) => {
       </Section>
 
       {/* Skills */}
-      <Section icon={Tag} title="Skills" onEdit={() => onEditStep(2)}>
+      <Section icon={Tag} title="Skills" onEdit={() => onEditStep(3)}>
         {skills.length > 0 ? (
           <div className="fob-review-tags">
             {skills.map((s) => (
@@ -106,7 +123,7 @@ const StepReview = ({ formData, onEditStep }) => {
       </Section>
 
       {/* Languages */}
-      <Section icon={Globe} title="Languages" onEdit={() => onEditStep(3)}>
+      <Section icon={Globe} title="Languages" onEdit={() => onEditStep(4)}>
         {languages.length > 0 ? (
           <div className="fob-review-list">
             {languages.map((lang, i) => (
@@ -122,7 +139,7 @@ const StepReview = ({ formData, onEditStep }) => {
       </Section>
 
       {/* Portfolio */}
-      <Section icon={FolderOpen} title="Portfolio" onEdit={() => onEditStep(4)}>
+      <Section icon={FolderOpen} title="Portfolio" onEdit={() => onEditStep(5)}>
         {portfolio.length > 0 ? (
           <div className="fob-review-list">
             {portfolio.map((p, i) => (
@@ -152,7 +169,7 @@ const StepReview = ({ formData, onEditStep }) => {
       </Section>
 
       {/* Education */}
-      <Section icon={GraduationCap} title="Education" onEdit={() => onEditStep(5)}>
+      <Section icon={GraduationCap} title="Education" onEdit={() => onEditStep(6)}>
         {education.length > 0 ? (
           <div className="fob-review-list">
             {education.map((edu, i) => (
@@ -173,7 +190,7 @@ const StepReview = ({ formData, onEditStep }) => {
       </Section>
 
       {/* Certifications */}
-      <Section icon={Award} title="Certifications" onEdit={() => onEditStep(6)}>
+      <Section icon={Award} title="Certifications" onEdit={() => onEditStep(7)}>
         {certifications.length > 0 ? (
           <div className="fob-review-list">
             {certifications.map((cert, i) => (

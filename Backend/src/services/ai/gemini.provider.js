@@ -197,22 +197,31 @@ Output ONLY a JSON object:
     }
 
     const prompt = `
-You are a professional skills classifier. Your task is to validate if a given string is a valid professional skill (technical, soft, or industry-specific).
+You are a professional skills classifier for SkillKart, a digital freelancing platform.
+Your task is to validate if a given string is a valid DIGITAL or PROFESSIONAL skill relevant to online freelancing.
+
+Allowed Categories: Software/Web/Mobile Development, UI/UX Design, Graphic Design, Video Editing, Content Writing, SEO, Digital Marketing, Data Science, AI/ML, Cybersecurity, Cloud/DevOps, Business/Virtual Assistance, No-Code/Automation, Finance/Accounting, Professional online services.
+
+Strict Rejection Rules:
+- Reject HOBBIES (e.g., Cooking, Traveling).
+- Reject SPORTS/PHYSICAL ACTIVITIES (e.g., Cricket, Football, Swimming, Skating).
+- Reject ENTERTAINMENT-ONLY skills (e.g., Dancing, Magic tricks).
+- Reject UNRELATED REAL-WORLD activities (e.g., Driving).
 
 Input: "${input}"
 
 Rules:
-1. Determine if it's a real professional skill. 
+1. Determine if it's a valid professional/digital skill. 
 2. If it's a common typo or variation (e.g., "reactjs"), normalize it (e.g., "React.js").
 3. If it's valid, provide 3 related professional skill suggestions.
-4. If it's invalid (garbage, random letters, non-professional), mark it as invalid and suggest 3 common professional skills.
+4. If it's invalid (non-digital, hobby, sport, or garbage), set "valid": false, explain why in "message", and suggest 3 common professional digital skills.
 
 Output ONLY valid JSON:
 {
   "valid": boolean,
   "skill": "Normalized Name or Original if no normalization needed",
   "suggestions": ["Skill 1", "Skill 2", "Skill 3"],
-  "message": "Brief reason if invalid, otherwise null"
+  "message": "Reason if invalid (e.g. 'SkillKart only accepts professional digital/tech skills. This appears to be a hobby or physical activity.'), otherwise null"
 }
 `;
 

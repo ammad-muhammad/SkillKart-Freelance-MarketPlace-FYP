@@ -3,11 +3,15 @@ import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
+import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
+import { LANGUAGES } from '../../data/languages';
+import { Plus, Trash2, Globe } from 'lucide-react';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
 
 const MAX_BIO = 600;
 const PROJECT_TYPES = ['Web Development', 'Mobile App', 'Design', 'Content Writing', 'Marketing', 'Data Science', 'DevOps'];
+const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const ClientProfile = () => {
   const { profile, saveProfile, showToast } = useClient();
@@ -19,6 +23,7 @@ const ClientProfile = () => {
   const [prefSkills, setPrefSkills] = useState(Array.isArray(profile?.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
   const [projTypes, setProjTypes] = useState(Array.isArray(profile?.preferences?.projectTypes) ? [...profile.preferences.projectTypes] : []);
   const [budgetRange, setBudgetRange] = useState({ ...(profile?.preferences?.budgetRange || {}) });
+  const [languages, setLanguages] = useState(Array.isArray(profile?.personalInfo?.languages) ? [...profile.personalInfo.languages] : []);
   const [remoteOnly, setRemoteOnly] = useState(!!profile?.preferences?.remoteOnly);
   const [errors, setErrors] = useState({});
   const avatarRef = useRef(null);
@@ -29,6 +34,7 @@ const ClientProfile = () => {
     setPrefSkills(Array.isArray(profile.preferences.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
     setProjTypes(Array.isArray(profile.preferences.projectTypes) ? [...profile.preferences.projectTypes] : []);
     setBudgetRange({ ...profile.preferences.budgetRange });
+    setLanguages(Array.isArray(profile.personalInfo.languages) ? [...profile.personalInfo.languages] : []);
     setRemoteOnly(profile.preferences.remoteOnly);
     setErrors({});
     setEditing(true);
@@ -37,9 +43,28 @@ const ClientProfile = () => {
   const save = async () => {
     setSaving(true);
     try {
+      if (budgetRange.min > budgetRange.max && budgetRange.max !== 0) {
+        showToast('Minimum budget cannot be greater than maximum budget', 'error');
+        setSaving(false);
+        return;
+      }
+
+      if (languages.length === 0) {
+        showToast('At least one language is required', 'error');
+        setSaving(false);
+        return;
+      }
+
       const updatedProfile = {
         ...profile,
-        personalInfo: { ...profile.personalInfo, ...form },
+        personalInfo: { 
+          ...profile.personalInfo, 
+          ...form, 
+          languages: languages.map(l => ({
+            language: typeof l.language === 'object' ? (l.language.name || l.language.language || "") : l.language,
+            proficiency: l.proficiency
+          }))
+        },
         preferences: {
           ...profile.preferences,
           preferredSkills: [...prefSkills],
@@ -48,13 +73,6 @@ const ClientProfile = () => {
           remoteOnly,
         },
       };
-
-      if (budgetRange.min > budgetRange.max && budgetRange.max !== 0) {
-        showToast('Minimum budget cannot be greater than maximum budget', 'error');
-        setSaving(false);
-        return;
-      }
-
 
       const result = await saveProfile(updatedProfile);
       if (result.success) {
@@ -134,9 +152,11 @@ const ClientProfile = () => {
             <div>
               <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Profile Photo</p>
               <div className="cl-avatar-circle">
-                {(editing ? form.avatar : profile?.personalInfo?.avatar) ? (
-                  <img src={editing ? form.avatar : profile?.personalInfo?.avatar} alt="avatar" />
-                ) : <span>{initials}</span>}
+                <UserAvatar 
+                  src={editing ? form.avatar : profile?.personalInfo?.avatar}
+                  fullName={data.fullName}
+                  size="lg"
+                />
               </div>
               {editing && (
                 <>
@@ -220,6 +240,72 @@ const ClientProfile = () => {
             />
             {editing && <span className="cl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>}
           </div>
+        </div>
+      </div>
+
+      {/* Languages */}
+      <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 className="cl-section-title" style={{ marginBottom: 0 }}>🌐 Languages Spoken</h3>
+          {editing && (
+            <button 
+              className="cl-btn cl-btn--ghost cl-btn--sm" 
+              onClick={() => setLanguages([...languages, { language: '', proficiency: 'fluent' }])}
+            >
+              <Plus size={14} /> Add Language
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {languages.map((lang, idx) => (
+            <div key={idx} style={{ display: 'grid', gridTemplateColumns: editing ? '1fr 1fr auto' : '1fr 1fr', gap: '1rem', alignItems: 'end', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e5edf5' }}>
+              <div className="cl-form-group" style={{ marginBottom: 0 }}>
+                <label className="cl-label">Language</label>
+                {editing ? (
+                  <TagInput 
+                    tags={lang.language ? [lang.language] : []}
+                    onChange={(tags) => {
+                      const newList = [...languages];
+                      newList[idx].language = tags[0] || '';
+                      setLanguages(newList);
+                    }}
+                    options={LANGUAGES}
+                    placeholder="Select..."
+                    showHint={false}
+                  />
+                ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? lang : (lang?.language || 'Unknown')}</div>}
+              </div>
+              <div className="cl-form-group" style={{ marginBottom: 0 }}>
+                <label className="cl-label">Proficiency</label>
+                {editing ? (
+                  <select 
+                    className="cl-input" 
+                    value={lang.proficiency}
+                    onChange={(e) => {
+                      const newList = [...languages];
+                      newList[idx].proficiency = e.target.value;
+                      setLanguages(newList);
+                    }}
+                  >
+                    {PROFICIENCY_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+                    ))}
+                  </select>
+                ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? 'fluent' : (lang?.proficiency || 'fluent')}</div>}
+              </div>
+              {editing && (
+                <button 
+                  className="cl-btn cl-btn--ghost cl-btn--sm" 
+                  style={{ color: '#ef4444', height: '42px' }}
+                  onClick={() => setLanguages(languages.filter((_, i) => i !== idx))}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+          {languages.length === 0 && <p style={{ fontSize: '0.85rem', color: '#ef4444' }}>⚠ No languages added. At least one is required.</p>}
         </div>
       </div>
 

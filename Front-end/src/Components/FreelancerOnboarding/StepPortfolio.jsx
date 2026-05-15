@@ -1,6 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X } from "lucide-react";
+import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X, Loader2 } from "lucide-react";
+import { freelancersAPI } from "../../api/freelancers";
+import { toast } from "react-toastify";
 
 const StepPortfolio = ({ formData, setFormData, errors }) => {
   const fileInputRefs = useRef([]);
@@ -31,34 +33,73 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
     });
   };
 
-  const handleImageUpload = (index, e) => {
+  const handleImageUpload = async (index, e) => {
     const files = Array.from(e.target.files);
     const validImages = files.filter((f) => f.type.startsWith("image/"));
 
     if (validImages.length === 0) return;
 
-    const previews = validImages.map((f) => URL.createObjectURL(f));
-
+    // Show local previews first for better UX
+    const localPreviews = validImages.map(f => URL.createObjectURL(f));
+    
     setFormData((prev) => {
       const updated = [...(prev.portfolio || [])];
       updated[index] = {
         ...updated[index],
-        images: [...(updated[index].images || []), ...validImages],
-        imagePreviews: [...(updated[index].imagePreviews || []), ...previews],
+        imagePreviews: [...(updated[index].imagePreviews || []), ...localPreviews]
       };
       return { ...prev, portfolio: updated };
     });
+
+    toast.info(`Uploading ${validImages.length} image(s)...`);
+
+    try {
+      const uploadPromises = validImages.map(async (file) => {
+        const mediaData = new FormData();
+        mediaData.append("image", file);
+        const res = await freelancersAPI.uploadPortfolioMedia(mediaData);
+        return res.data.data.url;
+      });
+
+      const permanentUrls = await Promise.all(uploadPromises);
+
+      setFormData((prev) => {
+        const updated = [...(prev.portfolio || [])];
+        // Replace previews with permanent URLs in the main images array
+        updated[index] = {
+          ...updated[index],
+          images: [...(updated[index].images || []), ...permanentUrls],
+          // We can clear previews or keep them, but let's sync them
+          imagePreviews: [...(updated[index].images || []), ...permanentUrls]
+        };
+        return { ...prev, portfolio: updated };
+      });
+      
+      toast.success("Images uploaded successfully!");
+    } catch (error) {
+      console.error("Portfolio upload error:", error);
+      toast.error("Failed to upload portfolio images.");
+      // Remove the local previews on failure
+      setFormData((prev) => {
+        const updated = [...(prev.portfolio || [])];
+        const currentImages = updated[index].images || [];
+        updated[index] = {
+          ...updated[index],
+          imagePreviews: currentImages // Revert to only confirmed images
+        };
+        return { ...prev, portfolio: updated };
+      });
+    }
   };
 
   const removeImage = (projectIndex, imgIndex) => {
     setFormData((prev) => {
       const updated = [...(prev.portfolio || [])];
+      const newImages = (updated[projectIndex].images || []).filter((_, i) => i !== imgIndex);
       updated[projectIndex] = {
         ...updated[projectIndex],
-        images: updated[projectIndex].images.filter((_, i) => i !== imgIndex),
-        imagePreviews: updated[projectIndex].imagePreviews.filter(
-          (_, i) => i !== imgIndex
-        ),
+        images: newImages,
+        imagePreviews: newImages
       };
       return { ...prev, portfolio: updated };
     });

@@ -1,8 +1,32 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import Modal from './components/Modal';
+import TagInput from '../../Components/common/TagInput/TagInput';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import { Plus, X, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 import './FreelancerDashboard.css';
+
+const CATEGORIES = [
+  'Web Development', 'Mobile Development', 'Design', 'Writing & Translation',
+  'Digital Marketing', 'Video & Animation', 'Music & Audio', 'Programming & Tech',
+  'Business', 'Data', 'Photography', 'Other',
+];
+
+const SUBCATEGORIES = {
+  'Web Development': ['Full Stack', 'Frontend', 'Backend', 'E-Commerce', 'WordPress'],
+  'Mobile Development': ['iOS', 'Android', 'React Native', 'Flutter'],
+  'Design': ['UI/UX Design', 'Logo Design', 'Brand Identity', 'Graphic Design'],
+  'Writing & Translation': ['Article Writing', 'Copywriting', 'Translation', 'Proofreading'],
+  'Digital Marketing': ['SEO', 'Social Media', 'Email Marketing', 'PPC'],
+  'Video & Animation': ['Video Editing', '2D Animation', '3D Animation', 'Whiteboard'],
+  'Music & Audio': ['Voice Over', 'Mixing', 'Composing', 'Podcast'],
+  'Programming & Tech': ['AI/ML', 'DevOps', 'Cybersecurity', 'Automation'],
+  'Business': ['Virtual Assistant', 'Data Entry', 'Market Research'],
+  'Data': ['Data Analysis', 'Data Visualization', 'Excel', 'SQL'],
+  'Photography': ['Product Photography', 'Portrait', 'Editing'],
+  'Other': ['Other'],
+};
 
 const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
   <div className="fl-gig-card">
@@ -91,13 +115,19 @@ const FreelancerGigs = () => {
     fullDescription: '',
     category: '',
     subcategory: '',
-    skills: '',
+    skills: [],
     pricing: {
       basic: { price: 0, delivery: 1, revisions: 1 },
       standard: { price: 0, delivery: 1, revisions: 1 },
       premium: { price: 0, delivery: 1, revisions: 1 }
-    }
+    },
+    media: { banner: null, images: [], videoLink: '', portfolioLinks: [] },
+    faqs: []
   });
+
+  const [uploading, setUploading] = useState(false);
+  const bannerRef = useRef(null);
+  const imagesRef = useRef(null);
 
   const filtered = gigs.filter((g) => filter === 'all' || g.status === filter);
 
@@ -113,7 +143,7 @@ const FreelancerGigs = () => {
       fullDescription: gig.fullDescription || '',
       category: gig.category || '',
       subcategory: gig.subcategory || '',
-      skills: gig.skills?.join(', ') || '',
+      skills: Array.isArray(gig.skills) ? gig.skills : [],
       pricing: {
         basic: { 
           price: gig.pricing?.basic?.price || 0,
@@ -130,9 +160,55 @@ const FreelancerGigs = () => {
           delivery: gig.pricing?.premium?.delivery || 1,
           revisions: gig.pricing?.premium?.revisions || 1
         }
-      }
+      },
+      media: gig.media || { banner: null, images: [], videoLink: '', portfolioLinks: [] },
+      faqs: gig.faqs || []
     });
   };
+
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { uploadBanner } = await import('../../utils/uploadHelper');
+      const url = await uploadBanner(file);
+      setFormData(prev => ({
+        ...prev,
+        media: { ...prev.media, banner: url }
+      }));
+    } catch (error) {
+      console.error('Banner upload failed:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImagesUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setUploading(true);
+    try {
+      const { uploadPortfolioImage } = await import('../../utils/uploadHelper');
+      const uploadPromises = files.map(file => uploadPortfolioImage(file));
+      const urls = await Promise.all(uploadPromises);
+      setFormData(prev => ({
+        ...prev,
+        media: { ...prev.media, images: [...prev.media.images, ...urls].slice(0, 5) }
+      }));
+    } catch (error) {
+      console.error('Images upload failed:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addFaq = () => setFormData(prev => ({ ...prev, faqs: [...prev.faqs, { question: '', answer: '' }] }));
+  const removeFaq = (i) => setFormData(prev => ({ ...prev, faqs: prev.faqs.filter((_, idx) => idx !== i) }));
+  const updateFaq = (i, key, val) => setFormData(prev => ({
+    ...prev,
+    faqs: prev.faqs.map((f, idx) => (idx === i ? { ...f, [key]: val } : f))
+  }));
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -144,8 +220,10 @@ const FreelancerGigs = () => {
       fullDescription: formData.fullDescription,
       category: formData.category,
       subcategory: formData.subcategory,
-      skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
-      pricing: formData.pricing
+      skills: formData.skills,
+      pricing: formData.pricing,
+      media: formData.media,
+      faqs: formData.faqs
     };
     
     const success = await updateGig(editTarget._id, updatedData);
@@ -222,20 +300,22 @@ const FreelancerGigs = () => {
             <div className="fl-form-grid">
               <div className="fl-form-group">
                 <label>Category</label>
-                <input 
-                  type="text" 
+                <CustomSelect 
+                  options={CATEGORIES}
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  required 
+                  onChange={(val) => setFormData({
+                    ...formData, 
+                    category: val,
+                    subcategory: (SUBCATEGORIES[val] || ['Other'])[0]
+                  })}
                 />
               </div>
               <div className="fl-form-group">
                 <label>Subcategory</label>
-                <input 
-                  type="text" 
+                <CustomSelect 
+                  options={SUBCATEGORIES[formData.category] || ['Other']}
                   value={formData.subcategory}
-                  onChange={(e) => setFormData({...formData, subcategory: e.target.value})}
-                  required 
+                  onChange={(val) => setFormData({...formData, subcategory: val})}
                 />
               </div>
             </div>
@@ -258,13 +338,140 @@ const FreelancerGigs = () => {
               />
             </div>
             <div className="fl-form-group">
-              <label>Skills (comma separated)</label>
-              <input 
-                type="text" 
-                value={formData.skills}
-                onChange={(e) => setFormData({...formData, skills: e.target.value})}
-                required 
+              <label>Skills</label>
+              <TagInput 
+                tags={formData.skills} 
+                onChange={(tags) => setFormData({...formData, skills: tags})} 
+                placeholder="e.g. React, Node.js" 
               />
+            </div>
+
+            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Media & Portfolio</h4>
+            
+            <div className="fl-form-group">
+              <label>Banner Image</label>
+              <div 
+                className="fl-upload-box" 
+                onClick={() => bannerRef.current?.click()}
+                style={{ 
+                  height: '140px', 
+                  border: '2px dashed #e2e8f0', 
+                  borderRadius: '12px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  background: '#f8fafc'
+                }}
+              >
+                {formData.media?.banner ? (
+                  <img src={formData.media.banner} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                    <Upload size={24} style={{ marginBottom: '0.5rem' }} />
+                    <p style={{ fontSize: '0.75rem' }}>Click to upload banner</p>
+                  </div>
+                )}
+              </div>
+              <input ref={bannerRef} type="file" hidden onChange={handleBannerUpload} accept="image/*" />
+            </div>
+
+            <div className="fl-form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <label>Portfolio Images (Max 5)</label>
+                <button type="button" className="fl-btn fl-btn--ghost fl-btn--xs" onClick={() => imagesRef.current?.click()}>
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+              <input ref={imagesRef} type="file" hidden multiple onChange={handleImagesUpload} accept="image/*" />
+              <div className="fl-edit-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                {(formData.media?.images || []).map((img, i) => (
+                  <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden' }}>
+                    <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button 
+                      type="button"
+                      onClick={() => setFormData(p => ({ ...p, media: { ...p.media, images: p.media.images.filter((_, idx) => idx !== i) } }))}
+                      style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(255,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="fl-form-group">
+              <label>Video Link (YouTube/Vimeo)</label>
+              <input 
+                type="url" 
+                value={formData.media?.videoLink || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  media: { ...formData.media, videoLink: e.target.value }
+                })}
+                placeholder="https://..."
+              />
+            </div>
+
+            <div className="fl-form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <label>Portfolio Links</label>
+                <button type="button" className="fl-btn fl-btn--ghost fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: [...(p.media.portfolioLinks || []), ''] } }))}>
+                  <Plus size={12} /> Add Link
+                </button>
+              </div>
+              <div className="fl-links-edit-list">
+                {(formData.media?.portfolioLinks || []).map((link, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input 
+                      type="url" 
+                      value={link}
+                      onChange={(e) => {
+                        const newLinks = [...formData.media.portfolioLinks];
+                        newLinks[i] = e.target.value;
+                        setFormData({...formData, media: { ...formData.media, portfolioLinks: newLinks }});
+                      }}
+                      placeholder="https://..."
+                    />
+                    <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: p.media.portfolioLinks.filter((_, idx) => idx !== i) } }))}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Frequently Asked Questions</h4>
+            <div className="fl-faqs-edit-list">
+              {formData.faqs.map((faq, i) => (
+                <div key={i} className="fl-faq-edit-item" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>FAQ #{i + 1}</span>
+                    <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => removeFaq(i)}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="fl-form-group">
+                    <input 
+                      type="text" 
+                      placeholder="Question" 
+                      value={faq.question}
+                      onChange={(e) => updateFaq(i, 'question', e.target.value)}
+                      style={{ marginBottom: '0.5rem' }}
+                    />
+                    <textarea 
+                      placeholder="Answer" 
+                      value={faq.answer}
+                      onChange={(e) => updateFaq(i, 'answer', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="fl-btn fl-btn--ghost fl-btn--sm" onClick={addFaq} style={{ width: '100%' }}>
+                <Plus size={14} /> Add New FAQ
+              </button>
             </div>
 
             <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Pricing Tiers</h4>

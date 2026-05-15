@@ -120,25 +120,57 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
       exit={{ opacity: 0, x: -30 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
-      {/* Profile Picture Upload - Hidden for Supabase Users */}
-      {user?.authProvider !== 'supabase' && (
-        <div className="fob-profile-pic-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
-          <div className="fob-avatar-container" style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
-            {formData.profilePicUrl ? (
-              <img src={formData.profilePicUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <User size={40} color="#94a3b8" />
-            )}
-            <label style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, cursor: 'pointer', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
-              <Upload size={24} />
-              <span style={{ fontSize: '12px', fontWeight: '600', marginTop: '4px' }}>Upload</span>
-              <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
-            </label>
-          </div>
-          <span className="fob-label" style={{ marginTop: '12px', marginBottom: '4px' }}>Profile Picture</span>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>WEBP, PNG or JPG, max 5MB</p>
+      {/* Name Section */}
+      <div className="fob-form-row">
+        <div className="fob-form-group">
+          <label className="fob-label">
+            <User size={15} className="fob-label-icon" />
+            First Name*
+          </label>
+          <input
+            type="text"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            className={`fob-input ${errors?.firstName ? "fob-input--error" : ""}`}
+            placeholder="John"
+          />
+          {errors?.firstName && <p className="fob-error">{errors.firstName}</p>}
         </div>
-      )}
+        <div className="fob-form-group">
+          <label className="fob-label">
+            <User size={15} className="fob-label-icon" />
+            Last Name*
+          </label>
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            className={`fob-input ${errors?.lastName ? "fob-input--error" : ""}`}
+            placeholder="Doe"
+          />
+          {errors?.lastName && <p className="fob-error">{errors.lastName}</p>}
+        </div>
+      </div>
+
+      {/* Profile Picture Upload */}
+      <div className="fob-profile-pic-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+        <div className="fob-avatar-container" style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
+          {formData.profilePicUrl ? (
+            <img src={formData.profilePicUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <User size={40} color="#94a3b8" />
+          )}
+          <label style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, cursor: 'pointer', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
+            <Upload size={24} />
+            <span style={{ fontSize: '12px', fontWeight: '600', marginTop: '4px' }}>Upload</span>
+            <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
+          </label>
+        </div>
+        <span className="fob-label" style={{ marginTop: '12px', marginBottom: '4px' }}>Profile Picture</span>
+        <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>WEBP, PNG or JPG, max 5MB</p>
+      </div>
       {/* Professional Title */}
       <div className="fob-form-group">
         <label className="fob-label">

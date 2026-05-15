@@ -26,6 +26,7 @@ const emptyProfile = {
     avatar: null,
     companyLogo: null,
     memberSince: '',
+    languages: [],
   },
   preferences: {
     preferredSkills: [],
@@ -119,6 +120,7 @@ export const ClientProvider = ({ children }) => {
           bio: dbProfile?.description || '',
           avatar: user?.profilePicture || null,
           memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently',
+          languages: dbProfile?.languages || [],
         },
         preferences: {
           preferredSkills: dbProfile?.techStack || [],
@@ -217,10 +219,17 @@ export const ClientProvider = ({ children }) => {
         services: preferences.projectTypes,
         budgetRange: preferences.budgetRange,
         notificationSettings,
-        recoveryEmail: securitySettings.recoveryEmail,
-        recoveryPhone: securitySettings.recoveryPhone,
+        securitySettings: {
+          ...securitySettings,
+          recoveryEmail: securitySettings.recoveryEmail,
+          recoveryPhone: securitySettings.recoveryPhone
+        },
         username: personalInfo.username,
-        email: personalInfo.email
+        email: personalInfo.email,
+        languages: (personalInfo.languages || []).map(l => ({
+          language: typeof l.language === 'object' ? (l.language.name || l.language.language || "") : l.language,
+          proficiency: l.proficiency
+        }))
       };
 
       await clientsAPI.updateProfile(profilePayload);

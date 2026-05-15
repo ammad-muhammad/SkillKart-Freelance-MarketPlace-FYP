@@ -154,6 +154,8 @@
 
 .fl-tag-dropdown__list {
   padding: 0.4rem;
+  max-height: 250px;
+  overflow-y: auto;
 }
 
 .fl-tag-suggestion {

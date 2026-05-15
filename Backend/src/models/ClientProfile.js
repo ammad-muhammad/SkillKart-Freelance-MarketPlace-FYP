@@ -42,8 +42,14 @@ const clientProfileSchema = new mongoose.Schema({
     proposalAlerts: { type: Boolean, default: true },
     messageAlerts: { type: Boolean, default: true }
   },
-  recoveryEmail: String,
-  recoveryPhone: String,
+  securitySettings: {
+    twoFactorEnabled: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
+    loginAlerts: { type: Boolean, default: true },
+    passwordChangeAlerts: { type: Boolean, default: true },
+    recoveryEmail: String,
+    recoveryPhone: String
+  },
   profileCompletion: { type: Number, default: 0 },
   verificationStatus: {
     type: String,
@@ -51,6 +57,10 @@ const clientProfileSchema = new mongoose.Schema({
     default: 'unverified'
   },
   verificationDocuments: [String],
+  languages: [{
+    language: String,
+    proficiency: { type: String, enum: ['basic', 'conversational', 'fluent', 'native'] }
+  }],
   rating: { type: Number, default: 0, min: 0, max: 5 },
   totalProjectsPosted: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { useAuth } from '../../../hooks/useAuth';
+import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import './FreelancerSidebar.css';
 
 const NAV_ITEMS = [
@@ -57,11 +58,10 @@ const FreelancerSidebar = () => {
         {/* Avatar */}
         <div className="fl-sidebar__avatar-wrap">
           <div className="fl-sidebar__avatar">
-            {avatar ? (
-              <img src={avatar} alt={fullName} />
-            ) : (
-              <span>{initials}</span>
-            )}
+            <UserAvatar 
+              src={avatar}
+              fullName={fullName}
+            />
             <span className="fl-sidebar__online-dot" />
           </div>
           <div className="fl-sidebar__user-info">

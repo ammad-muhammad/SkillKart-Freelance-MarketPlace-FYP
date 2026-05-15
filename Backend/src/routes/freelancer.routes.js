@@ -139,14 +139,14 @@ router.post('/parse-cv',
 );
 
 // Upload profile picture
-router.post('/upload/avatar',
+router.post('/profile/avatar',
   authenticate,
   requireRole('freelancer'),
   uploadSingle('avatar'),
   freelancerController.uploadAvatar
 );
 
-router.post('/upload/portfolio',
+router.post('/portfolio/media',
   authenticate,
   requireRole('freelancer'),
   uploadSingle('image'),

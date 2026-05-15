@@ -5,6 +5,7 @@ const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const User = require('../models/User');
 const Job = require('../models/Job');
+const { syncFreelancerVerification } = require('../services/verification.service');
 /**
  * createUser: create user and send otp
  */
@@ -297,6 +298,12 @@ const verifyEmail = asyncHandler(async (req, res) => {
   }
 
   await authService.verifyEmail(email);
+
+  // Sync verification if user is a freelancer
+  const user = await User.findOne({ email });
+  if (user && user.role === 'freelancer') {
+    await syncFreelancerVerification(user._id);
+  }
 
   sendSuccess(res, {
     message: 'Email verified successfully'
