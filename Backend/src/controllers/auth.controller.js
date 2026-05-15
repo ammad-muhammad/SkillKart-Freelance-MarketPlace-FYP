@@ -1,5 +1,6 @@
 //controlers/auth.controller
 const authService = require('../services/auth.service');
+const { handleLoginAlert } = authService;
 const otpService = require('../services/otp.service');
 const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
@@ -92,7 +93,13 @@ const verifyOtp = asyncHandler(async (req, res) => {
   try {
     const emailResult = await authService.verifyEmail(email);
     
-    // If user found and email verified successfully
+    if (emailResult.user) {
+      handleLoginAlert(emailResult.user, 'Email/Password', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    }
+
     data = { 
       tokens: emailResult.tokens, 
       user: emailResult.user, 
@@ -352,6 +359,14 @@ const supabaseAuth = asyncHandler(async (req, res) => {
 
   // Call auth service
   const result = await authService.authenticateWithSupabase(supabaseAccessToken);
+
+  // Trigger login alert
+  if (result.user) {
+    handleLoginAlert(result.user, `${result.user.authProvider || 'OAuth'} Login`, {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+  }
 
   sendSuccess(res, {
     message: 'Authentication successful',

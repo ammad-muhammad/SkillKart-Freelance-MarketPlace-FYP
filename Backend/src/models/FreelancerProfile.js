@@ -61,7 +61,6 @@ const freelancerProfileSchema = new mongoose.Schema({
   },
   securitySettings: {
     twoFactorEnabled: { type: Boolean, default: false },
-    emailVerified: { type: Boolean, default: false },
     loginAlerts: { type: Boolean, default: true },
     passwordChangeAlerts: { type: Boolean, default: true },
     recoveryEmail: String,

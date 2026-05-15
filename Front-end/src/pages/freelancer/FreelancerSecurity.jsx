@@ -11,30 +11,32 @@ const FreelancerSecurity = () => {
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const sec = profile?.securitySettings || {};
 
-  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwErrors, setPwErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [twoFactor, setTwoFactor] = useState(!!sec.twoFactorEnabled);
-  const [emailVerified, setEmailVerified] = useState(!!sec.emailVerified);
   const [loginAlerts, setLoginAlerts] = useState(!!sec.loginAlerts);
   const [passwordAlerts, setPasswordAlerts] = useState(!!sec.passwordChangeAlerts);
 
   // Sync state with profile data
   useEffect(() => {
     setTwoFactor(!!profile?.securitySettings?.twoFactorEnabled);
-    setEmailVerified(!!profile?.securitySettings?.emailVerified);
     setLoginAlerts(!!profile?.securitySettings?.loginAlerts);
     setPasswordAlerts(!!profile?.securitySettings?.passwordChangeAlerts);
   }, [profile?.securitySettings]);
 
   const validatePw = () => {
     const errs = {};
-    if (!pwForm.current) errs.current = 'Current password is required';
-    if (!pwForm.newPw || pwForm.newPw.length < 8) errs.newPw = 'At least 8 characters required';
-    if (pwForm.newPw !== pwForm.confirm) errs.confirm = 'Passwords do not match';
+    if (!pwForm.currentPassword) errs.currentPassword = 'Current password is required';
+    if (!pwForm.newPassword) {
+      errs.newPassword = 'New password is required';
+    } else if (pwForm.newPassword.length < 8) {
+      errs.newPassword = 'At least 8 characters required';
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) errs.confirmPassword = 'Passwords do not match';
     return errs;
   };
 
@@ -44,13 +46,21 @@ const FreelancerSecurity = () => {
     setSaving(true);
     try {
       await authAPI.changePassword({
-        currentPassword: pwForm.current,
-        newPassword: pwForm.newPw
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.newPassword,
+        confirmPassword: pwForm.confirmPassword
       });
-      setPwForm({ current: '', newPw: '', confirm: '' });
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setPwErrors({});
       showToast('Password changed successfully!');
     } catch (error) {
+      if (error.response?.data?.errors) {
+        const backendErrs = {};
+        error.response.data.errors.forEach(err => {
+          backendErrs[err.field] = err.message;
+        });
+        setPwErrors(backendErrs);
+      }
       showToast(error.response?.data?.message || 'Failed to change password', 'error');
     } finally {
       setSaving(false);
@@ -61,12 +71,6 @@ const FreelancerSecurity = () => {
     const next = !twoFactor;
     setTwoFactor(next);
     await updateProfile('securitySettings', { twoFactorEnabled: next }, false, true);
-  };
-
-  const toggleEmailVerified = async () => {
-    const next = !emailVerified;
-    setEmailVerified(next);
-    await updateProfile('securitySettings', { emailVerified: next }, false, true);
   };
 
   const toggleLoginAlerts = async () => {
@@ -132,36 +136,36 @@ const FreelancerSecurity = () => {
             <div style={{ position: 'relative' }}>
               <input
                 type={showPw ? 'text' : 'password'}
-                className={`fl-input${pwErrors.current ? ' fl-input--error' : ''}`}
-                value={pwForm.current}
-                onChange={(e) => { setPwForm((p) => ({ ...p, current: e.target.value })); setPwErrors((e2) => ({ ...e2, current: '' })); }}
+                className={`fl-input${pwErrors.currentPassword ? ' fl-input--error' : ''}`}
+                value={pwForm.currentPassword}
+                onChange={(e) => { setPwForm((p) => ({ ...p, currentPassword: e.target.value })); setPwErrors((e2) => ({ ...e2, currentPassword: '' })); }}
                 placeholder="••••••••"
               />
+              {pwErrors.currentPassword && <span className="fl-error">{pwErrors.currentPassword}</span>}
             </div>
-            {pwErrors.current && <span className="fl-error">{pwErrors.current}</span>}
           </div>
           <div className="fl-form-group" style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
             <div className="fl-form-group" style={{ margin: 0 }}>
               <label className="fl-label">New Password</label>
               <input
                 type={showPw ? 'text' : 'password'}
-                className={`fl-input${pwErrors.newPw ? ' fl-input--error' : ''}`}
-                value={pwForm.newPw}
-                onChange={(e) => { setPwForm((p) => ({ ...p, newPw: e.target.value })); setPwErrors((e2) => ({ ...e2, newPw: '' })); }}
+                className={`fl-input${pwErrors.newPassword ? ' fl-input--error' : ''}`}
+                value={pwForm.newPassword}
+                onChange={(e) => { setPwForm((p) => ({ ...p, newPassword: e.target.value })); setPwErrors((e2) => ({ ...e2, newPassword: '' })); }}
                 placeholder="Min 8 characters"
               />
-              {pwErrors.newPw && <span className="fl-error">{pwErrors.newPw}</span>}
-              {pwForm.newPw && (
+              {pwErrors.newPassword && <span className="fl-error">{pwErrors.newPassword}</span>}
+              {pwForm.newPassword && (
                 <div className="fl-pw-strength">
                   <div
                     className="fl-pw-strength__bar"
                     style={{
-                      width: `${Math.min(100, pwForm.newPw.length * 10)}%`,
-                      background: pwForm.newPw.length >= 12 ? '#10b981' : pwForm.newPw.length >= 8 ? '#f59e0b' : '#ef4444'
+                      width: `${Math.min(100, pwForm.newPassword.length * 10)}%`,
+                      background: pwForm.newPassword.length >= 12 ? '#10b981' : pwForm.newPassword.length >= 8 ? '#f59e0b' : '#ef4444'
                     }}
                   />
                   <span className="fl-pw-strength__label">
-                    {pwForm.newPw.length >= 12 ? 'Strong' : pwForm.newPw.length >= 8 ? 'Good' : 'Weak'}
+                    {pwForm.newPassword.length >= 12 ? 'Strong' : pwForm.newPassword.length >= 8 ? 'Good' : 'Weak'}
                   </span>
                 </div>
               )}
@@ -170,12 +174,12 @@ const FreelancerSecurity = () => {
               <label className="fl-label">Confirm New Password</label>
               <input
                 type={showPw ? 'text' : 'password'}
-                className={`fl-input${pwErrors.confirm ? ' fl-input--error' : ''}`}
-                value={pwForm.confirm}
-                onChange={(e) => { setPwForm((p) => ({ ...p, confirm: e.target.value })); setPwErrors((e2) => ({ ...e2, confirm: '' })); }}
-                placeholder="Repeat password"
+                className={`fl-input${pwErrors.confirmPassword ? ' fl-input--error' : ''}`}
+                value={pwForm.confirmPassword}
+                onChange={(e) => { setPwForm((p) => ({ ...p, confirmPassword: e.target.value })); setPwErrors((e2) => ({ ...e2, confirmPassword: '' })); }}
+                placeholder="••••••••"
               />
-              {pwErrors.confirm && <span className="fl-error">{pwErrors.confirm}</span>}
+              {pwErrors.confirmPassword && <span className="fl-error">{pwErrors.confirmPassword}</span>}
             </div>
           </div>
         </div>
@@ -198,31 +202,11 @@ const FreelancerSecurity = () => {
       </div>
       )}
 
-      {/* 2FA / Toggles */}
-      {!isSupabaseUser && (
+      {/* Security Options */}
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
         <h3 className="fl-section-title">🛡️ Security Options</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div className="fl-toggle">
-            <div className="fl-toggle__info">
-              <span className="fl-toggle__label">🔐 Two-Factor Authentication</span>
-              <span className="fl-toggle__desc">Add an extra layer of security to your account.</span>
-            </div>
-            <div
-              className={`fl-toggle__switch${twoFactor ? ' fl-toggle__switch--on' : ''}`}
-              onClick={toggleTwoFactor}
-            />
-          </div>
-          <div className="fl-toggle">
-            <div className="fl-toggle__info">
-              <span className="fl-toggle__label">📧 Email Verification</span>
-              <span className="fl-toggle__desc">Require email verification for account changes.</span>
-            </div>
-            <div
-              className={`fl-toggle__switch${emailVerified ? ' fl-toggle__switch--on' : ''}`}
-              onClick={toggleEmailVerified}
-            />
-          </div>
+          {/* Available for ALL users */}
           <div className="fl-toggle">
             <div className="fl-toggle__info">
               <span className="fl-toggle__label">🔔 Login Alerts</span>
@@ -233,19 +217,34 @@ const FreelancerSecurity = () => {
               onClick={toggleLoginAlerts}
             />
           </div>
-          <div className="fl-toggle">
-            <div className="fl-toggle__info">
-              <span className="fl-toggle__label">🛡️ Password Change Alerts</span>
-              <span className="fl-toggle__desc">Get notified immediately if your password is changed.</span>
-            </div>
-            <div
-              className={`fl-toggle__switch${passwordAlerts ? ' fl-toggle__switch--on' : ''}`}
-              onClick={togglePasswordAlerts}
-            />
-          </div>
+
+          {/* ONLY for Email/Password users */}
+          {!isSupabaseUser && (
+            <>
+              <div className="fl-toggle">
+                <div className="fl-toggle__info">
+                  <span className="fl-toggle__label">🔐 Two-Factor Authentication</span>
+                  <span className="fl-toggle__desc">Add an extra layer of security to your account.</span>
+                </div>
+                <div
+                  className={`fl-toggle__switch${twoFactor ? ' fl-toggle__switch--on' : ''}`}
+                  onClick={toggleTwoFactor}
+                />
+              </div>
+              <div className="fl-toggle">
+                <div className="fl-toggle__info">
+                  <span className="fl-toggle__label">🛡️ Password Change Alerts</span>
+                  <span className="fl-toggle__desc">Get notified immediately if your password is changed.</span>
+                </div>
+                <div
+                  className={`fl-toggle__switch${passwordAlerts ? ' fl-toggle__switch--on' : ''}`}
+                  onClick={togglePasswordAlerts}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
-      )}
 
       {/* Forgot Password Modal */}
       <Modal open={forgotModal} title="Reset Password" onClose={() => { setForgotModal(false); setForgotSent(false); }}>

@@ -2,6 +2,9 @@ const User = require('../models/User');
 const { generateTokenPair } = require('../utils/jwt');
 const { AuthenticationError, NotFoundError } = require('../utils/apiError');
 const bcrypt = require('bcryptjs');
+const FreelancerProfile = require('../models/FreelancerProfile');
+const ClientProfile = require('../models/ClientProfile');
+const { sendLoginAlertEmail } = require('./email.service');
 
 /**
  * Register new user with email/password
@@ -289,6 +292,51 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
 };
 
 
+/**
+ * Handle Login Alert Email
+ */
+const handleLoginAlert = async (user, method, reqDetails = {}) => {
+  try {
+    const { ip, userAgent } = reqDetails;
+    
+    // 1. Fetch Profile based on role
+    let profile = null;
+    if (user.role === 'freelancer') {
+      profile = await FreelancerProfile.findOne({ userId: user._id });
+    } else if (user.role === 'client') {
+      profile = await ClientProfile.findOne({ userId: user._id });
+    }
+
+    // 2. Check if login alerts are enabled (default to true if profile exists)
+    const laEnabled = profile?.securitySettings?.loginAlerts !== false;
+
+    if (laEnabled) {
+      const uap = require('ua-parser-js');
+      const parser = new uap(userAgent);
+      const ua = parser.getResult();
+      
+      const details = {
+        time: new Date().toLocaleString('en-US', { 
+          timeZone: 'UTC',
+          dateStyle: 'full', 
+          timeStyle: 'long' 
+        }) + ' UTC',
+        method: method,
+        browser: `${ua.browser.name || 'Unknown Browser'} ${ua.browser.version || ''}`,
+        device: `${ua.os.name || 'Unknown OS'} ${ua.device.model || ''}`,
+        ip: ip || 'Unknown IP'
+      };
+
+      // Send email (async - don't await)
+      sendLoginAlertEmail(user.email, details)
+        .then(() => console.log(`🚀 Login alert email sent to ${user.email}`))
+        .catch(err => console.error(`❌ Failed to send login alert:`, err.message));
+    }
+  } catch (error) {
+    console.error('⚠️ handleLoginAlert error:', error.message);
+  }
+};
+
 module.exports = {
   registerWithEmail,
   loginWithEmail,
@@ -298,5 +346,6 @@ module.exports = {
   resetPassword,
   verifyEmail,
   createOrUpdateFromOAuth,
-  authenticateWithSupabase
+  authenticateWithSupabase,
+  handleLoginAlert
 };

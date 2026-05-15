@@ -31,8 +31,8 @@ export const authAPI = {
   logout: () =>
     client.post('/auth/logout'),
 
-  changePassword: (currentPassword, newPassword) =>
-    client.post('/auth/password/change', { currentPassword, newPassword }),
+  changePassword: (data) =>
+    client.post('/auth/password/change', data),
 
   requestPasswordReset: (email) =>
     client.post('/auth/password/reset/request', { email }),
