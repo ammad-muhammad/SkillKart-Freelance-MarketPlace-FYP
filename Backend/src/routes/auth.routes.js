@@ -14,7 +14,8 @@ const {
   refreshTokenValidation,
   superAdminLoginValidation,
   resendOtpValidation,
-  changeRoleValidation
+  changeRoleValidation,
+  confirmChangePasswordValidation
 } = require('../validators/auth.validator');
 
 /**
@@ -344,12 +345,20 @@ router.put('/role/change',
   authController.updateRole
 );
 
-// Change password
+// Change password (Step 1: Request OTP)
 router.post('/password/change',
   authenticate,
   changePasswordValidation,
   validate,
   authController.changePassword
+);
+
+// Confirm change password (Step 2: Verify OTP)
+router.post('/password/change/confirm',
+  authenticate,
+  confirmChangePasswordValidation,
+  validate,
+  authController.confirmChangePassword
 );
 
 // Logout

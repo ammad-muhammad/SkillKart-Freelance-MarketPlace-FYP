@@ -41,6 +41,12 @@ const ClientSecurity = () => {
   const [loginAlerts, setLoginAlerts] = useState(!!profile?.securitySettings?.loginAlerts);
   const [passwordAlerts, setPasswordAlerts] = useState(!!profile?.securitySettings?.passwordChangeAlerts);
   
+  // Password Change OTP State
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [verifying, setVerifying] = useState(false);
+  
   useEffect(() => {
     setTwoFactor(!!profile?.securitySettings?.twoFactorEnabled);
     setLoginAlerts(!!profile?.securitySettings?.loginAlerts);
@@ -60,14 +66,16 @@ const ClientSecurity = () => {
     if (!validate()) return;
     setSaving(true);
     try {
+      // Step 1: Request OTP
       await authAPI.changePassword({
         currentPassword: passwords.currentPassword,
         newPassword: passwords.newPassword,
         confirmPassword: passwords.confirmPassword
       });
-      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setErrors({});
-      showToast('Password changed successfully!');
+      
+      setShowOtpModal(true);
+      setOtpTimer(60);
+      showToast('Verification code sent to your email');
     } catch (error) {
       if (error.response?.data?.errors) {
         const backendErrs = {};
@@ -76,11 +84,58 @@ const ClientSecurity = () => {
         });
         setErrors(backendErrs);
       }
-      showToast(error.response?.data?.message || 'Failed to change password', 'error');
+      showToast(error.response?.data?.message || 'Failed to request password change', 'error');
     } finally {
       setSaving(false);
     }
   };
+
+  const confirmPasswordChange = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      showToast('Please enter 6-digit code', 'error');
+      return;
+    }
+    setVerifying(true);
+    try {
+      await authAPI.confirmChangePassword({
+        otp: otpCode,
+        newPassword: passwords.newPassword
+      });
+      
+      setShowOtpModal(false);
+      setOtpCode('');
+      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setErrors({});
+      showToast('Password updated successfully!');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Verification failed', 'error');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpTimer > 0) return;
+    try {
+      await authAPI.changePassword({
+        currentPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword,
+        confirmPassword: passwords.confirmPassword
+      });
+      setOtpTimer(60);
+      showToast('New code sent');
+    } catch (error) {
+      showToast('Failed to resend code', 'error');
+    }
+  };
+
+  useEffect(() => {
+    let interval;
+    if (otpTimer > 0) {
+      interval = setInterval(() => setOtpTimer(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpTimer]);
 
   const handleRequestDeactivate = async () => {
     setDeactivateLoading(true);
@@ -360,6 +415,44 @@ const ClientSecurity = () => {
             </div>
           </>
         )}
+      </Modal>
+
+      {/* Password Change OTP Modal */}
+      <Modal open={showOtpModal} title="Verify Password Change" onClose={() => setShowOtpModal(false)}>
+        <div style={{ padding: '0.5rem' }}>
+          <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)', fontSize: '0.9rem' }}>
+            A 6-digit verification code was sent to your email. Enter it below to finalize your password change.
+          </p>
+          <div className="cl-form-group">
+            <label className="cl-label">Verification Code</label>
+            <input
+              type="text"
+              className="cl-input"
+              placeholder="000000"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontWeight: 'bold' }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
+            <button
+              className={`cl-btn cl-btn--primary${verifying ? ' cl-btn--loading' : ''}`}
+              disabled={verifying || otpCode.length !== 6}
+              onClick={confirmPasswordChange}
+            >
+              {verifying ? 'Verifying...' : 'Finalize Change'}
+            </button>
+            <button
+              className="cl-btn cl-btn--ghost"
+              disabled={otpTimer > 0}
+              onClick={handleResendOtp}
+              style={{ fontSize: '0.85rem' }}
+            >
+              {otpTimer > 0 ? `Resend in ${otpTimer}s` : 'Resend Code'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

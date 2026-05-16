@@ -250,16 +250,49 @@ const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const userId = req.user._id;
 
-  await authService.changePassword(userId, currentPassword, newPassword);
+  // Step 1: Verify current password
+  const user = await User.findById(userId).select('+password');
+  if (!user || !(await user.comparePassword(currentPassword))) {
+    return sendError(res, 'Invalid current password', 401);
+  }
 
-  // Trigger password change alert
-  handlePasswordChangeAlert(req.user, {
+  // Step 2: Generate and Send OTP
+  await otpService.generateAndSendOTP(user.email, 'password_reset');
+
+  sendSuccess(res, {
+    message: 'OTP sent to your email for password change confirmation'
+  });
+});
+
+/**
+ * Confirm Change Password (Step 2)
+ */
+const confirmChangePassword = asyncHandler(async (req, res) => {
+  const { otp, newPassword } = req.body;
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return sendError(res, 'User not found', 404);
+  }
+
+  // Step 1: Verify OTP
+  const isOtpValid = await otpService.verifyOTP(user.email, otp, 'password_reset');
+  if (!isOtpValid) {
+    return sendError(res, 'Invalid or expired OTP', 400);
+  }
+
+  // Step 2: Update Password
+  await authService.resetPassword(user.email, newPassword);
+
+  // Step 3: Trigger Alert
+  handlePasswordChangeAlert(user, {
     ip: req.ip,
     userAgent: req.get('User-Agent')
   });
 
   sendSuccess(res, {
-    message: 'Password changed successfully'
+    message: 'Password updated successfully'
   });
 });
 
@@ -464,5 +497,6 @@ module.exports = {
   updateRole,
   updateMe,
   requestDeactivation,
-  confirmDeactivation
+  confirmDeactivation,
+  confirmChangePassword
 };

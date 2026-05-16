@@ -118,6 +118,21 @@ const changePasswordValidation = [
     .withMessage('Passwords do not match')
 ];
 
+// Confirm Change Password validation
+const confirmChangePasswordValidation = [
+  body('otp')
+    .trim()
+    .notEmpty().withMessage('OTP is required')
+    .isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
+    .isNumeric().withMessage('OTP must contain only numbers'),
+
+  body('newPassword')
+    .notEmpty().withMessage('New password is required')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain uppercase, lowercase, and number')
+];
+
 // Role Change validation
 const changeRoleValidation = [
   body('role')
@@ -213,5 +228,6 @@ module.exports = {
   superAdminLoginValidation,
   updateEmailValidation,
   resendOtpValidation,
-  changeRoleValidation
+  changeRoleValidation,
+  confirmChangePasswordValidation
 };
