@@ -14,7 +14,16 @@ export const clientsAPI = {
   uploadAvatar: (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return client.post('/clients/profile/avatar', formData, {
+    return client.post('/clients/upload/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // Company logo upload
+  uploadCompanyLogo: (file) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return client.post('/clients/upload/logo', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },

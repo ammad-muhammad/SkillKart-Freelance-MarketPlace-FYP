@@ -119,6 +119,7 @@ export const ClientProvider = ({ children }) => {
           location: dbProfile?.location?.country || dbProfile?.timezone || 'Global',
           bio: dbProfile?.description || '',
           avatar: user?.profilePicture || null,
+          companyLogo: dbProfile?.companyLogo || null,
           memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently',
           languages: dbProfile?.languages || [],
         },
@@ -211,6 +212,7 @@ export const ClientProvider = ({ children }) => {
       const profilePayload = {
         companyName: personalInfo.companyName,
         industryType: personalInfo.industry,
+        companyLogo: personalInfo.companyLogo,
         website: personalInfo.website,
         description: personalInfo.bio,
         phone: personalInfo.phone,

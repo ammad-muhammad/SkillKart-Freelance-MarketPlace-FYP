@@ -87,7 +87,7 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   // Explicit mapping to prevent unsafe assignment
   const allowedFields = [
-    'companyName', 'companyType', 'companySize', 'industry', 'industryType', 
+    'companyName', 'companyType', 'companyLogo', 'companySize', 'industry', 'industryType', 
     'role', 'phone', 'website', 'description', 'location', 
     'techStack', 'services', 'hiringFrequency', 'technicalUnderstanding', 
     'urgency', 'aiAssistance', 'notificationSettings', 
@@ -290,9 +290,13 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
     userId,
     companyName: data.companyName,
     companyType: data.companyType,
+    companyLogo: data.companyLogo,
     industryType: data.industryType,
     customIndustry: data.customIndustry,
     role: data.role,
+    phone: data.phone,
+    description: data.bio,
+    languages: data.languages,
     location: data.location || { country: data.country },
     isNewToHiring: data.isNewToHiring,
     services: data.services,
@@ -357,6 +361,31 @@ const uploadAvatar = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Upload company logo
+ */
+const uploadCompanyLogo = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
+  const fileUpload = await uploadProfilePicture(userId, req.file);
+  
+  const profile = await ClientProfile.findOne({ userId });
+  if (profile) {
+    profile.companyLogo = fileUpload.url;
+    profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));
+    await profile.save();
+  }
+
+  sendSuccess(res, {
+    message: 'Company logo uploaded successfully',
+    data: { url: fileUpload.url }
+  });
+});
+
+/**
  * Toggle saved freelancer
  */
 const toggleSavedFreelancer = asyncHandler(async (req, res) => {
@@ -414,6 +443,7 @@ module.exports = {
   getDraft,
   submitOnboardingProfile,
   uploadAvatar,
+  uploadCompanyLogo,
   toggleSavedFreelancer,
   getSavedFreelancers
 };

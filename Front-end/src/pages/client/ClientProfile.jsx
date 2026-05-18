@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
+import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import { LANGUAGES } from '../../data/languages';
@@ -115,8 +115,12 @@ const ClientProfile = () => {
 
     setSaving(true);
     try {
-      // For avatar, use 'client' role
-      const url = await apiUploadAvatar(file, 'client');
+      let url;
+      if (field === 'companyLogo') {
+        url = await apiUploadCompanyLogo(file);
+      } else {
+        url = await apiUploadAvatar(file, 'client');
+      }
       setForm((p) => ({ ...p, [field]: url }));
       showToast('Image uploaded! Save profile to persist.');
     } catch (error) {

@@ -4,6 +4,7 @@ const clientProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   companyName: String,
   companyType: { type: String, enum: ['Individual', 'Startup', 'SME', 'Enterprise'] },
+  companyLogo: String,
   companySize: String,
   industry: String,
   industryType: String,

@@ -67,6 +67,13 @@ router.post('/upload/avatar',
   clientController.uploadAvatar
 );
 
+// Upload company logo
+router.post('/upload/logo',
+  requireRole('client'),
+  uploadSingle('logo'),
+  clientController.uploadCompanyLogo
+);
+
 /**
  * Onboarding flow routes
  */

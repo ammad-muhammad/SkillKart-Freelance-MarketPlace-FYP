@@ -14,6 +14,8 @@ import { toast } from "react-toastify";
 import { clientsAPI } from "../../../api/clients";
 import { useAuth } from "../../../hooks/useAuth";
 import { timezones, getCurrentTimezone } from "../../../utils/timezones";
+import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
+import { LANGUAGES } from "../../../data/languages";
 import "./ClientOnboarding.css";
 
 const ClientOnboarding = () => {
@@ -39,12 +41,16 @@ const ClientOnboarding = () => {
         country: "",
         profilePic: null,
         profilePicUrl: "",
+        companyPic: null,
+        companyPicUrl: "",
 
         // Step 2: Professional Background
         isNewToHiring: "", // Yes (Fresh), No (Experienced)
         industryType: "",
         customIndustry: "",
         role: "", // Founder, PM, Marketing, Developer, Other
+        bio: "",
+        languages: [],
 
         // Step 3: Project Needs
         services: [],
@@ -104,14 +110,14 @@ const ClientOnboarding = () => {
         }
     }, [step, showDraftPrompt]); // Sync on step change for robustness
 
-    // Pre-fill user info if available
     useEffect(() => {
         if (user && !showDraftPrompt) {
             setFormData(prev => ({
                 ...prev,
                 fullName: prev.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
                 workEmail: prev.workEmail || user.email || '',
-                timezone: prev.timezone || getCurrentTimezone()?.label || ''
+                timezone: prev.timezone || getCurrentTimezone()?.label || '',
+                profilePicUrl: prev.profilePicUrl || user.profilePicture || ''
             }));
         }
     }, [user, showDraftPrompt]);
@@ -141,7 +147,7 @@ const ClientOnboarding = () => {
         }));
     };
 
-    const handleImageUpload = (e) => {
+    const handleImageUpload = (e, field) => {
         const file = e.target.files[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
@@ -150,8 +156,8 @@ const ClientOnboarding = () => {
             }
             setFormData(prev => ({
                 ...prev,
-                profilePic: file,
-                profilePicUrl: URL.createObjectURL(file)
+                [field]: file,
+                [`${field}Url`]: URL.createObjectURL(file)
             }));
         }
     };
@@ -194,6 +200,14 @@ const ClientOnboarding = () => {
                 toast.warn("Please specify your industry");
                 return false;
             }
+            if (!formData.bio || formData.bio.trim().length < 20) {
+                toast.warn("Please provide a descriptive Bio / About summary (minimum 20 characters)");
+                return false;
+            }
+            if (!formData.languages || formData.languages.length === 0) {
+                toast.warn("Please select at least one language spoken / preferred");
+                return false;
+            }
         }
         if (step === 3) {
             if (formData.services.length === 0) { toast.warn("Please select at least one expertise area"); return false; }
@@ -216,7 +230,31 @@ const ClientOnboarding = () => {
 
         setIsLoading(true);
         try {
-            await clientsAPI.submitOnboarding(formData);
+            let profilePicUrl = formData.profilePicUrl;
+            let companyPicUrl = formData.companyPicUrl;
+
+            // 1. Upload Profile Picture if selected as a local file
+            if (formData.profilePic instanceof File) {
+                toast.info("Uploading profile picture...");
+                const avatarUrl = await uploadAvatar(formData.profilePic, 'client');
+                profilePicUrl = avatarUrl;
+            }
+
+            // 2. Upload Company Logo/Picture if selected as a local file
+            if (formData.companyPic instanceof File) {
+                toast.info("Uploading company logo...");
+                const companyLogoUrl = await uploadCompanyLogo(formData.companyPic);
+                companyPicUrl = companyLogoUrl;
+            }
+
+            // 3. Submit onboarding profile with updated URLs
+            const submitData = {
+                ...formData,
+                profilePicUrl,
+                companyLogo: companyPicUrl
+            };
+
+            await clientsAPI.submitOnboarding(submitData);
             toast.success("Onboarding profile deployed successfully!");
             await refreshAuth(); // Refresh user data locally
             setStep(6);
@@ -235,7 +273,7 @@ const ClientOnboarding = () => {
             return hasBasic && formData.companyName.trim();
         }
         if (step === 2) {
-            return formData.isNewToHiring && formData.industryType && (formData.industryType !== 'Other' || formData.customIndustry.trim());
+            return formData.isNewToHiring && formData.industryType && (formData.industryType !== 'Other' || formData.customIndustry.trim()) && formData.bio.trim().length >= 20 && formData.languages.length > 0;
         }
         if (step === 3) {
             return formData.services.length > 0 && formData.budgetRange && formData.hiringFrequency;
@@ -284,6 +322,8 @@ const ClientOnboarding = () => {
         { value: 'Software & IT Services', label: 'Software & IT Services' },
         { value: 'Telecommunications', label: 'Telecommunications' }
     ];
+
+    const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
 
     const CustomControl = ({ children, ...props }) => {
         const iconStyle = { marginLeft: '12px', opacity: 0.7, fontSize: '1rem' };
@@ -383,23 +423,46 @@ const ClientOnboarding = () => {
             transition={{ duration: 0.4, ease: "easeOut" }}
         >
             {user?.authProvider !== 'supabase' && (
-                <div className="onboarding__profile-pic">
-                    <div className="onboarding__avatar-container">
-                        <div className="onboarding__avatar">
-                            {formData.profilePicUrl ? (
-                                <img src={formData.profilePicUrl} className="onboarding__avatar-img" alt="Profile" />
-                            ) : (
-                                <User size={40} color="var(--onboard-accent-primary)" />
-                            )}
-                            <label className="onboarding__avatar-overlay">
-                                <Upload size={28} />
-                                <span>Upload</span>
-                                <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
-                            </label>
+                <div style={{ display: 'flex', gap: '40px', justifyContent: 'center', marginBottom: '28px', flexWrap: 'wrap' }}>
+                    <div className="onboarding__profile-pic">
+                        <div className="onboarding__avatar-container">
+                            <div className="onboarding__avatar">
+                                {formData.profilePicUrl ? (
+                                    <img src={formData.profilePicUrl} className="onboarding__avatar-img" alt="Profile" />
+                                ) : (
+                                    <User size={40} color="var(--onboard-accent-primary)" />
+                                )}
+                                <label className="onboarding__avatar-overlay">
+                                    <Upload size={28} />
+                                    <span>Upload</span>
+                                    <input type="file" hidden onChange={(e) => handleImageUpload(e, 'profilePic')} accept="image/*" />
+                                </label>
+                            </div>
                         </div>
+                        <span className="onboarding__label" style={{ marginBottom: '4px' }}>Profile Image</span>
+                        <p className="onboarding__upload-hint">PNG, JPG up to 5MB</p>
                     </div>
-                    <span className="onboarding__label" style={{ marginBottom: '4px' }}>Professional Avatar</span>
-                    <p className="onboarding__upload-hint">PNG, JPG up to 5MB</p>
+
+                    {formData.companyType !== 'Individual' && formData.companyType !== '' && (
+                        <div className="onboarding__profile-pic">
+                            <div className="onboarding__avatar-container">
+                                <div className="onboarding__avatar" style={{ borderRadius: '12px' }}>
+                                    {formData.companyPicUrl ? (
+                                        <img src={formData.companyPicUrl} className="onboarding__avatar-img" alt="Company" style={{ borderRadius: '12px' }} />
+                                    ) : (
+                                        <Building2 size={40} color="var(--onboard-accent-primary)" />
+                                    )}
+                                    <label className="onboarding__avatar-overlay" style={{ borderRadius: '12px' }}>
+                                        <Upload size={28} />
+                                        <span>Upload</span>
+                                        <input type="file" hidden onChange={(e) => handleImageUpload(e, 'companyPic')} accept="image/*" />
+                                    </label>
+                                </div>
+                            </div>
+                            <span className="onboarding__label" style={{ marginBottom: '4px' }}>Business / Company Image</span>
+                            <p className="onboarding__upload-hint">PNG, JPG up to 5MB</p>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -467,6 +530,21 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__form-row">
                 <div className="onboarding__form-group">
+                    <label className="onboarding__label">Phone Number (Optional)</label>
+                    <div style={{ position: 'relative' }}>
+                        <Phone size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className="onboarding__input"
+                            style={{ paddingLeft: '40px' }}
+                            placeholder="e.g. +1 (555) 000-0000"
+                        />
+                    </div>
+                </div>
+                <div className="onboarding__form-group">
                     <label className="onboarding__label">Timezone / Base Location</label>
                     <div style={{ position: 'relative' }}>
                         <Select
@@ -485,7 +563,10 @@ const ClientOnboarding = () => {
                         />
                     </div>
                 </div>
-                <div className="onboarding__form-group">
+            </div>
+
+            <div className="onboarding__form-row">
+                <div className="onboarding__form-group" style={{ flex: 0.5 }}>
                     <label className="onboarding__label">LinkedIn Profile (Optional)</label>
                     <div style={{ position: 'relative' }}>
                         <Linkedin size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
@@ -572,6 +653,49 @@ const ClientOnboarding = () => {
                         <div key={r} className={`onboarding__tag ${formData.role === r ? 'onboarding__tag--active' : ''}`} onClick={() => setFormData(p => ({ ...p, role: r }))}>{r}</div>
                     ))}
                 </div>
+            </div>
+
+            <div className="onboarding__form-group">
+                <label className="onboarding__label">Bio / About Yourself*</label>
+                <textarea
+                    name="bio"
+                    required
+                    value={formData.bio}
+                    onChange={handleChange}
+                    className="onboarding__input"
+                    style={{ minHeight: '120px', resize: 'vertical' }}
+                    placeholder="Describe your goals, team size, company mission, or what you plan to accomplish on SkillKart..."
+                />
+                <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '4px', fontWeight: '500' }}>
+                    Introduce yourself and your organization to help top freelancers understand your requirements. (Min 20 characters)
+                </p>
+            </div>
+
+            <div className="onboarding__form-group">
+                <label className="onboarding__label">Languages Spoken / Preferred*</label>
+                <Select
+                    isMulti
+                    options={languageOptions}
+                    value={formData.languages.map(l => ({ value: l.language, label: l.language }))}
+                    onChange={(selected) => {
+                        const mapped = (selected || []).map(opt => ({
+                            language: opt.value,
+                            proficiency: 'fluent'
+                        }));
+                        setFormData(p => ({ ...p, languages: mapped }));
+                    }}
+                    styles={customStyles}
+                    placeholder="Select Languages Spoken / Preferred"
+                    classNamePrefix="skillkart-select"
+                    maxMenuHeight={220}
+                    menuShouldScrollIntoView={true}
+                    components={{ Control: CustomControl }}
+                    menuPortalTarget={document.body}
+                    menuPlacement="bottom"
+                />
+                <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '4px', fontWeight: '500' }}>
+                    Select one or more languages you use to communicate with freelancers.
+                </p>
             </div>
         </motion.div>
     );

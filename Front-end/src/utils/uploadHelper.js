@@ -98,3 +98,19 @@ export const uploadBanner = async (file) => {
 
   return data.data.url;
 };
+
+/**
+ * Upload a client's company logo/image.
+ * @param {File} file - The image file to upload
+ * @returns {Promise<string>} The Cloudinary URL
+ */
+export const uploadCompanyLogo = async (file) => {
+  const formData = new FormData();
+  formData.append('logo', file);
+
+  const { data } = await client.post('/clients/upload/logo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
+  return data.data.url;
+};
