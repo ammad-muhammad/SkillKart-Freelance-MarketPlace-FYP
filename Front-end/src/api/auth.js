@@ -10,8 +10,8 @@ export const authAPI = {
   supabaseAuth: (supabaseAccessToken, supabaseRefreshToken) =>
     client.post('/auth/supabase-auth', { supabaseAccessToken, supabaseRefreshToken }),
 
-  verifyOTP: (email, otp) =>
-    client.post('/auth/otp/verify', { email, otp }),
+  verifyOTP: (email, otp, purpose) =>
+    client.post('/auth/otp/verify', { email, otp, purpose }),
 
   resendOTP: (email, purpose = 'email_verification') =>
     client.post('/auth/otp/resend', { email, purpose }),
@@ -47,5 +47,17 @@ export const authAPI = {
     client.post('/auth/deactivate/request'),
 
   confirmDeactivation: (otp) =>
-    client.post('/auth/deactivate/confirm', { otp })
+    client.post('/auth/deactivate/confirm', { otp }),
+
+  requestEmailChange: (newEmail) =>
+    client.post('/auth/email/change/request', { newEmail }),
+
+  confirmEmailChange: (otp) =>
+    client.post('/auth/email/change/confirm', { otp }),
+
+  requestRecoveryEmailChange: (newRecoveryEmail) =>
+    client.post('/auth/recovery-email/change/request', { newRecoveryEmail }),
+
+  confirmRecoveryEmailChange: (otp) =>
+    client.post('/auth/recovery-email/change/confirm', { otp })
 };

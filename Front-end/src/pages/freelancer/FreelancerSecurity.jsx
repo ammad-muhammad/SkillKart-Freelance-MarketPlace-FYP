@@ -22,7 +22,7 @@ const FreelancerSecurity = () => {
   const [passwordAlerts, setPasswordAlerts] = useState(!!sec.passwordChangeAlerts);
   
   // OTP Modal State
-  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpPending, setOtpPending] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpTimer, setOtpTimer] = useState(0);
   const [verifying, setVerifying] = useState(false);
@@ -58,7 +58,7 @@ const FreelancerSecurity = () => {
         confirmPassword: pwForm.confirmPassword
       });
       
-      setShowOtpModal(true);
+      setOtpPending(true);
       setOtpTimer(60); // 60 seconds resend timer
       showToast('Verification code sent to your email');
     } catch (error) {
@@ -87,7 +87,7 @@ const FreelancerSecurity = () => {
         newPassword: pwForm.newPassword
       });
       
-      setShowOtpModal(false);
+      setOtpPending(false);
       setOtpCode('');
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setPwErrors({});
@@ -250,9 +250,6 @@ const FreelancerSecurity = () => {
           >
             {saving ? 'Updating...' : '🔒 Update Password'}
           </button>
-          <button className="fl-btn fl-btn--ghost" onClick={() => setForgotModal(true)}>
-            Forgot Password?
-          </button>
         </div>
       </div>
       )}
@@ -322,8 +319,7 @@ const FreelancerSecurity = () => {
       )}
 
       {/* OTP Verification Modal for Password Change */}
-      {showOtpModal && (
-        <Modal title="Verify Password Change" onClose={() => setShowOtpModal(false)}>
+      <Modal open={otpPending} title="Verify Password Change" onClose={() => {}}>
           <div style={{ padding: '0.5rem' }}>
             <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
               A 6-digit verification code was sent to your email. Enter it below to finalize your password change.
@@ -359,7 +355,6 @@ const FreelancerSecurity = () => {
             </div>
           </div>
         </Modal>
-      )}
 
       <style>{`
         .fl-input--error { border-color: #ef4444 !important; }

@@ -194,9 +194,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const verifyOtp = async (email, otp) => {
+  const verifyOtp = async (email, otp, purpose = 'email_verification') => {
     try {
-      const { data } = await authAPI.verifyOTP(email, otp);
+      const { data } = await authAPI.verifyOTP(email, otp, purpose);
       
       tokenManager.setTokens(
         data.data.tokens.accessToken,

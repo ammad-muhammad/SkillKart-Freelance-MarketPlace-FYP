@@ -2,7 +2,7 @@ const FreelancerProfile = require('../models/FreelancerProfile');
 const ClientProfile = require('../models/ClientProfile');
 const uploadService = require('../services/upload.service');
 const otpService = require('../services/otp.service');
-const { sendSuccess } = require('../utils/apiResponse');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 
 /**

@@ -42,7 +42,7 @@ const login = asyncHandler(async (req, res) => {
 
     if (is2FAEnabled) {
       // Send OTP in background
-      otpService.generateAndSendOTP(email, 'email_verification')
+      otpService.generateAndSendOTP(email, 'login')
         .then(() => console.log("✅ 2FA OTP sent successfully"))
         .catch(err => console.error("⚠️ 2FA OTP send failed:", err.message));
 
@@ -88,11 +88,13 @@ const login = asyncHandler(async (req, res) => {
  * Verify OTP
  */
 const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
+  const { email, otp, purpose } = req.body;
   let data;
 
+  const verificationPurpose = purpose || 'email_verification';
+
   // Verify OTP
-  const otpResult = await otpService.verifyOTP(email, otp, 'email_verification');
+  const otpResult = await otpService.verifyOTP(email, otp, verificationPurpose);
   if (!otpResult.valid) {
     return sendError(res, { statusCode: 400, message: otpResult.message });
   }
@@ -228,6 +230,277 @@ const updateMe = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Request Email Change
+ */
+const requestEmailChange = asyncHandler(async (req, res) => {
+  const { newEmail } = req.body;
+  const userId = req.user._id;
+
+  if (!newEmail || newEmail.trim() === '') {
+    return sendError(res, { statusCode: 400, message: 'New email is required' });
+  }
+
+  const normalizedEmail = newEmail.trim().toLowerCase();
+
+  // Check if new email is already in use
+  const existingUser = await User.findOne({ email: normalizedEmail });
+  if (existingUser) {
+    return sendError(res, { statusCode: 400, message: 'Email is already in use' });
+  }
+
+  // Update pending email
+  await User.findByIdAndUpdate(userId, { pendingEmail: normalizedEmail }, { new: true });
+
+  // Generate OTP and send to new email
+  await otpService.generateAndSendOTP(normalizedEmail, 'email_change');
+
+  sendSuccess(res, {
+    message: 'OTP sent to new email address'
+  });
+});
+
+/**
+ * Confirm Email Change
+ */
+const confirmEmailChange = asyncHandler(async (req, res) => {
+  const { otp } = req.body;
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+  
+  if (!user.pendingEmail) {
+    return sendError(res, { statusCode: 400, message: 'No pending email change requested' });
+  }
+
+  const newEmail = user.pendingEmail;
+  const oldEmail = user.email;
+
+  // Verify OTP against the NEW email and 'email_change' purpose
+  const otpResult = await otpService.verifyOTP(newEmail, otp, 'email_change');
+  if (!otpResult.valid) {
+    return sendError(res, { statusCode: 400, message: otpResult.message || 'Invalid OTP' });
+  }
+
+  // Find recovery email
+  let recoveryEmail = null;
+  if (user.role === 'freelancer') {
+    const FreelancerProfile = require('../models/FreelancerProfile');
+    const profile = await FreelancerProfile.findOne({ userId });
+    recoveryEmail = profile?.securitySettings?.recoveryEmail;
+  } else if (user.role === 'client') {
+    const ClientProfile = require('../models/ClientProfile');
+    const profile = await ClientProfile.findOne({ userId });
+    recoveryEmail = profile?.securitySettings?.recoveryEmail || profile?.recoveryEmail;
+  }
+
+  // Update email and clear pending
+  user.email = newEmail;
+  user.pendingEmail = undefined;
+  await user.save();
+
+  // Send Security Alerts
+  const emailService = require('../services/email.service');
+  
+  // Helper to mask email
+  const maskEmail = (email) => {
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return email;
+    if (name.length <= 2) return `${name}***@${domain}`;
+    return `${name.substring(0, 3)}***@${domain}`;
+  };
+
+  const timestamp = new Date().toLocaleString('en-US', { timeZoneName: 'short' });
+  const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+  const userAgent = req.headers['user-agent'] || 'Unknown Device';
+  
+  const generateSecurityAlertHtml = (isRecoveryContact) => `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: #fef2f2; padding: 20px; border-bottom: 1px solid #fee2e2; text-align: center;">
+        <h2 style="color: #dc2626; margin: 0; font-size: 20px;">⚠️ Critical Security Alert</h2>
+      </div>
+      <div style="padding: 30px 20px;">
+        <p style="margin-top: 0;">Hello,</p>
+        <p>You are receiving this notification because this email address is registered as the <strong>${isRecoveryContact ? 'designated security recovery contact' : 'primary email address'}</strong> for a SkillKart account.</p>
+        <p>We want to inform you that the primary email address for this account was recently changed.</p>
+        
+        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin: 25px 0;">
+          <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Change Details</h3>
+          <p style="margin: 5px 0;"><strong>Previous Email:</strong> ${maskEmail(oldEmail)}</p>
+          <p style="margin: 5px 0;"><strong>New Email:</strong> ${newEmail}</p>
+          <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${timestamp}</p>
+          <p style="margin: 5px 0;"><strong>IP Address:</strong> ${ipAddress}</p>
+          <p style="margin: 5px 0; word-break: break-all;"><strong>Device Info:</strong> <span style="font-size: 13px; color: #6b7280;">${userAgent}</span></p>
+        </div>
+
+        <h3 style="font-size: 16px; margin-top: 25px;">What does this mean?</h3>
+        <p>The owner of the account has successfully verified their identity and updated their login credentials. All future communications, including password resets, will now be sent to the new email address.</p>
+
+        <h3 style="font-size: 16px; color: #dc2626; margin-top: 25px;">Didn't authorize this change?</h3>
+        <p>If you or the account owner did not make this change, the account may be compromised. Please take the following steps immediately:</p>
+        <ol style="margin-bottom: 0;">
+          <li style="margin-bottom: 8px;">Go to the SkillKart login page and attempt to reset your password.</li>
+          <li style="margin-bottom: 8px;">If you cannot access the account, contact our dedicated support team immediately at <strong>support@skillkart.com</strong>.</li>
+          <li>Provide this exact email as reference so we can investigate the unauthorized change and lock the account.</li>
+        </ol>
+      </div>
+      <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+        <p style="margin: 0;">This is an automated security notification. Please do not reply directly to this email.</p>
+        <p style="margin: 5px 0 0 0;">SkillKart Security Team</p>
+      </div>
+    </div>
+  `;
+
+  // 1. To old email
+  await emailService.sendEmail(oldEmail, 'Critical Security Alert: Your email was changed', generateSecurityAlertHtml(false)).catch(console.error);
+  // 2. To new email
+  await emailService.sendEmail(newEmail, 'Email updated successfully', `<h2>Email Updated</h2><p>Your email has been successfully updated to ${newEmail} for your SkillKart account.</p>`).catch(console.error);
+  // 3. To recovery email
+  if (recoveryEmail && recoveryEmail !== oldEmail && recoveryEmail !== newEmail) {
+    await emailService.sendEmail(recoveryEmail, 'Critical Security Alert: Account email updated', generateSecurityAlertHtml(true)).catch(console.error);
+  }
+
+  sendSuccess(res, {
+    message: 'Email updated successfully'
+  });
+});
+
+/**
+ * Request Recovery Email Change
+ */
+const requestRecoveryEmailChange = asyncHandler(async (req, res) => {
+  const { newRecoveryEmail } = req.body;
+  const userId = req.user._id;
+
+  if (!newRecoveryEmail || newRecoveryEmail.trim() === '') {
+    return sendError(res, { statusCode: 400, message: 'New recovery email is required' });
+  }
+
+  const normalizedEmail = newRecoveryEmail.trim().toLowerCase();
+
+  // Save pending recovery email on User
+  await User.findByIdAndUpdate(userId, { pendingRecoveryEmail: normalizedEmail }, { new: true });
+
+  // Generate and send OTP to the new recovery email
+  await otpService.generateAndSendOTP(normalizedEmail, 'recovery_email_change');
+
+  sendSuccess(res, {
+    message: 'OTP sent to new recovery email'
+  });
+});
+
+/**
+ * Confirm Recovery Email Change
+ */
+const confirmRecoveryEmailChange = asyncHandler(async (req, res) => {
+  const { otp } = req.body;
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+  if (!user.pendingRecoveryEmail) {
+    return sendError(res, { statusCode: 400, message: 'No pending recovery email change requested' });
+  }
+
+  const newRecoveryEmail = user.pendingRecoveryEmail;
+
+  // Verify OTP against the NEW recovery email and 'recovery_email_change' purpose
+  const otpResult = await otpService.verifyOTP(newRecoveryEmail, otp, 'recovery_email_change');
+  if (!otpResult.valid) {
+    return sendError(res, { statusCode: 400, message: otpResult.message || 'Invalid OTP' });
+  }
+
+  // Find current recovery email and update profile
+  let oldRecoveryEmail = null;
+  let profile = null;
+
+  if (user.role === 'freelancer') {
+    const FreelancerProfile = require('../models/FreelancerProfile');
+    profile = await FreelancerProfile.findOne({ userId });
+    if (profile) {
+      oldRecoveryEmail = profile.securitySettings?.recoveryEmail;
+      profile.securitySettings = {
+        ...profile.securitySettings,
+        recoveryEmail: newRecoveryEmail
+      };
+      await profile.save();
+    }
+  } else if (user.role === 'client') {
+    const ClientProfile = require('../models/ClientProfile');
+    profile = await ClientProfile.findOne({ userId });
+    if (profile) {
+      oldRecoveryEmail = profile.securitySettings?.recoveryEmail || profile.recoveryEmail;
+      profile.securitySettings = {
+        ...(profile.securitySettings || {}),
+        recoveryEmail: newRecoveryEmail
+      };
+      await profile.save();
+    }
+  }
+
+  // Clear pending recovery email on User
+  user.pendingRecoveryEmail = undefined;
+  await user.save();
+
+  // Send Security Alerts
+  const emailService = require('../services/email.service');
+  const timestamp = new Date().toLocaleString('en-US', { timeZoneName: 'short' });
+  const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+  const userAgent = req.headers['user-agent'] || 'Unknown Device';
+
+  const maskEmail = (email) => {
+    if (!email) return '';
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return email;
+    if (name.length <= 2) return `${name}***@${domain}`;
+    return `${name.substring(0, 3)}***@${domain}`;
+  };
+
+  const generateRecoveryChangeAlertHtml = (isOldEmail) => `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: #fef2f2; padding: 20px; border-bottom: 1px solid #fee2e2; text-align: center;">
+        <h2 style="color: #dc2626; margin: 0; font-size: 20px;">⚠️ Security Alert: Recovery Email Changed</h2>
+      </div>
+      <div style="padding: 30px 20px;">
+        <p style="margin-top: 0;">Hello,</p>
+        <p>You are receiving this notification because a request was processed to change the security recovery contact email for a SkillKart account.</p>
+        
+        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin: 25px 0;">
+          <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Change Details</h3>
+          <p style="margin: 5px 0;"><strong>Previous Recovery Email:</strong> ${oldRecoveryEmail ? maskEmail(oldRecoveryEmail) : 'None set'}</p>
+          <p style="margin: 5px 0;"><strong>New Recovery Email:</strong> ${newRecoveryEmail}</p>
+          <p style="margin: 5px 0;"><strong>Date & Time:</strong> ${timestamp}</p>
+          <p style="margin: 5px 0;"><strong>IP Address:</strong> ${ipAddress}</p>
+          <p style="margin: 5px 0; word-break: break-all;"><strong>Device Info:</strong> <span style="font-size: 13px; color: #6b7280;">${userAgent}</span></p>
+        </div>
+
+        <p>If you authorized this change, no further action is required.</p>
+
+        <h3 style="font-size: 16px; color: #dc2626; margin-top: 25px;">Didn't authorize this change?</h3>
+        <p>If you did not make this change, please secure your SkillKart account immediately:</p>
+        <ol style="margin-bottom: 0;">
+          <li style="margin-bottom: 8px;">Login to SkillKart and change your primary password.</li>
+          <li style="margin-bottom: 8px;">Contact our security support team immediately at <strong>support@skillkart.com</strong>.</li>
+        </ol>
+      </div>
+      <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+        <p style="margin: 0;">This is an automated security notification. Please do not reply directly to this email.</p>
+        <p style="margin: 5px 0 0 0;">SkillKart Security Team</p>
+      </div>
+    </div>
+  `;
+
+  // 1. Send alert to old recovery email (if it exists)
+  if (oldRecoveryEmail) {
+    await emailService.sendEmail(oldRecoveryEmail, 'Security Alert: Recovery email was changed', generateRecoveryChangeAlertHtml(true)).catch(console.error);
+  }
+
+  // 2. Send confirmation to new recovery email
+  await emailService.sendEmail(newRecoveryEmail, 'Recovery email updated successfully', generateRecoveryChangeAlertHtml(false)).catch(console.error);
+
+  sendSuccess(res, {
+    message: 'Recovery email updated successfully'
+  });
+});
 
 /**
  * Refresh Token
@@ -253,7 +526,11 @@ const changePassword = asyncHandler(async (req, res) => {
   // Step 1: Verify current password
   const user = await User.findById(userId).select('+password');
   if (!user || !(await user.comparePassword(currentPassword))) {
-    return sendError(res, 'Invalid current password', 401);
+    return sendError(res, { 
+      message: 'Current password is incorrect', 
+      statusCode: 401,
+      errors: [{ field: 'currentPassword', message: 'Current password is incorrect' }]
+    });
   }
 
   // Step 2: Generate and Send OTP
@@ -277,9 +554,9 @@ const confirmChangePassword = asyncHandler(async (req, res) => {
   }
 
   // Step 1: Verify OTP
-  const isOtpValid = await otpService.verifyOTP(user.email, otp, 'password_reset');
-  if (!isOtpValid) {
-    return sendError(res, 'Invalid or expired OTP', 400);
+  const otpResult = await otpService.verifyOTP(user.email, otp, 'password_reset');
+  if (!otpResult.valid) {
+    return sendError(res, { statusCode: 400, message: otpResult.message || 'Invalid OTP' });
   }
 
   // Step 2: Update Password
@@ -496,6 +773,10 @@ module.exports = {
   supabaseAuth,
   updateRole,
   updateMe,
+  requestEmailChange,
+  confirmEmailChange,
+  requestRecoveryEmailChange,
+  confirmRecoveryEmailChange,
   requestDeactivation,
   confirmDeactivation,
   confirmChangePassword

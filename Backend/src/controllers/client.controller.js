@@ -106,12 +106,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     userUpdated = true;
   }
 
-  if (updates.email && updates.email.trim() !== "" && updates.email !== user.email) {
-    const existing = await User.findOne({ email: updates.email, _id: { $ne: userId } });
-    if (existing) return res.status(400).json({ success: false, message: 'Email already in use' });
-    user.email = updates.email.trim().toLowerCase();
-    userUpdated = true;
-  }
+
 
   if (userUpdated) await user.save();
 

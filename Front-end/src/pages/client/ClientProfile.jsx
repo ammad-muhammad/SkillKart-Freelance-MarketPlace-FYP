@@ -223,7 +223,7 @@ const ClientProfile = () => {
                 className={`cl-input${errors[key] ? ' cl-input--error' : ''}`}
                 value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                disabled={!editing || (key === 'email' && isSupabaseUser)}
+                disabled={!editing || key === 'email'}
               />
               {editing && errors[key] && <span className="cl-error">⚠ {errors[key]}</span>}
             </div>

@@ -153,7 +153,8 @@ const OTP = () => {
                 console.log("Verifying OTP:", otpComplete, "for email:", userEmail);
                 console.log("Registration Type:", registrationType);
 
-                const response = await verifyOtp(userEmail, otpComplete);
+                const purpose = registrationType === 'login' ? 'login' : 'email_verification';
+                const response = await verifyOtp(userEmail, otpComplete, purpose);
                 console.log("✅ OTP verification successful:", response.data);
 
                 setSuccess("Verification successful!");
@@ -214,7 +215,9 @@ const OTP = () => {
 
         try {
             const emailForResend = isPasswordReset ? resetEmail : userEmail;
-            const purpose = isPasswordReset ? 'password_reset' : 'email_verification';
+            let purpose = 'email_verification';
+            if (isPasswordReset) purpose = 'password_reset';
+            else if (registrationType === 'login') purpose = 'login';
 
             console.log("📧 Resending OTP to:", emailForResend);
             console.log("Purpose:", purpose);

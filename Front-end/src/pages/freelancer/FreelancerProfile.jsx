@@ -206,7 +206,7 @@ const FreelancerProfile = () => {
                   className="fl-input"
                   value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                  disabled={!editing || (key === 'email' && isSupabaseUser)}
+                  disabled={!editing || key === 'email'}
                   placeholder={label}
                 />
               )}

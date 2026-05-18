@@ -28,6 +28,7 @@ const otpSchema = new mongoose.Schema({
       'password_reset',
       'profile_update',
       'email_change',
+      'recovery_email_change',
       'phone_verification',
       'sensitive_operation',
       'login',

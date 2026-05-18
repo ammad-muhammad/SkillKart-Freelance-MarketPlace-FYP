@@ -33,6 +33,16 @@ const FreelancerSettings = () => {
   const [deactivateOtp, setDeactivateOtp] = useState('');
   const [deactivateLoading, setDeactivateLoading] = useState(false);
 
+  // Email Change State
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  // Recovery Email Change State
+  const [recoveryEmailModal, setRecoveryEmailModal] = useState(false);
+  const [recoveryEmailOtp, setRecoveryEmailOtp] = useState('');
+  const [recoveryEmailLoading, setRecoveryEmailLoading] = useState(false);
+
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
   const saveSection = async (section, data, label) => {
@@ -43,6 +53,72 @@ const FreelancerSettings = () => {
       console.error(`Failed to save ${label}:`, error);
     } finally {
       setSaving(null);
+    }
+  };
+
+  const handleRequestEmailChange = async () => {
+    if (!form.email || form.email === profile?.personalInfo?.email) return;
+    
+    setEmailLoading(true);
+    setSaving('Email');
+    try {
+      await authAPI.requestEmailChange(form.email);
+      setEmailModal(true);
+      showToast('OTP sent to new email address.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Cannot change email.', 'error');
+    } finally {
+      setEmailLoading(false);
+      setSaving(null);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    if (!emailOtp) return;
+    setEmailLoading(true);
+    try {
+      await authAPI.confirmEmailChange(emailOtp);
+      showToast('Email updated successfully.', 'success');
+      setEmailModal(false);
+      setEmailOtp('');
+      // update frontend state
+      updateProfile('personalInfo', { email: form.email }, false, false);
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleRequestRecoveryEmailChange = async () => {
+    if (!form.recoveryEmail || form.recoveryEmail === profile?.securitySettings?.recoveryEmail) return;
+    
+    setRecoveryEmailLoading(true);
+    try {
+      await authAPI.requestRecoveryEmailChange(form.recoveryEmail);
+      setRecoveryEmailModal(true);
+      showToast('OTP sent to new recovery email.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Cannot change recovery email.', 'error');
+    } finally {
+      setRecoveryEmailLoading(false);
+    }
+  };
+
+  const handleConfirmRecoveryEmailChange = async () => {
+    if (!recoveryEmailOtp) return;
+    setRecoveryEmailLoading(true);
+    try {
+      await authAPI.confirmRecoveryEmailChange(recoveryEmailOtp);
+      showToast('Recovery email updated successfully.', 'success');
+      setRecoveryEmailModal(false);
+      setRecoveryEmailOtp('');
+      // update context locally
+      updateProfile('securitySettings', { ...profile.securitySettings, recoveryEmail: form.recoveryEmail }, false, false);
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
+    } finally {
+      setRecoveryEmailLoading(false);
     }
   };
 
@@ -136,54 +212,62 @@ const FreelancerSettings = () => {
             <button
               className={`fl-btn fl-btn--primary${saving === 'Email' ? ' fl-btn--loading' : ''}`}
               disabled={saving === 'Email' || form.email === profile?.personalInfo?.email}
-              onClick={() => saveSection('personalInfo', { email: form.email }, 'Email')}
+              onClick={handleRequestEmailChange}
             >
-              {saving === 'Email' ? 'Saving...' : 'Update Email'}
+              {saving === 'Email' ? 'Sending OTP...' : 'Update Email'}
             </button>
           </div>
         )}
       </div>
 
       {/* Recovery Info */}
-      <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-        <h3 className="fl-section-title">🛡️ Recovery Information</h3>
-        <div className="fl-form-grid">
-          <div className="fl-form-group">
-            <label className="fl-label">Recovery Email</label>
-            <input
-              type="email"
-              className="fl-input"
-              value={form.recoveryEmail}
-              onChange={(e) => set('recoveryEmail', e.target.value)}
-              placeholder="backup@email.com"
-            />
+      {!isSupabaseUser && (
+        <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
+          <h3 className="fl-section-title">🛡️ Recovery Information</h3>
+          <div className="fl-form-grid">
+            <div className="fl-form-group">
+              <label className="fl-label">Recovery Email</label>
+              <input
+                type="email"
+                className="fl-input"
+                value={form.recoveryEmail}
+                onChange={(e) => set('recoveryEmail', e.target.value)}
+                placeholder="backup@email.com"
+              />
+            </div>
+            <div className="fl-form-group">
+              <label className="fl-label">Recovery Phone Number</label>
+              <input
+                type="tel"
+                className="fl-input"
+                value={form.recoveryPhone}
+                onChange={(e) => set('recoveryPhone', e.target.value)}
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
           </div>
-          <div className="fl-form-group">
-            <label className="fl-label">Recovery Phone Number</label>
-            <input
-              type="tel"
-              className="fl-input"
-              value={form.recoveryPhone}
-              onChange={(e) => set('recoveryPhone', e.target.value)}
-              placeholder="+1 (555) 000-0000"
-            />
+          <div className="fl-actions" style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              className={`fl-btn fl-btn--primary${recoveryEmailLoading ? ' fl-btn--loading' : ''}`}
+              disabled={recoveryEmailLoading || form.recoveryEmail === profile?.securitySettings?.recoveryEmail}
+              onClick={handleRequestRecoveryEmailChange}
+            >
+              {recoveryEmailLoading ? 'Sending OTP...' : 'Update Recovery Email'}
+            </button>
+            <button
+              className={`fl-btn fl-btn--secondary${saving === 'Recovery' ? ' fl-btn--loading' : ''}`}
+              disabled={saving === 'Recovery'}
+              onClick={() =>
+                saveSection('securitySettings', {
+                  recoveryPhone: form.recoveryPhone,
+                }, 'Recovery')
+              }
+            >
+              {saving === 'Recovery' ? 'Saving...' : 'Save Recovery Phone'}
+            </button>
           </div>
         </div>
-        <div className="fl-actions">
-          <button
-            className={`fl-btn fl-btn--primary${saving === 'Recovery' ? ' fl-btn--loading' : ''}`}
-            disabled={saving === 'Recovery'}
-            onClick={() =>
-              saveSection('securitySettings', {
-                recoveryEmail: form.recoveryEmail,
-                recoveryPhone: form.recoveryPhone,
-              }, 'Recovery')
-            }
-          >
-            {saving === 'Recovery' ? 'Saving...' : 'Save Recovery Info'}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Danger Zone */}
       <div className="fl-card">
@@ -245,6 +329,53 @@ const FreelancerSettings = () => {
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal open={emailModal} title="Verify Email Change" onClose={() => setEmailModal(false)}>
+        <p style={{ marginBottom: '1rem' }}>
+          Please enter the OTP sent to <strong>{form.email}</strong> to confirm your new email address.
+        </p>
+        <div className="fl-form-group">
+          <input
+            className="fl-input"
+            placeholder="Enter OTP"
+            value={emailOtp}
+            onChange={(e) => setEmailOtp(e.target.value)}
+          />
+        </div>
+        <div className="fl-actions" style={{ marginTop: '1rem' }}>
+          <button
+            className={`fl-btn fl-btn--primary${emailLoading ? ' fl-btn--loading' : ''}`}
+            onClick={handleConfirmEmailChange}
+            disabled={emailLoading || !emailOtp}
+          >
+            {emailLoading ? 'Verifying...' : 'Verify and Update Email'}
+          </button>
+          <button className="fl-btn fl-btn--ghost" onClick={() => setEmailModal(false)}>Cancel</button>
+        </div>
+      </Modal>
+      <Modal open={recoveryEmailModal} title="Verify Recovery Email" onClose={() => setRecoveryEmailModal(false)}>
+        <p style={{ marginBottom: '1rem' }}>
+          Please enter the OTP sent to <strong>{form.recoveryEmail}</strong> to confirm your new recovery email address.
+        </p>
+        <div className="fl-form-group">
+          <input
+            className="fl-input"
+            placeholder="Enter OTP"
+            value={recoveryEmailOtp}
+            onChange={(e) => setRecoveryEmailOtp(e.target.value)}
+          />
+        </div>
+        <div className="fl-actions" style={{ marginTop: '1rem' }}>
+          <button
+            className={`fl-btn fl-btn--primary${recoveryEmailLoading ? ' fl-btn--loading' : ''}`}
+            onClick={handleConfirmRecoveryEmailChange}
+            disabled={recoveryEmailLoading || !recoveryEmailOtp}
+          >
+            {recoveryEmailLoading ? 'Verifying...' : 'Verify and Update'}
+          </button>
+          <button className="fl-btn fl-btn--ghost" onClick={() => setRecoveryEmailModal(false)}>Cancel</button>
+        </div>
       </Modal>
     </div>
   );

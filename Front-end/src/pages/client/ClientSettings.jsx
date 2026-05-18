@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
+import { authAPI } from '../../api/auth';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
 
@@ -32,17 +33,87 @@ const ClientSettings = () => {
   }, [profile]);
 
   const [deleteModal, setDeleteModal] = useState(false);
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
 
+  // Recovery Email Change State
+  const [recoveryEmailModal, setRecoveryEmailModal] = useState(false);
+  const [recoveryEmailOtp, setRecoveryEmailOtp] = useState('');
+  const [recoveryEmailLoading, setRecoveryEmailLoading] = useState(false);
+
+  const handleRequestEmailChange = async () => {
+    if (!account.newEmail || account.newEmail === profile?.personalInfo?.email) return;
+    
+    setEmailLoading(true);
+    try {
+      await authAPI.requestEmailChange(account.newEmail);
+      setEmailModal(true);
+      showToast('OTP sent to new email address.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Cannot change email.', 'error');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    if (!emailOtp) return;
+    setEmailLoading(true);
+    try {
+      await authAPI.confirmEmailChange(emailOtp);
+      showToast('Email updated successfully.', 'success');
+      setEmailModal(false);
+      setEmailOtp('');
+      // update context locally
+      updateProfile('personalInfo', { email: account.newEmail }, false, false);
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleRequestRecoveryEmailChange = async () => {
+    if (!account.recoveryEmail || account.recoveryEmail === profile?.securitySettings?.recoveryEmail) return;
+    
+    setRecoveryEmailLoading(true);
+    try {
+      await authAPI.requestRecoveryEmailChange(account.recoveryEmail);
+      setRecoveryEmailModal(true);
+      showToast('OTP sent to new recovery email.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Cannot change recovery email.', 'error');
+    } finally {
+      setRecoveryEmailLoading(false);
+    }
+  };
+
+  const handleConfirmRecoveryEmailChange = async () => {
+    if (!recoveryEmailOtp) return;
+    setRecoveryEmailLoading(true);
+    try {
+      await authAPI.confirmRecoveryEmailChange(recoveryEmailOtp);
+      showToast('Recovery email updated successfully.', 'success');
+      setRecoveryEmailModal(false);
+      setRecoveryEmailOtp('');
+      // update context locally
+      updateProfile('securitySettings', { ...profile.securitySettings, recoveryEmail: account.recoveryEmail }, false, false);
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
+    } finally {
+      setRecoveryEmailLoading(false);
+    }
+  };
 
   const saveAccount = async () => {
     setErrors({});
     try {
       const updates = {
         personalInfo: { 
-          username: account.newUsername?.trim() || profile?.personalInfo?.username, 
-          email: account.newEmail?.trim() || profile?.personalInfo?.email 
+          username: account.newUsername?.trim() || profile?.personalInfo?.username
         },
-        securitySettings: { recoveryEmail: account.recoveryEmail, recoveryPhone: account.recoveryPhone }
+        securitySettings: { recoveryPhone: account.recoveryPhone }
       };
 
       const res = await updateMultipleSections(updates, false, true, { skipFetch: true });
@@ -126,8 +197,8 @@ const ClientSettings = () => {
           )}
         </div>
         {!isSupabaseUser && (
-          <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
-            Update Email
+          <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={handleRequestEmailChange} disabled={emailLoading || account.newEmail === profile?.personalInfo?.email}>
+            {emailLoading ? 'Sending OTP...' : 'Update Email'}
           </button>
         )}
 
@@ -149,9 +220,14 @@ const ClientSettings = () => {
                 {errors.recoveryPhone && <span className="cl-error">⚠ {errors.recoveryPhone}</span>}
               </div>
             </div>
-            <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
-              Save Recovery Options
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={handleRequestRecoveryEmailChange} disabled={recoveryEmailLoading || account.recoveryEmail === profile?.securitySettings?.recoveryEmail}>
+                {recoveryEmailLoading ? 'Sending OTP...' : 'Update Recovery Email'}
+              </button>
+              <button className="cl-btn cl-btn--secondary cl-btn--sm" onClick={saveAccount}>
+                Save Recovery Phone
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -200,6 +276,52 @@ const ClientSettings = () => {
             Yes, Delete Everything
           </button>
           <button className="cl-btn cl-btn--ghost" onClick={() => setDeleteModal(false)}>Cancel</button>
+        </div>
+      </Modal>
+      <Modal open={emailModal} title="Verify Email Change" onClose={() => setEmailModal(false)}>
+        <p style={{ marginBottom: '1rem' }}>
+          Please enter the OTP sent to <strong>{account.newEmail}</strong> to confirm your new email address.
+        </p>
+        <div className="cl-form-group">
+          <input
+            className="cl-input"
+            placeholder="Enter OTP"
+            value={emailOtp}
+            onChange={(e) => setEmailOtp(e.target.value)}
+          />
+        </div>
+        <div className="cl-actions" style={{ marginTop: '1rem' }}>
+          <button
+            className={`cl-btn cl-btn--primary${emailLoading ? ' cl-btn--loading' : ''}`}
+            onClick={handleConfirmEmailChange}
+            disabled={emailLoading || !emailOtp}
+          >
+            {emailLoading ? 'Verifying...' : 'Verify and Update'}
+          </button>
+          <button className="cl-btn cl-btn--ghost" onClick={() => setEmailModal(false)}>Cancel</button>
+        </div>
+      </Modal>
+      <Modal open={recoveryEmailModal} title="Verify Recovery Email" onClose={() => setRecoveryEmailModal(false)}>
+        <p style={{ marginBottom: '1rem' }}>
+          Please enter the OTP sent to <strong>{account.recoveryEmail}</strong> to confirm your new recovery email address.
+        </p>
+        <div className="cl-form-group">
+          <input
+            className="cl-input"
+            placeholder="Enter OTP"
+            value={recoveryEmailOtp}
+            onChange={(e) => setRecoveryEmailOtp(e.target.value)}
+          />
+        </div>
+        <div className="cl-actions" style={{ marginTop: '1rem' }}>
+          <button
+            className={`cl-btn cl-btn--primary${recoveryEmailLoading ? ' cl-btn--loading' : ''}`}
+            onClick={handleConfirmRecoveryEmailChange}
+            disabled={recoveryEmailLoading || !recoveryEmailOtp}
+          >
+            {recoveryEmailLoading ? 'Verifying...' : 'Verify and Update'}
+          </button>
+          <button className="cl-btn cl-btn--ghost" onClick={() => setRecoveryEmailModal(false)}>Cancel</button>
         </div>
       </Modal>
     </div>

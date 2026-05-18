@@ -10,6 +10,16 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  pendingEmail: {
+    type: String,
+    lowercase: true,
+    trim: true
+  },
+  pendingRecoveryEmail: {
+    type: String,
+    lowercase: true,
+    trim: true
+  },
   password: {
     type: String,
     select: false // Don't return password by default

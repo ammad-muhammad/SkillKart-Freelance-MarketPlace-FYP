@@ -42,7 +42,7 @@ const ClientSecurity = () => {
   const [passwordAlerts, setPasswordAlerts] = useState(!!profile?.securitySettings?.passwordChangeAlerts);
   
   // Password Change OTP State
-  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpPending, setOtpPending] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpTimer, setOtpTimer] = useState(0);
   const [verifying, setVerifying] = useState(false);
@@ -73,7 +73,7 @@ const ClientSecurity = () => {
         confirmPassword: passwords.confirmPassword
       });
       
-      setShowOtpModal(true);
+      setOtpPending(true);
       setOtpTimer(60);
       showToast('Verification code sent to your email');
     } catch (error) {
@@ -102,7 +102,7 @@ const ClientSecurity = () => {
         newPassword: passwords.newPassword
       });
       
-      setShowOtpModal(false);
+      setOtpPending(false);
       setOtpCode('');
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setErrors({});
@@ -269,9 +269,6 @@ const ClientSecurity = () => {
               >
                 {saving ? 'Saving...' : '🔒 Change Password'}
               </button>
-              <button className="cl-btn cl-btn--ghost" onClick={() => setForgotModal(true)}>
-                Forgot Password?
-              </button>
             </div>
           </div>
         </div>
@@ -418,7 +415,7 @@ const ClientSecurity = () => {
       </Modal>
 
       {/* Password Change OTP Modal */}
-      <Modal open={showOtpModal} title="Verify Password Change" onClose={() => setShowOtpModal(false)}>
+      <Modal open={otpPending} title="Verify Password Change" onClose={() => {}}>
         <div style={{ padding: '0.5rem' }}>
           <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)', fontSize: '0.9rem' }}>
             A 6-digit verification code was sent to your email. Enter it below to finalize your password change.

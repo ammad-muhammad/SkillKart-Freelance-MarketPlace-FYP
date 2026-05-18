@@ -367,6 +367,28 @@ router.post('/logout',
   authController.logout
 );
 
+// Email Change
+router.post('/email/change/request',
+  authenticate,
+  authController.requestEmailChange
+);
+
+router.post('/email/change/confirm',
+  authenticate,
+  authController.confirmEmailChange
+);
+
+// Recovery Email Change
+router.post('/recovery-email/change/request',
+  authenticate,
+  authController.requestRecoveryEmailChange
+);
+
+router.post('/recovery-email/change/confirm',
+  authenticate,
+  authController.confirmRecoveryEmailChange
+);
+
 router.post('/supabase-auth', 
   authController.supabaseAuth
 );
