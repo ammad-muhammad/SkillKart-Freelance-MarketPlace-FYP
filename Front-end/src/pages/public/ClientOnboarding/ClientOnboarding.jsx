@@ -13,6 +13,7 @@ import {
 import { toast } from "react-toastify";
 import { clientsAPI } from "../../../api/clients";
 import { useAuth } from "../../../hooks/useAuth";
+import { useClient } from '../../../context/ClientContext';
 import { timezones, getCurrentTimezone } from "../../../utils/timezones";
 import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
@@ -26,6 +27,7 @@ const ClientOnboarding = () => {
     const [showDraftPrompt, setShowDraftPrompt] = useState(false);
     const [draftData, setDraftData] = useState(null);
     const { refreshAuth, user } = useAuth();
+    const { fetchProfile } = useClient();
 
     const DRAFT_KEY = "skillkart_client_onboarding_draft";
 
@@ -76,21 +78,31 @@ const ClientOnboarding = () => {
         termsAccepted: false
     });
 
-    // Initial Load - Check for draft in Backend
+    // Load existing client profile to prefill onboarding (if already completed)
     useEffect(() => {
-        const fetchDraft = async () => {
+        if (!user) return;
+        const fetchProfile = async () => {
             try {
-                const response = await clientsAPI.getOnboardingDraft();
-                if (response.data?.data?.draft) {
-                    setDraftData(response.data.data.draft);
-                    setShowDraftPrompt(true);
-                }
+                const res = await clientsAPI.getProfile(); // assuming endpoint exists
+                const profile = res.data?.data?.profile?.personalInfo || {};
+                setFormData(prev => ({
+                    ...prev,
+                    // map backend fields to onboarding form fields
+                    fullName: profile.fullName || prev.fullName,
+                    workEmail: profile.email || prev.workEmail,
+                    phone: profile.phone || prev.phone,
+                    companyName: profile.companyName || prev.companyName,
+                    companyWebsite: profile.website || prev.companyWebsite,
+                    // handle nested location
+                    country: profile.location?.country || prev.country,
+                    // other fields already captured elsewhere
+                }));
             } catch (e) {
-                console.error("Failed to fetch client draft from backend", e);
+                console.error('Failed to prefill onboarding:', e);
             }
         };
-        fetchDraft();
-    }, []);
+        fetchProfile();
+    }, [user]);
 
     // Sync Draft to Backend on step change or significant changes
     useEffect(() => {
@@ -268,9 +280,10 @@ const ClientOnboarding = () => {
 
     const isStepValid = () => {
         if (step === 1) {
-            const hasBasic = formData.fullName.trim() && formData.workEmail.trim() && formData.companyType;
-            if (formData.companyType === 'Individual') return hasBasic;
-            return hasBasic && formData.companyName.trim();
+            const hasBasic = formData.fullName.trim() && formData.workEmail.trim() && formData.companyType && formData.country;
+            const validWebsite = !formData.companyWebsite || /^https?:\/\/.*/.test(formData.companyWebsite);
+            if (formData.companyType === 'Individual') return hasBasic && validWebsite;
+            return hasBasic && formData.companyName.trim() && validWebsite;
         }
         if (step === 2) {
             return formData.isNewToHiring && formData.industryType && (formData.industryType !== 'Other' || formData.customIndustry.trim()) && formData.bio.trim().length >= 20 && formData.languages.length > 0;
@@ -508,23 +521,6 @@ const ClientOnboarding = () => {
                         <label className="onboarding__label">Company Name</label>
                         <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="onboarding__input" placeholder="Acme Inc." />
                     </div>
-                    <div className="onboarding__form-group" style={{ flex: 1 }}>
-                        <label className="onboarding__label">Country</label>
-                        <Select
-                            options={options}
-                            value={formData.country ? options.find(opt => opt.label === formData.country) : null}
-                            onChange={(val) => setFormData(p => ({ ...p, country: val ? val.label : '' }))}
-                            styles={customStyles}
-                            placeholder="Select Country"
-                            classNamePrefix="skillkart-select"
-                            isSearchable={true}
-                            maxMenuHeight={220} // ~5.5 items
-                            menuShouldScrollIntoView={true}
-                            components={{ Control: CustomControl }}
-                            menuPortalTarget={document.body}
-                            menuPlacement="bottom"
-                        />
-                    </div>
                 </motion.div>
             )}
 
@@ -543,6 +539,44 @@ const ClientOnboarding = () => {
                             placeholder="e.g. +1 (555) 000-0000"
                         />
                     </div>
+                </div>
+                <div className="onboarding__form-group">
+                    <label className="onboarding__label">Website (Optional)</label>
+                    <div style={{ position: 'relative' }}>
+                        <Globe2 size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
+                        <input
+                            type="url"
+                            name="companyWebsite"
+                            value={formData.companyWebsite}
+                            onChange={handleChange}
+                            className="onboarding__input"
+                            style={{ paddingLeft: '40px' }}
+                            placeholder="https://example.com"
+                        />
+                    </div>
+                    {formData.companyWebsite && !/^https?:\/\/.*/.test(formData.companyWebsite) && (
+                        <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>Please include http:// or https://</p>
+                    )}
+                </div>
+            </div>
+
+            <div className="onboarding__form-row">
+                <div className="onboarding__form-group">
+                    <label className="onboarding__label">Country*</label>
+                    <Select
+                        options={options}
+                        value={formData.country ? options.find(opt => opt.label === formData.country) : null}
+                        onChange={(val) => setFormData(p => ({ ...p, country: val ? val.label : '' }))}
+                        styles={customStyles}
+                        placeholder="Select Country"
+                        classNamePrefix="skillkart-select"
+                        isSearchable={true}
+                        maxMenuHeight={220}
+                        menuShouldScrollIntoView={true}
+                        components={{ Control: CustomControl }}
+                        menuPortalTarget={document.body}
+                        menuPlacement="bottom"
+                    />
                 </div>
                 <div className="onboarding__form-group">
                     <label className="onboarding__label">Timezone / Base Location</label>
@@ -672,28 +706,73 @@ const ClientOnboarding = () => {
             </div>
 
             <div className="onboarding__form-group">
-                <label className="onboarding__label">Languages Spoken / Preferred*</label>
-                <Select
-                    isMulti
-                    options={languageOptions}
-                    value={formData.languages.map(l => ({ value: l.language, label: l.language }))}
-                    onChange={(selected) => {
-                        const mapped = (selected || []).map(opt => ({
-                            language: opt.value,
-                            proficiency: 'fluent'
-                        }));
-                        setFormData(p => ({ ...p, languages: mapped }));
-                    }}
-                    styles={customStyles}
-                    placeholder="Select Languages Spoken / Preferred"
-                    classNamePrefix="skillkart-select"
-                    maxMenuHeight={220}
-                    menuShouldScrollIntoView={true}
-                    components={{ Control: CustomControl }}
-                    menuPortalTarget={document.body}
-                    menuPlacement="bottom"
-                />
-                <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '4px', fontWeight: '500' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <label className="onboarding__label" style={{ marginBottom: 0 }}>Languages Spoken / Preferred*</label>
+                    <button
+                        type="button"
+                        className="cl-btn cl-btn--ghost cl-btn--sm"
+                        onClick={() => setFormData(p => ({ ...p, languages: [...p.languages, { language: '', proficiency: 'fluent' }] }))}
+                        style={{ padding: '4px 8px', fontSize: '13px' }}
+                    >
+                        <Plus size={14} /> Add Language
+                    </button>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {formData.languages.map((lang, idx) => (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'end', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e5edf5' }}>
+                            <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
+                                <label className="onboarding__label" style={{ fontSize: '12px', marginBottom: '4px' }}>Language</label>
+                                <Select
+                                    options={languageOptions}
+                                    value={lang.language ? { value: lang.language, label: lang.language } : null}
+                                    onChange={(selected) => {
+                                        const newList = [...formData.languages];
+                                        newList[idx].language = selected?.value || '';
+                                        setFormData(p => ({ ...p, languages: newList }));
+                                    }}
+                                    placeholder="Select language"
+                                    styles={customStyles}
+                                    classNamePrefix="skillkart-select"
+                                    menuPortalTarget={document.body}
+                                />
+                            </div>
+                            <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
+                                <label className="onboarding__label" style={{ fontSize: '12px', marginBottom: '4px' }}>Proficiency</label>
+                                <select 
+                                    className="onboarding__input" 
+                                    value={lang.proficiency || 'fluent'} 
+                                    onChange={(e) => {
+                                        const newList = [...formData.languages];
+                                        newList[idx].proficiency = e.target.value;
+                                        setFormData(p => ({ ...p, languages: newList }));
+                                    }}
+                                    style={{ backgroundColor: '#fff' }}
+                                >
+                                    <option value="basic">Basic</option>
+                                    <option value="conversational">Conversational</option>
+                                    <option value="fluent">Fluent</option>
+                                    <option value="native">Native</option>
+                                </select>
+                            </div>
+                            <button
+                                type="button"
+                                className="cl-btn cl-btn--ghost cl-btn--sm"
+                                style={{ color: '#ef4444', height: '42px', border: '1px solid #fee2e2', background: '#fef2f2' }}
+                                onClick={() => {
+                                    const newList = formData.languages.filter((_, i) => i !== idx);
+                                    setFormData(p => ({ ...p, languages: newList }));
+                                }}
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ))}
+                    {formData.languages.length === 0 && (
+                        <p style={{ fontSize: '0.85rem', color: '#ef4444' }}>⚠ No languages added. At least one is required.</p>
+                    )}
+                </div>
+                <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '8px', fontWeight: '500' }}>
                     Select one or more languages you use to communicate with freelancers.
                 </p>
             </div>

@@ -291,6 +291,7 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
     companyName: data.companyName,
     companyType: data.companyType,
     companyLogo: data.companyLogo,
+    website: data.companyWebsite,
     industryType: data.industryType,
     customIndustry: data.customIndustry,
     role: data.role,

@@ -336,17 +336,28 @@ export const ClientProvider = ({ children }) => {
   };
 
   return (
-    <ClientContext.Provider
-      value={{
-        profile, setProfile, updateProfile, updateMultipleSections,
-        projects, addProject, updateProject, deleteProject,
-        savedFreelancers, toggleSavedFreelancer,
-        toasts, showToast,
-        loading, fetchProfile, saveProfile
-      }}
-    >
+    <ClientContext.Provider value={{
+      profile,
+      setProfile,
+      updateProfile,
+      updateMultipleSections,
+      projects,
+      setProjects,
+      addProject,
+      updateProject,
+      deleteProject,
+      savedFreelancers,
+      setSavedFreelancers,
+      toggleSavedFreelancer,
+      toasts,
+      setToasts,
+      showToast,
+      loading,
+      setLoading,
+      fetchProfile,
+      saveProfile
+    }}>
       {children}
     </ClientContext.Provider>
   );
 };
-
