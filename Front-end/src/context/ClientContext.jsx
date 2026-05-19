@@ -19,9 +19,15 @@ const emptyProfile = {
     email: '',
     phone: '',
     companyName: '',
+    companyType: '',
     industry: '',
+    customIndustry: '',
+    role: '',
+    isNewToHiring: '',
     website: '',
     location: '',
+    timezone: '',
+    linkedin: '',
     bio: '',
     avatar: null,
     companyLogo: null,
@@ -32,6 +38,9 @@ const emptyProfile = {
     preferredSkills: [],
     budgetRange: { min: 0, max: 0 },
     projectTypes: [],
+    hiringFrequency: '',
+    technicalUnderstanding: 5,
+    urgency: '',
     remoteOnly: true,
   },
   securitySettings: {
@@ -109,24 +118,33 @@ export const ClientProvider = ({ children }) => {
       // 2. Transform to UI format with safety checks
       const transformedProfile = {
         personalInfo: {
-          fullName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Loading...',
+          fullName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '',
           username: user?.username || user?.email?.split('@')[0] || 'user',
           email: user?.email || '',
           phone: dbProfile?.phone || '',
-          companyName: dbProfile?.companyName || 'Not Set',
-          industry: dbProfile?.industryType || 'Not Set',
+          companyName: dbProfile?.companyName || '',
+          companyType: dbProfile?.companyType || '',
+          industry: dbProfile?.industryType || dbProfile?.industry || '',
+          customIndustry: dbProfile?.customIndustry || '',
+          role: dbProfile?.role || '',
+          isNewToHiring: dbProfile?.isNewToHiring || '',
           website: dbProfile?.website || '',
-          location: dbProfile?.location?.country || dbProfile?.timezone || 'Global',
+          location: dbProfile?.location?.country || '',
+          timezone: dbProfile?.timezone || '',
+          linkedin: dbProfile?.socialLinks?.linkedin || '',
           bio: dbProfile?.description || '',
           avatar: user?.profilePicture || null,
           companyLogo: dbProfile?.companyLogo || null,
-          memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently',
+          memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
           languages: dbProfile?.languages || [],
         },
         preferences: {
           preferredSkills: dbProfile?.techStack || [],
           budgetRange: dbProfile?.budgetRange || { min: 0, max: 0 }, 
           projectTypes: dbProfile?.services || [],
+          hiringFrequency: dbProfile?.hiringFrequency || '',
+          technicalUnderstanding: dbProfile?.technicalUnderstanding || 5,
+          urgency: dbProfile?.urgency || '',
           remoteOnly: true,
         },
         securitySettings: {
@@ -149,6 +167,7 @@ export const ClientProvider = ({ children }) => {
         verificationStatus: dbProfile?.verificationStatus || 'unverified'
       };
 
+      console.log("Fetched client profile:", transformedProfile);
       setProfile(transformedProfile);
 
       // 3. Fetch Client's Projects using ownership-restricted API
@@ -209,17 +228,28 @@ export const ClientProvider = ({ children }) => {
         });
       }
 
+      const isIndiv = personalInfo.companyType === 'Individual';
       const profilePayload = {
-        companyName: personalInfo.companyName,
-        industryType: personalInfo.industry,
-        companyLogo: personalInfo.companyLogo,
-        website: personalInfo.website,
+        companyName: isIndiv ? '' : personalInfo.companyName,
+        companyType: personalInfo.companyType,
+        industryType: isIndiv ? '' : personalInfo.industry,
+        industry: isIndiv ? '' : personalInfo.industry,
+        customIndustry: '',
+        role: isIndiv ? '' : personalInfo.role,
+        isNewToHiring: personalInfo.isNewToHiring,
+        companyLogo: isIndiv ? '' : personalInfo.companyLogo,
+        website: isIndiv ? '' : personalInfo.website,
         description: personalInfo.bio,
         phone: personalInfo.phone,
         location: { country: personalInfo.location },
+        timezone: personalInfo.timezone,
+        socialLinks: { linkedin: personalInfo.linkedin },
         techStack: preferences.preferredSkills,
-        services: preferences.projectTypes,
+        services: [],
         budgetRange: preferences.budgetRange,
+        hiringFrequency: preferences.hiringFrequency,
+        technicalUnderstanding: preferences.technicalUnderstanding,
+        urgency: preferences.urgency,
         notificationSettings,
         securitySettings: {
           ...securitySettings,

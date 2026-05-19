@@ -60,7 +60,15 @@ const ClientDashboardOverview = () => {
           </div>
           <div className="cl-dash-hero__info">
             <h2 className="cl-dash-hero__name">{personalInfo.fullName}</h2>
-            <p className="cl-dash-hero__company"><Building2 size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.companyName} · {personalInfo.industry}</p>
+            <p className="cl-dash-hero__company">
+              {personalInfo.companyType === 'Individual' ? (
+                <>👤 Individual</>
+              ) : (
+                <>
+                  <Building2 size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.companyName} · {personalInfo.industry}
+                </>
+              )}
+            </p>
             <div className="cl-dash-hero__meta">
               <span><MapPin size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.location}</span>
               <span><Calendar size={13} style={{display:'inline',verticalAlign:'middle'}} /> Member since {personalInfo.memberSince}</span>

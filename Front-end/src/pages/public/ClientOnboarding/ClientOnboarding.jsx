@@ -17,7 +17,10 @@ import { useClient } from '../../../context/ClientContext';
 import { timezones, getCurrentTimezone } from "../../../utils/timezones";
 import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
+import TagInput from "../../../Components/common/TagInput/TagInput";
+import IndustryInput from "../../../Components/common/IndustryInput/IndustryInput";
 import "./ClientOnboarding.css";
+
 
 const ClientOnboarding = () => {
     const navigate = useNavigate();
@@ -26,8 +29,12 @@ const ClientOnboarding = () => {
     const [searchCountry, setSearchCountry] = useState("");
     const [showDraftPrompt, setShowDraftPrompt] = useState(false);
     const [draftData, setDraftData] = useState(null);
+    const [aiSuggestions, setAiSuggestions] = useState([]);
+    const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
     const { refreshAuth, user } = useAuth();
     const { fetchProfile } = useClient();
+
+
 
     const DRAFT_KEY = "skillkart_client_onboarding_draft";
 
@@ -48,14 +55,13 @@ const ClientOnboarding = () => {
 
         // Step 2: Professional Background
         isNewToHiring: "", // Yes (Fresh), No (Experienced)
-        industryType: "",
+        industryType: [],
         customIndustry: "",
         role: "", // Founder, PM, Marketing, Developer, Other
         bio: "",
         languages: [],
 
         // Step 3: Project Needs
-        services: [],
         techStack: [],
         budgetRange: "",
         hiringFrequency: "", // One-time, Monthly, Long-term
@@ -83,20 +89,28 @@ const ClientOnboarding = () => {
         if (!user) return;
         const fetchProfile = async () => {
             try {
-                const res = await clientsAPI.getProfile(); // assuming endpoint exists
-                const profile = res.data?.data?.profile?.personalInfo || {};
-                setFormData(prev => ({
-                    ...prev,
-                    // map backend fields to onboarding form fields
-                    fullName: profile.fullName || prev.fullName,
-                    workEmail: profile.email || prev.workEmail,
-                    phone: profile.phone || prev.phone,
-                    companyName: profile.companyName || prev.companyName,
-                    companyWebsite: profile.website || prev.companyWebsite,
-                    // handle nested location
-                    country: profile.location?.country || prev.country,
-                    // other fields already captured elsewhere
-                }));
+                const res = await clientsAPI.getProfile();
+                const dbProfile = res.data?.data?.profile || {};
+                if (dbProfile._id) {
+                    setFormData(prev => ({
+                        ...prev,
+                        fullName: prev.fullName || (user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : ''),
+                        workEmail: prev.workEmail || user?.email || '',
+                        phone: dbProfile.phone || prev.phone,
+                        companyName: dbProfile.companyName || prev.companyName,
+                        companyWebsite: dbProfile.website || prev.companyWebsite,
+                        companyType: dbProfile.companyType || prev.companyType,
+                        companySize: dbProfile.companySize || prev.companySize,
+                        country: dbProfile.location?.country || prev.country,
+                        isNewToHiring: dbProfile.isNewToHiring || prev.isNewToHiring,
+                        industryType: Array.isArray(dbProfile.industryType) ? dbProfile.industryType : (dbProfile.industryType ? [dbProfile.industryType] : []),
+                        customIndustry: dbProfile.customIndustry || prev.customIndustry,
+                        role: dbProfile.role || prev.role,
+                        bio: dbProfile.description || prev.bio,
+                        languages: dbProfile.languages || prev.languages,
+                        techStack: dbProfile.techStack || prev.techStack,
+                    }));
+                }
             } catch (e) {
                 console.error('Failed to prefill onboarding:', e);
             }
@@ -133,6 +147,34 @@ const ClientOnboarding = () => {
             }));
         }
     }, [user, showDraftPrompt]);
+
+    const fetchAISuggestions = async () => {
+        if (!formData.companyName && !formData.bio && (!formData.techStack || formData.techStack.length === 0)) {
+            return;
+        }
+        setFetchingSuggestions(true);
+        try {
+            const res = await clientsAPI.recommendIndustry({
+                companyName: formData.companyName,
+                bio: formData.bio,
+                techStack: formData.techStack,
+                website: formData.companyWebsite
+            });
+            if (res.data?.success && res.data?.data?.recommendations) {
+                setAiSuggestions(res.data.data.recommendations);
+            }
+        } catch (error) {
+            console.error("Error getting industry recommendations:", error);
+        } finally {
+            setFetchingSuggestions(false);
+        }
+    };
+
+    useEffect(() => {
+        if (step === 2 && formData.companyType !== 'Individual') {
+            fetchAISuggestions();
+        }
+    }, [step, formData.companyType]);
 
     const handleRestoreDraft = () => {
         if (draftData) {
@@ -207,10 +249,8 @@ const ClientOnboarding = () => {
         }
         if (step === 2) {
             if (!formData.isNewToHiring) { toast.warn("Hiring Experience selection is required"); return false; }
-            if (!formData.industryType) { toast.warn("Please select your Primary Industry"); return false; }
-            if (formData.industryType === 'Other' && !formData.customIndustry.trim()) {
-                toast.warn("Please specify your industry");
-                return false;
+            if (formData.companyType !== 'Individual') {
+                if (!formData.industryType) { toast.warn("Please select your Industry"); return false; }
             }
             if (!formData.bio || formData.bio.trim().length < 20) {
                 toast.warn("Please provide a descriptive Bio / About summary (minimum 20 characters)");
@@ -222,7 +262,7 @@ const ClientOnboarding = () => {
             }
         }
         if (step === 3) {
-            if (formData.services.length === 0) { toast.warn("Please select at least one expertise area"); return false; }
+            if (formData.techStack.length === 0) { toast.warn("Please add at least one required skill"); return false; }
             if (!formData.budgetRange) { toast.warn("Please select a Budget Allocation"); return false; }
             if (!formData.hiringFrequency) { toast.warn("Please select an Engagement Type"); return false; }
         }
@@ -286,10 +326,13 @@ const ClientOnboarding = () => {
             return hasBasic && formData.companyName.trim() && validWebsite;
         }
         if (step === 2) {
-            return formData.isNewToHiring && formData.industryType && (formData.industryType !== 'Other' || formData.customIndustry.trim()) && formData.bio.trim().length >= 20 && formData.languages.length > 0;
+            if (formData.companyType === 'Individual') {
+                return formData.isNewToHiring && formData.bio.trim().length >= 20 && formData.languages.length > 0;
+            }
+            return formData.isNewToHiring && formData.industryType && formData.industryType.length > 0 && formData.bio.trim().length >= 20 && formData.languages.length > 0;
         }
         if (step === 3) {
-            return formData.services.length > 0 && formData.budgetRange && formData.hiringFrequency;
+            return formData.techStack.length > 0 && formData.budgetRange && formData.hiringFrequency;
         }
         if (step === 4) {
             return formData.urgency;
@@ -503,7 +546,21 @@ const ClientOnboarding = () => {
                         <div
                             key={item.id}
                             className={`onboarding__choice-card ${formData.companyType === item.id ? 'onboarding__choice-card--active' : ''}`}
-                            onClick={() => setFormData(p => ({ ...p, companyType: item.id }))}
+                            onClick={() => setFormData(p => {
+                                const isIndiv = item.id === 'Individual';
+                                return {
+                                    ...p,
+                                    companyType: item.id,
+                                    companyName: isIndiv ? '' : p.companyName,
+                                    companyPic: isIndiv ? null : p.companyPic,
+                                    companyPicUrl: isIndiv ? '' : p.companyPicUrl,
+                                    companyWebsite: isIndiv ? '' : p.companyWebsite,
+                                    companySize: isIndiv ? '' : p.companySize,
+                                    industryType: isIndiv ? '' : p.industryType,
+                                    role: isIndiv ? '' : p.role,
+                                    customIndustry: ''
+                                };
+                            })}
                         >
                             <item.icon className="onboarding__choice-icon" />
                             <div>
@@ -647,47 +704,71 @@ const ClientOnboarding = () => {
                 </div>
             </div>
 
-            <div className="onboarding__form-row">
-                <div className="onboarding__form-group">
-                    <label className="onboarding__label">Primary Industry*</label>
-                    <Select
-                        name="industryType"
-                        options={industryOptions}
-                        styles={customStyles}
-                        components={{ Control: CustomControl }}
-                        placeholder="Select Industry"
-                        value={formData.industryType ? industryOptions.find(o => o.value === formData.industryType) : null}
-                        onChange={(opt) => setFormData(p => ({ ...p, industryType: opt ? opt.value : '' }))}
-                        classNamePrefix="skillkart-select"
-                        isSearchable={true}
-                        maxMenuHeight={220}
-                        menuShouldScrollIntoView={true}
-                        menuPortalTarget={document.body}
-                        menuPlacement="bottom"
-                    />
-                </div>
+            {formData.companyType !== 'Individual' && (
+                <div className="onboarding__form-row" style={{ display: 'block' }}>
+                    <div className="onboarding__form-group" style={{ flex: 1, marginBottom: '1.5rem' }}>
+                        <label className="onboarding__label">Industry*</label>
+                        <IndustryInput
+                            value={formData.industryType}
+                            onChange={(val) => setFormData(p => ({ ...p, industryType: val }))}
+                            placeholder="Type to search industry (e.g. software, design)..."
+                        />
 
-                <div className="onboarding__form-group">
-                    <label className="onboarding__label">Other Industry (Optional)</label>
-                    <input
-                        type="text"
-                        name="customIndustry"
-                        value={formData.customIndustry}
-                        onChange={handleChange}
-                        className="onboarding__input"
-                        placeholder="e.g. Space Exploration"
-                    />
-                </div>
-            </div>
 
-            <div className="onboarding__form-group">
-                <label className="onboarding__label">Your Executive Role</label>
-                <div className="onboarding__tags">
-                    {['Founder', 'Product Lead', 'CTO', 'Engineering Manager', 'Marketing Head', 'Design Director'].map(r => (
-                        <div key={r} className={`onboarding__tag ${formData.role === r ? 'onboarding__tag--active' : ''}`} onClick={() => setFormData(p => ({ ...p, role: r }))}>{r}</div>
-                    ))}
+                        <div className="onboarding__ai-suggestions" style={{ marginTop: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Sparkles size={13} style={{ color: '#eab308' }} /> AI Recommended:
+                                </span>
+                                {fetchingSuggestions && <span style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>analyzing company profile...</span>}
+                                {!fetchingSuggestions && (
+                                    <button 
+                                        type="button" 
+                                        onClick={fetchAISuggestions}
+                                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
+                                    >
+                                        re-analyze
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {aiSuggestions.length > 0 ? (
+                                    aiSuggestions.map(rec => (
+                                        <button
+                                            key={rec}
+                                            type="button"
+                                            className={`onboarding__tag ${formData.industryType?.includes(rec) ? 'onboarding__tag--active' : ''}`}
+                                            style={{ fontSize: '12px', padding: '6px 12px', height: 'auto', margin: 0, borderRadius: '8px', cursor: 'pointer' }}
+                                            onClick={() => {
+                                                const current = Array.isArray(formData.industryType) ? formData.industryType : [formData.industryType].filter(Boolean);
+                                                const updated = current.includes(rec)
+                                                    ? current.filter(x => x !== rec)
+                                                    : [...current, rec];
+                                                setFormData(p => ({ ...p, industryType: updated }));
+                                            }}
+                                        >
+                                            {rec}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>Fill name or bio details to populate AI recommendations.</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {formData.companyType !== 'Individual' && (
+                <div className="onboarding__form-group">
+                    <label className="onboarding__label">Your Executive Role</label>
+                    <div className="onboarding__tags">
+                        {['Founder', 'Product Lead', 'CTO', 'Engineering Manager', 'Marketing Head', 'Design Director'].map(r => (
+                            <div key={r} className={`onboarding__tag ${formData.role === r ? 'onboarding__tag--active' : ''}`} onClick={() => setFormData(p => ({ ...p, role: r }))}>{r}</div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="onboarding__form-group">
                 <label className="onboarding__label">Bio / About Yourself*</label>
@@ -782,12 +863,12 @@ const ClientOnboarding = () => {
     const renderStep3 = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="onboarding__form-group">
-                <label className="onboarding__label">Expertise Required (Multi-select)</label>
-                <div className="onboarding__tags">
-                    {['Web Development', 'Mobile Apps', 'AI/ML', 'Cloud Architecture', 'UI/UX Design', 'Cybersecurity', 'Data Science'].map(s => (
-                        <div key={s} className={`onboarding__tag ${formData.services.includes(s) ? 'onboarding__tag--active' : ''}`} onClick={() => toggleMultiSelect('services', s)}>{s}</div>
-                    ))}
-                </div>
+                <label className="onboarding__label">Skills Required*</label>
+                <TagInput 
+                    tags={formData.techStack} 
+                    onChange={(tags) => setFormData(p => ({ ...p, techStack: tags }))} 
+                    placeholder="e.g. React, Node.js, Graphic Design..." 
+                />
             </div>
 
             <div className="onboarding__form-group">
@@ -953,7 +1034,7 @@ const ClientOnboarding = () => {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <p style={{ color: 'var(--onboard-text-secondary)', margin: 0, fontSize: '15px', lineHeight: 1.6 }}>
-                        Hello <b>{formData.fullName ? formData.fullName.split(' ')[0] : 'Client'}</b>, we've identified <b>12+ verified experts</b> in <b>{formData.services[0] || 'your field'}</b> who match your <b>{formData.budgetRange || 'your range'}</b> budget.
+                        Hello <b>{formData.fullName ? formData.fullName.split(' ')[0] : 'Client'}</b>, we've identified <b>12+ verified experts</b> in <b>{formData.techStack?.[0] || 'your field'}</b> who match your <b>{formData.budgetRange || 'your range'}</b> budget.
                     </p>
                     <button className="onboarding__btn-next" style={{ alignSelf: 'flex-start' }} onClick={() => navigate("/client/dashboard")}>Go to Dashboard</button>
                 </div>

@@ -223,6 +223,53 @@ Output ONLY a JSON object:
       throw new Error('Failed to validate skill with Groq');
     }
   }
+
+  async recommendIndustry(companyName, bio, techStack, website) {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is not set');
+    }
+
+    const ALLOWED_INDUSTRIES = [
+      'Accounting & Finance', 'Advertising & PR', 'Architecture & Design', 'Automotive',
+      'Aviation & Aerospace', 'Banking', 'Biotechnology', 'Construction', 'Consulting',
+      'E-commerce', 'Education & EdTech', 'Energy & Utilities', 'Entertainment & Media',
+      'FinTech', 'Food & Beverage', 'Gaming', 'Government & Public Sector', 'Healthcare & HealthTech',
+      'Hospitality & Tourism', 'Human Resources', 'Insurance', 'Legal', 'Logistics & Supply Chain',
+      'Manufacturing', 'Marketing', 'NGO & Non-profit', 'Real Estate & PropTech', 'Retail',
+      'Software & IT Services', 'Telecommunications'
+    ];
+
+    const prompt = `
+You are an expert business classification assistant for SkillKart.
+Based on the following client business details, recommend the top 3 most suitable industries from the allowed list, sorted by relevance.
+
+Business Details:
+- Company Name: "${companyName || 'N/A'}"
+- Bio/About: "${bio || 'N/A'}"
+- Required Skills/Tech Stack: "${(techStack || []).join(', ')}"
+- Website: "${website || 'N/A'}"
+
+Allowed Industries List:
+${ALLOWED_INDUSTRIES.map(ind => `- ${ind}`).join('\n')}
+
+Output ONLY valid JSON in this exact format:
+{
+  "recommendations": ["Industry 1", "Industry 2", "Industry 3"]
+}
+`;
+
+    try {
+      const completion = await this.groq.chat.completions.create({
+        messages: [{ role: 'system', content: 'You are a helpful assistant that outputs only JSON.' }, { role: 'user', content: prompt }],
+        model: this.model,
+        response_format: { type: 'json_object' }
+      });
+      return JSON.parse(completion.choices[0].message.content);
+    } catch (error) {
+      console.error("Groq recommendIndustry Error:", error);
+      throw new Error('Failed to recommend industry with Groq');
+    }
+  }
 }
 
 module.exports = GroqProvider;

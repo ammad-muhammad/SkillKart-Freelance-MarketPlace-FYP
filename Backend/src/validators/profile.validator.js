@@ -121,9 +121,27 @@ const updateFreelancerProfileValidation = [
 // Update client profile validation
 const updateClientProfileValidation = [
   body('companyName')
-    .optional()
-    .trim()
-    .isLength({ min: 2, max: 100 }).withMessage('Company name must be 2-100 characters'),
+    .custom((value, { req }) => {
+      const companyType = req.body.companyType;
+      // Skip validation if company type is Individual
+      if (companyType === 'Individual') {
+        return true;
+      }
+      // If company type is not Individual, name is required
+      if (companyType && companyType !== 'Individual') {
+        if (!value || typeof value !== 'string' || value.trim().length < 2 || value.trim().length > 100) {
+          throw new Error('Company name is required for businesses (2-100 characters)');
+        }
+        return true;
+      }
+      // If companyType is not specified (e.g. partial update), validate if present and non-empty
+      if (value !== undefined && value.trim() !== '') {
+        if (value.trim().length < 2 || value.trim().length > 100) {
+          throw new Error('Company name must be 2-100 characters');
+        }
+      }
+      return true;
+    }),
 
   body('companySize')
     .optional()
@@ -219,7 +237,95 @@ const updateClientProfileValidation = [
   body('languages.*.proficiency')
     .optional()
     .isIn(['basic', 'conversational', 'fluent', 'native'])
-    .withMessage('Invalid proficiency level')
+    .withMessage('Invalid proficiency level'),
+
+  body('companyType')
+    .optional()
+    .isIn(['Individual', 'Startup', 'SME', 'Enterprise'])
+    .withMessage('Invalid company type'),
+
+  body('timezone')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Timezone too long'),
+
+  body('socialLinks')
+    .optional()
+    .isObject().withMessage('Social links must be an object'),
+
+  body('socialLinks.linkedin')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ max: 200 }).withMessage('LinkedIn URL too long'),
+
+  body('isNewToHiring')
+    .optional()
+    .isIn(['Yes', 'No'])
+    .withMessage('Invalid hiring experience value'),
+
+  body('industryType')
+    .custom((value, { req }) => {
+      const companyType = req.body.companyType;
+      if (companyType === 'Individual') {
+        return true;
+      }
+      if (!value || (typeof value !== 'string' && !Array.isArray(value)) || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')) {
+        throw new Error('Industry is required');
+      }
+      const ALLOWED_INDUSTRIES = [
+        'Accounting & Finance', 'Advertising & PR', 'Architecture & Design', 'Automotive',
+        'Aviation & Aerospace', 'Banking', 'Biotechnology', 'Construction', 'Consulting',
+        'E-commerce', 'Education & EdTech', 'Energy & Utilities', 'Entertainment & Media',
+        'FinTech', 'Food & Beverage', 'Gaming', 'Government & Public Sector', 'Healthcare & HealthTech',
+        'Hospitality & Tourism', 'Human Resources', 'Insurance', 'Legal', 'Logistics & Supply Chain',
+        'Manufacturing', 'Marketing', 'NGO & Non-profit', 'Real Estate & PropTech', 'Retail',
+        'Software & IT Services', 'Telecommunications'
+      ];
+      const valuesToCheck = Array.isArray(value) ? value : [value];
+      for (const val of valuesToCheck) {
+        if (!ALLOWED_INDUSTRIES.includes(val)) {
+          throw new Error(`Invalid industry value: ${val}`);
+        }
+      }
+      return true;
+    }),
+
+
+  body('role')
+    .custom((value, { req }) => {
+      const companyType = req.body.companyType;
+      if (companyType === 'Individual') {
+        return true;
+      }
+      if (value !== undefined && value !== null && value.trim() !== '') {
+        if (value.trim().length > 100) {
+          throw new Error('Role must not exceed 100 characters');
+        }
+      }
+      return true;
+    }),
+
+  body('services')
+    .optional()
+    .isArray().withMessage('Services must be an array'),
+
+  body('hiringFrequency')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Hiring frequency too long'),
+
+  body('technicalUnderstanding')
+    .optional()
+    .isInt({ min: 1, max: 10 }).withMessage('Technical understanding must be between 1 and 10'),
+
+  body('urgency')
+    .optional()
+    .isIn(['Immediate', 'Exploring', 'Flexible'])
+    .withMessage('Invalid urgency value'),
+
+  body('techStack')
+    .optional()
+    .isArray().withMessage('Tech stack must be an array')
 ];
 
 // Add portfolio item validation

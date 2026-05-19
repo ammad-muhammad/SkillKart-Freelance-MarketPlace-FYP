@@ -5,6 +5,7 @@ const { uploadProfilePicture } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+const { getAIProvider } = require('../services/ai');
 
 /**
  * Calculate client profile completion
@@ -14,7 +15,7 @@ const calculateCompletion = (profile, user = {}) => {
   const total = 7;
   
   if (profile.companyName) score++;
-  if (profile.industryType) score++;
+  if (profile.industryType && (Array.isArray(profile.industryType) ? profile.industryType.length > 0 : !!profile.industryType)) score++;
   if (profile.description) score++;
   if (profile.location?.country) score++;
   if (profile.website) score++;
@@ -38,6 +39,14 @@ const transformBudget = (budget) => {
   if (clean.includes('+')) {
     const val = parseInt(clean.replace('k', '000'));
     return { min: val || 0, max: 0 };
+  }
+
+  // Case: "<5k" or "up to 5k"
+  if (clean.includes('<') || clean.includes('up to')) {
+    let valStr = clean.replace('<', '').replace('up to', '').trim();
+    if (valStr.includes('k')) valStr = valStr.replace('k', '000');
+    const val = parseInt(valStr);
+    return { min: 0, max: val || 5000 };
   }
   
   // Case: "10k - 20k"
@@ -91,7 +100,8 @@ const updateProfile = asyncHandler(async (req, res) => {
     'role', 'phone', 'website', 'description', 'location', 
     'techStack', 'services', 'hiringFrequency', 'technicalUnderstanding', 
     'urgency', 'aiAssistance', 'notificationSettings', 
-    'recoveryEmail', 'recoveryPhone'
+    'recoveryEmail', 'recoveryPhone', 'languages', 'customIndustry', 'isNewToHiring',
+    'timezone', 'socialLinks'
   ];
 
   // Update associated User fields if present
@@ -115,6 +125,49 @@ const updateProfile = asyncHandler(async (req, res) => {
       profile[field] = updates[field];
     }
   });
+
+  if (profile.companyType === 'Individual') {
+    profile.companyName = '';
+    profile.companyLogo = '';
+    profile.companySize = '';
+    profile.role = '';
+    profile.industry = [];
+    profile.industryType = [];
+    profile.customIndustry = '';
+  } else {
+    if (updates.industry !== undefined) {
+      profile.industry = Array.isArray(updates.industry) ? updates.industry : [updates.industry].filter(Boolean);
+      profile.industryType = Array.isArray(updates.industry) ? updates.industry : [updates.industry].filter(Boolean);
+    } else if (updates.industryType !== undefined) {
+      profile.industry = Array.isArray(updates.industryType) ? updates.industryType : [updates.industryType].filter(Boolean);
+      profile.industryType = Array.isArray(updates.industryType) ? updates.industryType : [updates.industryType].filter(Boolean);
+    }
+  }
+
+  // Special handling for securitySettings nested structure
+  if (updates.securitySettings !== undefined) {
+    profile.securitySettings = {
+      ...profile.securitySettings?.toObject(),
+      ...updates.securitySettings
+    };
+  } else {
+    if (updates.recoveryEmail !== undefined) {
+      if (!profile.securitySettings) profile.securitySettings = {};
+      profile.securitySettings.recoveryEmail = updates.recoveryEmail;
+    }
+    if (updates.recoveryPhone !== undefined) {
+      if (!profile.securitySettings) profile.securitySettings = {};
+      profile.securitySettings.recoveryPhone = updates.recoveryPhone;
+    }
+  }
+
+  // Special handling for socialLinks nested structure
+  if (updates.socialLinks !== undefined) {
+    profile.socialLinks = {
+      ...profile.socialLinks?.toObject(),
+      ...updates.socialLinks
+    };
+  }
 
   // Special handling for budgetRange
   if (updates.budgetRange !== undefined) {
@@ -286,21 +339,29 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
 
   let profile = await ClientProfile.findOne({ userId });
 
+  const isIndividual = data.companyType === 'Individual';
+  let industryValue = [];
+  if (!isIndividual) {
+    const rawVal = data.industryType || data.industry || [];
+    industryValue = Array.isArray(rawVal) ? rawVal : [rawVal].filter(Boolean);
+  }
+
   const profileData = {
     userId,
-    companyName: data.companyName,
+    companyName: isIndividual ? '' : data.companyName,
     companyType: data.companyType,
-    companyLogo: data.companyLogo,
-    website: data.companyWebsite,
-    industryType: data.industryType,
-    customIndustry: data.customIndustry,
-    role: data.role,
+    companyLogo: isIndividual ? '' : data.companyLogo,
+    website: isIndividual ? '' : data.companyWebsite,
+    industry: industryValue,
+    industryType: industryValue,
+    customIndustry: '',
+    role: isIndividual ? '' : data.role,
     phone: data.phone,
     description: data.bio,
     languages: data.languages,
     location: data.location || { country: data.country },
     isNewToHiring: data.isNewToHiring,
-    services: data.services,
+    services: [],
     techStack: data.techStack,
     budgetRange: transformBudget(data.budgetRange),
     hiringFrequency: data.hiringFrequency,
@@ -432,6 +493,30 @@ const getSavedFreelancers = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Recommend industries based on company details
+ */
+const recommendIndustry = asyncHandler(async (req, res) => {
+  const { companyName, bio, techStack, website } = req.body;
+
+  try {
+    const ai = getAIProvider();
+    const result = await ai.recommendIndustry(companyName, bio, techStack, website);
+    
+    sendSuccess(res, {
+      message: 'Industry recommendations generated successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error("recommendIndustry controller error:", error.message);
+    const defaultRecommendations = ["Software & IT Services", "E-commerce", "Consulting"];
+    sendSuccess(res, {
+      message: 'Industry recommendations generated (Fallback)',
+      data: { recommendations: defaultRecommendations }
+    });
+  }
+});
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -446,5 +531,6 @@ module.exports = {
   uploadAvatar,
   uploadCompanyLogo,
   toggleSavedFreelancer,
-  getSavedFreelancers
+  getSavedFreelancers,
+  recommendIndustry
 };

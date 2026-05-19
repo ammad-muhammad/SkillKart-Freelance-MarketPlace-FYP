@@ -1,65 +1,250 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
+import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
+
 import { LANGUAGES } from '../../data/languages';
-import { Plus, Trash2, Globe } from 'lucide-react';
-import Modal from '../freelancer/components/Modal';
+import { Plus, Trash2, Globe, Building2, Linkedin, Zap, Clock, Search, Lightbulb, Target, Sparkles, User } from 'lucide-react';
+import Select from 'react-select';
+import countryList from 'react-select-country-list';
+import { timezones } from '../../utils/timezones';
+import { clientsAPI } from '../../api/clients';
 import './ClientDashboard.css';
 
 const MAX_BIO = 600;
-const PROJECT_TYPES = ['Web Development', 'Mobile App', 'Design', 'Content Writing', 'Marketing', 'Data Science', 'DevOps'];
 const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
+
+const COMPANY_TYPES = ['Individual', 'Startup', 'SME', 'Enterprise'];
+
+const INDUSTRY_OPTIONS = [
+  { value: 'Accounting & Finance', label: 'Accounting & Finance' },
+  { value: 'Advertising & PR', label: 'Advertising & PR' },
+  { value: 'Architecture & Design', label: 'Architecture & Design' },
+  { value: 'Automotive', label: 'Automotive' },
+  { value: 'Aviation & Aerospace', label: 'Aviation & Aerospace' },
+  { value: 'Banking', label: 'Banking' },
+  { value: 'Biotechnology', label: 'Biotechnology' },
+  { value: 'Construction', label: 'Construction' },
+  { value: 'Consulting', label: 'Consulting' },
+  { value: 'E-commerce', label: 'E-commerce' },
+  { value: 'Education & EdTech', label: 'Education & EdTech' },
+  { value: 'Energy & Utilities', label: 'Energy & Utilities' },
+  { value: 'Entertainment & Media', label: 'Entertainment & Media' },
+  { value: 'FinTech', label: 'FinTech' },
+  { value: 'Food & Beverage', label: 'Food & Beverage' },
+  { value: 'Gaming', label: 'Gaming' },
+  { value: 'Government & Public Sector', label: 'Government & Public Sector' },
+  { value: 'Healthcare & HealthTech', label: 'Healthcare & HealthTech' },
+  { value: 'Hospitality & Tourism', label: 'Hospitality & Tourism' },
+  { value: 'Human Resources', label: 'Human Resources' },
+  { value: 'Insurance', label: 'Insurance' },
+  { value: 'Legal', label: 'Legal' },
+  { value: 'Logistics & Supply Chain', label: 'Logistics & Supply Chain' },
+  { value: 'Manufacturing', label: 'Manufacturing' },
+  { value: 'Marketing', label: 'Marketing' },
+  { value: 'NGO & Non-profit', label: 'NGO & Non-profit' },
+  { value: 'Real Estate & PropTech', label: 'Real Estate & PropTech' },
+  { value: 'Retail', label: 'Retail' },
+  { value: 'Software & IT Services', label: 'Software & IT Services' },
+  { value: 'Telecommunications', label: 'Telecommunications' }
+];
+
+const EXECUTIVE_ROLES = ['Founder', 'Product Lead', 'CTO', 'Engineering Manager', 'Marketing Head', 'Design Director'];
+
+
 
 const ClientProfile = () => {
   const { profile, saveProfile, showToast } = useClient();
   const { user } = useAuth();
-  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ ...(profile?.personalInfo || {}) });
+  
+  // Local Form state
+  const [form, setForm] = useState({
+    ...(profile?.personalInfo || {}),
+    industry: Array.isArray(profile?.personalInfo?.industry)
+      ? [...profile.personalInfo.industry]
+      : (profile?.personalInfo?.industry ? [profile.personalInfo.industry] : [])
+  });
+
+  
+  // Custom arrays and fields matching preferences and personalInfo
   const [prefSkills, setPrefSkills] = useState(Array.isArray(profile?.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
-  const [projTypes, setProjTypes] = useState(Array.isArray(profile?.preferences?.projectTypes) ? [...profile.preferences.projectTypes] : []);
-  const [budgetRange, setBudgetRange] = useState({ ...(profile?.preferences?.budgetRange || {}) });
+  const [budgetRange, setBudgetRange] = useState({ ...(profile?.preferences?.budgetRange || { min: 0, max: 0 }) });
   const [languages, setLanguages] = useState(Array.isArray(profile?.personalInfo?.languages) ? [...profile.personalInfo.languages] : []);
   const [remoteOnly, setRemoteOnly] = useState(!!profile?.preferences?.remoteOnly);
+  
+  // Added fields for onboarding alignment
+  const [hiringFrequency, setHiringFrequency] = useState(profile?.preferences?.hiringFrequency || '');
+  const [technicalUnderstanding, setTechnicalUnderstanding] = useState(profile?.preferences?.technicalUnderstanding || 5);
+  const [urgency, setUrgency] = useState(profile?.preferences?.urgency || '');
+  
+  // AI Suggestions
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
+  
   const [errors, setErrors] = useState({});
+
+
   const avatarRef = useRef(null);
   const logoRef = useRef(null);
 
+  const countryOptions = useMemo(() => countryList().getData(), []);
+  const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
+
+  const customSelectStyles = {
+    control: (base, state) => ({
+      ...base,
+      background: "#fff",
+      borderColor: state.isFocused ? "var(--color-primary)" : "#cbd5e1",
+      borderRadius: "10px",
+      minHeight: "42px",
+      color: "#0f172a",
+      fontSize: "0.875rem",
+      fontFamily: "var(--font-body)",
+      boxShadow: state.isFocused ? "0 0 0 3px rgba(4,46,76,0.08)" : "none",
+      transition: "all 0.2s ease",
+      cursor: "pointer",
+      "&:hover": {
+        borderColor: state.isFocused ? "var(--color-primary)" : "#94a3b8"
+      }
+    }),
+    menu: (base) => ({
+      ...base,
+      background: "#fff",
+      border: "1px solid #e2e8f0",
+      borderRadius: "12px",
+      boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
+      zIndex: 9999
+    }),
+    option: (base, state) => ({
+      ...base,
+      background: state.isSelected
+        ? "var(--color-primary)"
+        : state.isFocused
+          ? "rgba(37, 99, 235, 0.05)"
+          : "transparent",
+      color: state.isSelected ? "#fff" : "#334155",
+      cursor: "pointer",
+      borderRadius: "8px",
+      margin: "2px 4px",
+      padding: "8px 12px",
+      transition: "all 0.15s ease",
+      fontWeight: state.isSelected ? "700" : "500"
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: "#334155",
+      fontWeight: "500"
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: "#94a3b8"
+    }),
+    dropdownIndicator: (base) => ({
+      ...base,
+      color: "#94a3b8"
+    }),
+    indicatorSeparator: () => ({ display: "none" })
+  };
+
+  const budgetOptions = [
+    { value: '<$5k', label: 'Startup (Up to $5,000)', min: 0, max: 5000 },
+    { value: '$5k-$20k', label: 'Growth ($5,000 - $20,000)', min: 5000, max: 20000 },
+    { value: '$20k+', label: 'Enterprise ($20,000+)', min: 20000, max: 0 }
+  ];
+
+  const currentBudgetOption = budgetOptions.find(
+    opt => opt.min === budgetRange.min && opt.max === budgetRange.max
+  ) || null;
+
+  const fetchAISuggestions = async () => {
+    if (!form.companyName && !form.bio && (!prefSkills || prefSkills.length === 0)) {
+      return;
+    }
+    setFetchingSuggestions(true);
+    try {
+      const res = await clientsAPI.recommendIndustry({
+        companyName: form.companyName || '',
+        bio: form.bio || '',
+        techStack: prefSkills,
+        website: form.website || ''
+      });
+      if (res.data?.success && res.data?.data?.recommendations) {
+        setAiSuggestions(res.data.data.recommendations);
+      }
+    } catch (error) {
+      console.error("Error getting industry recommendations:", error);
+    } finally {
+      setFetchingSuggestions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (editing && form.companyType !== 'Individual') {
+      fetchAISuggestions();
+    }
+  }, [editing, form.companyType]);
+
   const startEdit = () => {
-    setForm({ ...profile.personalInfo });
-    setPrefSkills(Array.isArray(profile.preferences.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
-    setProjTypes(Array.isArray(profile.preferences.projectTypes) ? [...profile.preferences.projectTypes] : []);
-    setBudgetRange({ ...profile.preferences.budgetRange });
-    setLanguages(Array.isArray(profile.personalInfo.languages) ? [...profile.personalInfo.languages] : []);
-    setRemoteOnly(profile.preferences.remoteOnly);
+    setForm({
+      ...profile.personalInfo,
+      industry: Array.isArray(profile.personalInfo?.industry)
+        ? [...profile.personalInfo.industry]
+        : (profile.personalInfo?.industry ? [profile.personalInfo.industry] : [])
+    });
+    setPrefSkills(Array.isArray(profile.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
+    setBudgetRange({ ...(profile.preferences?.budgetRange || { min: 0, max: 0 }) });
+    setLanguages(Array.isArray(profile.personalInfo?.languages) ? [...profile.personalInfo.languages] : []);
+    setRemoteOnly(!!profile.preferences?.remoteOnly);
+    setHiringFrequency(profile.preferences?.hiringFrequency || '');
+    setTechnicalUnderstanding(profile.preferences?.technicalUnderstanding || 5);
+    setUrgency(profile.preferences?.urgency || '');
     setErrors({});
     setEditing(true);
   };
 
+  const validate = () => {
+    const newErrors = {};
+    if (!form.fullName?.trim()) newErrors.fullName = 'Full Name is required';
+    if (!form.bio || form.bio.trim().length < 20) {
+      newErrors.bio = 'Please provide a descriptive Bio (minimum 20 characters)';
+    }
+    if (languages.length === 0) {
+      newErrors.languages = 'At least one language is required';
+    }
+    if (form.companyType !== 'Individual') {
+      if (!form.companyName?.trim()) newErrors.companyName = 'Company Name is required';
+      if (!form.industry || (Array.isArray(form.industry) && form.industry.length === 0)) {
+        newErrors.industry = 'Please select your Industry';
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const save = async () => {
+    if (!validate()) {
+      showToast('Please fix the errors before saving', 'error');
+      return;
+    }
+    
     setSaving(true);
     try {
-      if (budgetRange.min > budgetRange.max && budgetRange.max !== 0) {
-        showToast('Minimum budget cannot be greater than maximum budget', 'error');
-        setSaving(false);
-        return;
-      }
-
-      if (languages.length === 0) {
-        showToast('At least one language is required', 'error');
-        setSaving(false);
-        return;
-      }
-
+      const isIndiv = form.companyType === 'Individual';
       const updatedProfile = {
         ...profile,
         personalInfo: { 
           ...profile.personalInfo, 
-          ...form, 
+          ...form,
+          companyName: isIndiv ? '' : form.companyName,
+          companyLogo: isIndiv ? '' : form.companyLogo,
+          website: isIndiv ? '' : form.website,
+          role: isIndiv ? '' : form.role,
+          industry: isIndiv ? [] : (Array.isArray(form.industry) ? form.industry : [form.industry].filter(Boolean)),
           languages: languages.map(l => ({
             language: typeof l.language === 'object' ? (l.language.name || l.language.language || "") : l.language,
             proficiency: l.proficiency
@@ -68,9 +253,11 @@ const ClientProfile = () => {
         preferences: {
           ...profile.preferences,
           preferredSkills: [...prefSkills],
-          projectTypes: [...projTypes],
           budgetRange: { ...budgetRange },
-          remoteOnly,
+          hiringFrequency,
+          technicalUnderstanding,
+          urgency,
+          remoteOnly
         },
       };
 
@@ -79,16 +266,13 @@ const ClientProfile = () => {
         setEditing(false);
         setErrors({});
       } else if (result.errors) {
-        // Map backend errors to local state
         const newErrors = {};
         if (Array.isArray(result.errors)) {
           result.errors.forEach(err => {
             if (typeof err === 'object' && err.field) {
-              // Structured validation error from express-validator
               newErrors[err.field] = err.message;
             } else if (typeof err === 'string') {
-              // Raw string error (e.g. Mongoose CastError)
-              const pathMatch = err.match(/at path \\"(.+)\\"/);
+              const pathMatch = err.match(/at path \"(.+)\"/);
               if (pathMatch) {
                 newErrors[pathMatch[1]] = err;
               } else {
@@ -97,13 +281,13 @@ const ClientProfile = () => {
             }
           });
         } else if (typeof result.errors === 'object') {
-          // Direct object mapping
           Object.assign(newErrors, result.errors);
         }
         setErrors(newErrors);
       }
     } catch (error) {
       console.error('Update failed:', error);
+      showToast('Update failed. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
@@ -130,14 +314,14 @@ const ClientProfile = () => {
     }
   };
 
-  const toggleProjType = (type) => {
-    setProjTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    );
+  const getBudgetLabel = (br) => {
+    if (!br) return 'N/A';
+    if (br.min === 0 && br.max === 5000) return 'Startup (Up to $5,000)';
+    if (br.min === 5000 && br.max === 20000) return 'Growth ($5,000 - $20,000)';
+    if (br.min === 20000 && br.max === 0) return 'Enterprise ($20,000+)';
+    if (br.min || br.max) return `$${br.min || 0} - $${br.max || 'unlimited'}`;
+    return 'N/A';
   };
-
-  const initials = (profile?.personalInfo?.fullName || 'CL')
-    .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const data = editing ? form : profile.personalInfo;
 
@@ -164,44 +348,54 @@ const ClientProfile = () => {
               </div>
               {editing && (
                 <>
-                  <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem' }} onClick={() => avatarRef.current?.click()}>
+                  <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => avatarRef.current?.click()}>
                     📷 Change
                   </button>
                   <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'avatar')} />
                 </>
               )}
             </div>
-            {/* Company Logo */}
-            <div>
-              <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Company Logo</p>
-              <div className="cl-logo-box">
-                {(editing ? form.companyLogo : profile?.personalInfo?.companyLogo) ? (
-                  <img src={editing ? form.companyLogo : profile?.personalInfo?.companyLogo} alt="logo" />
-                ) : <span style={{ fontSize: '2rem' }}>🏢</span>}
+            {/* Company Logo - Hidden for Individuals */}
+            {data.companyType !== 'Individual' && (
+              <div>
+                <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Company Logo</p>
+                <div className="cl-logo-box">
+                  {(editing ? form.companyLogo : profile?.personalInfo?.companyLogo) ? (
+                    <img src={editing ? form.companyLogo : profile?.personalInfo?.companyLogo} alt="logo" />
+                  ) : <span style={{ fontSize: '2rem' }}>🏢</span>}
+                </div>
+                {editing && (
+                  <>
+                    <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => logoRef.current?.click()}>
+                      📷 Upload
+                    </button>
+                    <input ref={logoRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'companyLogo')} />
+                  </>
+                )}
               </div>
-              {editing && (
-                <>
-                  <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem' }} onClick={() => logoRef.current?.click()}>
-                    📷 Upload
-                  </button>
-                  <input ref={logoRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'companyLogo')} />
-                </>
+            )}
+          </div>
+
+          <div className="cl-profile-hero__info">
+            <h2 className="cl-profile-hero__name">{data.fullName || 'New Client'}</h2>
+            <p className="cl-profile-hero__company">
+              {data.companyType === 'Individual' ? (
+                <span>👤 Individual Client</span>
+              ) : (
+                <span>🏢 {data.companyName || 'No Company'} · {data.industry || 'No Industry Specified'}</span>
+              )}
+            </p>
+            <div className="cl-profile-hero__meta">
+              <span>📍 {data.location || 'Location Not Specified'}</span>
+              <span>🗓️ Member Since: {data.memberSince || 'N/A'}</span>
+              {data.companyType !== 'Individual' && data.website && (
+                <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>🌐 Website</a>
               )}
             </div>
           </div>
 
-          <div className="cl-profile-hero__info">
-            <h2 className="cl-profile-hero__name">{data.fullName}</h2>
-            <p className="cl-profile-hero__company">🏢 {data.companyName} · {data.industry}</p>
-            <div className="cl-profile-hero__meta">
-              <span>📍 {data.location}</span>
-              <span>🗓️ {data.memberSince}</span>
-              {data.website && <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>🌐 Website</a>}
-            </div>
-          </div>
-
           {!editing && (
-            <button className="cl-btn cl-btn--primary" onClick={startEdit}>✏ Edit Profile</button>
+            <button className="cl-btn cl-btn--primary" style={{ width: 'auto' }} onClick={startEdit}>✏ Edit Profile</button>
           )}
         </div>
       </div>
@@ -210,39 +404,306 @@ const ClientProfile = () => {
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="cl-section-title">👤 Personal Information</h3>
         <div className="cl-form-grid">
-          {[
-            { key: 'fullName', label: 'Full Name' },
-            { key: 'username', label: 'Username' },
-            { key: 'email', label: 'Email', type: 'email' },
-            { key: 'phone', label: 'Phone' },
-            { key: 'companyName', label: 'Company Name' },
-            { key: 'industry', label: 'Industry' },
-            { key: 'website', label: 'Website', type: 'url' },
-            { key: 'location', label: 'Location' },
-          ].map(({ key, label, type }) => (
-            <div key={key} className="cl-form-group">
-              <label className="cl-label">{label}</label>
+          {/* Full Name */}
+          <div className="cl-form-group">
+            <label className="cl-label">Full Name*</label>
+            <input
+              type="text"
+              className={`cl-input${errors.fullName ? ' cl-input--error' : ''}`}
+              value={editing ? form.fullName || '' : profile?.personalInfo?.fullName || ''}
+              onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
+              disabled={!editing}
+              placeholder="e.g. John Doe"
+            />
+            {editing && errors.fullName && <span className="cl-error">⚠ {errors.fullName}</span>}
+          </div>
+
+          {/* Username */}
+          <div className="cl-form-group">
+            <label className="cl-label">Username</label>
+            <input
+              type="text"
+              className="cl-input"
+              value={editing ? form.username || '' : profile?.personalInfo?.username || ''}
+              onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
+              disabled={true}
+            />
+          </div>
+
+          {/* Email */}
+          <div className="cl-form-group">
+            <label className="cl-label">Email (Immutable)</label>
+            <input
+              type="email"
+              className="cl-input"
+              value={profile?.personalInfo?.email || ''}
+              disabled={true}
+            />
+          </div>
+
+          {/* Phone */}
+          <div className="cl-form-group">
+            <label className="cl-label">Phone</label>
+            <input
+              type="text"
+              className="cl-input"
+              value={editing ? form.phone || '' : profile?.personalInfo?.phone || ''}
+              onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+              disabled={!editing}
+              placeholder="+1 (555) 000-0000"
+            />
+          </div>
+
+          {/* Organization Type */}
+          <div className="cl-form-group">
+            <label className="cl-label">Organization Type*</label>
+            {editing ? (
+              <select
+                className="cl-input"
+                value={form.companyType || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm(p => ({
+                    ...p,
+                    companyType: val,
+                    companyName: val === 'Individual' ? '' : p.companyName,
+                    companyLogo: val === 'Individual' ? '' : p.companyLogo,
+                    website: val === 'Individual' ? '' : p.website,
+                    role: val === 'Individual' ? '' : p.role,
+                    industry: val === 'Individual' ? '' : p.industry,
+                  }));
+                }}
+              >
+                <option value="">Select...</option>
+                {COMPANY_TYPES.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                {profile?.personalInfo?.companyType || 'N/A'}
+              </div>
+            )}
+          </div>
+
+          {/* Company Name - Hidden for Individuals */}
+          {data.companyType !== 'Individual' && (
+            <div className="cl-form-group">
+              <label className="cl-label">Company Name*</label>
               <input
-                type={type || 'text'}
-                className={`cl-input${errors[key] ? ' cl-input--error' : ''}`}
-                value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
-                onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                disabled={!editing || key === 'email'}
+                type="text"
+                className={`cl-input${errors.companyName ? ' cl-input--error' : ''}`}
+                value={editing ? form.companyName || '' : profile?.personalInfo?.companyName || ''}
+                onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))}
+                disabled={!editing}
+                placeholder="e.g. Acme Corp"
               />
-              {editing && errors[key] && <span className="cl-error">⚠ {errors[key]}</span>}
+              {editing && errors.companyName && <span className="cl-error">⚠ {errors.companyName}</span>}
             </div>
-          ))}
+          )}
+
+          {/* Industry - Hidden for Individuals */}
+          {data.companyType !== 'Individual' && (
+            <div className="cl-form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="cl-label">Industry*</label>
+              {editing ? (
+                <>
+                  <IndustryInput
+                    value={form.industry}
+                    onChange={(val) => setForm(p => ({ ...p, industry: val }))}
+                    placeholder="Type to search industry (e.g. software, design)..."
+                  />
+
+
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Sparkles size={13} style={{ color: '#eab308' }} /> AI Recommended:
+                      </span>
+                      {fetchingSuggestions && <span style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>analyzing profile...</span>}
+                      {!fetchingSuggestions && (
+                        <button 
+                          type="button" 
+                          onClick={fetchAISuggestions}
+                          style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
+                        >
+                          re-analyze
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {aiSuggestions.length > 0 ? (
+                        aiSuggestions.map(rec => (
+                          <button
+                            key={rec}
+                            type="button"
+                            className={`cl-checkbox-pill${form.industry?.includes(rec) ? ' cl-checkbox-pill--checked' : ''}`}
+                            style={{ fontSize: '11px', padding: '4px 10px', height: 'auto', margin: 0, borderRadius: '8px', cursor: 'pointer' }}
+                            onClick={() => {
+                              const current = Array.isArray(form.industry) ? form.industry : [form.industry].filter(Boolean);
+                              const updated = current.includes(rec)
+                                ? current.filter(x => x !== rec)
+                                : [...current, rec];
+                              setForm(p => ({ ...p, industry: updated }));
+                            }}
+                          >
+                            {rec}
+                          </button>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>Provide company info or bio details to trigger recommendations.</span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                  {Array.isArray(profile?.personalInfo?.industry)
+                    ? (profile.personalInfo.industry.join(', ') || 'N/A')
+                    : (profile?.personalInfo?.industry || 'N/A')}
+                </div>
+              )}
+              {editing && errors.industry && <span className="cl-error">⚠ {errors.industry}</span>}
+            </div>
+          )}
+
+          {/* Country */}
+          <div className="cl-form-group">
+            <label className="cl-label">Country / Location*</label>
+            {editing ? (
+              <Select
+                options={countryOptions}
+                value={form.location ? countryOptions.find(opt => opt.label === form.location) : null}
+                onChange={(val) => setForm(p => ({ ...p, location: val ? val.label : '' }))}
+                styles={customSelectStyles}
+                placeholder="Select Country"
+                classNamePrefix="skillkart-select"
+                isSearchable={true}
+                maxMenuHeight={220}
+              />
+            ) : (
+              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                {profile?.personalInfo?.location || 'N/A'}
+              </div>
+            )}
+          </div>
+
+          {/* Timezone */}
+          <div className="cl-form-group">
+            <label className="cl-label">Timezone / Base Location</label>
+            {editing ? (
+              <Select
+                options={timezones}
+                value={form.timezone ? timezones.find(t => t.label === form.timezone) : null}
+                onChange={(val) => setForm(p => ({ ...p, timezone: val ? val.label : '' }))}
+                styles={customSelectStyles}
+                placeholder="Select Timezone"
+                classNamePrefix="skillkart-select"
+                isSearchable={true}
+                maxMenuHeight={220}
+              />
+            ) : (
+              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                {profile?.personalInfo?.timezone || 'N/A'}
+              </div>
+            )}
+          </div>
+
+          {/* LinkedIn Profile */}
+          <div className="cl-form-group">
+            <label className="cl-label">LinkedIn Profile (Optional)</label>
+            <div style={{ position: 'relative' }}>
+              <Linkedin size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+              <input
+                type="text"
+                className="cl-input"
+                style={{ paddingLeft: '38px' }}
+                value={editing ? form.linkedin || '' : profile?.personalInfo?.linkedin || ''}
+                onChange={(e) => setForm((p) => ({ ...p, linkedin: e.target.value }))}
+                disabled={!editing}
+                placeholder="linkedin.com/in/username"
+              />
+            </div>
+          </div>
+
+          {/* Website - Hidden for Individuals */}
+          {data.companyType !== 'Individual' && (
+            <div className="cl-form-group">
+              <label className="cl-label">Website</label>
+              <input
+                type="url"
+                className="cl-input"
+                value={editing ? form.website || '' : profile?.personalInfo?.website || ''}
+                onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))}
+                disabled={!editing}
+                placeholder="https://company.com"
+              />
+            </div>
+          )}
+
+          {/* Hiring Experience */}
+          <div className="cl-form-group">
+            <label className="cl-label">Hiring Experience*</label>
+            {editing ? (
+              <select
+                className="cl-input"
+                value={form.isNewToHiring || ''}
+                onChange={(e) => setForm(p => ({ ...p, isNewToHiring: e.target.value }))}
+              >
+                <option value="">Select...</option>
+                <option value="Yes">Fresh Client (First time hiring)</option>
+                <option value="No">Experienced (I have hired before)</option>
+              </select>
+            ) : (
+              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                {profile?.personalInfo?.isNewToHiring === 'Yes' ? 'Fresh Client (First time hiring)' : profile?.personalInfo?.isNewToHiring === 'No' ? 'Experienced (I have hired before)' : 'N/A'}
+              </div>
+            )}
+          </div>
+
+          {/* Executive Role - Hidden for Individuals */}
+          {data.companyType !== 'Individual' && (
+            <div className="cl-form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="cl-label">Your Executive Role</label>
+              {editing ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginTop: '4px' }}>
+                  {EXECUTIVE_ROLES.map(r => (
+                    <span
+                      key={r}
+                      className={`cl-checkbox-pill${form.role === r ? ' cl-checkbox-pill--checked' : ''}`}
+                      onClick={() => setForm(p => ({ ...p, role: r }))}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                  {profile?.personalInfo?.role || 'N/A'}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Bio */}
           <div className="cl-form-group full">
-            <label className="cl-label">Bio</label>
+            <label className="cl-label">Bio / About yourself*</label>
             <textarea
-              className="cl-textarea"
+              className={`cl-textarea${errors.bio ? ' cl-input--error' : ''}`}
               maxLength={MAX_BIO}
               rows={4}
               value={editing ? form.bio || '' : profile?.personalInfo?.bio || ''}
               onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
               disabled={!editing}
+              placeholder="Describe your goals, team size, company mission, or what you plan to accomplish..."
             />
-            {editing && <span className="cl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>}
+            {editing && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem' }}>
+                {errors.bio ? <span className="cl-error">⚠ {errors.bio}</span> : <span />}
+                <span className="cl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -254,6 +715,7 @@ const ClientProfile = () => {
           {editing && (
             <button 
               className="cl-btn cl-btn--ghost cl-btn--sm" 
+              style={{ width: 'auto' }}
               onClick={() => setLanguages([...languages, { language: '', proficiency: 'fluent' }])}
             >
               <Plus size={14} /> Add Language
@@ -267,16 +729,17 @@ const ClientProfile = () => {
               <div className="cl-form-group" style={{ marginBottom: 0 }}>
                 <label className="cl-label">Language</label>
                 {editing ? (
-                  <TagInput 
-                    tags={lang.language ? [lang.language] : []}
-                    onChange={(tags) => {
+                  <Select
+                    options={languageOptions}
+                    value={lang.language ? { value: lang.language, label: lang.language } : null}
+                    onChange={(selected) => {
                       const newList = [...languages];
-                      newList[idx].language = tags[0] || '';
+                      newList[idx].language = selected?.value || '';
                       setLanguages(newList);
                     }}
-                    options={LANGUAGES}
-                    placeholder="Select..."
-                    showHint={false}
+                    placeholder="Select language"
+                    styles={customSelectStyles}
+                    classNamePrefix="skillkart-select"
                   />
                 ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? lang : (lang?.language || 'Unknown')}</div>}
               </div>
@@ -301,7 +764,7 @@ const ClientProfile = () => {
               {editing && (
                 <button 
                   className="cl-btn cl-btn--ghost cl-btn--sm" 
-                  style={{ color: '#ef4444', height: '42px' }}
+                  style={{ color: '#ef4444', height: '42px', border: '1px solid #fee2e2', background: '#fef2f2', width: 'auto' }}
                   onClick={() => setLanguages(languages.filter((_, i) => i !== idx))}
                 >
                   <Trash2 size={16} />
@@ -310,6 +773,7 @@ const ClientProfile = () => {
             </div>
           ))}
           {languages.length === 0 && <p style={{ fontSize: '0.85rem', color: '#ef4444' }}>⚠ No languages added. At least one is required.</p>}
+          {editing && errors.languages && <span className="cl-error">⚠ {errors.languages}</span>}
         </div>
       </div>
 
@@ -317,8 +781,9 @@ const ClientProfile = () => {
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="cl-section-title">🎯 Project Preferences</h3>
 
+        {/* Preferred Skills */}
         <div className="cl-form-group" style={{ marginBottom: '1.25rem' }}>
-          <label className="cl-label">Preferred Skills</label>
+          <label className="cl-label">Skills Required*</label>
           {editing ? (
             <TagInput tags={prefSkills} onChange={setPrefSkills} placeholder="e.g. React, Design..." />
           ) : (
@@ -331,53 +796,105 @@ const ClientProfile = () => {
         </div>
 
         <div className="cl-form-grid" style={{ marginBottom: '1.25rem' }}>
+          {/* Budget Allocation */}
           <div className="cl-form-group">
-            <label className="cl-label">Budget Range (Min $)</label>
-            <input
-              type="number" className={`cl-input${errors.budgetRange ? ' cl-input--error' : ''}`}
-              value={editing ? budgetRange.min : profile?.preferences?.budgetRange?.min || 0}
-              onChange={(e) => setBudgetRange((p) => ({ ...p, min: Number(e.target.value) }))}
-              disabled={!editing}
-            />
+            <label className="cl-label">Budget Allocation</label>
+            {editing ? (
+              <Select
+                options={budgetOptions}
+                value={currentBudgetOption}
+                onChange={(opt) => setBudgetRange({ min: opt ? opt.min : 0, max: opt ? opt.max : 0 })}
+                styles={customSelectStyles}
+                placeholder="Select Budget Allocation"
+              />
+            ) : (
+              <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{getBudgetLabel(profile?.preferences?.budgetRange)}</div>
+            )}
           </div>
-          <div className="cl-form-group">
-            <label className="cl-label">Budget Range (Max $)</label>
-            <input
-              type="number" className={`cl-input${errors.budgetRange ? ' cl-input--error' : ''}`}
-              value={editing ? budgetRange.max : profile?.preferences?.budgetRange?.max || 0}
-              onChange={(e) => setBudgetRange((p) => ({ ...p, max: Number(e.target.value) }))}
-              disabled={!editing}
-            />
-          </div>
-          {editing && errors.budgetRange && <div className="cl-error" style={{ gridColumn: 'span 2' }}>⚠ {errors.budgetRange}</div>}
-        </div>
 
-        <div className="cl-form-group" style={{ marginBottom: '1.25rem' }}>
-          <label className="cl-label">Project Types</label>
-          <div className="cl-checkbox-group" style={{ marginTop: '0.4rem' }}>
-            {PROJECT_TYPES.map((type) => {
-              const checked = (editing ? projTypes : (profile?.preferences?.projectTypes || [])).includes(type);
-              return (
-                <span
-                  key={type}
-                  className={`cl-checkbox-pill${checked ? ' cl-checkbox-pill--checked' : ''}`}
-                  onClick={() => editing && toggleProjType(type)}
-                  style={{ cursor: editing ? 'pointer' : 'default' }}
-                >
-                  {checked ? '✓ ' : ''}{type}
-                </span>
-              );
-            })}
+          {/* Engagement Type */}
+          <div className="cl-form-group">
+            <label className="cl-label">Engagement Type</label>
+            {editing ? (
+              <select
+                className="cl-input"
+                value={hiringFrequency}
+                onChange={(e) => setHiringFrequency(e.target.value)}
+              >
+                <option value="">Select Engagement Type...</option>
+                <option value="One-time Project">One-time Project</option>
+                <option value="Monthly Retainer">Monthly Retainer</option>
+                <option value="Full-time Dedicated">Full-time Dedicated</option>
+                <option value="Part-time Support">Part-time Support</option>
+              </select>
+            ) : (
+              <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{profile?.preferences?.hiringFrequency || 'N/A'}</div>
+            )}
           </div>
         </div>
 
+        {/* Technical Complexity Awareness */}
+        <div className="cl-form-group" style={{ marginBottom: '1.5rem' }}>
+          {editing ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="cl-label">Technical Complexity Awareness</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)' }}>{technicalUnderstanding}/10</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={technicalUnderstanding}
+                onChange={(e) => setTechnicalUnderstanding(Number(e.target.value))}
+                className="onboarding__slider"
+                style={{ width: '100%' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
+                <span>Conceptual</span>
+                <span>Deep Tech</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Technical Complexity Awareness</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${(profile?.preferences?.technicalUnderstanding || 5) * 10}%`, height: '100%', background: 'var(--color-primary)' }} />
+                </div>
+                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{profile?.preferences?.technicalUnderstanding || 5}/10</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Project Urgency */}
+        <div className="cl-form-group" style={{ marginBottom: '1.5rem' }}>
+          <label className="cl-label">Project Urgency</label>
+          {editing ? (
+            <select
+              className="cl-input"
+              value={urgency}
+              onChange={(e) => setUrgency(e.target.value)}
+            >
+              <option value="">Select Urgency...</option>
+              <option value="Immediate">ASAP / Immediate</option>
+              <option value="Exploring">Exploring / Planning</option>
+              <option value="Flexible">Flexible / Slower</option>
+            </select>
+          ) : (
+            <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{profile?.preferences?.urgency || 'N/A'}</div>
+          )}
+        </div>
+
+        {/* Remote Only Switch */}
         <div className="cl-toggle" style={{ maxWidth: '400px' }}>
           <div className="cl-toggle__info">
             <span className="cl-toggle__label">🌍 Remote Only</span>
             <span className="cl-toggle__desc">Only accept remote freelancer applications</span>
           </div>
           <div
-            className={`cl-toggle__switch${(editing ? remoteOnly : !!profile?.preferences?.remoteOnly) ? ' cl-toggle__switch--on' : ''}`}
+            className={`cl-toggle__switch${remoteOnly ? ' cl-toggle__switch--on' : ''}`}
             onClick={() => editing && setRemoteOnly((v) => !v)}
             style={{ cursor: editing ? 'pointer' : 'default' }}
           />
@@ -396,14 +913,13 @@ const ClientProfile = () => {
           <button
             className={`cl-btn cl-btn--primary${saving ? ' cl-btn--loading' : ''}`}
             onClick={save} disabled={saving}
+            style={{ width: 'auto' }}
           >
             {saving ? 'Saving...' : '✔ Save Changes'}
           </button>
-          <button className="cl-btn cl-btn--ghost" onClick={() => setEditing(false)}>Cancel</button>
+          <button className="cl-btn cl-btn--ghost" style={{ width: 'auto' }} onClick={() => setEditing(false)}>Cancel</button>
         </div>
       )}
-
-
 
       <style>{`
         .cl-profile-hero { display: flex; align-items: flex-start; gap: 1.75rem; flex-wrap: wrap; }
@@ -427,6 +943,31 @@ const ClientProfile = () => {
         .cl-profile-hero__name { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--color-primary); }
         .cl-profile-hero__company { color: var(--color-text-mid); font-size: 0.875rem; margin: 0.2rem 0; }
         .cl-profile-hero__meta { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.3rem; }
+        
+        .onboarding__slider {
+          -webkit-appearance: none;
+          width: 100%;
+          height: 8px;
+          border-radius: 6px;
+          background: #e2e8f0;
+          outline: none;
+          transition: background 0.3s;
+        }
+        .onboarding__slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: var(--color-primary);
+          cursor: pointer;
+          border: 2px solid #fff;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+          transition: transform 0.1s;
+        }
+        .onboarding__slider::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+        }
       `}</style>
     </div>
   );

@@ -78,6 +78,18 @@ class RouterAIProvider extends AIProvider {
     }
     throw new Error('All AI providers are currently unavailable. Please try again later.');
   }
+
+  async recommendIndustry(companyName, bio, techStack, website) {
+    for (const provider of this.providers) {
+      try {
+        const result = await provider.instance.recommendIndustry(companyName, bio, techStack, website);
+        if (result) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for recommendIndustry:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
 }
 
 let activeProviderInstance = null;

@@ -24,6 +24,18 @@ class AIProvider {
   async validateSkill(input) {
     throw new Error('Method validateSkill() must be implemented by the provider.');
   }
+
+  /**
+   * Recommends a list of industries based on client profile details.
+   * @param {string} companyName - The name of the company.
+   * @param {string} bio - The bio/description of the company.
+   * @param {Array<string>} techStack - The skills/technologies.
+   * @param {string} website - The website link/domain.
+   * @returns {Promise<Object>} { recommendations: string[] }
+   */
+  async recommendIndustry(companyName, bio, techStack, website) {
+    throw new Error('Method recommendIndustry() must be implemented by the provider.');
+  }
 }
 
 module.exports = AIProvider;

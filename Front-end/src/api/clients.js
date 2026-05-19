@@ -33,5 +33,8 @@ export const clientsAPI = {
     client.post('/clients/saved-freelancers', { freelancerId }),
 
   getSavedFreelancers: () => 
-    client.get('/clients/saved-freelancers')
+    client.get('/clients/saved-freelancers'),
+
+  recommendIndustry: (data) => 
+    client.post('/clients/ai/recommend-industry', data)
 };

@@ -237,6 +237,53 @@ Output ONLY valid JSON:
       throw new Error('Failed to validate skill with AI');
     }
   }
+
+  async recommendIndustry(companyName, bio, techStack, website) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+
+    const ALLOWED_INDUSTRIES = [
+      'Accounting & Finance', 'Advertising & PR', 'Architecture & Design', 'Automotive',
+      'Aviation & Aerospace', 'Banking', 'Biotechnology', 'Construction', 'Consulting',
+      'E-commerce', 'Education & EdTech', 'Energy & Utilities', 'Entertainment & Media',
+      'FinTech', 'Food & Beverage', 'Gaming', 'Government & Public Sector', 'Healthcare & HealthTech',
+      'Hospitality & Tourism', 'Human Resources', 'Insurance', 'Legal', 'Logistics & Supply Chain',
+      'Manufacturing', 'Marketing', 'NGO & Non-profit', 'Real Estate & PropTech', 'Retail',
+      'Software & IT Services', 'Telecommunications'
+    ];
+
+    const prompt = `
+You are an expert business classification assistant for SkillKart.
+Based on the following client business details, recommend the top 3 most suitable industries from the allowed list, sorted by relevance.
+
+Business Details:
+- Company Name: "${companyName || 'N/A'}"
+- Bio/About: "${bio || 'N/A'}"
+- Required Skills/Tech Stack: "${(techStack || []).join(', ')}"
+- Website: "${website || 'N/A'}"
+
+Allowed Industries List:
+${ALLOWED_INDUSTRIES.map(ind => `- ${ind}`).join('\n')}
+
+Output ONLY valid JSON in this exact format. Do not include markdown code blocks or other text.
+{
+  "recommendations": ["Industry 1", "Industry 2", "Industry 3"]
+}
+`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error("Gemini recommendIndustry Error:", error);
+      throw new Error('Failed to recommend industry with Gemini');
+    }
+  }
 }
 
 module.exports = GeminiProvider;

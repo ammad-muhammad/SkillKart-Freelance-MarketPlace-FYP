@@ -156,4 +156,7 @@ router.get('/stats/overview',
 router.post('/saved-freelancers', clientController.toggleSavedFreelancer);
 router.get('/saved-freelancers', clientController.getSavedFreelancers);
 
+// AI-assisted Industry recommendation route
+router.post('/ai/recommend-industry', requireRole('client'), clientController.recommendIndustry);
+
 module.exports = router;
