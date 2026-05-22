@@ -46,6 +46,7 @@ const ClientSecurity = () => {
   const [otpCode, setOtpCode] = useState('');
   const [otpTimer, setOtpTimer] = useState(0);
   const [verifying, setVerifying] = useState(false);
+  const [updating, setUpdating] = useState({});
   
   useEffect(() => {
     setTwoFactor(!!profile?.securitySettings?.twoFactorEnabled);
@@ -165,9 +166,51 @@ const ClientSecurity = () => {
     }
   };
 
-  const toggleSecurity = async (key, value, setter) => {
-    setter(value);
-    await updateProfile('securitySettings', { [key]: value }, false, true);
+  const toggleSecurity = async (key, value) => {
+    // 1. Log payload
+    console.log(`[Security Toggle] Payload for ${key}:`, value);
+
+    setUpdating(prev => ({ ...prev, [key]: true }));
+
+    // Determine the state setter and the previous value for reverting
+    let setter;
+    let previousValue;
+    if (key === 'twoFactorEnabled') {
+      setter = setTwoFactor;
+      previousValue = twoFactor;
+    } else if (key === 'loginAlerts') {
+      setter = setLoginAlerts;
+      previousValue = loginAlerts;
+    } else if (key === 'passwordChangeAlerts') {
+      setter = setPasswordAlerts;
+      previousValue = passwordAlerts;
+    }
+
+    // Optimistically update the state
+    if (setter) setter(value);
+
+    try {
+      // call updateProfile with silent = true (third param) to avoid duplicate success toasts
+      const res = await updateProfile('securitySettings', { [key]: value }, true, true);
+      
+      // 2. Log API response
+      console.log(`[Security Toggle] API response for ${key}:`, res);
+
+      if (res && res.success) {
+        showToast('Security settings updated successfully.');
+      } else {
+        // Revert optimistic update
+        if (setter) setter(previousValue);
+        showToast(res?.message || 'Failed to update security settings.', 'error');
+      }
+    } catch (error) {
+      console.error(`[Security Toggle] Error updating ${key}:`, error);
+      // Revert optimistic update
+      if (setter) setter(previousValue);
+      showToast('Failed to update security settings.', 'error');
+    } finally {
+      setUpdating(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   const sendForgot = async () => {
@@ -184,8 +227,12 @@ const ClientSecurity = () => {
     }
   };
 
-  const strength = getStrength(passwords.newPassword);
-  const strengthInfo = strengthLabel(strength);
+  // 3. Log rendered state
+  console.log('[ClientSecurity] Rendered state:', {
+    twoFactor,
+    loginAlerts,
+    passwordAlerts
+  });
 
   return (
     <div>
@@ -285,8 +332,8 @@ const ClientSecurity = () => {
               <span className="cl-toggle__desc">Get notified whenever someone logs into your account.</span>
             </div>
             <div
-              className={`cl-toggle__switch${loginAlerts ? ' cl-toggle__switch--on' : ''}`}
-              onClick={() => toggleSecurity('loginAlerts', !loginAlerts, setLoginAlerts)}
+              className={`cl-toggle__switch${loginAlerts ? ' cl-toggle__switch--on' : ''}${updating['loginAlerts'] ? ' cl-toggle__switch--loading' : ''}`}
+              onClick={() => !updating['loginAlerts'] && toggleSecurity('loginAlerts', !loginAlerts)}
             />
           </div>
 
@@ -299,8 +346,8 @@ const ClientSecurity = () => {
                   <span className="cl-toggle__desc">Add an extra layer of security with 2FA</span>
                 </div>
                 <div
-                  className={`cl-toggle__switch${twoFactor ? ' cl-toggle__switch--on' : ''}`}
-                  onClick={() => toggleSecurity('twoFactorEnabled', !twoFactor, setTwoFactor)}
+                  className={`cl-toggle__switch${twoFactor ? ' cl-toggle__switch--on' : ''}${updating['twoFactorEnabled'] ? ' cl-toggle__switch--loading' : ''}`}
+                  onClick={() => !updating['twoFactorEnabled'] && toggleSecurity('twoFactorEnabled', !twoFactor)}
                 />
               </div>
               <div className="cl-toggle">
@@ -309,8 +356,8 @@ const ClientSecurity = () => {
                   <span className="cl-toggle__desc">Get notified immediately if your password is changed.</span>
                 </div>
                 <div
-                  className={`cl-toggle__switch${passwordAlerts ? ' cl-toggle__switch--on' : ''}`}
-                  onClick={() => toggleSecurity('passwordChangeAlerts', !passwordAlerts, setPasswordAlerts)}
+                  className={`cl-toggle__switch${passwordAlerts ? ' cl-toggle__switch--on' : ''}${updating['passwordChangeAlerts'] ? ' cl-toggle__switch--loading' : ''}`}
+                  onClick={() => !updating['passwordChangeAlerts'] && toggleSecurity('passwordChangeAlerts', !passwordAlerts)}
                 />
               </div>
             </>

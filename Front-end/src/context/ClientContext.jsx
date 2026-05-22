@@ -46,7 +46,9 @@ const emptyProfile = {
   securitySettings: {
     recoveryEmail: '',
     recoveryPhone: '',
-    twoFactorEnabled: false,
+    twoFactorEnabled: true,
+    loginAlerts: true,
+    passwordChangeAlerts: true,
     emailVerified: false,
   },
   notificationSettings: {
@@ -94,7 +96,7 @@ export const ClientProvider = ({ children }) => {
   const [savedFreelancers, setSavedFreelancers] = useState(initialSaved);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
 
   // Fetch real profile on load or when auth changes
   useEffect(() => {
@@ -106,21 +108,26 @@ export const ClientProvider = ({ children }) => {
     }
   }, [isAuthenticated, user?.role]);
 
-  const fetchProfile = async () => {
-    if (!user?._id) return;
-    
+  const fetchProfile = async (refreshUserFirst = false) => {
+    if (!user?._id && !refreshUserFirst) return;
+
     setLoading(true);
     try {
+      let activeUser = user;
+      if (refreshUserFirst) {
+        activeUser = await refreshUser();
+      }
+
       // 1. Get Profile
       const profileRes = await clientsAPI.getProfile();
       const dbProfile = profileRes.data.data.profile;
 
-      // 2. Transform to UI format with safety checks
+      // 2. Transform to UI format with safety checks (username lives on User, not ClientProfile)
       const transformedProfile = {
         personalInfo: {
-          fullName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '',
-          username: user?.username || user?.email?.split('@')[0] || 'user',
-          email: user?.email || '',
+          fullName: activeUser ? `${activeUser.firstName || ''} ${activeUser.lastName || ''}`.trim() : '',
+          username: activeUser?.username || activeUser?.email?.split('@')[0] || 'user',
+          email: activeUser?.email || '',
           phone: dbProfile?.phone || '',
           companyName: dbProfile?.companyName || '',
           companyType: dbProfile?.companyType || '',
@@ -133,9 +140,9 @@ export const ClientProvider = ({ children }) => {
           timezone: dbProfile?.timezone || '',
           linkedin: dbProfile?.socialLinks?.linkedin || '',
           bio: dbProfile?.description || '',
-          avatar: user?.profilePicture || null,
+          avatar: activeUser?.profilePicture || null,
           companyLogo: dbProfile?.companyLogo || null,
-          memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
+          memberSince: activeUser?.createdAt ? new Date(activeUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
           languages: dbProfile?.languages || [],
         },
         preferences: {
@@ -148,10 +155,12 @@ export const ClientProvider = ({ children }) => {
           remoteOnly: true,
         },
         securitySettings: {
-          recoveryEmail: dbProfile?.recoveryEmail || '',
-          recoveryPhone: dbProfile?.recoveryPhone || '',
-          twoFactorEnabled: false,
-          emailVerified: user?.isEmailVerified || false,
+          recoveryEmail: dbProfile?.securitySettings?.recoveryEmail || '',
+          recoveryPhone: dbProfile?.securitySettings?.recoveryPhone || '',
+          twoFactorEnabled: dbProfile?.securitySettings?.twoFactorEnabled !== false,
+          loginAlerts: dbProfile?.securitySettings?.loginAlerts !== false,
+          passwordChangeAlerts: dbProfile?.securitySettings?.passwordChangeAlerts !== false,
+          emailVerified: activeUser?.isEmailVerified || false,
         },
         notificationSettings: dbProfile?.notificationSettings || {
           emailNotifications: true,
@@ -265,9 +274,19 @@ export const ClientProvider = ({ children }) => {
       };
 
       await clientsAPI.updateProfile(profilePayload);
-      
+
+      const usernameChanged =
+        personalInfo.username &&
+        personalInfo.username !== user?.username;
+
       if (!options.skipFetch) {
-        await fetchProfile();
+        await fetchProfile(usernameChanged);
+      } else if (usernameChanged) {
+        await refreshUser();
+        setProfile((prev) => ({
+          ...prev,
+          personalInfo: { ...prev.personalInfo, username: personalInfo.username }
+        }));
       }
       
       showToast('All changes saved to database!');
@@ -285,8 +304,7 @@ export const ClientProvider = ({ children }) => {
   };
 
   const updateMultipleSections = async (updates, silent = false, persist = false, options = {}) => {
-    // We use a functional update to get the latest profile state
-    let finalProfile;
+    // 1. Update React state asynchronously
     setProfile(prev => {
       const next = { ...prev };
       Object.keys(updates).forEach(section => {
@@ -295,12 +313,18 @@ export const ClientProvider = ({ children }) => {
           ...updates[section]
         };
       });
-      finalProfile = next;
       return next;
     });
 
+    // 2. Synchronously compute updated profile to prevent async state race conditions during API save
     if (persist) {
-      // Small delay to ensure state has set, or better, use the calculated finalProfile
+      const finalProfile = { ...profile };
+      Object.keys(updates).forEach(section => {
+        finalProfile[section] = {
+          ...finalProfile[section],
+          ...updates[section]
+        };
+      });
       return await saveProfile(finalProfile, options);
     } else if (!silent) {
       showToast('Profile updated locally');

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api/auth';
+import { freelancersAPI } from '../../api/freelancers';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -28,6 +29,7 @@ const FreelancerSettings = () => {
   }, [profile]);
 
   const [saving, setSaving] = useState(null);
+  const [usernameError, setUsernameError] = useState('');
   const [deactivateModal, setDeactivateModal] = useState(false);
   const [deactivateStep, setDeactivateStep] = useState(1);
   const [deactivateOtp, setDeactivateOtp] = useState('');
@@ -47,6 +49,24 @@ const FreelancerSettings = () => {
 
   const saveSection = async (section, data, label) => {
     setSaving(label);
+    setUsernameError('');
+
+    if (label === 'Username' && data.username?.trim() && data.username.trim() !== profile?.personalInfo?.username) {
+      try {
+        const res = await freelancersAPI.checkUsername(data.username.trim());
+        if (res.data?.data?.exists) {
+          setUsernameError('Username is already taken');
+          setSaving(null);
+          return;
+        }
+      } catch (err) {
+        console.error('Username check failed', err);
+        setUsernameError('Unable to verify username');
+        setSaving(null);
+        return;
+      }
+    }
+
     try {
       await updateProfile(section, data, false, true);
     } catch (error) {
@@ -173,6 +193,7 @@ const FreelancerSettings = () => {
               onChange={(e) => set('username', e.target.value)}
               placeholder="Enter new username"
             />
+            {usernameError && <p className="text-red-500 text-xs mt-1">{usernameError}</p>}
           </div>
         </div>
         <div className="fl-actions">

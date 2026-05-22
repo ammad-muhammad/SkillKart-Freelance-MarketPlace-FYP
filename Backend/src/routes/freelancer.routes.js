@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const freelancerController = require('../controllers/freelancer.controller');
+const authController = require('../controllers/auth.controller');
 const { authenticate, optionalAuth } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
@@ -75,6 +76,12 @@ router.get('/stats/overview',
  *       200:
  *         description: Profile retrieved successfully
  */
+router.get('/check-username',
+  authenticate,
+  requireRole('freelancer'),
+  authController.checkUsername
+);
+
 router.get('/profile/me',
   authenticate,
   requireRole('freelancer'),

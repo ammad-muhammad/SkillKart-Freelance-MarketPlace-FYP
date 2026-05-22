@@ -22,6 +22,9 @@ export const authAPI = {
   getCurrentUser: () =>
     client.get('/auth/me'),
 
+  checkUsername: (username) =>
+    client.get(`/auth/check-username?username=${encodeURIComponent(username)}`),
+
   updateMe: (userData) =>
     client.put('/auth/me', userData),
 

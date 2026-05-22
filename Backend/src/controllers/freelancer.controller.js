@@ -4,6 +4,7 @@ const { uploadProfilePicture, uploadPortfolioImage } = require('../services/uplo
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+const { applyUsernameUpdate } = require('../utils/username');
 const { syncFreelancerVerification } = require('../services/verification.service');
 
 /**
@@ -55,7 +56,16 @@ const getProfile = asyncHandler(async (req, res) => {
  */
 const updateProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const updates = req.body;
+  const updates = { ...req.body };
+
+  const user = await User.findById(userId);
+  if (!user) throw new NotFoundError('User not found');
+
+  if (updates.username !== undefined && updates.username !== null && String(updates.username).trim() !== '') {
+    await applyUsernameUpdate(user, updates.username);
+    await user.save();
+  }
+  delete updates.username;
   
   let profile = await FreelancerProfile.findOne({ userId });
   
@@ -84,8 +94,6 @@ const updateProfile = asyncHandler(async (req, res) => {
     profile.set(updates);
   }
   
-  // Calculate completion
-  const user = await User.findById(userId);
   profile.profileCompletion = calculateCompletion(profile, user);
   
   await profile.save();

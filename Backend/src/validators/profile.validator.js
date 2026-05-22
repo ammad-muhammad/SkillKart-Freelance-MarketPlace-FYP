@@ -16,6 +16,12 @@ const updateFreelancerProfileValidation = [
     .trim()
     .isLength({ min: 2, max: 100 }).withMessage('Title must be 2-100 characters'),
 
+  body('username')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 30 }).withMessage('Username must be 3–30 characters')
+    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores'),
+
   body('hourlyRate')
     .optional()
     .isFloat({ min: 0, max: 10000 }).withMessage('Hourly rate must be between 0 and 10000'),
@@ -161,6 +167,12 @@ const updateClientProfileValidation = [
     .optional()
     .trim()
     .isLength({ max: 1000 }).withMessage('Description must not exceed 1000 characters'),
+
+  body('username')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 30 }).withMessage('Username must be 3–30 characters')
+    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores'),
 
   body('location')
     .optional()

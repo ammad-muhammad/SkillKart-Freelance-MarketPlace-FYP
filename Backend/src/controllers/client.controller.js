@@ -4,7 +4,8 @@ const User = require('../models/User');
 const { uploadProfilePicture } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
-const { NotFoundError } = require('../utils/apiError');
+const { NotFoundError, BadRequestError } = require('../utils/apiError');
+const { isUsernameTaken, applyUsernameUpdate } = require('../utils/username');
 const { getAIProvider } = require('../services/ai');
 
 /**
@@ -109,11 +110,8 @@ const updateProfile = asyncHandler(async (req, res) => {
   if (!user) throw new NotFoundError('User not found');
 
   let userUpdated = false;
-  if (updates.username && updates.username.trim() !== "" && updates.username !== user.username) {
-    const existing = await User.findOne({ username: updates.username, _id: { $ne: userId } });
-    if (existing) return res.status(400).json({ success: false, message: 'Username already taken' });
-    user.username = updates.username.trim();
-    userUpdated = true;
+  if (updates.username !== undefined && updates.username !== null && String(updates.username).trim() !== '') {
+    userUpdated = await applyUsernameUpdate(user, updates.username);
   }
 
 
@@ -494,6 +492,23 @@ const getSavedFreelancers = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Check if a username is available (excluding the current user)
+ */
+const checkUsername = asyncHandler(async (req, res) => {
+  const { username } = req.query;
+  if (!username || !String(username).trim()) {
+    throw new BadRequestError('Username query parameter is required');
+  }
+
+  const exists = await isUsernameTaken(username, req.user._id);
+
+  sendSuccess(res, {
+    message: exists ? 'Username is already taken' : 'Username is available',
+    data: { exists, available: !exists }
+  });
+});
+
+/**
  * Recommend industries based on company details
  */
 const recommendIndustry = asyncHandler(async (req, res) => {
@@ -532,5 +547,6 @@ module.exports = {
   uploadCompanyLogo,
   toggleSavedFreelancer,
   getSavedFreelancers,
-  recommendIndustry
+  recommendIndustry,
+  checkUsername
 };

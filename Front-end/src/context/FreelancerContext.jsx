@@ -40,7 +40,9 @@ const emptyProfile = {
   securitySettings: {
     recoveryEmail: '',
     recoveryPhone: '',
-    twoFactorEnabled: false,
+    twoFactorEnabled: true,
+    loginAlerts: true,
+    passwordChangeAlerts: true,
     emailVerified: false,
   },
   notificationSettings: {
@@ -74,31 +76,37 @@ export const FreelancerProvider = ({ children }) => {
   const [savedProjects, setSavedProjects] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
 
-  const fetchFreelancerData = async () => {
+  const fetchFreelancerData = async (refreshUserFirst = false) => {
     try {
       setLoading(true);
+
+      let activeUser = user;
+      if (refreshUserFirst) {
+        activeUser = await refreshUser();
+      }
+
       const [profileRes, gigsRes, savedRes, propRes] = await Promise.all([
         freelancersAPI.getProfile(),
         gigsAPI.listMyGigs(),
         freelancersAPI.getSavedJobs(),
-        proposalsAPI.listProposals({ freelancerId: user._id })
+        proposalsAPI.listProposals({ freelancerId: activeUser._id })
       ]);
 
       const dbProfile = profileRes.data.data.profile;
       
       const transformedProfile = {
         personalInfo: {
-          fullName: `${user.firstName} ${user.lastName}`,
-          username: user.email.split('@')[0],
-          email: user.email,
+          fullName: `${activeUser.firstName} ${activeUser.lastName}`,
+          username: activeUser.username || activeUser.email?.split('@')[0] || '',
+          email: activeUser.email,
           phone: dbProfile.phone || '',
           bio: dbProfile.bio || '',
           title: dbProfile.title || '',
           location: dbProfile.timezone || 'Global',
-          memberSince: new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-          avatar: user.profilePicture || null,
+          memberSince: new Date(activeUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          avatar: activeUser.profilePicture || null,
           experienceLevel: dbProfile.experienceLevel || 'Entry',
           hourlyRate: dbProfile.hourlyRate || 0,
           availability: dbProfile.availability || 'full-time',
@@ -111,7 +119,14 @@ export const FreelancerProvider = ({ children }) => {
         portfolio: dbProfile.portfolio || [],
         portfolioLinks: dbProfile.portfolioLinks || [],
         socialLinks: dbProfile.socialLinks || { github: '', linkedin: '', website: '' },
-        securitySettings: dbProfile.securitySettings || { recoveryEmail: '', recoveryPhone: '' },
+        securitySettings: {
+          recoveryEmail: dbProfile.securitySettings?.recoveryEmail || '',
+          recoveryPhone: dbProfile.securitySettings?.recoveryPhone || '',
+          twoFactorEnabled: dbProfile.securitySettings?.twoFactorEnabled !== false,
+          loginAlerts: dbProfile.securitySettings?.loginAlerts !== false,
+          passwordChangeAlerts: dbProfile.securitySettings?.passwordChangeAlerts !== false,
+          emailVerified: activeUser?.isEmailVerified || false,
+        },
         stats: {
           totalGigs: gigsRes.data.meta?.pagination?.total || (gigsRes.data.data?.length || 0),
           activeOrders: 0,
@@ -157,7 +172,7 @@ export const FreelancerProvider = ({ children }) => {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
 
-  const saveProfile = async (updatedData = null) => {
+  const saveProfile = async (updatedData = null, options = {}) => {
     setLoading(true);
     try {
       const currentProfile = updatedData || profile;
@@ -174,6 +189,7 @@ export const FreelancerProvider = ({ children }) => {
       });
 
       const profilePayload = {
+        username: personalInfo.username,
         bio: personalInfo.bio,
         title: personalInfo.title,
         phone: personalInfo.phone,
@@ -196,21 +212,36 @@ export const FreelancerProvider = ({ children }) => {
       };
 
       await freelancersAPI.updateProfile(profilePayload);
-      await fetchFreelancerData();
+
+      const usernameChanged =
+        personalInfo.username &&
+        personalInfo.username !== user?.username;
+
+      if (!options.skipFetch) {
+        await fetchFreelancerData(usernameChanged);
+      } else if (usernameChanged) {
+        await refreshUser();
+        setProfile((prev) => ({
+          ...prev,
+          personalInfo: { ...prev.personalInfo, username: personalInfo.username }
+        }));
+      }
       
       showToast('All changes saved to database!');
-      return true;
+      return { success: true };
     } catch (error) {
       console.error("Save profile failed:", error);
-      showToast(error.response?.data?.message || 'Failed to save changes', 'error');
-      return false;
+      const message = error.response?.data?.message || 'Failed to save changes';
+      const errors = error.response?.data?.errors || null;
+      showToast(message, 'error');
+      return { success: false, message, errors };
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProfile = async (section, data, silent = false, persist = false) => {
-    let newProfile;
+  const updateProfile = async (section, data, silent = false, persist = false, options = {}) => {
+    // 1. Update React state asynchronously
     setProfile((prev) => {
       let next;
       if (typeof data === 'function') {
@@ -220,15 +251,25 @@ export const FreelancerProvider = ({ children }) => {
       } else {
         next = { ...prev[section], ...data };
       }
-      newProfile = { ...prev, [section]: next };
-      return newProfile;
+      return { ...prev, [section]: next };
     });
 
+    // 2. Synchronously compute updated profile to prevent async state race conditions during API save
     if (persist) {
-      await saveProfile(newProfile);
+      let next;
+      if (typeof data === 'function') {
+        next = data(profile[section]);
+      } else if (Array.isArray(data) || typeof data !== 'object' || data === null) {
+        next = data;
+      } else {
+        next = { ...profile[section], ...data };
+      }
+      const updatedProfile = { ...profile, [section]: next };
+      return await saveProfile(updatedProfile, options);
     } else if (!silent) {
       showToast('Profile updated (not yet saved to DB)');
     }
+    return { success: true };
   };
 
   const addGig = async (gig) => {

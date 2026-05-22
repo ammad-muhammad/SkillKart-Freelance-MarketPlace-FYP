@@ -332,6 +332,11 @@ router.get('/me',
   authController.getCurrentUser
 );
 
+router.get('/check-username',
+  authenticate,
+  authController.checkUsername
+);
+
 router.put('/me',
   authenticate,
   authController.updateMe

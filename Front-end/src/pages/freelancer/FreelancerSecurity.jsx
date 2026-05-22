@@ -21,11 +21,11 @@ const FreelancerSecurity = () => {
   const [loginAlerts, setLoginAlerts] = useState(!!sec.loginAlerts);
   const [passwordAlerts, setPasswordAlerts] = useState(!!sec.passwordChangeAlerts);
   
-  // OTP Modal State
   const [otpPending, setOtpPending] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpTimer, setOtpTimer] = useState(0);
   const [verifying, setVerifying] = useState(false);
+  const [updating, setUpdating] = useState({});
 
   // Sync state with profile data
   useEffect(() => {
@@ -122,22 +122,51 @@ const FreelancerSecurity = () => {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  const toggleTwoFactor = async () => {
-    const next = !twoFactor;
-    setTwoFactor(next);
-    await updateProfile('securitySettings', { twoFactorEnabled: next }, false, true);
-  };
+  const toggleSecurity = async (key, value) => {
+    // 1. Log payload
+    console.log(`[Security Toggle] Payload for ${key}:`, value);
 
-  const toggleLoginAlerts = async () => {
-    const next = !loginAlerts;
-    setLoginAlerts(next);
-    await updateProfile('securitySettings', { loginAlerts: next }, false, true);
-  };
+    setUpdating(prev => ({ ...prev, [key]: true }));
 
-  const togglePasswordAlerts = async () => {
-    const next = !passwordAlerts;
-    setPasswordAlerts(next);
-    await updateProfile('securitySettings', { passwordChangeAlerts: next }, false, true);
+    // Determine the state setter and the previous value for reverting
+    let setter;
+    let previousValue;
+    if (key === 'twoFactorEnabled') {
+      setter = setTwoFactor;
+      previousValue = twoFactor;
+    } else if (key === 'loginAlerts') {
+      setter = setLoginAlerts;
+      previousValue = loginAlerts;
+    } else if (key === 'passwordChangeAlerts') {
+      setter = setPasswordAlerts;
+      previousValue = passwordAlerts;
+    }
+
+    // Optimistically update the state
+    if (setter) setter(value);
+
+    try {
+      // call updateProfile with silent = true (third param) to avoid duplicate success toasts
+      const res = await updateProfile('securitySettings', { [key]: value }, true, true);
+      
+      // 2. Log API response
+      console.log(`[Security Toggle] API response for ${key}:`, res);
+
+      if (res && res.success) {
+        showToast('Security settings updated successfully.');
+      } else {
+        // Revert optimistic update
+        if (setter) setter(previousValue);
+        showToast(res?.message || 'Failed to update security settings.', 'error');
+      }
+    } catch (error) {
+      console.error(`[Security Toggle] Error updating ${key}:`, error);
+      // Revert optimistic update
+      if (setter) setter(previousValue);
+      showToast('Failed to update security settings.', 'error');
+    } finally {
+      setUpdating(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   const sendForgot = async () => {
@@ -152,6 +181,13 @@ const FreelancerSecurity = () => {
       setSaving(false);
     }
   };
+
+  // 3. Log rendered state
+  console.log('[FreelancerSecurity] Rendered state:', {
+    twoFactor,
+    loginAlerts,
+    passwordChangeAlerts
+  });
 
   return (
     <div>
@@ -265,8 +301,8 @@ const FreelancerSecurity = () => {
               <span className="fl-toggle__desc">Get notified whenever someone logs into your account.</span>
             </div>
             <div
-              className={`fl-toggle__switch${loginAlerts ? ' fl-toggle__switch--on' : ''}`}
-              onClick={toggleLoginAlerts}
+              className={`fl-toggle__switch${loginAlerts ? ' fl-toggle__switch--on' : ''}${updating['loginAlerts'] ? ' fl-toggle__switch--loading' : ''}`}
+              onClick={() => !updating['loginAlerts'] && toggleSecurity('loginAlerts', !loginAlerts)}
             />
           </div>
 
@@ -279,8 +315,8 @@ const FreelancerSecurity = () => {
                   <span className="fl-toggle__desc">Add an extra layer of security to your account.</span>
                 </div>
                 <div
-                  className={`fl-toggle__switch${twoFactor ? ' fl-toggle__switch--on' : ''}`}
-                  onClick={toggleTwoFactor}
+                  className={`fl-toggle__switch${twoFactor ? ' fl-toggle__switch--on' : ''}${updating['twoFactorEnabled'] ? ' fl-toggle__switch--loading' : ''}`}
+                  onClick={() => !updating['twoFactorEnabled'] && toggleSecurity('twoFactorEnabled', !twoFactor)}
                 />
               </div>
               <div className="fl-toggle">
@@ -289,8 +325,8 @@ const FreelancerSecurity = () => {
                   <span className="fl-toggle__desc">Get notified immediately if your password is changed.</span>
                 </div>
                 <div
-                  className={`fl-toggle__switch${passwordAlerts ? ' fl-toggle__switch--on' : ''}`}
-                  onClick={togglePasswordAlerts}
+                  className={`fl-toggle__switch${passwordAlerts ? ' fl-toggle__switch--on' : ''}${updating['passwordChangeAlerts'] ? ' fl-toggle__switch--loading' : ''}`}
+                  onClick={() => !updating['passwordChangeAlerts'] && toggleSecurity('passwordChangeAlerts', !passwordAlerts)}
                 />
               </div>
             </>

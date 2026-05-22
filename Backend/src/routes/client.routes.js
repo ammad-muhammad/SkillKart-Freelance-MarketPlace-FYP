@@ -125,6 +125,12 @@ router.post('/onboarding/submit',
   clientController.submitOnboardingProfile
 );
 
+// Check username availability (must be before /:id)
+router.get('/check-username',
+  requireRole('client'),
+  clientController.checkUsername
+);
+
 // Get client by ID (Admin only)
 router.get('/:id',
   requireRole('admin', 'superadmin'),

@@ -257,6 +257,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    const { data } = await authAPI.getCurrentUser();
+    const freshUser = data.data.user;
+    setUser(freshUser);
+    lastCheckedAuth.current = Date.now();
+    return freshUser;
+  };
+
   const value = useMemo(() => ({
     user,
     loading,
@@ -266,7 +274,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     isAuthenticated: !!user,
     getAccessToken: () => tokenManager.getAccessToken(),
-    refreshAuth: checkAuth
+    refreshAuth: checkAuth,
+    refreshUser
   }), [user, loading]);
 
   return (

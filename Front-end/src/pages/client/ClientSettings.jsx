@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import { authAPI } from '../../api/auth';
 import Modal from '../freelancer/components/Modal';
-import './ClientDashboard.css';
+import { clientsAPI } from '../../api/clients';
 
 const ClientSettings = () => {
   const { user } = useAuth();
@@ -108,41 +108,28 @@ const ClientSettings = () => {
 
   const saveAccount = async () => {
     setErrors({});
-    try {
-      const updates = {
-        personalInfo: { 
-          username: account.newUsername?.trim() || profile?.personalInfo?.username
-        },
-        securitySettings: { recoveryPhone: account.recoveryPhone }
-      };
-
-      const res = await updateMultipleSections(updates, false, true, { skipFetch: true });
-      
-      const processErrors = (res, target) => {
-        if (res && !res.success && res.errors) {
-          if (Array.isArray(res.errors)) {
-            res.errors.forEach(err => {
-              if (typeof err === 'object' && err.field) target[err.field] = err.message;
-              else if (typeof err === 'string') {
-                const pathMatch = err.match(/at path \\"(.+)\\"/);
-                target[pathMatch ? pathMatch[1] : 'global'] = err;
-              }
-            });
-          } else if (typeof res.errors === 'object') {
-            Object.assign(target, res.errors);
-          }
+    // Validate username uniqueness if changed
+    if (account.newUsername?.trim() && account.newUsername?.trim() !== profile?.personalInfo?.username) {
+      try {
+        const res = await clientsAPI.checkUsername(account.newUsername.trim());
+        if (res.data?.data?.exists) {
+          setErrors(prev => ({ ...prev, newUsername: 'Username is already taken' }));
+          return;
         }
-      };
-
-      const combinedErrors = {};
-      processErrors(res, combinedErrors);
-      
-      if (Object.keys(combinedErrors).length > 0) {
-        setErrors(combinedErrors);
+      } catch (err) {
+        console.error('Username check failed', err);
+        setErrors(prev => ({ ...prev, newUsername: 'Unable to verify username' }));
+        return;
       }
-    } catch (error) {
-      console.error('Failed to save account settings:', error);
     }
+
+    const updates = {
+      personalInfo: { username: account.newUsername?.trim() || profile?.personalInfo?.username },
+      securitySettings: { recoveryPhone: account.recoveryPhone }
+    };
+    // Persist changes and refresh profile to reflect updated username
+    await updateMultipleSections(updates, false, true);
+    // Errors are handled via updateMultipleSections/showToast
   };
 
   const toggleNotif = async (key) => {

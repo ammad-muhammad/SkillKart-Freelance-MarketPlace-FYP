@@ -1,6 +1,9 @@
 import client from './client';
 
 export const clientsAPI = {
+  // Check if a username is already taken
+  checkUsername: (username) =>
+    client.get(`/clients/check-username?username=${encodeURIComponent(username)}`),
   getProfile: () => client.get('/clients/profile/me'),
   updateProfile: (profileData) => client.put('/clients/profile/me', profileData),
   submitVerification: (documents) => client.post('/clients/verification/submit', { documents }),

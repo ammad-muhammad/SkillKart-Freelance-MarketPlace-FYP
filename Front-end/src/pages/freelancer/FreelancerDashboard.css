@@ -243,6 +243,11 @@
   flex-shrink: 0;
 }
 .fl-toggle__switch--on { background: var(--color-primary); }
+.fl-toggle__switch--loading {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: not-allowed;
+}
 .fl-toggle__switch::after {
   content: '';
   position: absolute;

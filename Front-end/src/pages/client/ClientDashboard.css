@@ -197,6 +197,11 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 .cl-toggle__switch--on::after { transform: translateX(20px); }
+.cl-toggle__switch--loading {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 /* ── Divider ── */
 .cl-divider { height: 1px; background: #e5edf5; margin: 1.5rem 0; }

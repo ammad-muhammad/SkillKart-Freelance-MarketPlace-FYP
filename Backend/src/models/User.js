@@ -34,6 +34,16 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  username: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    sparse: true,
+    unique: true,
+    minlength: [3, 'Username must be at least 3 characters'],
+    maxlength: [30, 'Username must not exceed 30 characters'],
+    match: [/^[a-z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
+  },
   profilePicture: {
     type: String,
     default: null
@@ -342,6 +352,7 @@ userSchema.methods.toAuthJSON = function () {
   return {
     id: this._id,
     email: this.email,
+    username: this.username,
     firstName: this.firstName,
     lastName: this.lastName,
     fullName: this.fullName,

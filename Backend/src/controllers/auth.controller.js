@@ -4,6 +4,8 @@ const otpService = require('../services/otp.service');
 const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const User = require('../models/User');
+const { BadRequestError } = require('../utils/apiError');
+const { isUsernameTaken, applyUsernameUpdate } = require('../utils/username');
 const Job = require('../models/Job');
 const { syncFreelancerVerification } = require('../services/verification.service');
 /**
@@ -209,14 +211,9 @@ const updateRole = asyncHandler(async (req, res) => {
  */
 const updateMe = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { firstName, lastName, phone } = req.body;
+  const { firstName, lastName, phone, username } = req.body;
 
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { firstName, lastName, phone },
-    { new: true, runValidators: true }
-  ).select('-password');
-
+  const user = await User.findById(userId);
   if (!user) {
     return res.status(404).json({
       success: false,
@@ -224,9 +221,35 @@ const updateMe = asyncHandler(async (req, res) => {
     });
   }
 
+  if (firstName !== undefined) user.firstName = firstName;
+  if (lastName !== undefined) user.lastName = lastName;
+  if (phone !== undefined) user.phone = phone;
+  if (username !== undefined && String(username).trim() !== '') {
+    await applyUsernameUpdate(user, username);
+  }
+
+  await user.save();
+
   sendSuccess(res, {
     message: 'Profile updated successfully',
     data: { user: user.toAuthJSON() }
+  });
+});
+
+/**
+ * Check if a username is available (any authenticated user)
+ */
+const checkUsername = asyncHandler(async (req, res) => {
+  const { username } = req.query;
+  if (!username || !String(username).trim()) {
+    throw new BadRequestError('Username query parameter is required');
+  }
+
+  const exists = await isUsernameTaken(username, req.user._id);
+
+  sendSuccess(res, {
+    message: exists ? 'Username is already taken' : 'Username is available',
+    data: { exists, available: !exists }
   });
 });
 
@@ -773,6 +796,7 @@ module.exports = {
   supabaseAuth,
   updateRole,
   updateMe,
+  checkUsername,
   requestEmailChange,
   confirmEmailChange,
   requestRecoveryEmailChange,

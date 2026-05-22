@@ -58,7 +58,6 @@ router.get('/',
 // Get client's own projects (Must be before /:id)
 router.get('/my-projects',
   authenticate,
-  requireRole('client'),
   jobController.getMyProjects
 );
 
