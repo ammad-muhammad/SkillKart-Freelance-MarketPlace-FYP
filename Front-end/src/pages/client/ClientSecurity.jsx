@@ -26,7 +26,7 @@ const ClientSecurity = () => {
   const { user } = useContext(AuthContext);
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [showPwd, setShowPwd] = useState({ current: false, newPwd: false, confirm: false });
+  const [showPwd, setShowPwd] = useState({ currentPassword: false, newPassword: false, confirmPassword: false });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [forgotModal, setForgotModal] = useState(false);
@@ -137,6 +137,9 @@ const ClientSecurity = () => {
     }
     return () => clearInterval(interval);
   }, [otpTimer]);
+
+  const strength = getStrength(passwords.newPassword);
+  const strengthInfo = strengthLabel(strength);
 
   const handleRequestDeactivate = async () => {
     setDeactivateLoading(true);
