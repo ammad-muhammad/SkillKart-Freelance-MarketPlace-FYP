@@ -1,7 +1,8 @@
 // src/context/AuthContext.jsx
-import { createContext, useState, useEffect, useRef, useMemo } from 'react';
+import { createContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { authAPI } from '../api/auth';
 import { tokenManager } from '../utils/tokenManager';
+import { normalizeAuthUser } from '../utils/user';
 import { toast } from 'react-toastify';
 
 export const AuthContext = createContext();
@@ -13,6 +14,10 @@ export const AuthProvider = ({ children }) => {
   const isCheckingAuth = useRef(false);
   const lastCheckedAuth = useRef(0);
   const AUTH_CHECK_THROTTLE = 60 * 1000; // Only check once per minute on visibility/online
+
+  const setAuthUser = useCallback((nextUser) => {
+    setUser(normalizeAuthUser(nextUser));
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -149,7 +154,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       const { data } = await authAPI.getCurrentUser();
-      setUser(data.data.user);
+      setAuthUser(data.data.user);
       lastCheckedAuth.current = Date.now();
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -182,7 +187,7 @@ export const AuthProvider = ({ children }) => {
           data.tokens.accessToken,
           data.tokens.refreshToken
         );
-        setUser(data.user);
+        setAuthUser(data.user);
         toast.success(`Welcome back, ${data.user.firstName || data.user.email}!`);
         return { requires2FA: false };
       }
@@ -204,7 +209,7 @@ export const AuthProvider = ({ children }) => {
       );
       
       const userData = await authAPI.getCurrentUser();
-      setUser(userData.data.data.user);
+      setAuthUser(userData.data.data.user);
       
       toast.success('OTP Verified!');
       return data;
@@ -227,7 +232,7 @@ export const AuthProvider = ({ children }) => {
         data.data.tokens.refreshToken
       );
       
-      setUser(data.data.user);
+      setAuthUser(data.data.user);
       
       const userName = data.data.user.name || data.data.user.email;
       toast.success(`Welcome back, ${userName}!`);
@@ -259,8 +264,8 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = async () => {
     const { data } = await authAPI.getCurrentUser();
-    const freshUser = data.data.user;
-    setUser(freshUser);
+    const freshUser = normalizeAuthUser(data.data.user);
+    setAuthUser(freshUser);
     lastCheckedAuth.current = Date.now();
     return freshUser;
   };

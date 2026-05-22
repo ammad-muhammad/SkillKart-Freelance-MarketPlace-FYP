@@ -1,8 +1,10 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { clientsAPI } from '../api/clients';
 import { authAPI } from '../api/auth';
 import { jobsAPI } from '../api/jobs';
 import { useAuth } from '../hooks/useAuth';
+import { getUserId } from '../utils/user';
+import { tokenManager } from '../utils/tokenManager';
 
 const ClientContext = createContext(null);
 
@@ -95,31 +97,39 @@ export const ClientProvider = ({ children }) => {
   const [projects, setProjects] = useState([]);
   const [savedFreelancers, setSavedFreelancers] = useState(initialSaved);
   const [toasts, setToasts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, refreshUser, loading: authLoading } = useAuth();
+  const fetchGenerationRef = useRef(0);
 
-  // Fetch real profile on load or when auth changes
-  useEffect(() => {
-    if (isAuthenticated && user?.role === 'client') {
-      fetchProfile();
-    } else if (!isAuthenticated) {
-      setProfile(emptyProfile);
-      setProjects([]);
-    }
-  }, [isAuthenticated, user?.role]);
-
-  const fetchProfile = async (refreshUserFirst = false) => {
-    if (!user?._id && !refreshUserFirst) return;
-
+  const fetchProfile = useCallback(async (refreshUserFirst = false, attempt = 0) => {
+    const generation = ++fetchGenerationRef.current;
     setLoading(true);
+
     try {
+      if (!tokenManager.getAccessToken() && attempt < 4) {
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        if (generation !== fetchGenerationRef.current) return;
+        return fetchProfile(refreshUserFirst, attempt + 1);
+      }
+
       let activeUser = user;
       if (refreshUserFirst) {
         activeUser = await refreshUser();
       }
 
+      const userId = getUserId(activeUser || user);
+      if (!userId) {
+        if (attempt < 4) {
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+          if (generation !== fetchGenerationRef.current) return;
+          return fetchProfile(refreshUserFirst, attempt + 1);
+        }
+        return;
+      }
+
       // 1. Get Profile
       const profileRes = await clientsAPI.getProfile();
+      if (generation !== fetchGenerationRef.current) return;
       const dbProfile = profileRes.data.data.profile;
 
       // 2. Transform to UI format with safety checks (username lives on User, not ClientProfile)
@@ -202,10 +212,38 @@ export const ClientProvider = ({ children }) => {
 
     } catch (error) {
       console.error("Failed to fetch client profile/jobs:", error);
+      if (attempt < 2 && generation === fetchGenerationRef.current) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        if (generation === fetchGenerationRef.current) {
+          return fetchProfile(refreshUserFirst, attempt + 1);
+        }
+      }
     } finally {
+      if (generation === fetchGenerationRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [user, refreshUser]);
+
+  // Fetch when auth is ready and user id is available
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
+      setProfile(emptyProfile);
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
+    if (user?.role === 'client' && getUserId(user)) {
+      fetchProfile();
+    } else if (user?.role === 'client') {
+      setLoading(true);
+    } else {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, user?.role, user?.id, user?._id, authLoading, fetchProfile]);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();

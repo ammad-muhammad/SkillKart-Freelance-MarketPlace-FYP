@@ -1,9 +1,11 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { freelancersAPI } from '../api/freelancers';
 import { authAPI } from '../api/auth';
 import { gigsAPI } from '../api/gigs';
 import { proposalsAPI } from '../api/proposals';
 import { useAuth } from '../hooks/useAuth';
+import { getUserId } from '../utils/user';
+import { tokenManager } from '../utils/tokenManager';
 
 const FreelancerContext = createContext(null);
 
@@ -76,23 +78,42 @@ export const FreelancerProvider = ({ children }) => {
   const [savedProjects, setSavedProjects] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const { user, isAuthenticated, refreshUser, loading: authLoading } = useAuth();
+  const fetchGenerationRef = useRef(0);
 
-  const fetchFreelancerData = async (refreshUserFirst = false) => {
+  const fetchFreelancerData = useCallback(async (refreshUserFirst = false, attempt = 0) => {
+    const generation = ++fetchGenerationRef.current;
+    setLoading(true);
+
     try {
-      setLoading(true);
+      if (!tokenManager.getAccessToken() && attempt < 4) {
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        if (generation !== fetchGenerationRef.current) return;
+        return fetchFreelancerData(refreshUserFirst, attempt + 1);
+      }
 
       let activeUser = user;
       if (refreshUserFirst) {
         activeUser = await refreshUser();
       }
 
+      const userId = getUserId(activeUser || user);
+      if (!userId) {
+        if (attempt < 4) {
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+          if (generation !== fetchGenerationRef.current) return;
+          return fetchFreelancerData(refreshUserFirst, attempt + 1);
+        }
+        return;
+      }
+
       const [profileRes, gigsRes, savedRes, propRes] = await Promise.all([
         freelancersAPI.getProfile(),
         gigsAPI.listMyGigs(),
         freelancersAPI.getSavedJobs(),
-        proposalsAPI.listProposals({ freelancerId: activeUser._id })
+        proposalsAPI.listProposals({ freelancerId: userId })
       ]);
+      if (generation !== fetchGenerationRef.current) return;
 
       const dbProfile = profileRes.data.data.profile;
       
@@ -146,21 +167,39 @@ export const FreelancerProvider = ({ children }) => {
       setProposals(propRes.data.data || []);
     } catch (error) {
       console.error('Freelancer data fetch failed:', error);
+      if (attempt < 2 && generation === fetchGenerationRef.current) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        if (generation === fetchGenerationRef.current) {
+          return fetchFreelancerData(refreshUserFirst, attempt + 1);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (generation === fetchGenerationRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [user, refreshUser]);
 
-  // Fetch real profile on load or when auth changes
+  // Fetch when auth is ready and user id is available
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'freelancer') {
-      fetchFreelancerData();
-    } else if (!isAuthenticated) {
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
       setProfile(emptyProfile);
       setGigs([]);
       setProposals([]);
+      setLoading(false);
+      return;
     }
-  }, [isAuthenticated, user?.role]);
+
+    if (user?.role === 'freelancer' && getUserId(user)) {
+      fetchFreelancerData();
+    } else if (user?.role === 'freelancer') {
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user?.role, user?.id, user?._id, authLoading, fetchFreelancerData]);
 
   const fetchProfile = async () => {
     await fetchFreelancerData();
