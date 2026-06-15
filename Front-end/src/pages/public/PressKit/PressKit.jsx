@@ -124,9 +124,9 @@ export default function PressKit() {
                         <div className="press-hero__chip">👥 3 Executive bios</div>
                         <div className="press-hero__chip">📋 3 Press releases</div>
                     </div>
-                    <a href="#" className="press-hero__download" aria-label="Download full media kit ZIP">
+                    <button type="button" className="press-hero__download" aria-label="Download full media kit ZIP" onClick={() => alert('Media kit downloads will be available at launch.')}>
                         ⬇️ Download Full Media Kit (.zip)
-                    </a>
+                    </button>
                 </div>
                 <div className="press-hero__wave">
                     <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -225,9 +225,9 @@ export default function PressKit() {
                                         </div>
                                         <div className="press-logo-card__name">{logo.name}</div>
                                         <div className="press-logo-card__format">{logo.format}</div>
-                                        <a href="#" className="press-logo-card__dl" aria-label={`Download ${logo.name}`}>
+                                        <button type="button" className="press-logo-card__dl" aria-label={`Download ${logo.name}`} onClick={() => alert('Media kit downloads will be available at launch.')}>
                                             ⬇️ Download
-                                        </a>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -337,9 +337,15 @@ export default function PressKit() {
                                     <p className="pr-card__excerpt">{pr.excerpt}</p>
                                 </div>
                                 <div className="pr-card__action">
-                                    <a href={pr.href} className="pr-card__link" aria-label={`Read: ${pr.title}`}>
-                                        Read PDF →
-                                    </a>
+                                    {pr.href === '#' ? (
+                                        <span className="pr-card__link" aria-disabled="true">
+                                            Read PDF →
+                                        </span>
+                                    ) : (
+                                        <a href={pr.href} className="pr-card__link" aria-label={`Read: ${pr.title}`}>
+                                            Read PDF →
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -369,7 +375,7 @@ export default function PressKit() {
                             <h3 className="press-contact-card__title">Partnership &amp; Collaboration</h3>
                             <div className="press-contact-card__row"><strong>Email:</strong> <a href="mailto:partnerships@skillkart.app">partnerships@skillkart.app</a></div>
                             <div className="press-contact-card__row"><strong>Type:</strong> University partnerships, sponsors, integrations</div>
-                            <div className="press-contact-card__row"><strong>LinkedIn:</strong> <a href="#">linkedin.com/company/skillkart</a></div>
+                            <div className="press-contact-card__row"><strong>LinkedIn:</strong> <span>linkedin.com/company/skillkart</span></div>
                             <div className="press-contact-card__row"><strong>Address:</strong> Islamabad, Pakistan</div>
                             <div className="press-contact-card__row"><strong>Website:</strong> <a href="https://skillkart.app">skillkart.app</a></div>
                         </div>

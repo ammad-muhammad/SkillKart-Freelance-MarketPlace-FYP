@@ -284,6 +284,204 @@ Output ONLY valid JSON in this exact format. Do not include markdown code blocks
       throw new Error('Failed to recommend industry with Gemini');
     }
   }
+
+  async recommendJobCategory(title, description, skills = []) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+
+    const { JOB_CATEGORIES } = require('../../utils/constants');
+    const skillsText = Array.isArray(skills) ? skills.join(', ') : '';
+
+    const prompt = `
+You are a project classification assistant for SkillKart.
+Pick the single best category and up to 3 suggestions ONLY from the allowed list below.
+
+Project Title: "${title || 'N/A'}"
+Description: "${description || 'N/A'}"
+Skills: "${skillsText || 'N/A'}"
+
+Allowed categories (use exact spelling):
+${JOB_CATEGORIES.map((c) => `- ${c}`).join('\n')}
+
+Output ONLY valid JSON:
+{
+  "category": "Exact category from list",
+  "suggestions": ["Category 1", "Category 2", "Category 3"]
+}
+`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: { responseMimeType: 'application/json' }
+      });
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error('Gemini recommendJobCategory Error:', error);
+      throw new Error('Failed to recommend job category with Gemini');
+    }
+  }
+
+  /**
+   * Draft a freelancer proposal cover letter for a job, using the freelancer's
+   * own profile so it's personalised and honest (no invented experience).
+   * @param {object} job - { title, description, skills, budget, category }
+   * @param {object} freelancer - { name, title, bio, skills, experienceLevel }
+   * @returns {Promise<{ coverLetter: string }>}
+   */
+  async draftProposal(job = {}, freelancer = {}) {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
+
+    const prompt = `
+You help a freelancer write a concise, professional, and persuasive proposal
+cover letter for a job on SkillKart. Write in first person as the freelancer.
+Use ONLY the freelancer details provided — do NOT invent specific past clients,
+numbers, or experience that aren't given. 120-200 words, warm but professional,
+no markdown, no placeholders like [Name].
+
+JOB:
+- Title: ${job.title || 'N/A'}
+- Category: ${job.category || 'N/A'}
+- Description: ${(job.description || 'N/A').slice(0, 800)}
+- Required skills: ${(Array.isArray(job.skills) ? job.skills.join(', ') : '') || 'N/A'}
+
+FREELANCER:
+- Name: ${freelancer.name || 'the freelancer'}
+- Title: ${freelancer.title || 'N/A'}
+- Experience level: ${freelancer.experienceLevel || 'N/A'}
+- Skills: ${(Array.isArray(freelancer.skills) ? freelancer.skills.join(', ') : '') || 'N/A'}
+- Bio: ${(freelancer.bio || 'N/A').slice(0, 400)}
+
+Output ONLY valid JSON: { "coverLetter": "..." }
+`;
+
+    const response = await this.ai.models.generateContent({
+      model: this.model,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    const parsed = JSON.parse(response.text);
+    return { coverLetter: parsed?.coverLetter || '' };
+  }
+
+  /**
+   * Buddy AI assistant: answer a user's question about freelancing / using
+   * SkillKart. `history` is an array of { role:'user'|'assistant', content }.
+   * @returns {Promise<{ reply: string }>}
+   */
+  async buddyChat(message, history = []) {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
+
+    const convo = (history || [])
+      .slice(-8)
+      .map((m) => `${m.role === 'assistant' ? 'Buddy' : 'User'}: ${m.content}`)
+      .join('\n');
+
+    const prompt = `
+You are "Buddy", the friendly AI assistant for SkillKart — a student freelancing
+marketplace. Help users with: finding work/freelancers, writing proposals,
+pricing, building profiles, and navigating the platform. Be concise (under 120
+words), practical, and encouraging. If asked something off-topic, gently steer
+back to freelancing. Plain text only, no markdown headers.
+
+${convo ? `Conversation so far:\n${convo}\n` : ''}User: ${message}
+
+Output ONLY valid JSON: { "reply": "..." }
+`;
+
+    const response = await this.ai.models.generateContent({
+      model: this.model,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    const parsed = JSON.parse(response.text);
+    return { reply: parsed?.reply || '' };
+  }
+
+  /**
+   * Suggest a structured project brief from a free-text description: best
+   * category (from the allowed list), relevant skills, and a fair budget.
+   * Used by the AI Matchmaking auto-fill. @returns {Promise<{title,category,skills:string[],budget:number}>}
+   */
+  async suggestBrief(description, title = '') {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
+    const { JOB_CATEGORIES } = require('../../utils/constants');
+
+    const prompt = `
+A user is describing a freelance project. Infer a structured brief.
+Pick the single best category ONLY from the allowed list. Suggest 4-8 concrete,
+in-demand skills. Suggest a fair budget (USD, competitive student-marketplace
+rates). Infer the required experience level as one of exactly: "Entry",
+"Intermediate", or "Expert" (based on the scope/complexity). If a good title
+isn't given, write a short one.
+
+${title ? `Title: ${title}\n` : ''}Description: ${(description || '').slice(0, 1000)}
+
+Allowed categories (use exact spelling): ${JOB_CATEGORIES.join(', ')}
+
+Output ONLY valid JSON:
+{ "title": "<short title>", "category": "<exact category>", "skills": ["..."], "budget": <number>, "experienceLevel": "Entry | Intermediate | Expert" }
+`;
+
+    const response = await this.ai.models.generateContent({
+      model: this.model,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    const parsed = JSON.parse(response.text);
+    const LEVELS = ['Entry', 'Intermediate', 'Expert'];
+    return {
+      title: parsed?.title || title || '',
+      category: parsed?.category || '',
+      skills: Array.isArray(parsed?.skills) ? parsed.skills.slice(0, 8) : [],
+      budget: Number(parsed?.budget) || 0,
+      experienceLevel: LEVELS.includes(parsed?.experienceLevel) ? parsed.experienceLevel : '',
+    };
+  }
+
+  /**
+   * Cost estimator: estimate a fair budget range for a project.
+   * @param {object} project - { title, description, category, skills, complexity, timeline }
+   * @returns {Promise<{ min:number, max:number, currency:string, rationale:string, breakdown?:object[] }>}
+   */
+  async estimateCost(project = {}) {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
+
+    const prompt = `
+You estimate a fair freelance project budget in USD for SkillKart (a student
+talent marketplace — rates are competitive, not enterprise). Base it on scope,
+skills, and timeline. Give a realistic min and max.
+
+PROJECT:
+- Title: ${project.title || 'N/A'}
+- Category: ${project.category || 'N/A'}
+- Description: ${(project.description || 'N/A').slice(0, 800)}
+- Skills: ${(Array.isArray(project.skills) ? project.skills.join(', ') : '') || 'N/A'}
+- Complexity: ${project.complexity || 'medium'}
+- Timeline: ${project.timeline || 'N/A'}
+
+Output ONLY valid JSON:
+{ "min": <number>, "max": <number>, "currency": "USD",
+  "rationale": "<1-2 sentence explanation>",
+  "breakdown": [ { "label": "<phase>", "amount": <number> } ] }
+`;
+
+    const response = await this.ai.models.generateContent({
+      model: this.model,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    const parsed = JSON.parse(response.text);
+    return {
+      min: Number(parsed?.min) || 0,
+      max: Number(parsed?.max) || 0,
+      currency: parsed?.currency || 'USD',
+      rationale: parsed?.rationale || '',
+      breakdown: Array.isArray(parsed?.breakdown) ? parsed.breakdown : [],
+    };
+  }
 }
 
 module.exports = GeminiProvider;

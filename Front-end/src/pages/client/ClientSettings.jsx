@@ -6,7 +6,7 @@ import Modal from '../freelancer/components/Modal';
 import { clientsAPI } from '../../api/clients';
 
 const ClientSettings = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { profile, updateProfile, updateMultipleSections, showToast } = useClient();
   const isEmailUser = user?.authProvider === 'email';
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
@@ -33,6 +33,9 @@ const ClientSettings = () => {
   }, [profile]);
 
   const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState('confirm'); // 'confirm' | 'otp'
+  const [deleteOtp, setDeleteOtp] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
   const [emailOtp, setEmailOtp] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
@@ -139,6 +142,41 @@ const ClientSettings = () => {
       updateProfile('notificationSettings', updated, false, true, { skipFetch: true });
       return updated;
     });
+  };
+
+  // Step 1: request a deletion OTP to the account email.
+  const requestDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      await authAPI.requestDeletion();
+      setDeleteStep('otp');
+      showToast('A confirmation code was sent to your email.', 'info');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not start account deletion.', 'error');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Step 2: confirm with OTP → permanent delete → log out.
+  const confirmDelete = async () => {
+    if (!deleteOtp.trim()) { showToast('Enter the confirmation code.', 'error'); return; }
+    setDeleteLoading(true);
+    try {
+      await authAPI.confirmDeletion(deleteOtp.trim());
+      setDeleteModal(false);
+      await logout('Your account has been permanently deleted.');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Invalid or expired code.', 'error');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal(false);
+    setDeleteStep('confirm');
+    setDeleteOtp('');
   };
 
   return (
@@ -256,14 +294,36 @@ const ClientSettings = () => {
         </div>
       </div>
 
-      <Modal open={deleteModal} title="Delete Account" onClose={() => setDeleteModal(false)} danger>
-        <p>This will permanently delete your account and all projects. Are you sure?</p>
-        <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
-          <button className="cl-btn cl-btn--danger" onClick={() => { setDeleteModal(false); showToast('Account deletion simulated.', 'info'); }}>
-            Yes, Delete Everything
-          </button>
-          <button className="cl-btn cl-btn--ghost" onClick={() => setDeleteModal(false)}>Cancel</button>
-        </div>
+      <Modal open={deleteModal} title="Delete Account" onClose={closeDeleteModal} danger>
+        {deleteStep === 'confirm' ? (
+          <>
+            <p>This will <strong>permanently delete</strong> your account, profile, and all your projects. This cannot be undone. We'll email you a confirmation code to proceed.</p>
+            <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
+              <button className="cl-btn cl-btn--danger" onClick={requestDelete} disabled={deleteLoading}>
+                {deleteLoading ? 'Sending code…' : 'Send confirmation code'}
+              </button>
+              <button className="cl-btn cl-btn--ghost" onClick={closeDeleteModal} disabled={deleteLoading}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ marginBottom: '1rem' }}>Enter the confirmation code sent to <strong>{account.newEmail}</strong> to permanently delete your account.</p>
+            <div className="cl-form-group">
+              <input
+                className="cl-input"
+                placeholder="6-digit code"
+                value={deleteOtp}
+                onChange={e => setDeleteOtp(e.target.value)}
+              />
+            </div>
+            <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
+              <button className="cl-btn cl-btn--danger" onClick={confirmDelete} disabled={deleteLoading}>
+                {deleteLoading ? 'Deleting…' : 'Permanently delete my account'}
+              </button>
+              <button className="cl-btn cl-btn--ghost" onClick={closeDeleteModal} disabled={deleteLoading}>Cancel</button>
+            </div>
+          </>
+        )}
       </Modal>
       <Modal open={emailModal} title="Verify Email Change" onClose={() => setEmailModal(false)}>
         <p style={{ marginBottom: '1rem' }}>

@@ -182,13 +182,6 @@ const FreelancerSecurity = () => {
     }
   };
 
-  // 3. Log rendered state
-  console.log('[FreelancerSecurity] Rendered state:', {
-    twoFactor,
-    loginAlerts,
-    passwordChangeAlerts
-  });
-
   return (
     <div>
       <div className="fl-page-header">
@@ -223,7 +216,16 @@ const FreelancerSecurity = () => {
         <h3 className="fl-section-title">🔑 Change Password</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
-            <label className="fl-label">Current Password</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-label">Current Password</label>
+              <button
+                type="button"
+                onClick={() => setForgotModal(true)}
+                style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+              >
+                Forgot password?
+              </button>
+            </div>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPw ? 'text' : 'password'}

@@ -6,19 +6,10 @@ import { toast } from 'react-toastify';
 
 const AuthConsent = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading: authLoading, handleSupabaseOAuth } = useAuth();
+  const { handleSupabaseOAuth } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const hasProcessed = useRef(false); // Prevent multiple call
-
-  // useEffect(() => {
-  //   if (!authLoading) {
-  //     if (isAuthenticated) {
-  //       navigate('/');
-  //       return;
-  //     }
-  //   }
-  // }, [isAuthenticated, user, authLoading, navigate]);
 
   useEffect(() => {
     // Skip if already processed
@@ -59,15 +50,6 @@ const AuthConsent = () => {
 
         console.log('✅ Tokens received from Supabase');
 
-        // Decode and log user info
-        try {
-          const payload = JSON.parse(atob(accessToken.split('.')[1]));
-          // console.log('👤 User email:', payload.email);
-          // console.log('🔑 Provider:', payload.app_metadata?.provider);
-        } catch (e) {
-          console.warn('Could not decode token:', e);
-        }
-
         // ✅ Mark as processed BEFORE making API call
         hasProcessed.current = true;
 
@@ -85,13 +67,17 @@ const AuthConsent = () => {
 
         console.log(`🧭 Redirecting: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
 
-        // Navigate to different routes
+        // Navigate to the right destination. Always use `replace: true` so the
+        // OAuth callback screen is removed from history (prevents the back
+        // button — and any re-mount — from re-landing on /auth/consent). The
+        // session is already persisted via handleSupabaseOAuth above, so a
+        // reload of the destination will rehydrate correctly.
         if (userRole === "publicviewer") {
           navigate('/role', { replace: true });
         } else if (userRole === "client") {
-          isOnboardingCompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
+          navigate(isOnboardingCompleted ? '/client/dashboard' : '/client/onboarding', { replace: true });
         } else if (userRole === "freelancer") {
-          isOnboardingCompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+          navigate(isOnboardingCompleted ? '/freelancer/dashboard' : '/freelancer/onboarding', { replace: true });
         } else {
           navigate('/', { replace: true });
         }
@@ -113,7 +99,52 @@ const AuthConsent = () => {
     processOAuthCallback();
   }, []); // ✅ Empty dependency array
 
-  // ... rest of your component (loading, error, success states)
+  // A component MUST return valid JSX. Previously this returned `undefined`,
+  // which throws during render and breaks the OAuth callback screen.
+  return (
+    <div
+      style={{
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        padding: '2rem',
+        textAlign: 'center',
+      }}
+    >
+      {error ? (
+        <>
+          <div style={{ fontSize: '2.5rem' }}>⚠️</div>
+          <h2 style={{ margin: 0 }}>Sign-in failed</h2>
+          <p style={{ color: 'var(--color-text-light, #64748b)', maxWidth: 420 }}>{error}</p>
+          <p style={{ color: 'var(--color-text-light, #94a3b8)', fontSize: '0.875rem' }}>
+            Redirecting you to the login page…
+          </p>
+        </>
+      ) : (
+        <>
+          <div
+            aria-hidden="true"
+            style={{
+              width: 44,
+              height: 44,
+              border: '3px solid #e2e8f0',
+              borderTopColor: 'var(--color-primary, #6366f1)',
+              borderRadius: '50%',
+              animation: 'ac-spin 0.8s linear infinite',
+            }}
+          />
+          <h2 style={{ margin: 0 }}>Finishing sign-in…</h2>
+          <p style={{ color: 'var(--color-text-light, #64748b)' }}>
+            {loading ? 'Securely verifying your account.' : 'Almost there…'}
+          </p>
+        </>
+      )}
+      <style>{`@keyframes ac-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 };
 
 export default AuthConsent;

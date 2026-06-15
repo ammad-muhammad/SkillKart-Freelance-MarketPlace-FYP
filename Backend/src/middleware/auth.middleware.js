@@ -24,6 +24,10 @@ const authenticate = async (req, res, next) => {
     if (!user.isActive) throw new UnauthorizedError('Account is inactive');
     if (user.isBlocked) throw new UnauthorizedError('Account has been blocked');
     if (user.lockUntil && user.lockUntil > Date.now()) throw new UnauthorizedError('Account is temporarily locked');
+    // Reject tokens issued before a "log out all devices" / password change.
+    if ((decoded.tv || 0) !== (user.tokenVersion || 0)) {
+      throw new UnauthorizedError('Session expired. Please log in again.');
+    }
 
     req.user = user;
     req.userId = user._id;

@@ -2,8 +2,12 @@ import client from './client';
 
 export const proposalsAPI = {
   // Submit a new proposal
-  submitProposal: (proposalData) => 
+  submitProposal: (proposalData) =>
     client.post('/proposals', proposalData),
+
+  // AI-draft a cover letter for a job (freelancer only)
+  draftProposal: (jobId) =>
+    client.post('/proposals/ai/draft', { jobId }),
 
   // List proposals (for clients or freelancers)
   listProposals: (params) => 

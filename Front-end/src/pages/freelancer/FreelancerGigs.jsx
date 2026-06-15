@@ -2,31 +2,17 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import Modal from './components/Modal';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import TagInput from '../../Components/common/TagInput/TagInput';
-import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
+import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import { Plus, X, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import './FreelancerDashboard.css';
 
-const CATEGORIES = [
-  'Web Development', 'Mobile Development', 'Design', 'Writing & Translation',
-  'Digital Marketing', 'Video & Animation', 'Music & Audio', 'Programming & Tech',
-  'Business', 'Data', 'Photography', 'Other',
-];
-
-const SUBCATEGORIES = {
-  'Web Development': ['Full Stack', 'Frontend', 'Backend', 'E-Commerce', 'WordPress'],
-  'Mobile Development': ['iOS', 'Android', 'React Native', 'Flutter'],
-  'Design': ['UI/UX Design', 'Logo Design', 'Brand Identity', 'Graphic Design'],
-  'Writing & Translation': ['Article Writing', 'Copywriting', 'Translation', 'Proofreading'],
-  'Digital Marketing': ['SEO', 'Social Media', 'Email Marketing', 'PPC'],
-  'Video & Animation': ['Video Editing', '2D Animation', '3D Animation', 'Whiteboard'],
-  'Music & Audio': ['Voice Over', 'Mixing', 'Composing', 'Podcast'],
-  'Programming & Tech': ['AI/ML', 'DevOps', 'Cybersecurity', 'Automation'],
-  'Business': ['Virtual Assistant', 'Data Entry', 'Market Research'],
-  'Data': ['Data Analysis', 'Data Visualization', 'Excel', 'SQL'],
-  'Photography': ['Product Photography', 'Portrait', 'Editing'],
-  'Other': ['Other'],
-};
+// Canonical platform taxonomy (matches backend) so edited gigs stay countable.
+const CATEGORIES = JOB_CATEGORIES;
+const SUBCATEGORIES = GIG_SUBCATEGORIES;
 
 const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
   <div className="fl-gig-card">
@@ -131,8 +117,10 @@ const FreelancerGigs = () => {
 
   const filtered = gigs.filter((g) => filter === 'all' || g.status === filter);
 
-  const confirmDelete = () => {
-    if (deleteTarget) { deleteGig(deleteTarget); setDeleteTarget(null); }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const result = await deleteGig(deleteTarget);
+    if (result?.success) setDeleteTarget(null); // keep modal open on failure
   };
 
   const handleEditClick = (gig) => {
@@ -226,9 +214,9 @@ const FreelancerGigs = () => {
       faqs: formData.faqs
     };
     
-    const success = await updateGig(editTarget._id, updatedData);
-    if (success !== false) {
-      setEditTarget(null);
+    const result = await updateGig(editTarget._id, updatedData);
+    if (result?.success) {
+      setEditTarget(null); // keep edit modal open on failure
     }
   };
 
@@ -297,25 +285,48 @@ const FreelancerGigs = () => {
                 required 
               />
             </div>
+            {/* AI suggest & fill — category + skills from the gig title/description */}
+            <AiSuggestFill
+              label="Suggest category & skills (AI)"
+              getContext={() => ({
+                title: formData.title,
+                description: [formData.shortDescription, formData.fullDescription].filter(Boolean).join('\n'),
+                skills: formData.skills,
+              })}
+              allowedCategories={CATEGORIES}
+              existingSkills={formData.skills}
+              onCategory={(cat) => setFormData((p) => ({
+                ...p,
+                category: cat,
+                subcategory: (SUBCATEGORIES[cat] || ['Other'])[0],
+              }))}
+              onSkills={(newSkills) => setFormData((p) => ({
+                ...p,
+                skills: Array.from(new Set([...(p.skills || []), ...newSkills])),
+              }))}
+            />
+
             <div className="fl-form-grid">
               <div className="fl-form-group">
                 <label>Category</label>
-                <CustomSelect 
+                <ComboSelect
                   options={CATEGORIES}
                   value={formData.category}
                   onChange={(val) => setFormData({
-                    ...formData, 
+                    ...formData,
                     category: val,
                     subcategory: (SUBCATEGORIES[val] || ['Other'])[0]
                   })}
+                  placeholder="Type to search categories…"
                 />
               </div>
               <div className="fl-form-group">
                 <label>Subcategory</label>
-                <CustomSelect 
+                <ComboSelect
                   options={SUBCATEGORIES[formData.category] || ['Other']}
                   value={formData.subcategory}
                   onChange={(val) => setFormData({...formData, subcategory: val})}
+                  placeholder="Type to search subcategories…"
                 />
               </div>
             </div>
@@ -537,15 +548,14 @@ const FreelancerGigs = () => {
       </Modal>
 
       {/* Delete Modal */}
-      <Modal open={!!deleteTarget} title="Delete Gig" onClose={() => setDeleteTarget(null)} danger>
-        <p style={{ marginBottom: '1.25rem' }}>
-          Are you sure you want to delete this gig? All associated data will be permanently removed.
-        </p>
-        <div className="fl-actions" style={{ marginTop: 0 }}>
-          <button className="fl-btn fl-btn--danger" onClick={confirmDelete}>Yes, Delete</button>
-          <button className="fl-btn fl-btn--ghost" onClick={() => setDeleteTarget(null)}>Cancel</button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Gig"
+        message="Are you sure you want to delete this gig? All associated data will be permanently removed."
+        confirmLabel="Yes, Delete"
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
 
       <style>{`
         .fl-gig-tabs {

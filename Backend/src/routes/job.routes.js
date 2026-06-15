@@ -11,7 +11,8 @@ const {
   deleteJobValidation,
   listJobsValidation,
   searchJobsValidation,
-  closeJobValidation
+  closeJobValidation,
+  recommendCategoryValidation
 } = require('../validators/job.validator');
 
 const multer = require('multer');
@@ -59,6 +60,22 @@ router.get('/',
 router.get('/my-projects',
   authenticate,
   jobController.getMyProjects
+);
+
+router.post('/ai/recommend-category',
+  authenticate,
+  requireRole('client'),
+  recommendCategoryValidation,
+  validate,
+  jobController.recommendCategory
+);
+
+// Upload attachment (before /:id)
+router.post('/upload/attachment',
+  authenticate,
+  requireRole('client'),
+  upload.single('file'),
+  jobController.uploadAttachment
 );
 
 // Get job by ID (public)
@@ -131,14 +148,6 @@ router.delete('/:id',
   deleteJobValidation,
   validate,
   jobController.deleteJob
-);
-
-// Upload attachment
-router.post('/upload/attachment',
-  authenticate,
-  requireRole('client'),
-  upload.single('file'),
-  jobController.uploadAttachment
 );
 
 module.exports = router;

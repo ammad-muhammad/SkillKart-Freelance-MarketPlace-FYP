@@ -18,7 +18,7 @@ export const jobsAPI = {
     client.get(`/jobs/${id}`),
 
   // Search jobs
-  searchJobs: (params) => 
+  searchJobs: (params) =>
     client.get('/jobs/search', { params }),
 
   // Update job
@@ -31,5 +31,8 @@ export const jobsAPI = {
 
   // Delete job
   deleteJob: (id) => 
-    client.delete(`/jobs/${id}`)
+    client.delete(`/jobs/${id}`),
+
+  recommendCategory: (data) =>
+    client.post('/jobs/ai/recommend-category', data),
 };

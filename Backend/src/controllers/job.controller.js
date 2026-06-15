@@ -2,7 +2,8 @@ const Job = require('../models/Job');
 const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
-const cloudinaryService = require('../services/upload.service');
+const { uploadJobAttachment: uploadJobAttachmentToCloud } = require('../services/upload.service');
+const { recommendJobCategory } = require('../services/jobCategory.service');
 
 /**
  * Sync job statuses based on deadlines
@@ -27,14 +28,17 @@ const createJob = asyncHandler(async (req, res) => {
   const jobData = req.body;
   const clientId = req.user._id;
   
+  const allowedStatuses = ['draft', 'open'];
+  const status = allowedStatuses.includes(jobData.status) ? jobData.status : 'open';
+
   const job = new Job({
     ...jobData,
     clientId,
-    status: 'open' // Enforce 'open' for new projects
+    status
   });
-  
+
   await job.save();
-  
+
   sendCreated(res, 'Job created successfully', { job });
 });
 
@@ -44,15 +48,15 @@ const createJob = asyncHandler(async (req, res) => {
 const updateJob = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
-  
+
   const job = await Job.findById(id);
   if (!job) {
     throw new NotFoundError('Job not found');
   }
-  
+
   Object.assign(job, updates);
   await job.save();
-  
+
   sendSuccess(res, {
     message: 'Job updated successfully',
     data: { job }
@@ -170,7 +174,7 @@ const deleteJob = asyncHandler(async (req, res) => {
   }
   
   await Job.deleteOne({ _id: id });
-  
+
   sendSuccess(res, {
     message: 'Job deleted successfully'
   });
@@ -189,10 +193,20 @@ const closeJob = asyncHandler(async (req, res) => {
   
   job.status = job.hiredFreelancer ? 'completed' : 'closed';
   await job.save();
-  
+
   sendSuccess(res, {
     message: 'Job closed successfully',
     data: { job }
+  });
+});
+
+const recommendCategory = asyncHandler(async (req, res) => {
+  const { title, description, skills } = req.body;
+  const result = await recommendJobCategory(title, description, skills);
+
+  sendSuccess(res, {
+    message: 'Category recommendation generated',
+    data: result
   });
 });
 
@@ -201,11 +215,11 @@ const uploadAttachment = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
-  const result = await cloudinaryService.uploadToCloudinary(req.file, 'skillkart/jobs/attachments');
+  const uploaded = await uploadJobAttachmentToCloud(req.file);
 
   sendSuccess(res, {
     message: 'Attachment uploaded successfully',
-    data: { url: result.secure_url }
+    data: uploaded
   });
 });
 
@@ -218,5 +232,6 @@ module.exports = {
   deleteJob,
   closeJob,
   uploadAttachment,
+  recommendCategory,
   getMyProjects
 };

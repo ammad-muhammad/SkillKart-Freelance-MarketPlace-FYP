@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { clientsAPI } from '../api/clients';
 import { authAPI } from '../api/auth';
 import { jobsAPI } from '../api/jobs';
@@ -67,35 +67,30 @@ const emptyProfile = {
   verificationStatus: 'unverified'
 };
 
-const initialSaved = [
-  {
-    id: 1,
-    name: 'Alex Rivera',
-    title: 'Senior Full Stack Developer',
-    rating: 4.9,
-    reviews: 124,
-    hourlyRate: 45,
-    skills: ['React', 'Node.js', 'AWS'],
-    avatar: null,
-    location: 'Ukraine'
-  },
-  {
-    id: 2,
-    name: 'Sophia Chen',
-    title: 'UI/UX Product Designer',
-    rating: 5.0,
-    reviews: 89,
-    hourlyRate: 55,
-    skills: ['Figma', 'Prototyping', 'Product Design'],
-    avatar: null,
-    location: 'Singapore'
-  }
-];
+// Normalize a populated saved-freelancer (a User doc with optional freelancerProfile)
+// from the backend into the shape the Saved Freelancers UI renders.
+const normalizeSavedFreelancer = (u) => {
+  if (!u || typeof u !== 'object') return null;
+  const fp = u.freelancerProfile || {};
+  const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim();
+  return {
+    id: u._id || u.id,
+    name: fullName || u.email?.split('@')[0] || 'Freelancer',
+    title: fp.title || '',
+    rating: u.rating || fp.rating || 0,
+    reviews: fp.completedProjects || 0,
+    hourlyRate: fp.hourlyRate || 0,
+    skills: (fp.skills || []).map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).slice(0, 4),
+    avatar: u.profilePicture || null,
+    location: fp.timezone || '',
+  };
+};
 
 export const ClientProvider = ({ children }) => {
   const [profile, setProfile] = useState(emptyProfile);
   const [projects, setProjects] = useState([]);
-  const [savedFreelancers, setSavedFreelancers] = useState(initialSaved);
+  const [savedFreelancers, setSavedFreelancers] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user, isAuthenticated, refreshUser, loading: authLoading } = useAuth();
@@ -210,6 +205,19 @@ export const ClientProvider = ({ children }) => {
 
       setProjects(transformedJobs);
 
+      // 4. Fetch saved freelancers (best-effort; doesn't block profile load)
+      try {
+        const savedRes = await clientsAPI.getSavedFreelancers();
+        if (generation === fetchGenerationRef.current) {
+          const list = savedRes.data?.data?.savedFreelancers || [];
+          setSavedFreelancers(list.map(normalizeSavedFreelancer).filter(Boolean));
+        }
+      } catch (savedErr) {
+        console.error('Failed to fetch saved freelancers:', savedErr);
+      } finally {
+        if (generation === fetchGenerationRef.current) setSavedLoading(false);
+      }
+
     } catch (error) {
       console.error("Failed to fetch client profile/jobs:", error);
       if (attempt < 2 && generation === fetchGenerationRef.current) {
@@ -232,6 +240,8 @@ export const ClientProvider = ({ children }) => {
     if (!isAuthenticated) {
       setProfile(emptyProfile);
       setProjects([]);
+      setSavedFreelancers([]);
+      setSavedLoading(false);
       setLoading(false);
       return;
     }
@@ -341,29 +351,27 @@ export const ClientProvider = ({ children }) => {
     }
   };
 
+  const mergeSections = (base, updates) => {
+    const next = { ...base };
+    Object.keys(updates).forEach(section => {
+      next[section] = { ...next[section], ...updates[section] };
+    });
+    return next;
+  };
+
   const updateMultipleSections = async (updates, silent = false, persist = false, options = {}) => {
-    // 1. Update React state asynchronously
+    // Compute the merged profile from the FRESHEST state (prev inside the
+    // updater), and reuse that exact object for the API save — never re-read the
+    // closure-stale `profile`, which caused rapid sequential saves to persist
+    // old data.
+    let merged = null;
     setProfile(prev => {
-      const next = { ...prev };
-      Object.keys(updates).forEach(section => {
-        next[section] = {
-          ...next[section],
-          ...updates[section]
-        };
-      });
-      return next;
+      merged = mergeSections(prev, updates);
+      return merged;
     });
 
-    // 2. Synchronously compute updated profile to prevent async state race conditions during API save
     if (persist) {
-      const finalProfile = { ...profile };
-      Object.keys(updates).forEach(section => {
-        finalProfile[section] = {
-          ...finalProfile[section],
-          ...updates[section]
-        };
-      });
-      return await saveProfile(finalProfile, options);
+      return await saveProfile(merged, options);
     } else if (!silent) {
       showToast('Profile updated locally');
     }
@@ -380,9 +388,10 @@ export const ClientProvider = ({ children }) => {
       const res = await jobsAPI.createJob(project);
       await fetchProfile(); // Refresh list and stats
       showToast('Project posted successfully! 🎉');
-      return res.data.data.job;
+      return { success: true, job: res.data.data.job };
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to post project', 'error');
+      return { success: false, error: error.response?.data?.message };
     } finally {
       setLoading(false);
     }
@@ -394,8 +403,10 @@ export const ClientProvider = ({ children }) => {
       await jobsAPI.updateJob(id, data);
       await fetchProfile();
       showToast('Project updated successfully!');
+      return true;
     } catch (error) {
-      showToast('Failed to update project', 'error');
+      showToast(error.response?.data?.errors?.[0]?.message || error.response?.data?.message || 'Failed to update project', 'error');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -407,48 +418,68 @@ export const ClientProvider = ({ children }) => {
       await jobsAPI.deleteJob(id);
       await fetchProfile();
       showToast('Project deleted.', 'info');
+      return { success: true };
     } catch (error) {
       showToast('Failed to delete project', 'error');
+      return { success: false };
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSavedFreelancer = (freelancer) => {
-    setSavedFreelancers(prev => {
-      const exists = prev.find(f => f.id === freelancer.id);
-      if (exists) {
-        showToast('Freelancer removed from saved.', 'info');
-        return prev.filter(f => f.id !== freelancer.id);
-      } else {
-        showToast('Freelancer saved successfully! 🔖');
-        return [...prev, freelancer];
-      }
-    });
+  const toggleSavedFreelancer = async (freelancer) => {
+    const freelancerId = freelancer.id || freelancer._id;
+    if (!freelancerId) return { success: false };
+
+    const exists = savedFreelancers.some(f => f.id === freelancerId);
+    const previous = savedFreelancers;
+
+    // Optimistic update
+    setSavedFreelancers(prev =>
+      exists ? prev.filter(f => f.id !== freelancerId) : [...prev, normalizeSavedFreelancer(freelancer) || freelancer]
+    );
+
+    try {
+      await clientsAPI.toggleSavedFreelancer(freelancerId);
+      showToast(exists ? 'Freelancer removed from saved.' : 'Freelancer saved successfully! 🔖', exists ? 'info' : 'success');
+      return { success: true, saved: !exists };
+    } catch (error) {
+      // Roll back on failure
+      setSavedFreelancers(previous);
+      showToast(error.response?.data?.message || 'Failed to update saved list', 'error');
+      return { success: false };
+    }
   };
 
+  // Memoized so consumers don't re-render on every provider render. Keyed on the
+  // state slices; the handler functions are recreated each render but are cheap
+  // and stable in behaviour, so we intentionally exclude them from deps.
+  const value = useMemo(() => ({
+    profile,
+    setProfile,
+    updateProfile,
+    updateMultipleSections,
+    projects,
+    setProjects,
+    addProject,
+    updateProject,
+    deleteProject,
+    savedFreelancers,
+    setSavedFreelancers,
+    savedLoading,
+    toggleSavedFreelancer,
+    toasts,
+    setToasts,
+    showToast,
+    loading,
+    setLoading,
+    fetchProfile,
+    saveProfile
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [profile, projects, savedFreelancers, savedLoading, toasts, loading, fetchProfile]);
+
   return (
-    <ClientContext.Provider value={{
-      profile,
-      setProfile,
-      updateProfile,
-      updateMultipleSections,
-      projects,
-      setProjects,
-      addProject,
-      updateProject,
-      deleteProject,
-      savedFreelancers,
-      setSavedFreelancers,
-      toggleSavedFreelancer,
-      toasts,
-      setToasts,
-      showToast,
-      loading,
-      setLoading,
-      fetchProfile,
-      saveProfile
-    }}>
+    <ClientContext.Provider value={value}>
       {children}
     </ClientContext.Provider>
   );

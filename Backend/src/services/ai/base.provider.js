@@ -36,6 +36,32 @@ class AIProvider {
   async recommendIndustry(companyName, bio, techStack, website) {
     throw new Error('Method recommendIndustry() must be implemented by the provider.');
   }
+
+  /**
+   * @returns {Promise<{ category: string, suggestions: string[] }>}
+   */
+  async recommendJobCategory(title, description, skills) {
+    throw new Error('Method recommendJobCategory() must be implemented by the provider.');
+  }
+
+  /**
+   * Generate a skill test (array of question objects) for the given skills.
+   * @param {string[]} skills
+   * @param {number} count
+   * @returns {Promise<Array<Object>>}
+   */
+  async generateSkillTest(skills, count) {
+    throw new Error('Method generateSkillTest() must be implemented by the provider.');
+  }
+
+  /**
+   * Evaluate submitted skill-test answers and return scored results.
+   * @param {Array<Object>} questionsAndAnswers
+   * @returns {Promise<Object>}
+   */
+  async evaluateSkillTest(questionsAndAnswers) {
+    throw new Error('Method evaluateSkillTest() must be implemented by the provider.');
+  }
 }
 
 module.exports = AIProvider;

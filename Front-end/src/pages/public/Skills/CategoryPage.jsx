@@ -5,7 +5,9 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { getCategoryBySlug } from "../../../data/categories";
 import { getSkillsByCategorySlug } from "../../../data/skills";
-import { getGigsByCategory } from "../../../data/gigs";
+import { gigsAPI } from "../../../api/gigs";
+import { publicAPI } from "../../../api/publicData";
+import { mapGig, mapFreelancer } from "../../../utils/gigMapper";
 import Navbar from "../../../Components/common/Navbar/Navbar";
 import Footer from "../../../Components/common/Footer/Footer";
 import SkillCard from "./SkillCard";
@@ -14,23 +16,65 @@ import "./marketplace.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const FREELANCERS_SAMPLE = [
-  { name: "Alex Morgan",  title: "Full-Stack Developer", rating: 4.9, reviews: 312, price: 35, seed: "AlexMorgan"  },
-  { name: "Sara Kim",     title: "UI/UX Designer",       rating: 4.9, reviews: 248, price: 45, seed: "SaraKim"    },
-  { name: "James Patel",  title: "SEO Specialist",       rating: 4.8, reviews: 187, price: 25, seed: "JamesPatel" },
-  { name: "Lena Rossi",   title: "Content Strategist",   rating: 4.9, reviews: 203, price: 20, seed: "LenaRossi"  },
-  { name: "Omar Hassan",  title: "AI Developer",         rating: 5.0, reviews: 159, price: 75, seed: "OmarHassan" },
-  { name: "Priya Nair",   title: "Brand Designer",       rating: 4.8, reviews: 294, price: 40, seed: "PriyaNair"  },
-  { name: "Tom Clarke",   title: "Video Editor",         rating: 4.9, reviews: 328, price: 30, seed: "TomClarke"  },
-];
-
 export default function CategoryPage() {
   const { categorySlug } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
 
   const category = getCategoryBySlug(categorySlug);
   const skills   = getSkillsByCategorySlug(categorySlug);
-  const featuredGigs = getGigsByCategory(categorySlug).slice(0, 9);
+
+  /* ── Real backend data ── */
+  const [allGigs, setAllGigs]             = useState([]);
+  const [featuredGigs, setFeaturedGigs]   = useState([]);
+  const [gigsLoading, setGigsLoading]     = useState(true);
+  const [freelancers, setFreelancers]     = useState([]);
+  const [flLoading, setFlLoading]         = useState(true);
+  const [stats, setStats]                 = useState(null);
+
+  useEffect(() => {
+    if (!category) return;
+    let active = true;
+
+    setGigsLoading(true);
+    setFlLoading(true);
+
+    /* Skill names from the category's static skill taxonomy — used to scope
+       the freelancer search to people who actually work in this category. */
+    const skillNames = skills.map((s) => s.name).filter(Boolean).join(",");
+
+    /* Real gigs in this category (Gig.category stores the display name).
+       Fetch a larger pool so per-skill counts + trending are accurate; show
+       the top 9 by rating as "featured". */
+    gigsAPI
+      .listGigs({ category: category.name, sort: "rating", limit: 100 })
+      .then((res) => {
+        if (!active) return;
+        const list = (res.data?.data || []).map(mapGig);
+        setAllGigs(list);
+        setFeaturedGigs(list.slice(0, 9));
+      })
+      .catch(() => { if (active) { setAllGigs([]); setFeaturedGigs([]); } })
+      .finally(() => { if (active) setGigsLoading(false); });
+
+    /* Real top-rated freelancers scoped to this category's skills. */
+    publicAPI
+      .searchFreelancers({ skills: skillNames, sortBy: "rating", limit: 7 })
+      .then((res) => {
+        if (!active) return;
+        const list = res.data?.data || [];
+        setFreelancers(list.map(mapFreelancer));
+      })
+      .catch(() => { if (active) setFreelancers([]); })
+      .finally(() => { if (active) setFlLoading(false); });
+
+    /* Real aggregate stats for the hero. */
+    publicAPI
+      .getCategoryStats(categorySlug)
+      .then((res) => { if (active) setStats(res.data?.data || null); })
+      .catch(() => { if (active) setStats(null); });
+
+    return () => { active = false; };
+  }, [categorySlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Refs for GSAP ── */
   const heroRef       = useRef(null);
@@ -72,7 +116,7 @@ export default function CategoryPage() {
     animateChildren(gigsRef,     ".mp-gig-card");
 
     return () => ScrollTrigger.getAll().forEach(t => t.kill());
-  }, [category]);
+  }, [category, freelancers, featuredGigs]);
 
   if (!category) {
     return (
@@ -91,7 +135,34 @@ export default function CategoryPage() {
     );
   }
 
-  const allTrending = skills.flatMap((s) => s.trending || []).slice(0, 20);
+  /* Real trending = the skills that actually appear most across this category's
+     live gigs (ranked by frequency). Falls back to the static taxonomy tags
+     only when there are no gigs yet. */
+  const realTrending = (() => {
+    const freq = new Map();
+    for (const g of allGigs) {
+      for (const s of g.skills || []) {
+        const k = String(s).trim();
+        if (k) freq.set(k, (freq.get(k) || 0) + 1);
+      }
+    }
+    return [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name).slice(0, 20);
+  })();
+  const staticTrending = skills.flatMap((s) => s.trending || []).slice(0, 20);
+  const allTrending = realTrending.length > 0 ? realTrending : staticTrending;
+
+  /* Real per-skill gig count: how many live gigs list this skill. */
+  const skillGigCount = (skill) => {
+    const target = String(skill.name).toLowerCase();
+    return allGigs.filter((g) => (g.skills || []).some((s) => String(s).toLowerCase() === target)).length;
+  };
+
+  /* Real stats ONLY — no static fallback. "—" until there's data. */
+  const totalServices = Number(stats?.totalGigs) || 0;
+  const totalFreelancers = Number(stats?.totalFreelancers) || 0;
+  const avgRating = stats?.avgRating
+    ? `${Number(stats.avgRating).toFixed(1)}★`
+    : "—";
 
   const filteredSkills = searchTerm.trim()
     ? skills.filter((s) =>
@@ -126,7 +197,7 @@ export default function CategoryPage() {
             {/* Badge */}
             <div className="cat-hero__badge cat-hero__badge--el">
               <span>{category.icon}</span>
-              {category.totalServices.toLocaleString()} Services Available
+              {totalServices.toLocaleString()} Services Available
             </div>
 
             {/* Title */}
@@ -145,18 +216,23 @@ export default function CategoryPage() {
               </div>
               <div className="cat-hero__stat-divider" />
               <div className="cat-hero__stat">
-                <span className="cat-hero__stat-num">{category.totalServices.toLocaleString()}</span>
-                <span className="cat-hero__stat-lbl">Total Services</span>
+                <span className="cat-hero__stat-num">{totalServices.toLocaleString()}</span>
+                <span className="cat-hero__stat-lbl">
+                  {totalFreelancers != null ? "Total Gigs" : "Total Services"}
+                </span>
               </div>
               <div className="cat-hero__stat-divider" />
               <div className="cat-hero__stat">
-                <span className="cat-hero__stat-num">4.8★</span>
+                <span className="cat-hero__stat-num">{avgRating}</span>
                 <span className="cat-hero__stat-lbl">Avg Rating</span>
               </div>
             </div>
 
-            {/* Search */}
-            <div className="cat-hero__search">
+            {/* Search — filters the skills grid live; the button jumps to results */}
+            <form
+              className="cat-hero__search"
+              onSubmit={(e) => { e.preventDefault(); skillsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+            >
               <Search size={18} color="rgba(255,255,255,0.55)" style={{ flexShrink: 0 }} />
               <input
                 className="cat-hero__search-input"
@@ -164,8 +240,8 @@ export default function CategoryPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <button className="cat-hero__search-btn">Search</button>
-            </div>
+              <button type="submit" className="cat-hero__search-btn">Search</button>
+            </form>
           </div>
 
           {/* Wave separator — same as About page */}
@@ -190,7 +266,7 @@ export default function CategoryPage() {
             </div>
             <div ref={skillsRef} className="mp-skills-grid">
               {filteredSkills.map((skill) => (
-                <SkillCard key={skill.id} skill={skill} categorySlug={categorySlug} />
+                <SkillCard key={skill.id} skill={skill} categorySlug={categorySlug} gigCount={skillGigCount(skill)} />
               ))}
             </div>
           </div>
@@ -229,22 +305,38 @@ export default function CategoryPage() {
                 View All <ArrowRight size={14} style={{ display: "inline", verticalAlign: "middle" }} />
               </Link>
             </div>
-            <div ref={freelanceRef} className="mp-freelancers-scroll">
-              {FREELANCERS_SAMPLE.map((fl) => (
-                <div key={fl.seed} className="mp-freelancer-card">
-                  <div className="mp-freelancer-card__avatar">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${fl.seed}`} alt={fl.name} />
-                  </div>
-                  <div className="mp-freelancer-card__name">{fl.name}</div>
-                  <div className="mp-freelancer-card__title">{fl.title}</div>
-                  <div className="mp-freelancer-card__rating">
-                    <Star size={13} fill="currentColor" /> {fl.rating}
-                    <span className="mp-freelancer-card__reviews">({fl.reviews})</span>
-                  </div>
-                  <div className="mp-freelancer-card__price">From ${fl.price}/hr</div>
-                </div>
-              ))}
-            </div>
+            {flLoading ? (
+              <div className="mp-state-msg">Loading…</div>
+            ) : freelancers.length === 0 ? (
+              <div className="mp-state-msg">No freelancers here yet</div>
+            ) : (
+              <div ref={freelanceRef} className="mp-freelancers-scroll">
+                {freelancers.map((f) => (
+                  <Link
+                    key={f.id}
+                    to={`/freelancers/${f.id}`}
+                    className="mp-freelancer-card"
+                  >
+                    <div className="mp-freelancer-card__avatar">
+                      <img
+                        src={f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.seed}`}
+                        alt={f.name}
+                        onError={(e) => {
+                          e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.seed}`;
+                        }}
+                      />
+                    </div>
+                    <div className="mp-freelancer-card__name">{f.name}</div>
+                    <div className="mp-freelancer-card__title">{f.title}</div>
+                    <div className="mp-freelancer-card__rating">
+                      <Star size={13} fill="currentColor" /> {f.rating}
+                      <span className="mp-freelancer-card__reviews">({f.reviews})</span>
+                    </div>
+                    <div className="mp-freelancer-card__price">From ${f.price}/hr</div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -256,13 +348,23 @@ export default function CategoryPage() {
                 <div className="mp-section-tag"><Star size={11} /> Featured</div>
                 <h2 className="mp-section-title">Featured Gigs in {category.name}</h2>
               </div>
-              <a href="#" className="mp-view-all">
+              <Link to="/browse-projects" className="mp-view-all">
                 Browse All <ArrowRight size={14} style={{ display: "inline", verticalAlign: "middle" }} />
-              </a>
+              </Link>
             </div>
-            <div ref={gigsRef} className="mp-gigs-grid">
-              {featuredGigs.map((gig) => <GigCard key={gig.id} gig={gig} />)}
-            </div>
+            {gigsLoading ? (
+              <div className="mp-state-msg">Loading…</div>
+            ) : featuredGigs.length === 0 ? (
+              <div className="mp-state-msg">No gigs in this category yet — check back soon</div>
+            ) : (
+              <div ref={gigsRef} className="mp-gigs-grid">
+                {featuredGigs.map((gig) => (
+                  <Link key={gig.id} to={`/gigs/${gig.id}`} className="mp-gig-link">
+                    <GigCard gig={gig} />
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

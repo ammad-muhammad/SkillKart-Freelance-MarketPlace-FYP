@@ -1,15 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertCircle, Globe, Loader2, Plus, Sparkles, X } from 'lucide-react';
 import { skillsAPI } from '../../../api/skills';
 import './TagInput.css';
 
-const TagInput = ({ 
-  tags = [], 
-  onChange, 
+const TagInput = ({
+  tags = [],
+  onChange,
   placeholder = 'Add (e.g. React, UI Design)...',
   options = null, // If provided, use static list instead of AI
-  showHint = true 
+  showHint = true,
+  maxTags = null,
+  hintText = null,
+  // Skill-validation function used in AI mode. Defaults to the authenticated
+  // skillsAPI.validate; pass aiAPI.validateSkill for public/no-auth contexts
+  // (e.g. the free Cost Estimator usable while logged out).
+  validateFn = null,
 }) => {
+  // Stable identity so the suggestion effect doesn't re-fire every render.
+  const validateSkill = useCallback(
+    (value) => (validateFn || skillsAPI.validate)(value),
+    [validateFn]
+  );
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -63,7 +74,7 @@ const TagInput = ({
 
       debounceTimer.current = setTimeout(async () => {
         try {
-          const res = await skillsAPI.validate(input);
+          const res = await validateSkill(input);
           if (res.data.data.suggestions) {
             const currentTagNames = tags.map(t => (typeof t === 'string' ? t : t.name).toLowerCase());
             const newSuggestions = res.data.data.suggestions.filter(s => !currentTagNames.includes(s.toLowerCase()));
@@ -79,7 +90,7 @@ const TagInput = ({
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [input, tags, options, isStatic, showSuggestions]);
+  }, [input, tags, options, isStatic, showSuggestions, validateSkill]);
 
   const addTag = async (val) => {
     const trimmed = val.trim();
@@ -113,13 +124,14 @@ const TagInput = ({
     setError(null);
 
     try {
-      const res = await skillsAPI.validate(trimmed);
+      const res = await validateSkill(trimmed);
       const result = res.data.data;
 
       if (result.valid) {
         const normalizedSkill = result.skill || trimmed;
         if (!currentTagNames.includes(normalizedSkill.toLowerCase())) {
-          onChange([...tags, normalizedSkill]);
+          const next = maxTags === 1 ? [normalizedSkill] : [...tags, normalizedSkill];
+          onChange(next);
         }
         setInput('');
         setShowSuggestions(false);
@@ -129,7 +141,7 @@ const TagInput = ({
         setSuggestions(result.suggestions || []);
         setShowSuggestions(true);
       }
-    } catch (err) {
+    } catch {
       setError("Validation failed. Please try again.");
     } finally {
       setLoading(false);
@@ -174,7 +186,7 @@ const TagInput = ({
               onKeyDown={handleKey}
               onFocus={() => isStatic && setShowSuggestions(true)}
               onClick={() => isStatic && setShowSuggestions(true)}
-              placeholder={tags.length === 0 ? placeholder : ''}
+              placeholder={tags.length === 0 || maxTags !== 1 ? placeholder : 'Change category…'}
               className="fl-tag-input__field"
               disabled={loading}
               autoComplete="off"
@@ -214,10 +226,10 @@ const TagInput = ({
       
       {showHint && (
         <p className="fl-tag-hint">
-          {isStatic 
-            ? 'Select languages from the dropdown list.' 
+          {hintText || (isStatic 
+            ? 'Type to filter, then pick from the list or press Enter.' 
             : <span>Type a skill and press <strong>Enter</strong>. AI will validate and suggest related skills.</span>
-          }
+          )}
         </p>
       )}
     </div>

@@ -4,9 +4,11 @@ import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { projectsAPI } from '../../../api/projects';
 import { CATEGORIES, ALL_SKILLS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import ComboSelect from '../../../Components/common/ComboSelect/ComboSelect';
+import AiSuggestFill from '../../../Components/common/AiSuggest/AiSuggestFill';
+import { useAuth } from '../../../hooks/useAuth';
 import './PostProject.css';
 
 /* ─── Validation helpers ─── */
@@ -76,6 +78,8 @@ function qualityScore(form) {
 
 /* ─────────────── MAIN PAGE ─────────────── */
 export default function PostProject() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const [step, setStep] = useState(0);
     const [form, setForm] = useState(INIT);
     const [errors, setErrors] = useState({});
@@ -85,7 +89,6 @@ export default function PostProject() {
     const [projectId, setProjectId] = useState(null);
     const [dragOver, setDragOver] = useState(false);
     const fileRef = useRef(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         document.title = 'Post a Project — SkillKart';
@@ -142,31 +145,49 @@ export default function PostProject() {
         handleFiles(e.dataTransfer.files);
     };
 
-    /* submit */
+    /* submit — posting a real project requires a logged-in CLIENT. We stash the
+       drafted brief so the authenticated post-project form can prefill it, then
+       route based on auth state:
+         - client      → straight to the real post form
+         - freelancer  → show notice (wrong role)
+         - logged out  → login, returning to the post form afterwards */
     const submit = async () => {
         const errs = validate(form, 2);
         if (Object.keys(errs).length) { setErrors(errs); return; }
         setSubmitting(true);
+
+        const draft = {
+            title: form.title,
+            category: form.category,
+            description: form.description,
+            budgetType: form.budgetType,
+            budgetMin: form.budgetMin,
+            budgetMax: form.budgetMax,
+            timeline: form.timeline,
+            skills: form.skills,
+            visibility: form.visibility,
+        };
         try {
-            const payload = {
-                title: form.title,
-                category: form.category,
-                description: form.description,
-                budget: { type: form.budgetType, min: +form.budgetMin, max: form.budgetMax ? +form.budgetMax : undefined },
-                timeline: form.timeline,
-                skills: form.skills,
-                visibility: form.visibility,
-            };
-            const { data } = await projectsAPI.create(payload);
-            setProjectId(data?.data?.id ?? `SK-${Date.now().toString(36).toUpperCase()}`);
-            setSubmitted(true);
-        } catch {
-            /* mock success for demo */
-            setProjectId(`SK-${Date.now().toString(36).toUpperCase()}`);
-            setSubmitted(true);
-        } finally {
+            sessionStorage.setItem('pendingProjectDraft', JSON.stringify(draft));
+        } catch { /* sessionStorage may be unavailable; non-fatal */ }
+
+        // Already a logged-in client → jump straight into the real form.
+        if (user?.role === 'client') {
             setSubmitting(false);
+            navigate('/client/projects/create');
+            return;
         }
+
+        // Logged out → remember where to land after login.
+        if (!user) {
+            try { sessionStorage.setItem('postLoginRedirect', '/client/projects/create'); } catch { /* non-fatal */ }
+        }
+
+        // Confirmation screen (its CTA routes to login/register, or to the
+        // freelancer notice). For a wrong-role user we mark that too.
+        setProjectId(`DRAFT-${Date.now().toString(36).toUpperCase()}`);
+        setSubmitted(true);
+        setSubmitting(false);
     };
 
     const score = qualityScore(form);
@@ -179,29 +200,50 @@ export default function PostProject() {
                 <div className="pp-page">
                     <section className="pp-hero" style={{ padding: '2rem 0' }}>
                         <div className="container pp-hero__inner">
-                            <div className="pp-hero__tag">✅ Project Posted</div>
-                            <h1>Your Project is <span>Live!</span></h1>
+                            <div className="pp-hero__tag">📝 Brief Saved</div>
+                            <h1>You're One Step <span>Away!</span></h1>
                         </div>
                     </section>
                     <div className="container">
                         <div style={{ maxWidth: 600, margin: '3rem auto' }}>
                             <div className="pp-form-card">
-                                <div className="pp-success">
-                                    <div className="pp-success__icon">🎉</div>
-                                    <div className="pp-success__title">Project Posted Successfully</div>
-                                    <div className="pp-success__sub">
-                                        Your project is now live and our AI is already matching you with the best freelancers.
+                                {user?.role === 'freelancer' ? (
+                                    <div className="pp-success">
+                                        <div className="pp-success__icon">👋</div>
+                                        <div className="pp-success__title">Switch to a client account to post</div>
+                                        <div className="pp-success__sub">
+                                            You're signed in as a freelancer. Projects are posted by clients —
+                                            switch your role from your account to publish this brief and hire talent.
+                                        </div>
+                                        <div className="pp-success__id">Reference: <strong>{projectId}</strong></div>
+                                        <div className="pp-success__btns">
+                                            <Link to="/freelancer/dashboard" className="pp-success__btn-main">
+                                                Go to my dashboard
+                                            </Link>
+                                            <Link to="/browse-freelancers" className="pp-success__btn-sec">
+                                                Browse talent
+                                            </Link>
+                                        </div>
                                     </div>
-                                    <div className="pp-success__id">Project ID: <strong>{projectId}</strong></div>
-                                    <div className="pp-success__btns">
-                                        <Link to="/ai-matchmaking" className="pp-success__btn-main">
-                                            🤖 View AI Matches
-                                        </Link>
-                                        <button className="pp-success__btn-sec" onClick={() => { setSubmitted(false); setForm(INIT); setStep(0); }}>
-                                            Post Another
-                                        </button>
+                                ) : (
+                                    <div className="pp-success">
+                                        <div className="pp-success__icon">🎉</div>
+                                        <div className="pp-success__title">Your project brief is ready</div>
+                                        <div className="pp-success__sub">
+                                            We've saved your details. Sign in or create a free client account to
+                                            publish your project and start receiving proposals from verified freelancers.
+                                        </div>
+                                        <div className="pp-success__id">Reference: <strong>{projectId}</strong></div>
+                                        <div className="pp-success__btns">
+                                            <Link to="/registration" className="pp-success__btn-main">
+                                                Create account & publish
+                                            </Link>
+                                            <Link to="/login" className="pp-success__btn-sec">
+                                                Sign in
+                                            </Link>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -280,11 +322,11 @@ export default function PostProject() {
                                         {/* Category */}
                                         <div className="pp-field" style={{ marginBottom: '1rem' }}>
                                             <label className="pp-label" htmlFor="pp-category">Category <span>*</span></label>
-                                            <CustomSelect
+                                            <ComboSelect
                                                 id="pp-category"
                                                 value={form.category}
                                                 onChange={val => set('category', val)}
-                                                placeholder="Select a category…"
+                                                placeholder="Type to search categories…"
                                                 options={CATEGORIES.map(c => ({ value: c, label: c }))}
                                                 className={errors.category ? 'csel--error' : ''}
                                             />
@@ -307,6 +349,16 @@ export default function PostProject() {
                                                 <span className="pp-char-count">{form.description.length}</span>
                                             </div>
                                         </div>
+
+                                        {/* AI suggest & fill — category + skills from the title/description */}
+                                        <AiSuggestFill
+                                            label="Suggest category & skills (AI)"
+                                            getContext={() => ({ title: form.title, description: form.description, skills: form.skills })}
+                                            allowedCategories={CATEGORIES}
+                                            existingSkills={form.skills}
+                                            onCategory={(cat) => set('category', cat)}
+                                            onSkills={(newSkills) => set('skills', Array.from(new Set([...form.skills, ...newSkills])))}
+                                        />
                                     </div>
 
                                     {/* Visibility */}

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { timezones, getCurrentTimezone } from "../../utils/timezones";
+import ComboSelect from "../common/ComboSelect/ComboSelect";
 
 const AVAILABILITY_OPTIONS = [
   { value: "full-time",     label: "Full Time",     desc: "40+ hrs/week",     Icon: Zap       },
@@ -279,16 +280,17 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             <Award size={15} className="fob-label-icon" />
             Experience Level*
           </label>
-          <select
-            name="experienceLevel"
+          <ComboSelect
+            id="fob-experience"
+            options={[
+              { value: 'Entry', label: 'Entry (0-2 years)' },
+              { value: 'Intermediate', label: 'Intermediate (2-5 years)' },
+              { value: 'Expert', label: 'Expert (5+ years)' },
+            ]}
             value={formData.experienceLevel}
-            onChange={handleChange}
-            className="fob-input"
-          >
-            <option value="Entry">Entry (0-2 years)</option>
-            <option value="Intermediate">Intermediate (2-5 years)</option>
-            <option value="Expert">Expert (5+ years)</option>
-          </select>
+            onChange={(val) => handleChange({ target: { name: 'experienceLevel', value: val } })}
+            placeholder="Type to search…"
+          />
         </div>
 
         <div className="fob-form-group">
@@ -296,17 +298,13 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             <Globe size={15} className="fob-label-icon" />
             Timezone / Location*
           </label>
-          <select
-            name="timezone"
+          <ComboSelect
+            id="fob-timezone"
+            options={timezones.map((tz) => tz.label)}
             value={formData.timezone}
-            onChange={handleChange}
-            className="fob-input"
-          >
-            <option value="">Select Timezone</option>
-            {timezones.map(tz => (
-              <option key={tz.value} value={tz.label}>{tz.label}</option>
-            ))}
-          </select>
+            onChange={(val) => handleChange({ target: { name: 'timezone', value: val } })}
+            placeholder="Type to search timezone…"
+          />
         </div>
       </div>
 

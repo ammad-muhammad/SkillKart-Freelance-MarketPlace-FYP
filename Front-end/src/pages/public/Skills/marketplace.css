@@ -731,6 +731,8 @@
 .mp-freelancers-scroll::-webkit-scrollbar { display: none; }
 
 .mp-freelancer-card {
+  display: block;
+  text-decoration: none;
   background: #fff;
   border: 1px solid #e8edf3;
   border-radius: 14px;
@@ -740,6 +742,21 @@
   flex-shrink: 0;
   text-align: center;
   transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Wrap GigCard so the whole card links to the gig detail page. */
+.mp-gig-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Shared loading / empty placeholder for async sections. */
+.mp-state-msg {
+  padding: 32px 0;
+  color: #6b7a8d;
+  font-size: 14px;
+  font-weight: 500;
 }
 .mp-freelancer-card:hover {
   transform: translateY(-3px);

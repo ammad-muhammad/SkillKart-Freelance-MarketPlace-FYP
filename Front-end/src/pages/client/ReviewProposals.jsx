@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { jobsAPI } from '../../api/jobs';
+import { messagesAPI } from '../../api/messages';
 import { useClient } from '../../context/ClientContext';
 import { 
   User, CheckCircle2, XCircle, Clock, 
@@ -13,11 +14,31 @@ import './ReviewProposals.css';
 
 export default function ReviewProposals() {
   const { jobId } = useParams();
+  const navigate = useNavigate();
   const { fetchProfile } = useClient();
   const [job, setJob] = useState(null);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
+  const [messagingId, setMessagingId] = useState(null);
+
+  const handleMessage = async (prop) => {
+    const freelancerId = prop.freelancerId?._id;
+    if (!freelancerId) return;
+    setMessagingId(prop._id);
+    try {
+      await messagesAPI.startConversation(
+        freelancerId,
+        `Hi! I'd like to discuss your proposal for "${job?.title || 'my project'}".`
+      );
+      navigate('/client/messages');
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+      toast.error('Could not start the conversation. Please try again.');
+    } finally {
+      setMessagingId(null);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -111,8 +132,8 @@ export default function ReviewProposals() {
                       {prop.freelancerId?.firstName} {prop.freelancerId?.lastName}
                     </h4>
                     <div className="rp-user__meta">
-                      <Star size={12} fill="#facc15" color="#facc15" /> 
-                      <span>4.9 (28 reviews)</span>
+                      <Star size={12} fill="#facc15" color="#facc15" />
+                      <span>{prop.freelancerId?.rating > 0 ? prop.freelancerId.rating.toFixed(1) : 'New'}</span>
                     </div>
                   </div>
                 </div>
@@ -163,8 +184,12 @@ export default function ReviewProposals() {
                       Responded on {new Date(prop.respondedAt).toLocaleDateString()}
                     </span>
                   )}
-                  <button className="rp-btn rp-btn--ghost">
-                    <MessageSquare size={18} /> Message
+                  <button
+                    className="rp-btn rp-btn--ghost"
+                    onClick={() => handleMessage(prop)}
+                    disabled={messagingId === prop._id}
+                  >
+                    <MessageSquare size={18} /> {messagingId === prop._id ? 'Opening…' : 'Message'}
                   </button>
                 </div>
                 <Link to={`/freelancers/${prop.freelancerId?._id}`} className="rp-link">

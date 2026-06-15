@@ -2,7 +2,8 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
-const { NotFoundError } = require('../utils/apiError');
+const { NotFoundError, BadRequestError } = require('../utils/apiError');
+const { uploadJobAttachment: uploadAttachmentToCloud } = require('../services/upload.service');
 
 /**
  * Get all conversations for current user
@@ -90,8 +91,25 @@ const sendMessage = asyncHandler(async (req, res) => {
   sendCreated(res, 'Message sent', { message });
 });
 
+/**
+ * Upload a chat attachment (image or document). Any authenticated user.
+ * Returns { url, name, mimeType } to attach to a subsequent sendMessage call.
+ */
+const uploadAttachment = asyncHandler(async (req, res) => {
+  if (!req.file) throw new BadRequestError('No file provided');
+
+  const result = await uploadAttachmentToCloud(req.file);
+
+  sendCreated(res, 'Attachment uploaded', {
+    url: result.url,
+    name: result.originalName,
+    mimeType: result.mimeType
+  });
+});
+
 module.exports = {
   getConversations,
   getMessages,
-  sendMessage
+  sendMessage,
+  uploadAttachment
 };

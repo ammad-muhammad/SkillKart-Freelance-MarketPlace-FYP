@@ -1,17 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
-import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import ComboSelect from '../../../Components/common/ComboSelect/ComboSelect';
+import TagInput from '../../../Components/common/TagInput/TagInput';
+import AiSuggestFill from '../../../Components/common/AiSuggest/AiSuggestFill';
+import { JOB_CATEGORIES } from '../../../constants/jobCategories';
+import { aiAPI } from '../../../api/ai';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './AiTools.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Format a numeric amount with its currency. Falls back gracefully when the
+// API returns a non-numeric / missing value.
+const formatMoney = (amount, currency = 'USD') => {
+    if (amount === null || amount === undefined || isNaN(Number(amount))) {
+        return '—';
+    }
+    return `${Number(amount).toLocaleString()} ${currency}`;
+};
+
 export default function CostEstimator() {
     const [formData, setFormData] = useState({
-        type: 'Web Application',
-        skills: '',
+        type: JOB_CATEGORIES[0],   // full platform taxonomy (editable + AI-suggested)
+        skills: [],                // array of skills (TagInput chips)
         level: 'Expert',
         duration: '1 Month',
         complexity: 50,
@@ -20,7 +34,9 @@ export default function CostEstimator() {
 
     const [estimate, setEstimate] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const pageRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         document.title = "Project Cost Estimator | SkillKart AI";
@@ -56,71 +72,56 @@ export default function CostEstimator() {
         return () => ctx.revert();
     }, []);
 
-    const handleEstimate = (e) => {
+    const handleEstimate = async (e) => {
         e.preventDefault();
+        if (loading) return;
+
         setLoading(true);
-        
-        setTimeout(() => {
-            // Basic Calculation Logic
-            const basePrices = {
-                'Web Application': 1200,
-                'Mobile App (IOS/Android)': 1800,
-                'UI/UX Design Branding': 700,
-                'Content Strategy': 450,
-                'Custom AI Solution': 2500
-            };
+        setError('');
+        setEstimate(null);
 
-            const levelMult = {
-                'Beginner (Student)': 0.6,
-                'Intermediate': 1.0,
-                'Expert (Pro)': 2.2
-            };
+        // Map the form fields into the project brief the AI endpoint expects.
+        const skills = Array.isArray(formData.skills) ? formData.skills : [];
 
-            const durationMult = {
-                'Under 1 Week': 0.35,
-                '1 Month': 1.0,
-                '3 Months': 2.8,
-                '6+ Months': 5.5
-            };
+        const project = {
+            title: formData.type,
+            category: formData.type,
+            description: `A ${formData.type} project requiring ${skills.join(', ') || 'general skills'}. ` +
+                `Target expertise level: ${formData.level}. ` +
+                `Expected duration: ${formData.duration}. ` +
+                `Budget preference: ${formData.budget}.`,
+            skills,
+            complexity: formData.complexity,
+            timeline: formData.duration
+        };
 
-            const base = basePrices[formData.type] || 1000;
-            const level = levelMult[formData.level] || 1.0;
-            const duration = durationMult[formData.duration] || 1.0;
-            const complexity = 0.8 + (formData.complexity / 100) * 0.7;
-
-            const totalBase = base * level * duration * complexity;
-            const min = Math.round(totalBase * 0.85 / 50) * 50;
-            const max = Math.round(totalBase * 1.25 / 50) * 50;
-
-            const isHourly = formData.budget === 'Hourly Rate';
-            const currency = isHourly ? '/hr' : '';
-
+        try {
+            const res = await aiAPI.estimateCost(project);
+            const data = res?.data?.data || {};
             setEstimate({
-                range: `$${min.toLocaleString()} - $${max.toLocaleString()}${currency}`,
-                freelancerLevel: formData.level,
-                timeline: formData.duration,
-                risk: formData.complexity > 70 ? "High" : formData.complexity > 40 ? "Medium" : "Low",
-                breakdown: [
-                    { part: "Planning & Architecture", cost: `$${Math.round(min * 0.15)} - $${Math.round(max * 0.15)}` },
-                    { part: "Development Phase", cost: `$${Math.round(min * 0.6)} - $${Math.round(max * 0.6)}` },
-                    { part: "Testing & QA", cost: `$${Math.round(min * 0.15)} - $${Math.round(max * 0.15)}` },
-                    { part: "Deployment & Support", cost: `$${Math.round(min * 0.1)} - $${Math.round(max * 0.1)}` }
-                ]
+                min: data.min,
+                max: data.max,
+                currency: data.currency || 'USD',
+                rationale: data.rationale || '',
+                breakdown: Array.isArray(data.breakdown) ? data.breakdown : []
             });
 
-            setLoading(false);
-            
             setTimeout(() => {
                 const resSection = document.getElementById('estimate-result');
                 if (resSection) {
                     resSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    gsap.fromTo("#estimate-result", 
+                    gsap.fromTo("#estimate-result",
                         { opacity: 0, y: 30 },
                         { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
                     );
                 }
             }, 100);
-        }, 1200);
+        } catch (err) {
+            console.error('Cost estimate request failed:', err);
+            setError("Couldn't generate an estimate right now — please try again.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -167,55 +168,89 @@ export default function CostEstimator() {
                             <div className="ai-form-grid">
                                 <div className="ai-form-group">
                                     <label>Project Type</label>
-                                    <CustomSelect 
-                                        options={['Web Application', 'Mobile App (IOS/Android)', 'UI/UX Design Branding', 'Content Strategy', 'Custom AI Solution']}
-                                        value={formData.type}
-                                        onChange={val => setFormData({...formData, type: val})}
+                                    <TagInput
+                                        options={JOB_CATEGORIES}
+                                        maxTags={1}
+                                        tags={formData.type ? [formData.type] : []}
+                                        onChange={(tags) => setFormData({ ...formData, type: tags[tags.length - 1] || '' })}
+                                        placeholder="Type to search project types…"
+                                        hintText={<span>Type to filter the categories, then click one or press <strong>Enter</strong>.</span>}
                                     />
                                 </div>
                                 <div className="ai-form-group">
                                     <label>Required Skills</label>
-                                    <input 
-                                        type="text" required className="ai-input" placeholder="e.g. React, Node.js, AWS"
-                                        value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})}
+                                    <TagInput
+                                        tags={formData.skills}
+                                        onChange={tags => setFormData({ ...formData, skills: tags })}
+                                        validateFn={aiAPI.validateSkill}
+                                        placeholder="Type a skill (e.g. React) — AI suggests as you type…"
+                                        hintText={<span>Type a skill and press <strong>Enter</strong>. AI validates and suggests related skills — no login needed.</span>}
                                     />
                                 </div>
                                 <div className="ai-form-group">
                                     <label>Target Expertise Level</label>
-                                    <CustomSelect 
+                                    <ComboSelect
                                         options={['Beginner (Student)', 'Intermediate', 'Expert (Pro)']}
                                         value={formData.level}
-                                        onChange={val => setFormData({...formData, level: val})}
+                                        onChange={val => setFormData({ ...formData, level: val })}
+                                        placeholder="Type to search…"
                                     />
                                 </div>
                                 <div className="ai-form-group">
                                     <label>Project Duration</label>
-                                    <CustomSelect 
+                                    <ComboSelect
                                         options={['Under 1 Week', '1 Month', '3 Months', '6+ Months']}
                                         value={formData.duration}
-                                        onChange={val => setFormData({...formData, duration: val})}
+                                        onChange={val => setFormData({ ...formData, duration: val })}
+                                        placeholder="Type to search…"
                                     />
                                 </div>
                                 <div className="ai-form-group">
                                     <label>Complexity Level ({formData.complexity}%)</label>
-                                    <input 
+                                    <input
                                         type="range" className="ai-input" min="0" max="100" style={{ padding: 0 }}
                                         value={formData.complexity} onChange={e => setFormData({...formData, complexity: e.target.value})}
                                     />
                                 </div>
                                 <div className="ai-form-group">
                                     <label>Budget Preference</label>
-                                    <CustomSelect 
+                                    <ComboSelect
                                         options={['Fixed Price', 'Hourly Rate']}
                                         value={formData.budget}
-                                        onChange={val => setFormData({...formData, budget: val})}
+                                        onChange={val => setFormData({ ...formData, budget: val })}
+                                        placeholder="Type to search…"
                                     />
                                 </div>
                             </div>
-                             <button type="submit" className="ai-btn-primary ai-submit-btn" disabled={loading} style={{ marginTop: '2rem', minWidth: '240px' }}>
+
+                            {/* AI suggest — infer project type + skills from what's entered */}
+                            <AiSuggestFill
+                                label="Suggest type & skills (AI)"
+                                getContext={() => ({
+                                    title: formData.type,
+                                    description: `A ${formData.type} project. Required skills: ${(formData.skills || []).join(', ') || 'unspecified'}. Expertise: ${formData.level}.`,
+                                    skills: formData.skills,
+                                })}
+                                allowedCategories={JOB_CATEGORIES}
+                                existingSkills={formData.skills}
+                                onCategory={(cat) => setFormData((p) => ({ ...p, type: cat }))}
+                                onSkills={(newSkills) => setFormData((p) => ({
+                                    ...p,
+                                    skills: Array.from(new Set([...(p.skills || []), ...newSkills])),
+                                }))}
+                            />
+
+                             <button type="submit" className="ai-btn-primary ai-submit-btn" disabled={loading} style={{ marginTop: '1.5rem', minWidth: '240px' }}>
                                  {loading ? '📊 Calculating Market Rates...' : 'Get Cost Estimate'}
                              </button>
                         </form>
+
+                        {/* ERROR STATE */}
+                        {error && (
+                            <div style={{ marginTop: '2rem', padding: '1.25rem 1.5rem', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '12px', color: '#b91c1c', fontWeight: 600 }}>
+                                ⚠️ {error}
+                            </div>
+                        )}
 
                         {/* RESULT PANEL */}
                         {estimate && (
@@ -226,48 +261,69 @@ export default function CostEstimator() {
                                 <div className="ai-result-grid" style={{ marginBottom: '2.5rem' }}>
                                     <div className="ai-stat-card" style={{ borderLeft: '6px solid var(--ai-primary)' }}>
                                         <h4>Estimated Range</h4>
-                                        <div className="value" style={{ color: '#059669', fontSize: '2.25rem' }}>{estimate.range}</div>
+                                        <div className="value" style={{ color: '#059669', fontSize: '2.25rem' }}>
+                                            {formatMoney(estimate.min, estimate.currency)} – {formatMoney(estimate.max, estimate.currency)}
+                                        </div>
                                         <p style={{ fontSize: '0.85rem', color: '#718096', marginTop: '0.5rem' }}>Based on current {formData.type} trends</p>
                                     </div>
                                     <div className="ai-stat-card">
-                                        <h4>Recommended Level</h4>
-                                        <div className="value" style={{ fontSize: '1.5rem' }}>{estimate.freelancerLevel}</div>
+                                        <h4>Currency</h4>
+                                        <div className="value" style={{ fontSize: '1.5rem' }}>{estimate.currency}</div>
                                     </div>
                                     <div className="ai-stat-card">
                                         <h4>Estimated Timeline</h4>
-                                        <div className="value" style={{ fontSize: '1.5rem' }}>{estimate.timeline}</div>
+                                        <div className="value" style={{ fontSize: '1.5rem' }}>{formData.duration}</div>
                                     </div>
                                     <div className="ai-stat-card">
-                                        <h4>Risk Assessment</h4>
-                                        <div className="value" style={{ color: '#059669', fontSize: '1.5rem' }}>{estimate.risk}</div>
+                                        <h4>Target Level</h4>
+                                        <div className="value" style={{ fontSize: '1.5rem' }}>{formData.level}</div>
                                     </div>
                                 </div>
 
-                                <div className="breakdown-table-wrap" style={{ overflowX: 'auto', background: '#fbfcff', padding: '2rem', borderRadius: '16px', border: '1.5px solid #edf2f7' }}>
-                                    <h4 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Project Cost Breakdown</h4>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                                                <th style={{ padding: '1rem', color: '#718096', fontWeight: 600 }}>Project Phase</th>
-                                                <th style={{ padding: '1rem', color: '#718096', fontWeight: 600 }}>Estimated Cost Allocation</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {estimate.breakdown.map((row, i) => (
-                                                <tr key={i} style={{ borderBottom: '1.5px solid #edf2f7' }}>
-                                                    <td style={{ padding: '1rem', fontWeight: 600, color: '#4a5568' }}>{row.part}</td>
-                                                    <td style={{ padding: '1rem', color: '#042E4C', fontWeight: 700 }}>{row.cost}</td>
+                                {estimate.rationale && (
+                                    <div style={{ marginBottom: '2.5rem', padding: '1.5rem 1.75rem', background: '#f0f9ff', borderRadius: '16px', border: '1.5px solid #e0f2fe' }}>
+                                        <h4 style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#042E4C' }}>AI Rationale</h4>
+                                        <p style={{ color: '#4a5568', lineHeight: 1.7 }}>{estimate.rationale}</p>
+                                    </div>
+                                )}
+
+                                {estimate.breakdown.length > 0 && (
+                                    <div className="breakdown-table-wrap" style={{ overflowX: 'auto', background: '#fbfcff', padding: '2rem', borderRadius: '16px', border: '1.5px solid #edf2f7' }}>
+                                        <h4 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Project Cost Breakdown</h4>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                                                    <th style={{ padding: '1rem', color: '#718096', fontWeight: 600 }}>Project Phase</th>
+                                                    <th style={{ padding: '1rem', color: '#718096', fontWeight: 600 }}>Estimated Cost Allocation</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody>
+                                                {estimate.breakdown.map((row, i) => (
+                                                    <tr key={i} style={{ borderBottom: '1.5px solid #edf2f7' }}>
+                                                        <td style={{ padding: '1rem', fontWeight: 600, color: '#4a5568' }}>{row.label}</td>
+                                                        <td style={{ padding: '1rem', color: '#042E4C', fontWeight: 700 }}>{formatMoney(row.amount, estimate.currency)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
 
                                 <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                    <button className="ai-btn-primary" style={{ width: 'auto', padding: '1rem 2.5rem' }}>
+                                    <button
+                                        className="ai-btn-primary"
+                                        style={{ width: 'auto', padding: '1rem 2.5rem' }}
+                                        onClick={() => navigate('/post-project', {
+                                            state: { estimate, type: formData.type, skills: formData.skills }
+                                        })}
+                                    >
                                         🚀 Create Project with this Estimate
                                     </button>
-                                    <button className="ai-btn-secondary" style={{ width: 'auto', padding: '1rem 2.5rem', background: 'transparent', border: '2.5px solid var(--ai-primary)', color: 'var(--ai-primary)' }}>
+                                    <button
+                                        className="ai-btn-secondary"
+                                        style={{ width: 'auto', padding: '1rem 2.5rem', background: 'transparent', border: '2.5px solid var(--ai-primary)', color: 'var(--ai-primary)' }}
+                                        onClick={() => window.print()}
+                                    >
                                         📄 Save Estimate as PDF
                                     </button>
                                 </div>

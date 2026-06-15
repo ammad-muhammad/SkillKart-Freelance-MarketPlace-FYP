@@ -24,7 +24,7 @@ export default function FreelancerSavedProjects() {
             ) : (
                 <div className="fsp-grid">
                     {savedProjects.map(project => (
-                        <div key={project.id} className="fsp-card">
+                        <div key={project._id || project.id} className="fsp-card">
                             <div className="fsp-card__header">
                                 <span className={`fsp-card__badge fsp-card__badge--${(project.status || 'Active').toLowerCase()}`}>
                                     {project.status || 'Active'}
@@ -65,12 +65,15 @@ export default function FreelancerSavedProjects() {
                             </div>
 
                             <div className="fsp-card__footer">
-                                <Link to={`/projects/${project.id}`} className="fsp-card__btn">
+                                <Link to={`/jobs/${project._id || project.id}`} className="fsp-card__btn">
                                     View Details
                                 </Link>
-                                <button className="fsp-card__btn fsp-card__btn--primary">
+                                <Link
+                                    to={`/jobs/${project._id || project.id}`}
+                                    className="fsp-card__btn fsp-card__btn--primary"
+                                >
                                     Apply Now
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     ))}

@@ -1,17 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Clock, Wallet, TrendingUp, Search } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
 import { jobsAPI } from '../../../api/jobs';
+import { JOB_CATEGORIES } from '../../../constants/jobCategories';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import './BrowseProjects.css';
-
-const CATEGORIES = [
-  'Web Development', 'Mobile Development', 'Design', 'Writing & Translation',
-  'Digital Marketing', 'Video & Animation', 'Music & Audio', 'Programming & Tech',
-  'Business', 'Data', 'Photography', 'Other',
-];
 
 const BUDGET_TYPES = [
   { value: 'fixed', label: 'Fixed Price' },
@@ -24,64 +20,113 @@ const EXPERIENCE_LEVELS = [
   { value: 'expert', label: 'Expert' },
 ];
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'budget_high', label: 'Budget: High to Low' },
+  { value: 'budget_low', label: 'Budget: Low to High' },
+];
+
+// "5 days ago" style relative time
+const timeAgo = (date) => {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return '';
+  const secs = Math.floor((Date.now() - d.getTime()) / 1000);
+  const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['min', 60]];
+  for (const [name, s] of units) {
+    const v = Math.floor(secs / s);
+    if (v >= 1) return `${v} ${name}${v > 1 ? 's' : ''} ago`;
+  }
+  return 'just now';
+};
+
+const formatBudget = (budget) => {
+  if (!budget) return 'Not specified';
+  if (budget.type === 'hourly') return `$${budget.min ?? 0}/hr`;
+  if (budget.max && budget.max !== budget.min) return `$${budget.min ?? 0} – $${budget.max}`;
+  return `$${budget.min ?? 0}`;
+};
+
 function JobCard({ job }) {
   return (
-    <div className="bp-card">
-      <div className="bp-card__header">
+    <Link to={`/jobs/${job._id}`} className="bp-card">
+      <div className="bp-card__top">
         <div className="bp-card__meta">
           <span className="bp-card__category">{job.category}</span>
-          <span className="bp-card__posted">Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+          <span className="bp-card__posted"><Clock size={13} /> {timeAgo(job.createdAt)}</span>
         </div>
-        <h3 className="bp-card__title">
-          <Link to={`/jobs/${job._id}`}>{job.title}</Link>
-        </h3>
+        <h3 className="bp-card__title">{job.title}</h3>
+        <p className="bp-card__desc">
+          {job.description?.length > 180 ? `${job.description.slice(0, 180)}…` : job.description}
+        </p>
       </div>
-      
-      <div className="bp-card__body">
-        <p className="bp-card__desc">{job.description?.substring(0, 200)}...</p>
+
+      {job.skills?.length > 0 && (
         <div className="bp-card__tags">
-          {job.skills?.slice(0, 5).map(skill => (
+          {job.skills.slice(0, 5).map(skill => (
             <span key={skill} className="bp-card__tag">{skill}</span>
           ))}
+          {job.skills.length > 5 && <span className="bp-card__tag bp-card__tag--more">+{job.skills.length - 5}</span>}
         </div>
-      </div>
-      
+      )}
+
       <div className="bp-card__footer">
         <div className="bp-card__details">
           <div className="bp-card__detail">
-            <span className="label">Budget</span>
-            <span className="value">
-              {job.budget?.type === 'fixed' 
-                ? `$${job.budget?.min} - $${job.budget?.max}` 
-                : `$${job.budget?.min}/hr`}
-            </span>
+            <span className="label"><Wallet size={13} /> Budget</span>
+            <span className="value">{formatBudget(job.budget)}</span>
           </div>
           <div className="bp-card__detail">
-            <span className="label">Level</span>
-            <span className="value">{job.experienceLevel}</span>
+            <span className="label"><TrendingUp size={13} /> Level</span>
+            <span className="value bp-card__level">{job.experienceLevel || '—'}</span>
           </div>
+          {Array.isArray(job.proposals) && (
+            <div className="bp-card__detail">
+              <span className="label">Proposals</span>
+              <span className="value">{job.proposals.length}</span>
+            </div>
+          )}
         </div>
-        <Link to={`/jobs/${job._id}`} className="bp-card__btn">View Details</Link>
+        <span className="bp-card__btn">View Details →</span>
+      </div>
+    </Link>
+  );
+}
+
+function JobCardSkeleton() {
+  return (
+    <div className="bp-card bp-card--skeleton">
+      <div className="bp-skel bp-skel--chip" />
+      <div className="bp-skel bp-skel--title" />
+      <div className="bp-skel bp-skel--line" />
+      <div className="bp-skel bp-skel--line" style={{ width: '70%' }} />
+      <div className="bp-card__tags">
+        <div className="bp-skel bp-skel--tag" /><div className="bp-skel bp-skel--tag" /><div className="bp-skel bp-skel--tag" />
       </div>
     </div>
   );
 }
 
 export default function BrowseProjects() {
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
   const [jobs, setJobs] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
+  const [error, setError] = useState(null);
+  const [query, setQuery] = useState(initialQuery);
+  const [draftQuery, setDraftQuery] = useState(initialQuery);
   const [filters, setFilters] = useState({
     category: '',
     budgetType: '',
     experienceLevel: '',
   });
+  const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = {
         q: query || undefined,
@@ -92,17 +137,26 @@ export default function BrowseProjects() {
         limit: PER_PAGE,
         status: 'open'
       };
-      
+
       const res = await (query ? jobsAPI.searchJobs(params) : jobsAPI.listJobs(params));
       const responseData = res.data;
       setJobs(Array.isArray(responseData.data) ? responseData.data : []);
       setTotal(responseData.meta?.pagination?.total || 0);
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error);
+    } catch (err) {
+      console.error('Failed to fetch jobs:', err);
+      setJobs([]);
+      setTotal(0);
+      setError(err.response?.data?.message || 'Could not load projects right now. Please try again.');
     } finally {
       setLoading(false);
     }
   }, [query, filters, page]);
+
+  const handleSearch = (e) => {
+    e?.preventDefault();
+    setPage(1);
+    setQuery(draftQuery.trim());
+  };
 
   useEffect(() => {
     fetchJobs();
@@ -121,6 +175,14 @@ export default function BrowseProjects() {
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
+  // Client-side sort of the current page (budget needs a numeric key)
+  const budgetKey = (j) => j.budget?.max || j.budget?.min || 0;
+  const sortedJobs = [...jobs].sort((a, b) => {
+    if (sort === 'budget_high') return budgetKey(b) - budgetKey(a);
+    if (sort === 'budget_low') return budgetKey(a) - budgetKey(b);
+    return new Date(b.createdAt) - new Date(a.createdAt); // newest
+  });
+
   return (
     <>
       <Navbar />
@@ -132,15 +194,15 @@ export default function BrowseProjects() {
               <h1>Find Your Next <span>Big Project</span></h1>
               <p>Explore thousands of freelance jobs from startups to enterprises. AI-matched to your unique skills.</p>
               
-              <div className="bp-search">
-                <input 
-                  type="text" 
-                  placeholder="Search projects by title, skill, or keywords..." 
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+              <form className="bp-search" onSubmit={handleSearch}>
+                <input
+                  type="text"
+                  placeholder="Search projects by title, skill, or keywords..."
+                  value={draftQuery}
+                  onChange={(e) => setDraftQuery(e.target.value)}
                 />
-                <button className="bp-search__btn">Search Projects</button>
-              </div>
+                <button type="submit" className="bp-search__btn">Search Projects</button>
+              </form>
             </div>
           </div>
         </section>
@@ -150,10 +212,10 @@ export default function BrowseProjects() {
             <aside className="bp-sidebar">
               <div className="bp-sidebar__section">
                 <h3 className="bp-sidebar__title">Category</h3>
-                <CustomSelect 
-                  options={['All Categories', ...CATEGORIES]}
+                <CustomSelect
+                  options={['All Categories', ...JOB_CATEGORIES]}
                   value={filters.category || 'All Categories'}
-                  onChange={(val) => setFilters(prev => ({ ...prev, category: val === 'All Categories' ? '' : val }))}
+                  onChange={(val) => { setPage(1); setFilters(prev => ({ ...prev, category: val === 'All Categories' ? '' : val })); }}
                 />
               </div>
 
@@ -213,24 +275,47 @@ export default function BrowseProjects() {
             <main className="bp-main">
               <div className="bp-toolbar">
                 <div className="bp-toolbar__count">
-                  Found <strong>{total}</strong> projects
+                  {loading ? 'Searching…' : <>Found <strong>{total}</strong> project{total === 1 ? '' : 's'}{query && <> for “<em>{query}</em>”</>}</>}
+                </div>
+                <div className="bp-toolbar__sort">
+                  <span className="bp-toolbar__sort-label">Sort by</span>
+                  <CustomSelect
+                    compact
+                    options={SORT_OPTIONS}
+                    value={sort}
+                    onChange={setSort}
+                  />
                 </div>
               </div>
 
               {loading ? (
-                <div className="bp-loading">Searching projects...</div>
-              ) : jobs.length > 0 ? (
                 <div className="bp-grid">
-                  {jobs.map(job => <JobCard key={job._id} job={job} />)}
+                  {Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={i} />)}
+                </div>
+              ) : error ? (
+                <div className="bp-empty">
+                  <div className="bp-empty__icon">⚠️</div>
+                  <h3>Couldn’t load projects</h3>
+                  <p>{error}</p>
+                  <button className="bp-search__btn" style={{ marginTop: '1rem' }} onClick={fetchJobs}>Try Again</button>
+                </div>
+              ) : sortedJobs.length > 0 ? (
+                <div className="bp-grid">
+                  {sortedJobs.map(job => <JobCard key={job._id} job={job} />)}
                 </div>
               ) : (
                 <div className="bp-empty">
+                  <div className="bp-empty__icon">🔍</div>
                   <h3>No projects found</h3>
-                  <p>Try adjusting your search or filters to find more opportunities.</p>
+                  <p>
+                    {query || filters.category || filters.budgetType || filters.experienceLevel
+                      ? 'Try adjusting your search or filters to find more opportunities.'
+                      : 'No open projects have been posted yet — check back soon.'}
+                  </p>
                 </div>
               )}
 
-              {totalPages > 1 && (
+              {!error && totalPages > 1 && (
                 <div className="bp-pagination">
                   <button 
                     disabled={page === 1} 

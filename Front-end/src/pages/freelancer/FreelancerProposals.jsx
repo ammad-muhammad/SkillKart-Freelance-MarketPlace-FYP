@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { useAuth } from '../../hooks/useAuth';
 import { 
@@ -57,7 +58,7 @@ export default function FreelancerProposals() {
           <div className="fl-empty-state__icon">📄</div>
           <h3>No Proposals Found</h3>
           <p>You haven't submitted any proposals yet. Explore projects to find work!</p>
-          <a href="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</a>
+          <Link to="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</Link>
         </div>
       ) : (
         <div className="fl-card-list">
@@ -100,9 +101,9 @@ export default function FreelancerProposals() {
 
               <div className="fl-prop-card__footer">
                 <div className="fl-prop-card__btns">
-                  <a href={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
+                  <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
                     View Project <ExternalLink size={14} />
-                  </a>
+                  </Link>
                   {prop.status === 'pending' && (
                     <button 
                       className="fl-btn fl-btn--outline fl-btn--sm" 

@@ -1,10 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { matchmakingAPI } from '../../../api/matchmaking';
-import { MOCK_MATCH_RESULTS, ALL_SKILLS, CATEGORIES } from '../../../utils/mockData';
+import { aiAPI } from '../../../api/ai';
+import { ALL_SKILLS } from '../../../utils/mockData';
+import { JOB_CATEGORIES } from '../../../constants/jobCategories';
+import { toast } from 'react-toastify';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import './AiMatchmaking.css';
 
@@ -17,7 +21,7 @@ function scoreColor(s) {
 }
 
 /* ─── Match Card ─── */
-function MatchCard({ result, rank }) {
+function MatchCard({ result, rank, onView }) {
     const { freelancer: f, matchScore, matchReasons, estimatedCost, availability } = result;
     const [expanded, setExpanded] = useState(rank === 0); // top match auto-expanded
 
@@ -41,7 +45,9 @@ function MatchCard({ result, rank }) {
             {/* Header */}
             <div className="aim-card-header">
                 <div className="aim-avatar" style={{ background: f.avatarBg }}>
-                    {f.avatar}
+                    {f.avatarUrl
+                        ? <img src={f.avatarUrl} alt={f.name} style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                        : f.avatar}
                     {f.isOnline && <span className="aim-online" />}
                 </div>
 
@@ -125,8 +131,8 @@ function MatchCard({ result, rank }) {
                     </span>
                 </div>
                 <div className="aim-footer-btns">
-                    <button className="aim-btn-view">View Profile</button>
-                    <button className="aim-btn-invite">Invite →</button>
+                    <button className="aim-btn-view" onClick={() => onView(f.id)}>View Profile</button>
+                    <button className="aim-btn-invite" onClick={() => onView(f.id)}>Invite →</button>
                 </div>
             </div>
         </div>
@@ -135,6 +141,7 @@ function MatchCard({ result, rank }) {
 
 /* ─────────────── MAIN PAGE ─────────────── */
 export default function AiMatchmaking() {
+    const navigate = useNavigate();
     /* project form */
     const [projectTitle, setProjectTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -150,6 +157,33 @@ export default function AiMatchmaking() {
     const [hasRan, setHasRan] = useState(false);
     const [sortBy, setSortBy] = useState('score');
     const [error, setError] = useState(null);
+    const [autoFilling, setAutoFilling] = useState(false);
+
+    /* AI auto-fill: infer category + skills + budget (+ title) from the
+       description so the user doesn't have to fill everything manually. */
+    const autoFill = async () => {
+        if (!description.trim()) { toast.info('Write a short description first, then let AI fill the rest.'); return; }
+        setAutoFilling(true);
+        try {
+            const { data } = await aiAPI.suggestBrief(description, projectTitle);
+            const s = data?.data || {};
+            if (s.title && !projectTitle.trim()) setProjectTitle(s.title);
+            if (s.category) setCategory(s.category);
+            if (Array.isArray(s.skills) && s.skills.length) {
+                setSkills(prev => {
+                    const merged = [...prev];
+                    s.skills.forEach(sk => { if (sk && !merged.includes(sk)) merged.push(sk); });
+                    return merged;
+                });
+            }
+            if (s.budget && !budget) setBudget(String(s.budget));
+            toast.success('Filled in category, skills & budget — tweak as needed ✨');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'AI auto-fill is unavailable right now.');
+        } finally {
+            setAutoFilling(false);
+        }
+    };
 
     useEffect(() => {
         document.title = 'AI Matchmaking — SkillKart';
@@ -173,7 +207,7 @@ export default function AiMatchmaking() {
 
     const removeSkill = (sk) => setSkills(prev => prev.filter(s => s !== sk));
 
-    /* Run AI match */
+    /* Run AI match — calls the real /matchmaking endpoint */
     const runMatch = useCallback(async () => {
         if (!projectTitle.trim() && !description.trim()) return;
         setLoading(true);
@@ -184,23 +218,13 @@ export default function AiMatchmaking() {
             const { data } = await matchmakingAPI.matchByProject(payload);
             if (!isMounted.current) return;
             setMatches(data?.data?.matches ?? []);
-        } catch {
-            /* fallback to mock — simulate AI delay */
-            await new Promise(r => setTimeout(r, 2200));
+        } catch (err) {
             if (!isMounted.current) return;
-            /* optionally filter mock by skills */
-            let results = [...MOCK_MATCH_RESULTS];
-            if (skills.length) {
-                results = results.map(r => {
-                    const overlap = skills.filter(sk =>
-                        r.freelancer.skills.some(fs => fs.toLowerCase().includes(sk.toLowerCase()))
-                    ).length;
-                    const boost = Math.min(8, overlap * 3);
-                    return { ...r, matchScore: Math.min(100, r.matchScore + boost) };
-                });
-                results.sort((a, b) => b.matchScore - a.matchScore);
-            }
-            setMatches(results);
+            setMatches([]);
+            setError(
+                err.response?.data?.message ||
+                'Could not generate matches right now. Please try again in a moment.'
+            );
         } finally {
             if (isMounted.current) { setLoading(false); setHasRan(true); }
         }
@@ -270,11 +294,22 @@ export default function AiMatchmaking() {
                                 </div>
 
                                 <div className="aim-field">
-                                    <label className="aim-label" htmlFor="aim-desc">Description</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                        <label className="aim-label" htmlFor="aim-desc" style={{ margin: 0 }}>Description</label>
+                                        <button
+                                            type="button"
+                                            className="aim-autofill-btn"
+                                            onClick={autoFill}
+                                            disabled={autoFilling}
+                                            title="Let AI fill category, skills & budget from your description"
+                                        >
+                                            {autoFilling ? '✨ Filling…' : '✨ Auto-fill with AI'}
+                                        </button>
+                                    </div>
                                     <textarea
                                         id="aim-desc"
                                         className="aim-textarea"
-                                        placeholder="Describe what you need — features, goals, deliverables…"
+                                        placeholder="Describe what you need — features, goals, deliverables… then tap ✨ Auto-fill."
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         rows={5}
@@ -290,7 +325,7 @@ export default function AiMatchmaking() {
                                         placeholder="Any category"
                                         options={[
                                             { value: '', label: 'Any category' },
-                                            ...CATEGORIES.map(c => ({ value: c, label: c }))
+                                            ...JOB_CATEGORIES.map(c => ({ value: c, label: c }))
                                         ]}
                                     />
                                 </div>
@@ -479,20 +514,43 @@ export default function AiMatchmaking() {
                                 </div>
                             )}
 
+                            {/* Error state */}
+                            {!loading && hasRan && error && (
+                                <div className="aim-empty">
+                                    <div className="aim-empty__icon">⚠️</div>
+                                    <div className="aim-empty__title">Couldn’t generate matches</div>
+                                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-mid)', marginTop: '0.5rem' }}>
+                                        {error}
+                                    </div>
+                                    <button
+                                        className="aim-add-btn"
+                                        style={{ marginTop: '1rem' }}
+                                        onClick={runMatch}
+                                    >
+                                        Try Again
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Empty result */}
-                            {!loading && hasRan && matches.length === 0 && (
+                            {!loading && hasRan && !error && matches.length === 0 && (
                                 <div className="aim-empty">
                                     <div className="aim-empty__icon">🔍</div>
                                     <div className="aim-empty__title">No strong matches found</div>
                                     <div style={{ fontSize: '0.88rem', color: 'var(--color-text-mid)', marginTop: '0.5rem' }}>
-                                        Try broadening your skill requirements or adjusting your budget.
+                                        No freelancers have signed up with matching skills yet. Try broadening your skill requirements.
                                     </div>
                                 </div>
                             )}
 
                             {/* Match cards */}
                             {!loading && sorted.map((result, i) => (
-                                <MatchCard key={result.freelancer.id} result={result} rank={i} />
+                                <MatchCard
+                                    key={result.freelancer.id}
+                                    result={result}
+                                    rank={i}
+                                    onView={(id) => id && navigate(`/freelancers/${id}`)}
+                                />
                             ))}
                         </div>
 

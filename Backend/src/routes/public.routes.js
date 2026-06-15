@@ -3,6 +3,8 @@ const router = express.Router();
 const cmsController = require('../controllers/cms.controller');
 const freelancerController = require('../controllers/freelancer.controller');
 const jobController = require('../controllers/job.controller');
+const publicStatsController = require('../controllers/publicStats.controller');
+const testimonialController = require('../controllers/testimonial.controller');
 
 /**
  * Public routes - No authentication required
@@ -50,6 +52,21 @@ router.get('/freelancers/:id', freelancerController.getFreelancerById);
 router.get('/jobs/search', jobController.searchJobs);
 router.get('/jobs/:id', jobController.getJobById);
 router.get('/jobs', jobController.listJobs);
+
+/**
+ * Public taxonomy + real stats (for marketing/skill/category pages)
+ */
+router.get('/stats', publicStatsController.getStats);
+router.get('/trending', publicStatsController.getTrending);
+router.get('/categories', publicStatsController.getCategories);
+router.get('/categories/:slug/stats', publicStatsController.getCategoryStats);
+router.get('/skills/:skill/stats', publicStatsController.getSkillStats);
+router.get('/top-freelancers', publicStatsController.getTopFreelancers);
+router.get('/testimonials', testimonialController.getPublicTestimonials);
+
+// Contact form submission (rate-limited to deter spam)
+const { strictLimiter } = require('../middleware/rateLimit.middleware');
+router.post('/contact', strictLimiter, publicStatsController.submitContact);
 
 /**
  * @swagger

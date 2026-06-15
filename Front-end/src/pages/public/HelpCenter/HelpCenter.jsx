@@ -66,19 +66,20 @@ const FAQS = [
     },
 ];
 
+// Each links to the real page that actually performs the action.
 const POPULAR = [
-    { id: 1, icon: '🔑', title: 'How to reset your password', views: '12.4K', url: '#' },
-    { id: 2, icon: '💸', title: 'Withdrawing earnings to your bank account', views: '9.8K', url: '#' },
-    { id: 3, icon: '📄', title: 'Editing and submitting your first proposal', views: '8.1K', url: '#' },
-    { id: 4, icon: '✅', title: 'Getting your skills AI-verified', views: '7.6K', url: '#' },
-    { id: 5, icon: '🤖', title: 'Using Buddy AI to write your bio', views: '6.9K', url: '#' },
-    { id: 6, icon: '⚖️', title: 'Opening a payment dispute', views: '5.3K', url: '#' },
+    { id: 1, icon: '🔑', title: 'Reset your password', to: '/forgot-password' },
+    { id: 2, icon: '📄', title: 'Find work & submit a proposal', to: '/browse-projects' },
+    { id: 3, icon: '✅', title: 'Get your skills AI-verified', to: '/freelancer/skill-test' },
+    { id: 4, icon: '🤖', title: 'Use Buddy AI for your profile', to: '/ai/buddy' },
+    { id: 5, icon: '🚀', title: 'Post a project & get matched', to: '/post-project' },
+    { id: 6, icon: '💬', title: 'Contact support', to: '/contact' },
 ];
 
+const SUPPORT_EMAIL = 'support@skillkart.com';
 const SUPPORT_CHANNELS = [
-    { icon: '💬', title: 'Live Chat', desc: 'Talk to a support agent instantly. Available 9 AM – 9 PM PKT on weekdays.', cta: 'Start Chat', color: '#0a4a73', bg: 'rgba(10,74,115,.07)', wait: 'Avg. wait: 2 min' },
-    { icon: '📧', title: 'Email Support', desc: 'Send a detailed ticket and get a thorough response from our team.', cta: 'Send Email', color: '#276749', bg: 'rgba(39,103,73,.07)', wait: 'Avg. response: 4 hrs' },
-    { icon: '🌐', title: 'Community Forum', desc: 'Ask the community — 18,000+ members + moderators answer fast.', cta: 'Visit Forum', color: '#553c9a', bg: 'rgba(85,60,154,.07)', wait: 'Avg. response: 30 min', link: '/community' },
+    { icon: '📧', title: 'Email Support', desc: 'Send a detailed ticket and get a thorough response from our team.', cta: 'Send Email', color: '#276749', bg: 'rgba(39,103,73,.07)', wait: 'Avg. response: 4 hrs', href: `mailto:${SUPPORT_EMAIL}` },
+    { icon: '📨', title: 'Contact Form', desc: "Prefer a form? Reach us through our contact page and we'll get back to you.", cta: 'Go to Contact', color: '#0a4a73', bg: 'rgba(10,74,115,.07)', wait: 'Avg. response: 4 hrs', to: '/contact' },
 ];
 
 const STATUS = [
@@ -183,7 +184,7 @@ export default function HelpCenter() {
                             {!s.ok && <span className="hc-status-note">{s.note}</span>}
                         </span>
                     ))}
-                    <a href="#" className="hc-status-bar__all">View all →</a>
+                    <Link to="/contact" className="hc-status-bar__all">View all →</Link>
                 </div>
             </div>
 
@@ -223,27 +224,16 @@ export default function HelpCenter() {
                     {/* Left – Popular Articles */}
                     <div className="hc-popular">
                         <div className="hc-popular__header">
-                            <div className="hc-popular__title">⭐ Most Popular Articles</div>
+                            <div className="hc-popular__title">⭐ Quick Links</div>
                         </div>
                         <div className="hc-popular__list">
                             {POPULAR.map(p => (
-                                <a key={p.id} href={p.url} className="hc-popular-item">
+                                <Link key={p.id} to={p.to} className="hc-popular-item">
                                     <span className="hc-popular-item__icon">{p.icon}</span>
                                     <span className="hc-popular-item__title">{p.title}</span>
-                                    <span className="hc-popular-item__views">👁 {p.views}</span>
                                     <span className="hc-popular-item__arrow">→</span>
-                                </a>
+                                </Link>
                             ))}
-                        </div>
-
-                        {/* Video guide card */}
-                        <div className="hc-video-card">
-                            <div className="hc-video-card__play">▶</div>
-                            <div className="hc-video-card__body">
-                                <div className="hc-video-card__title">Getting Started in 5 Minutes</div>
-                                <div className="hc-video-card__sub">Video walkthrough — profile setup, first proposal, escrow basics</div>
-                                <a href="#" className="hc-video-card__link">Watch Now →</a>
-                            </div>
                         </div>
                     </div>
 
@@ -315,14 +305,14 @@ export default function HelpCenter() {
                                 <h3 className="hc-support-card__title">{ch.title}</h3>
                                 <p className="hc-support-card__desc">{ch.desc}</p>
                                 <div className="hc-support-card__wait">{ch.wait}</div>
-                                {ch.link ? (
-                                    <Link to={ch.link} className="hc-support-card__btn" style={{ background: ch.color }}>
+                                {ch.href ? (
+                                    <a href={ch.href} className="hc-support-card__btn" style={{ background: ch.color }}>
+                                        {ch.cta} →
+                                    </a>
+                                ) : (
+                                    <Link to={ch.to} className="hc-support-card__btn" style={{ background: ch.color }}>
                                         {ch.cta} →
                                     </Link>
-                                ) : (
-                                    <button className="hc-support-card__btn" style={{ background: ch.color }}>
-                                        {ch.cta} →
-                                    </button>
                                 )}
                             </div>
                         ))}
@@ -338,13 +328,11 @@ export default function HelpCenter() {
                     <div className="hc-bottom-cta__left">
                         <div className="hc-bottom-cta__title">Didn't find your answer?</div>
                         <div className="hc-bottom-cta__sub">
-                            Our community of 18,000+ student freelancers has likely faced the same question.
-                            Post it and get answers in minutes.
+                            Our support team is here to help. Reach out and we'll get back to you quickly.
                         </div>
                     </div>
                     <div className="hc-bottom-cta__right">
-                        <Link to="/community" className="hc-bottom-cta__btn">Ask the Community →</Link>
-                        <Link to="/contact" className="hc-bottom-cta__btn hc-bottom-cta__btn--outline">Contact Support</Link>
+                        <Link to="/contact" className="hc-bottom-cta__btn">Contact Support →</Link>
                     </div>
                 </div>
             </section>

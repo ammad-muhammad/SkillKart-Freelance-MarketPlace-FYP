@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import { publicAPI } from '../../../api/publicData';
 import './Contact.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -184,7 +185,7 @@ export default function Contact() {
     };
 
     /* ── Submit ── */
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         // Mark all fields as touched
         setTouched({ name: true, email: true, subject: true, message: true });
@@ -194,21 +195,22 @@ export default function Contact() {
 
         setSubmitState('loading');
 
-        // Simulate async submission
-        setTimeout(() => {
-            /* ── Log to console as requested ── */
-            console.log('✅ SkillKart Contact Form Submission:', {
+        try {
+            await publicAPI.submitContact({
                 name: fields.name.trim(),
                 email: fields.email.trim(),
                 subject: fields.subject,
                 message: fields.message.trim(),
-                timestamp: new Date().toISOString(),
             });
             setSubmitState('success');
             setFields(INIT);
             setTouched({});
             setErrors({});
-        }, 1200);
+        } catch (err) {
+            console.error('Contact submit failed:', err);
+            setErrors({ form: err.response?.data?.message || 'Could not send your message. Please try again.' });
+            setSubmitState('idle');
+        }
     };
 
     const toggleFaq = (i) => setOpenFaq(openFaq === i ? null : i);
@@ -445,6 +447,12 @@ export default function Contact() {
                                         See our <Link to="/privacy" className="contact-form__privacy-link">Privacy Policy</Link>.
                                     </p>
 
+                                    {errors.form && (
+                                        <p className="contact-form__error" role="alert" style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                                            {errors.form}
+                                        </p>
+                                    )}
+
                                     {/* Submit */}
                                     <button
                                         type="submit"
@@ -513,7 +521,7 @@ export default function Contact() {
                                 <p className="contact-info__accent-text">
                                     Buddy AI resolves 80% of common questions instantly — no wait time required.
                                 </p>
-                                <a href="#" className="contact-info__accent-btn">Ask Buddy AI →</a>
+                                <Link to="/ai/buddy" className="contact-info__accent-btn">Ask Buddy AI →</Link>
                             </div>
 
                             <div className="contact-info__social">
@@ -525,9 +533,9 @@ export default function Contact() {
                                         { name: 'GitHub', icon: '💻' },
                                         { name: 'Instagram', icon: '📸' },
                                     ].map(s => (
-                                        <a key={s.name} href="#" className="contact-info__social-pill" aria-label={s.name} role="listitem">
+                                        <Link key={s.name} to="/contact" className="contact-info__social-pill" aria-label={s.name} role="listitem">
                                             {s.icon} {s.name}
-                                        </a>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
@@ -612,7 +620,7 @@ export default function Contact() {
                             Create your free account, get AI-verified, and land your first project — no credit card needed.
                         </p>
                         <div className="contact-cta__btns">
-                            <Link to="/register" className="contact-cta__btn-primary">Create Free Account →</Link>
+                            <Link to="/registration" className="contact-cta__btn-primary">Create Free Account →</Link>
                             <Link to="/about" className="contact-cta__btn-secondary">Learn About SkillKart</Link>
                         </div>
                     </div>

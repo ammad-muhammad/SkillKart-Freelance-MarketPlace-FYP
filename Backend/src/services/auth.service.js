@@ -109,6 +109,10 @@ const refreshAccessToken = async (refreshToken) => {
   if (!user || !user.isActive || user.isBlocked) {
     throw new AuthenticationError('Invalid refresh token');
   }
+  // Reject refresh tokens minted before a "log out all devices" / password change.
+  if ((decoded.tv || 0) !== (user.tokenVersion || 0)) {
+    throw new AuthenticationError('Session expired. Please log in again.');
+  }
 
   return generateToken(user);
 };

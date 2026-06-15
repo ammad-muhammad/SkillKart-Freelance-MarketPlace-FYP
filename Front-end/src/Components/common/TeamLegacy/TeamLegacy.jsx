@@ -154,43 +154,64 @@ const TeamLegacy = () => {
         animate();
 
         // ── Horizontal Scroll Showcase ──
-        const horizontalSections = scrollRef.current;
-        const totalWidth = horizontalSections.scrollWidth - window.innerWidth;
+        // IMPORTANT: ScrollTrigger `pin: true` re-parents the pinned section into
+        // a generated `.pin-spacer` div (a DOM mutation outside React's knowledge).
+        // If we set this up on mount, sibling home sections that render their
+        // async/API data a moment later mutate <main>'s children while React still
+        // believes this <section> is a direct child of <main> — which throws
+        // "Failed to execute 'insertBefore' ... not a child of this node" and
+        // blanks the page. We defer pin setup to the next frame and scope every
+        // trigger to a gsap.context so it tears down cleanly.
+        let gsapCtx;
+        const rafId = requestAnimationFrame(() => {
+            const horizontalSections = scrollRef.current;
+            if (!horizontalSections) return;
 
-        gsap.to(horizontalSections, {
-            x: -totalWidth,
-            ease: "none",
-            scrollTrigger: {
-                trigger: sectionRef.current,
-                start: "top top",
-                end: `+=${totalWidth * 1.5}`,
-                pin: true,
-                scrub: 1,
-                // markers: true,
-            }
-        });
+            gsapCtx = gsap.context(() => {
+                const totalWidth = horizontalSections.scrollWidth - window.innerWidth;
 
-        // ── Reveal Animations for each slide ──
-        const slides = horizontalSections.querySelectorAll('.legacy-showcase-item');
-        slides.forEach(slide => {
-            gsap.fromTo(slide.querySelector('.showcase-content'),
-                { opacity: 0, x: 100 },
-                {
-                    opacity: 1, x: 0,
+                gsap.to(horizontalSections, {
+                    x: -totalWidth,
+                    ease: "none",
                     scrollTrigger: {
-                        trigger: slide,
-                        containerAnimation: gsap.to(horizontalSections, { x: -totalWidth }), // Need to sync with horizontal
-                        start: "left center",
-                        toggleActions: "play none none reverse",
+                        trigger: sectionRef.current,
+                        start: "top top",
+                        end: `+=${totalWidth * 1.5}`,
+                        pin: true,
+                        pinSpacing: true,
+                        invalidateOnRefresh: true,
+                        scrub: 1,
+                        // markers: true,
                     }
-                }
-            );
+                });
+
+                // ── Reveal Animations for each slide ──
+                const slides = horizontalSections.querySelectorAll('.legacy-showcase-item');
+                slides.forEach(slide => {
+                    gsap.fromTo(slide.querySelector('.showcase-content'),
+                        { opacity: 0, x: 100 },
+                        {
+                            opacity: 1, x: 0,
+                            scrollTrigger: {
+                                trigger: slide,
+                                containerAnimation: gsap.to(horizontalSections, { x: -totalWidth }), // Need to sync with horizontal
+                                start: "left center",
+                                toggleActions: "play none none reverse",
+                            }
+                        }
+                    );
+                });
+            }, sectionRef);
+
+            // Recompute pin/scroll geometry once async sibling sections have settled.
+            ScrollTrigger.refresh();
         });
 
         return () => {
+            cancelAnimationFrame(rafId);
             window.removeEventListener('resize', resize);
             window.removeEventListener('mousemove', handleMouseMove);
-            ScrollTrigger.getAll().forEach(st => st.kill());
+            gsapCtx?.revert();
         };
     }, []);
 

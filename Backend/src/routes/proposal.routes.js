@@ -42,6 +42,12 @@ router.get('/',
   proposalController.listProposals
 );
 
+// AI: draft a cover letter for a job (freelancer only). Before /:id.
+router.post('/ai/draft',
+  requireRole('freelancer'),
+  proposalController.draftProposal
+);
+
 // Get proposal by ID
 router.get('/:id',
   getProposalValidation,

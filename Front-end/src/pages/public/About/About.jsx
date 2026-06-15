@@ -353,7 +353,7 @@ export default function About() {
                         next generation to earn, grow, and build careers before graduation.
                     </p>
                     <div className="about-hero__btns">
-                        <Link to="/register" className="about-hero__btn-main">Get Started Free →</Link>
+                        <Link to="/registration" className="about-hero__btn-main">Get Started Free →</Link>
                         <Link to="/" className="about-hero__btn-outline">Explore the Platform</Link>
                     </div>
                 </div>
@@ -658,7 +658,7 @@ export default function About() {
                             and built careers on SkillKart. It's free to start — no credit card required.
                         </p>
                         <div className="about-cta__btns">
-                            <Link to="/register" className="about-cta__btn-primary">
+                            <Link to="/registration" className="about-cta__btn-primary">
                                 Create Free Account →
                             </Link>
                             <Link to="/" className="about-cta__btn-secondary">

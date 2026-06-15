@@ -1,34 +1,19 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import Stepper from './components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
-import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
+import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import './FreelancerDashboard.css';
 import './CreateGig.css';
 
 const STEPS = ['Basic Info', 'Pricing', 'Description', 'Media', 'Publish'];
 
-const CATEGORIES = [
-  'Web Development', 'Mobile Development', 'Design', 'Writing & Translation',
-  'Digital Marketing', 'Video & Animation', 'Music & Audio', 'Programming & Tech',
-  'Business', 'Data', 'Photography', 'Other',
-];
-
-const SUBCATEGORIES = {
-  'Web Development': ['Full Stack', 'Frontend', 'Backend', 'E-Commerce', 'WordPress'],
-  'Mobile Development': ['iOS', 'Android', 'React Native', 'Flutter'],
-  'Design': ['UI/UX Design', 'Logo Design', 'Brand Identity', 'Graphic Design'],
-  'Writing & Translation': ['Article Writing', 'Copywriting', 'Translation', 'Proofreading'],
-  'Digital Marketing': ['SEO', 'Social Media', 'Email Marketing', 'PPC'],
-  'Video & Animation': ['Video Editing', '2D Animation', '3D Animation', 'Whiteboard'],
-  'Music & Audio': ['Voice Over', 'Mixing', 'Composing', 'Podcast'],
-  'Programming & Tech': ['AI/ML', 'DevOps', 'Cybersecurity', 'Automation'],
-  'Business': ['Virtual Assistant', 'Data Entry', 'Market Research'],
-  'Data': ['Data Analysis', 'Data Visualization', 'Excel', 'SQL'],
-  'Photography': ['Product Photography', 'Portrait', 'Editing'],
-  'Other': ['Other'],
-};
+// Canonical platform taxonomy so gigs save with countable category names.
+const CATEGORIES = JOB_CATEGORIES;
+const SUBCATEGORIES = GIG_SUBCATEGORIES;
 
 const EMPTY_GIG = {
   title: '',
@@ -65,21 +50,37 @@ const Step1 = ({ gig, set }) => (
       <span className="fl-char-count">{gig.title.length}/80</span>
     </div>
 
-    <div className="fl-form-grid" style={{ marginBottom: '1.25rem' }}>
+    {/* AI suggest & fill — infers category + skills from the title/description */}
+    <AiSuggestFill
+      label="Suggest category & skills (AI)"
+      getContext={() => ({
+        title: gig.title,
+        description: [gig.shortDescription, gig.fullDescription].filter(Boolean).join('\n'),
+        skills: gig.skills,
+      })}
+      allowedCategories={CATEGORIES}
+      existingSkills={gig.skills}
+      onCategory={(cat) => set('category', cat, cat)}
+      onSkills={(newSkills) => set('skills', Array.from(new Set([...gig.skills, ...newSkills])))}
+    />
+
+    <div className="fl-form-grid" style={{ marginBottom: '1.25rem', marginTop: '0.75rem' }}>
       <div className="fl-form-group">
         <label className="fl-label">Category *</label>
-        <CustomSelect
+        <ComboSelect
           options={CATEGORIES}
           value={gig.category}
           onChange={(val) => set('category', val, val)}
+          placeholder="Type to search categories…"
         />
       </div>
       <div className="fl-form-group">
         <label className="fl-label">Subcategory</label>
-        <CustomSelect
+        <ComboSelect
           options={SUBCATEGORIES[gig.category] || ['Other']}
           value={gig.subcategory}
           onChange={(val) => set('subcategory', val)}
+          placeholder="Type to search subcategories…"
         />
       </div>
     </div>
@@ -489,17 +490,30 @@ const CreateGig = () => {
   };
 
   const validateStep = () => {
-    if (step === 0 && !gig.title.trim()) {
-      showToast('Gig title is required.', 'error');
-      return false;
+    if (step === 0) {
+      if (!gig.title.trim()) { showToast('Gig title is required.', 'error'); return false; }
+      if (!gig.shortDescription.trim()) { showToast('Short description is required.', 'error'); return false; }
+      if (!gig.category) { showToast('Please select a category.', 'error'); return false; }
+      if (!Array.isArray(gig.skills) || gig.skills.length === 0) {
+        showToast('Add at least one skill.', 'error');
+        return false;
+      }
     }
-    if (step === 0 && !gig.shortDescription.trim()) {
-      showToast('Short description is required.', 'error');
-      return false;
-    }
-    if (step === 1 && !gig.pricing.basic.price) {
-      showToast('At least set the basic package price.', 'error');
-      return false;
+    if (step === 1) {
+      const basicPrice = Number(gig.pricing.basic.price);
+      if (!basicPrice || basicPrice <= 0) {
+        showToast('Set a valid basic package price (greater than 0).', 'error');
+        return false;
+      }
+      // Any optional tier that's been started must also have a positive price.
+      for (const tier of ['standard', 'premium']) {
+        const t = gig.pricing[tier];
+        const started = t.price || t.delivery || t.revisions;
+        if (started && (!Number(t.price) || Number(t.price) <= 0)) {
+          showToast(`The ${tier} package needs a valid price.`, 'error');
+          return false;
+        }
+      }
     }
     if (step === 2 && !gig.fullDescription.trim()) {
       showToast('Full description is required.', 'error');
@@ -510,13 +524,12 @@ const CreateGig = () => {
 
   const publish = async (isDraft = false) => {
     setPublishing(true);
-    try {
-      await addGig({ ...gig, status: isDraft ? 'draft' : 'active' });
+    // addGig handles its own error toast and returns { success }. Only navigate
+    // away on success so a failed publish keeps the user on the form.
+    const result = await addGig({ ...gig, status: isDraft ? 'draft' : 'active' });
+    setPublishing(false);
+    if (result?.success) {
       navigate('/freelancer/gigs');
-    } catch (error) {
-      console.error('Publish failed:', error);
-    } finally {
-      setPublishing(false);
     }
   };
 

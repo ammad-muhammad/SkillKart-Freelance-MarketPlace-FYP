@@ -1,6 +1,7 @@
 const GeminiProvider = require('./gemini.provider');
 const GroqProvider = require('./groq.provider');
 const ClaudeProvider = require('./claude.provider');
+const OllamaProvider = require('./ollama.provider');
 const AIProvider = require('./base.provider');
 
 class RouterAIProvider extends AIProvider {
@@ -9,12 +10,17 @@ class RouterAIProvider extends AIProvider {
     this.gemini = new GeminiProvider();
     this.groq = new GroqProvider();
     this.claude = new ClaudeProvider();
-    
-    // Ordered list of providers: Gemini -> Groq -> Claude
+    this.ollama = new OllamaProvider();
+
+    // Ordered fallback chain: cloud first (Gemini -> Groq -> Claude), then a
+    // fully LOCAL Ollama provider last. Ollama needs no API key or quota, so it
+    // keeps core AI tools working when every cloud provider is rate-limited
+    // (e.g. Gemini free-tier 429). Set OLLAMA_DISABLED=1 to skip it.
     this.providers = [
       { name: 'Gemini', instance: this.gemini },
       { name: 'Groq', instance: this.groq },
-      { name: 'Claude', instance: this.claude }
+      { name: 'Claude', instance: this.claude },
+      { name: 'Ollama', instance: this.ollama }
     ];
   }
 
@@ -90,6 +96,71 @@ class RouterAIProvider extends AIProvider {
     }
     throw new Error('All AI providers are currently unavailable. Please try again later.');
   }
+
+  async recommendJobCategory(title, description, skills) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.recommendJobCategory !== 'function') continue;
+        const result = await provider.instance.recommendJobCategory(title, description, skills);
+        if (result) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for recommendJobCategory:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
+
+  async draftProposal(job, freelancer) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.draftProposal !== 'function') continue;
+        const result = await provider.instance.draftProposal(job, freelancer);
+        if (result && result.coverLetter) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for draftProposal:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
+
+  async buddyChat(message, history) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.buddyChat !== 'function') continue;
+        const result = await provider.instance.buddyChat(message, history);
+        if (result && result.reply) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for buddyChat:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
+
+  async estimateCost(project) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.estimateCost !== 'function') continue;
+        const result = await provider.instance.estimateCost(project);
+        if (result && (result.min || result.max)) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for estimateCost:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
+
+  async suggestBrief(description, title) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.suggestBrief !== 'function') continue;
+        const result = await provider.instance.suggestBrief(description, title);
+        if (result && (result.category || result.skills?.length)) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for suggestBrief:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
 }
 
 let activeProviderInstance = null;
@@ -105,7 +176,7 @@ const checkAIHealth = async () => {
   try {
     const provider = getAIProvider();
     await provider.ping();
-    return { status: 'success', provider: 'Router (Gemini -> Groq -> Claude)' };
+    return { status: 'success', provider: 'Router (Gemini -> Groq -> Claude -> Ollama)' };
   } catch (error) {
     return { status: 'error', provider: 'Router', error: error.message };
   }

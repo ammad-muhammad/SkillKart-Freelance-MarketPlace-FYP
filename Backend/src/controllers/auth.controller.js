@@ -699,12 +699,22 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Log out from ALL devices by bumping the user's tokenVersion, which
+ * immediately invalidates every previously-issued access & refresh token.
+ */
+const logoutAllDevices = asyncHandler(async (req, res) => {
+  await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+
+  sendSuccess(res, {
+    message: 'Signed out from all devices'
+  });
+});
+
+/**
  * Authenticate with Supabase OAuth tokens
  */
 const supabaseAuth = asyncHandler(async (req, res) => {
   const { supabaseAccessToken, supabaseRefreshToken } = req.body;
-
-  console.log(supabaseAccessToken, req.body)
 
   if (!supabaseAccessToken) {
     return sendError(res, {
@@ -780,6 +790,63 @@ const confirmDeactivation = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Request permanent Account Deletion (OTP-gated, stronger than deactivation).
+ */
+const requestDeletion = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  // Block deletion while the user has live commitments.
+  if (user.role === 'freelancer') {
+    const activeJobs = await Job.countDocuments({ hiredFreelancer: user._id, status: 'in-progress' });
+    if (activeJobs > 0) {
+      return sendError(res, { statusCode: 400, message: 'You have active in-progress jobs. Complete or cancel them before deleting your account.' });
+    }
+  } else if (user.role === 'client') {
+    const activeJobs = await Job.countDocuments({ clientId: user._id, status: { $in: ['open', 'in-progress'] } });
+    if (activeJobs > 0) {
+      return sendError(res, { statusCode: 400, message: 'You have open or in-progress projects. Close them before deleting your account.' });
+    }
+  }
+
+  await otpService.generateAndSendOTP(user.email, 'account_deletion');
+  sendSuccess(res, { message: 'Deletion OTP sent to your email' });
+});
+
+/**
+ * Confirm permanent Account Deletion — verifies OTP, then cascades cleanup of
+ * the user's profile, jobs, gigs and proposals before removing the user.
+ */
+const confirmDeletion = asyncHandler(async (req, res) => {
+  const { otp } = req.body;
+  const user = req.user;
+
+  const otpResult = await otpService.verifyOTP(user.email, otp, 'account_deletion');
+  if (!otpResult.valid) {
+    return sendError(res, { statusCode: 400, message: otpResult.message });
+  }
+
+  const FreelancerProfile = require('../models/FreelancerProfile');
+  const ClientProfile = require('../models/ClientProfile');
+  const Gig = require('../models/Gig');
+  const Proposal = require('../models/Proposal');
+
+  const userId = user._id;
+
+  // Cascade delete everything owned by this user.
+  await Promise.all([
+    FreelancerProfile.deleteOne({ userId }),
+    ClientProfile.deleteOne({ userId }),
+    Gig.deleteMany({ freelancerId: userId }),
+    Job.deleteMany({ clientId: userId }),
+    Proposal.deleteMany({ freelancerId: userId }),
+  ]);
+
+  await User.findByIdAndDelete(userId);
+
+  sendSuccess(res, { message: 'Account and all associated data permanently deleted' });
+});
+
 module.exports = {
   createUser,
   login,
@@ -793,6 +860,7 @@ module.exports = {
   verifyEmail,
   resendOTP,
   logout,
+  logoutAllDevices,
   supabaseAuth,
   updateRole,
   updateMe,
@@ -803,5 +871,7 @@ module.exports = {
   confirmRecoveryEmailChange,
   requestDeactivation,
   confirmDeactivation,
+  requestDeletion,
+  confirmDeletion,
   confirmChangePassword
 };

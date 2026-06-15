@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { Link } from 'react-router-dom';
 import Modal from './components/Modal';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import './FreelancerDashboard.css';
 
 const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
@@ -94,11 +95,14 @@ const FreelancerPortfolio = () => {
     setIsModalOpen(false);
   };
 
+  const [deletingBusy, setDeletingBusy] = useState(false);
   const handleDelete = async () => {
-    if (deletingId) {
-      await deletePortfolioItem(deletingId);
-      setDeletingId(null);
-    }
+    if (!deletingId) return;
+    setDeletingBusy(true);
+    const result = await deletePortfolioItem(deletingId);
+    setDeletingBusy(false);
+    // deletePortfolioItem returns true on success (legacy boolean) — close then.
+    if (result !== false) setDeletingId(null);
   };
 
   return (
@@ -246,13 +250,15 @@ const FreelancerPortfolio = () => {
       </Modal>
 
       {/* Delete Confirmation */}
-      <Modal open={!!deletingId} title="Remove Project?" onClose={() => setDeletingId(null)} danger>
-        <p style={{ marginBottom: '1.5rem' }}>Are you sure you want to remove this project from your portfolio? This cannot be undone.</p>
-        <div className="fl-actions" style={{ marginTop: 0 }}>
-          <button className="fl-btn fl-btn--danger" onClick={handleDelete}>Delete Project</button>
-          <button className="fl-btn fl-btn--ghost" onClick={() => setDeletingId(null)}>Cancel</button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={!!deletingId}
+        title="Remove Project?"
+        message="Are you sure you want to remove this project from your portfolio? This cannot be undone."
+        confirmLabel="Delete Project"
+        loading={deletingBusy}
+        onConfirm={handleDelete}
+        onClose={() => setDeletingId(null)}
+      />
 
       <style>{`
         .fl-portfolio-main-grid { margin-top: 2rem; }

@@ -4,8 +4,8 @@ const User = require('../models/User');
 const { uploadProfilePicture } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
-const { NotFoundError, BadRequestError } = require('../utils/apiError');
-const { isUsernameTaken, applyUsernameUpdate } = require('../utils/username');
+const { NotFoundError } = require('../utils/apiError');
+const { applyUsernameUpdate } = require('../utils/username');
 const { getAIProvider } = require('../services/ai');
 
 /**
@@ -491,22 +491,8 @@ const getSavedFreelancers = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Check if a username is available (excluding the current user)
- */
-const checkUsername = asyncHandler(async (req, res) => {
-  const { username } = req.query;
-  if (!username || !String(username).trim()) {
-    throw new BadRequestError('Username query parameter is required');
-  }
-
-  const exists = await isUsernameTaken(username, req.user._id);
-
-  sendSuccess(res, {
-    message: exists ? 'Username is already taken' : 'Username is available',
-    data: { exists, available: !exists }
-  });
-});
+// checkUsername was a duplicate of authController.checkUsername — the client
+// route now reuses the shared implementation. (removed)
 
 /**
  * Recommend industries based on company details
@@ -547,6 +533,5 @@ module.exports = {
   uploadCompanyLogo,
   toggleSavedFreelancer,
   getSavedFreelancers,
-  recommendIndustry,
-  checkUsername
+  recommendIndustry
 };

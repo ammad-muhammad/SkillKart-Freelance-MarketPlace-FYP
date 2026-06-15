@@ -50,28 +50,23 @@ import PrivacyPolicy from "../pages/public/Legal/PrivacyPolicy";
 import TermsOfService from "../pages/public/Legal/TermsOfService";
 import CookiePolicy from "../pages/public/Legal/CookiePolicy";
 import ServicesAgreement from "../pages/public/Legal/ServicesAgreement";
-import Blog from "../pages/public/Blog/Blog";
 import Careers from "../pages/public/Careers/Careers";
 import PressKit from "../pages/public/PressKit/PressKit";
 import BrowseFreelancers from "../pages/public/BrowseFreelancers/BrowseFreelancers";
 import PostProject from "../pages/public/PostProject/PostProject";
 import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
-import Community from "../pages/public/Community/Community";
 import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
 import Categories from "../pages/public/Categories/Categories";
 import BrowseProjects from "../pages/public/BrowseProjects/BrowseProjects";
 import JobDetails from "../pages/public/JobDetails/JobDetails";
+import GigDetail from "../pages/public/GigDetail/GigDetail";
+import PublicFreelancerProfile from "../pages/public/FreelancerProfile/PublicFreelancerProfile";
 
-//Sumair - work
-// import TermsAndConditions from "../pages/public/TermsAndConditions";
-// import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
 import Onboarding from "../pages/public/Onboarding/Onboarding";
 import FreelancerOnboarding from "../pages/public/FreelancerOnboarding/FreelancerOnboarding";
 // AI Tools
-import VerifyCredentials from "../pages/public/AiTools/VerifyCredentials";
 import BuddyAI from "../pages/public/AiTools/BuddyAI";
-import ProfileAnalyzer from "../pages/public/AiTools/ProfileAnalyzer";
 import CostEstimator from "../pages/public/AiTools/CostEstimator";
 import CategoryPage from "../pages/public/Skills/CategoryPage";
 import SkillPage from "../pages/public/Skills/SkillPage";
@@ -90,6 +85,8 @@ const AppRoutes = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registration" element={<Registration />} />
+            {/* Back-compat alias so any /register link resolves instead of 404ing */}
+            <Route path="/register" element={<Navigate to="/registration" replace />} />
             <Route path="/role" element={<Role />} />
             <Route path="/auth/consent" element={<AuthConsent />} />
             <Route path="/otp-verification" element={<OTP />} />
@@ -100,17 +97,17 @@ const AppRoutes = () => {
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/cookies" element={<CookiePolicy />} />
             <Route path="/services-agreement" element={<ServicesAgreement />} />
-            <Route path="/blog" element={<Blog />} />
             <Route path="/careers" element={<Careers />} />
             <Route path="/press" element={<PressKit />} />
             <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
             <Route path="/post-project" element={<PostProject />} />
             <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
-            <Route path="/community" element={<Community />} />
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/browse-projects" element={<BrowseProjects />} />
             <Route path="/jobs/:id" element={<JobDetails />} />
+            <Route path="/gigs/:id" element={<GigDetail />} />
+            <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
             {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
@@ -133,9 +130,7 @@ const AppRoutes = () => {
             />
             {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
             {/* AI Tools */}
-            <Route path="/ai/verify" element={<VerifyCredentials />} />
             <Route path="/ai/buddy" element={<BuddyAI />} />
-            <Route path="/ai/profile-analyzer" element={<ProfileAnalyzer />} />
             <Route path="/ai/cost-estimator" element={<CostEstimator />} />
             {/* Skills / Category / Gig Pages */}
             <Route path="/skills/:categorySlug" element={<CategoryPage />} />

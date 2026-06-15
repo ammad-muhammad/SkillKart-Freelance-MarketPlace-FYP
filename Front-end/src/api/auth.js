@@ -34,6 +34,9 @@ export const authAPI = {
   logout: () =>
     client.post('/auth/logout'),
 
+  logoutAllDevices: () =>
+    client.post('/auth/logout-all'),
+
   changePassword: (data) =>
     client.post('/auth/password/change', data),
 
@@ -51,6 +54,12 @@ export const authAPI = {
 
   confirmDeactivation: (otp) =>
     client.post('/auth/deactivate/confirm', { otp }),
+
+  requestDeletion: () =>
+    client.post('/auth/delete/request'),
+
+  confirmDeletion: (otp) =>
+    client.post('/auth/delete/confirm', { otp }),
 
   requestEmailChange: (newEmail) =>
     client.post('/auth/email/change/request', { newEmail }),

@@ -9,12 +9,15 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Public routes
 router.get('/', gigController.listGigs);
 
-// Owner routes
-router.get('/my-gigs', 
-  authenticate, 
-  requireRole('freelancer'), 
+// Owner routes (must be before /:id)
+router.get('/my-gigs',
+  authenticate,
+  requireRole('freelancer'),
   gigController.listMyGigs
 );
+
+// Public single gig detail
+router.get('/:id', gigController.getGigById);
 
 // Protected routes (Freelancers)
 router.post('/', 

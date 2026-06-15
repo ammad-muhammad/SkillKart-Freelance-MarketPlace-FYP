@@ -125,46 +125,57 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkAuth = async (force = false) => {
+    // Re-entrancy guard. The previous version could `return` here while
+    // leaving `loading === true` forever if a concurrent check was in flight
+    // (StrictMode double-invoke, visibility/online handlers). That stuck the
+    // ProtectedRoute on its loading screen / let a stale evaluation bounce the
+    // user. We never early-return without also resolving `loading`.
     if (isCheckingAuth.current) {
       return;
     }
-    
+
     const now = Date.now();
     if (!force && user && (now - lastCheckedAuth.current < AUTH_CHECK_THROTTLE)) {
+      setLoading(false);
       return;
     }
-    
+
     isCheckingAuth.current = true;
-    
+
     const refreshToken = tokenManager.getRefreshToken();
-    
+
+    // No refresh token at all → genuinely unauthenticated. Resolve and stop.
     if (!refreshToken) {
+      setUser(null);
       setLoading(false);
       isCheckingAuth.current = false;
       return;
     }
 
     try {
+      // If the access token was lost (e.g. memory-only in a prior version, or
+      // never persisted), mint a fresh one from the refresh token first so the
+      // /auth/me call below is always authenticated.
       if (!tokenManager.getAccessToken()) {
         const { data } = await authAPI.refreshToken(refreshToken);
-        tokenManager.setTokens(
-          data.data.accessToken,
-          refreshToken
-        );
+        tokenManager.setTokens(data.data.accessToken, refreshToken);
       }
-      
+
       const { data } = await authAPI.getCurrentUser();
       setAuthUser(data.data.user);
       lastCheckedAuth.current = Date.now();
     } catch (error) {
       console.error('Auth check failed:', error);
-      
-      if (error.response?.status === 401) {
-        logout('Session expired');
-      } else if (error.response?.status === 403) {
-        logout('Access forbidden');
-      } else {
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        // Token is invalid/expired → clear and treat as logged out, but do NOT
+        // hard-redirect from here; let ProtectedRoute decide based on `user`.
         tokenManager.clearTokens();
+        setUser(null);
+      } else {
+        // Network/transient error: keep tokens, just clear in-memory user.
+        // The user can retry; we don't want a blip to destroy a valid session.
+        setUser(null);
       }
     } finally {
       setLoading(false);
@@ -222,21 +233,21 @@ export const AuthProvider = ({ children }) => {
   // ✅ Handle Supabase OAuth (Google, GitHub, LinkedIn)
   const handleSupabaseOAuth = async (supabaseAccessToken, supabaseRefreshToken) => {
     try {
-      console.log(supabaseAccessToken, supabaseRefreshToken)
       // Send Supabase tokens to YOUR backend
       const { data } = await authAPI.supabaseAuth(supabaseAccessToken, supabaseRefreshToken);
-      
+
       // Store YOUR backend tokens
       tokenManager.setTokens(
         data.data.tokens.accessToken,
         data.data.tokens.refreshToken
       );
-      
+
       setAuthUser(data.data.user);
-      
+      lastCheckedAuth.current = Date.now(); // mark as freshly checked so passive re-checks throttle
+
       const userName = data.data.user.name || data.data.user.email;
       toast.success(`Welcome back, ${userName}!`);
-      
+
       return data;
     } catch (error) {
       console.error('OAuth login error:', error);

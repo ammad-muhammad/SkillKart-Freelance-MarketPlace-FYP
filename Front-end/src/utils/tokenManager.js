@@ -1,9 +1,35 @@
+const ACCESS_TOKEN_KEY = 'at';
+const REFRESH_TOKEN_KEY = 'rt';
+
 class TokenManager {
   constructor() {
     this.accessToken = null;
     this.refreshToken = null;
     this.tokenRefreshTimeout = null;
-    this.logoutCallbacks = []; // ✅ Store logout callbacks
+    this.logoutCallbacks = []; // ✅ Store logout callbacks (init before any restore)
+
+    // Restore the access token from sessionStorage so a page reload does not
+    // lose the session and force a /auth/refresh round-trip before the user
+    // can be hydrated. Refresh token is already persisted (key 'rt').
+    this.accessToken = this.restoreAccessToken();
+  }
+
+  // Decrypt without side effects — a corrupt/foreign stored token during
+  // bootstrap should simply be ignored, never trigger a logout cascade.
+  restoreAccessToken() {
+    try {
+      const encrypted = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+      if (!encrypted) return null;
+      const key = this.generateKey();
+      const decoded = atob(encrypted)
+        .split('')
+        .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
+        .join('');
+      // A valid JWT has two dots; reject anything that didn't decrypt cleanly.
+      return decoded && decoded.split('.').length === 3 ? decoded : null;
+    } catch {
+      return null;
+    }
   }
 
   // ✅ Register logout callback
@@ -19,20 +45,32 @@ class TokenManager {
 
   setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
-    
-    if (refreshToken) {
-      sessionStorage.setItem('rt', this.encryptToken(refreshToken));
+
+    // Persist the access token so it survives a full page reload (it used to
+    // live in memory only, which is why reloading the dashboard dropped the
+    // session and bounced the user to the home/login page).
+    if (accessToken) {
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, this.encryptToken(accessToken));
     }
-    
+
+    if (refreshToken) {
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, this.encryptToken(refreshToken));
+    }
+
     this.scheduleTokenRefresh();
   }
 
   getAccessToken() {
+    // Fall back to the persisted copy in case this instance was re-created
+    // (e.g. HMR) without setTokens having run this session.
+    if (!this.accessToken) {
+      this.accessToken = this.restoreAccessToken();
+    }
     return this.accessToken;
   }
 
   getRefreshToken() {
-    const encrypted = sessionStorage.getItem('rt');
+    const encrypted = sessionStorage.getItem(REFRESH_TOKEN_KEY);
     return encrypted ? this.decryptToken(encrypted) : null;
   }
 

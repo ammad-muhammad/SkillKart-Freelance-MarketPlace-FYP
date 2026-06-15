@@ -60,35 +60,38 @@ axiosInstance.interceptors.response.use(
     // 401 Unauthorized (token expired)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       const refreshToken = tokenManager.getRefreshToken();
       if (!refreshToken) {
         tokenManager.triggerLogout('Session expired');
         return Promise.reject(error);
       }
-      
+
       try {
         const { data } = await axios.post(`${API_URL}/auth/refresh`, {
           refreshToken
         });
-        
+
         tokenManager.setTokens(
           data.data.accessToken,
           refreshToken
         );
-        
+
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
         return axiosInstance(originalRequest);
-        
+
       } catch (refreshError) {
         tokenManager.triggerLogout('Session expired');
         return Promise.reject(refreshError);
       }
     }
 
-    // 403 Forbidden (account disabled/banned)
+    // 403 Forbidden — the user IS authenticated but not allowed THIS resource.
+    // This must NOT log the user out: a single forbidden sub-resource (e.g. an
+    // endpoint guarded for a different role) should not destroy a valid session.
+    // Let the calling code handle the 403 locally. We only end the session on a
+    // genuine auth failure (401 with a failed refresh, handled above).
     if (error.response?.status === 403) {
-      tokenManager.triggerLogout('Access forbidden - account may be disabled');
       return Promise.reject(error);
     }
 
@@ -113,7 +116,7 @@ const client = (configOrUrl, config = {}) => {
     const key = getRequestKey(finalConfig);
     
     if (pendingRequests.has(key)) {
-      console.log(`[API Client] Deduplicating in-flight request: ${finalConfig.url}`);
+      if (import.meta.env.DEV) console.log(`[API Client] Deduplicating in-flight request: ${finalConfig.url}`);
       return pendingRequests.get(key);
     }
 

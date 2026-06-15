@@ -5,9 +5,14 @@ export const gigsAPI = {
   createGig: (gigData) => 
     client.post('/gigs', gigData),
 
-  // List public gigs (Marketplace)
-  listGigs: (params) => 
+  // List public gigs (Marketplace) — supports category, subcategory, skill, q,
+  // minPrice, maxPrice, minRating, sort, page, limit
+  listGigs: (params) =>
     client.get('/gigs', { params }),
+
+  // Get a single public gig by id
+  getGig: (id) =>
+    client.get(`/gigs/${id}`),
 
   // List my own gigs (Freelancer Dashboard)
   listMyGigs: (params) => 

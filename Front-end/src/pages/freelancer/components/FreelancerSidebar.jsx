@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { useAuth } from '../../../hooks/useAuth';
 import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
@@ -7,10 +7,12 @@ import './FreelancerSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/freelancer/dashboard', icon: '⚡', label: 'Dashboard' },
+  { to: '/browse-projects', icon: '🔍', label: 'Find Work' },
   { to: '/freelancer/profile', icon: '👤', label: 'My Profile' },
   { to: '/freelancer/gigs', icon: '📦', label: 'My Gigs' },
   { to: '/freelancer/gigs/create', icon: '✚', label: 'Create New Gig' },
   { to: '/freelancer/portfolio', icon: '🗂️', label: 'Portfolio' },
+  { to: '/freelancer/proposals', icon: '📋', label: 'My Proposals' },
   { to: '/freelancer/saved', icon: '📑', label: 'Saved Projects' },
   { to: '/freelancer/messages', icon: '💬', label: 'Messages' },
   { to: '/freelancer/settings', icon: '⚙️', label: 'Settings' },
@@ -21,15 +23,7 @@ const FreelancerSidebar = () => {
   const [open, setOpen] = useState(false);
   const { profile } = useFreelancer();
   const { logout } = useAuth();
-  const navigate = useNavigate();
   const { fullName, title, avatar } = profile.personalInfo;
-
-  const initials = fullName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
 
   return (
     <>

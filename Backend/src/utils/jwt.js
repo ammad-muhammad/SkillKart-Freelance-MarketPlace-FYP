@@ -11,6 +11,7 @@ const generateToken = (user) => {
     userId: user._id || user.id || 'superadmin',
     email: user.email,
     role: user.role,
+    tv: user.tokenVersion || 0, // token version — bumping it logs out all devices
     type: 'access'
   };
 
@@ -30,6 +31,7 @@ const generateRefreshToken = (user) => {
   const payload = {
     userId: user._id || user.id || 'superadmin',
     email: user.email,
+    tv: user.tokenVersion || 0,
     type: 'refresh'
   };
 

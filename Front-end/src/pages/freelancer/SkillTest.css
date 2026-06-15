@@ -269,9 +269,11 @@
   color: #64748b;
 }
 
-/* Result States */
+/* Result States.
+   min-height (not a fixed 100vh) so it sits naturally inside the freelancer
+   layout's padded, 260px-offset main column without overflowing it. */
 .st-result-container {
-  height: 100vh;
+  min-height: 70vh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -410,4 +412,156 @@
   border: none;
   cursor: pointer;
   font-weight: 600;
+}
+
+/* ═══════════════ LOCKDOWN MODE ═══════════════
+   While the test is active it covers the entire viewport (including the
+   freelancer sidebar/nav) so only the test is visible. */
+.st-lockdown {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  overflow-y: auto;
+  background: #f8fafc;
+  /* keep the centered column behaviour from .st-page */
+  padding: 40px 20px;
+}
+.st-lockdown .st-header,
+.st-lockdown .st-progress-container,
+.st-lockdown .st-content {
+  margin-left: auto;
+  margin-right: auto;
+}
+/* Prevent text selection during the test (deterrent). */
+.st-lockdown .st-q-text,
+.st-lockdown .st-mcq-option span,
+.st-lockdown .st-q-meta {
+  user-select: none;
+}
+
+/* Proctor badge (replaces the old "Anti-Gaming" pill). */
+.st-proctor {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Cheating warning banner shown after the first violation. */
+.st-cheat-banner {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  color: #b45309;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ═══════════════ RULES / CONSENT SCREEN ═══════════════ */
+.st-rules-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 40px;
+}
+.st-rules-card {
+  width: 100%;
+  max-width: 720px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+.st-rules-head {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+.st-rules-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+.st-rules-head h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+.st-rules-head p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.92rem;
+}
+.st-rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.st-rules-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #334155;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.st-rules-list li svg {
+  color: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.st-rules-list li strong { color: #0f172a; }
+.st-rules-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.st-rules-actions .st-btn-submit {
+  width: auto;
+  display: inline-flex;
+  padding-left: 28px;
+  padding-right: 28px;
+}
+
+/* ═══════════════ MOBILE / SMALL SCREENS ═══════════════ */
+@media (max-width: 600px) {
+  .st-lockdown { padding: 18px 12px; }
+  .st-page { padding: 24px 14px; }
+
+  .st-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .st-header h1 { font-size: 1.2rem; }
+
+  .st-question-card { padding: 22px 18px; }
+  .st-q-text { font-size: 1.12rem; }
+
+  .st-footer {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .st-footer .st-nav-info { order: -1; width: 100%; text-align: center; }
+
+  .st-rules-card { padding: 24px 18px; }
+  .st-rules-head h1 { font-size: 1.25rem; }
+  .st-rules-actions { flex-direction: column; align-items: stretch; }
+  .st-rules-actions .st-btn-submit { width: 100%; justify-content: center; }
 }

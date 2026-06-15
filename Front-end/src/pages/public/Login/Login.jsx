@@ -70,13 +70,21 @@ const Login = () => {
                 setTimeout(() => navigate('/otp-verification'), 1500);
             } else {
                 setSuccess("Login successful! Redirecting...");
-                
+
                 // Role-based redirect logic (same as OTP.jsx)
                 const userRole = response.data.data.user.role;
                 const isOnboardingCompleted = response.data.data.user.isOnBoardingCompleted;
 
+                // Honor a pending redirect (e.g. guest tried to Post a Project, or
+                // tapped "Apply Now" on a job). Works for any onboarded role; if
+                // onboarding isn't done we send them to onboarding first.
+                const pending = sessionStorage.getItem('postLoginRedirect');
+
                 setTimeout(() => {
-                    if (userRole === 'client') {
+                    if (pending && isOnboardingCompleted && (userRole === 'client' || userRole === 'freelancer')) {
+                        sessionStorage.removeItem('postLoginRedirect');
+                        navigate(pending);
+                    } else if (userRole === 'client') {
                         isOnboardingCompleted ? navigate('/client/dashboard') : navigate('/client/onboarding');
                     } else if (userRole === 'freelancer') {
                         isOnboardingCompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding');

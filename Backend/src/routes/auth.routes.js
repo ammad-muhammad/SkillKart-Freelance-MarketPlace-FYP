@@ -372,6 +372,11 @@ router.post('/logout',
   authController.logout
 );
 
+router.post('/logout-all',
+  authenticate,
+  authController.logoutAllDevices
+);
+
 // Email Change
 router.post('/email/change/request',
   authenticate,
@@ -407,6 +412,17 @@ router.post('/deactivate/request',
 router.post('/deactivate/confirm',
   authenticate,
   authController.confirmDeactivation
+);
+
+// Permanent Account Deletion (OTP-gated, cascades data cleanup)
+router.post('/delete/request',
+  authenticate,
+  authController.requestDeletion
+);
+
+router.post('/delete/confirm',
+  authenticate,
+  authController.confirmDeletion
 );
 
 module.exports = router;

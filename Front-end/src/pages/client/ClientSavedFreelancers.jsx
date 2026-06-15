@@ -1,50 +1,14 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import './ClientDashboard.css';
 
-const MOCK_SAVED = [
-  {
-    id: 1,
-    name: 'Alex Rivera',
-    title: 'Senior Full Stack Developer',
-    rating: 4.9,
-    reviews: 124,
-    hourlyRate: 45,
-    skills: ['React', 'Node.js', 'AWS'],
-    avatar: null,
-    location: 'Ukraine'
-  },
-  {
-    id: 2,
-    name: 'Sophia Chen',
-    title: 'UI/UX Product Designer',
-    rating: 5.0,
-    reviews: 89,
-    hourlyRate: 55,
-    skills: ['Figma', 'Prototyping', 'Product Design'],
-    avatar: null,
-    location: 'Singapore'
-  },
-  {
-    id: 3,
-    name: 'Jordan Smith',
-    title: 'Mobile App Expert (iOS/Android)',
-    rating: 4.8,
-    reviews: 210,
-    hourlyRate: 60,
-    skills: ['Flutter', 'React Native', 'Firebase'],
-    avatar: null,
-    location: 'USA'
-  }
-];
-
 const ClientSavedFreelancers = () => {
-  const { showToast } = useClient();
-  const [saved, setSaved] = useState(MOCK_SAVED);
+  const { savedFreelancers: saved, savedLoading, toggleSavedFreelancer } = useClient();
+  const navigate = useNavigate();
 
-  const removeSaved = (id) => {
-    setSaved(prev => prev.filter(f => f.id !== id));
-    showToast('Freelancer removed from saved list.', 'info');
+  const removeSaved = (freelancer) => {
+    // toggleSavedFreelancer persists to the backend and updates context state
+    toggleSavedFreelancer(freelancer);
   };
 
   return (
@@ -54,14 +18,23 @@ const ClientSavedFreelancers = () => {
         <p className="cl-page-sub">Quickly access the talent you've bookmarked for future projects.</p>
       </div>
 
-      {saved.length === 0 ? (
+      {savedLoading ? (
+        <div className="cl-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+          <div className="cl-spinner" />
+          <p style={{ color: 'var(--color-text-light)', marginTop: '1rem' }}>Loading your saved freelancers…</p>
+        </div>
+      ) : saved.length === 0 ? (
         <div className="cl-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🔖</div>
           <h3 style={{ color: 'var(--color-primary)' }}>Your list is empty</h3>
           <p style={{ color: 'var(--color-text-light)', marginTop: '0.5rem' }}>
             Browse freelancers and click the bookmark icon to save them here.
           </p>
-          <button className="cl-btn cl-btn--primary" style={{ marginTop: '1.5rem' }}>
+          <button
+            className="cl-btn cl-btn--primary"
+            style={{ marginTop: '1.5rem' }}
+            onClick={() => navigate('/browse-freelancers')}
+          >
             Browse Talent
           </button>
         </div>
@@ -69,9 +42,9 @@ const ClientSavedFreelancers = () => {
         <div className="cl-saved-grid">
           {saved.map(f => (
             <div key={f.id} className="cl-card cl-freelancer-card animate-fade-in">
-              <button 
-                className="cl-freelancer-card__unsave" 
-                onClick={() => removeSaved(f.id)}
+              <button
+                className="cl-freelancer-card__unsave"
+                onClick={() => removeSaved(f)}
                 title="Remove from saved"
               >
                 🔖
@@ -98,7 +71,12 @@ const ClientSavedFreelancers = () => {
 
               <div className="cl-freelancer-card__footer">
                 <span className="cl-freelancer-card__rate"><strong>${f.hourlyRate}</strong> / hr</span>
-                <button className="cl-btn cl-btn--primary cl-btn--sm">View Profile</button>
+                <button
+                  className="cl-btn cl-btn--primary cl-btn--sm"
+                  onClick={() => navigate(`/freelancers/${f.id}`)}
+                >
+                  View Profile
+                </button>
               </div>
             </div>
           ))}
@@ -141,6 +119,12 @@ const ClientSavedFreelancers = () => {
           display: flex; justify-content: space-between; align-items: center;
         }
         .cl-freelancer-card__rate { font-size: 0.875rem; color: var(--color-text-mid); }
+        .cl-spinner {
+          width: 38px; height: 38px; margin: 0 auto;
+          border: 3px solid #e2e8f0; border-top-color: var(--color-primary);
+          border-radius: 50%; animation: cl-spin 0.8s linear infinite;
+        }
+        @keyframes cl-spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

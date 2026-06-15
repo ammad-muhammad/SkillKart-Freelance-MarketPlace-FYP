@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
+import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare } from 'lucide-react';
 import './ClientDashboard.css';
 
@@ -10,8 +11,12 @@ const ClientMessages = () => {
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [msgInput, setMsgInput] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const chatFeedRef = useRef(null);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     fetchConversations();
@@ -36,12 +41,14 @@ const ClientMessages = () => {
   const fetchConversations = async () => {
     try {
       const res = await messagesAPI.getConversations();
+      setError(null);
       setConversations(res.data.data);
       if (!activeChat && res.data.data.length > 0) {
         setActiveChat(res.data.data[0]);
       }
-    } catch (error) {
-      console.error('Failed to fetch conversations:', error);
+    } catch (err) {
+      console.error('Failed to fetch conversations:', err);
+      setError('Could not load your conversations. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -51,8 +58,8 @@ const ClientMessages = () => {
     try {
       const res = await messagesAPI.getMessages(chatId);
       setMessages(res.data.data);
-    } catch (error) {
-      console.error('Failed to fetch messages:', error);
+    } catch (err) {
+      console.error('Failed to fetch messages:', err);
     }
   };
 
@@ -65,10 +72,42 @@ const ClientMessages = () => {
       await messagesAPI.sendMessage(recipient._id, msgInput);
       setMsgInput('');
       fetchMessages(activeChat._id);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (err) {
+      console.error('Failed to send message:', err);
     }
   };
+
+  const handleAttach = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file || !activeChat) return;
+
+    const check = validateFile(file, {
+      maxSizeMB: 10,
+      allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    });
+    if (!check.valid) { alert(check.error); return; }
+
+    const recipient = activeChat.participants.find(p => p._id !== user._id);
+    setUploading(true);
+    try {
+      const att = await uploadMessageAttachment(file);
+      await messagesAPI.sendMessage(recipient._id, att.name, [att]);
+      fetchMessages(activeChat._id);
+    } catch (err) {
+      console.error('Attachment failed:', err);
+      alert('Could not send attachment. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const filteredConversations = conversations.filter(c => {
+    if (!search.trim()) return true;
+    const other = c.participants.find(p => p._id !== user._id);
+    return `${other?.firstName || ''} ${other?.lastName || ''}`.toLowerCase().includes(search.toLowerCase());
+  });
 
   if (loading) return <div className="cl-loading">Loading chats...</div>;
 
@@ -83,10 +122,26 @@ const ClientMessages = () => {
         {/* Chat List */}
         <aside className="cl-chat-list">
           <div className="cl-chat-list__search">
-            <input type="text" placeholder="Search conversations..." className="cl-input cl-input--sm" />
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              className="cl-input cl-input--sm"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
           <div className="cl-chat-list__items">
-            {conversations.map(chat => {
+            {error && (
+              <div style={{ padding: '1rem', fontSize: '0.8rem', color: '#ef4444', textAlign: 'center' }}>
+                {error} <button onClick={fetchConversations} style={{ display: 'block', margin: '0.5rem auto 0', textDecoration: 'underline' }}>Retry</button>
+              </div>
+            )}
+            {!error && filteredConversations.length === 0 && (
+              <div style={{ padding: '2rem 1rem', fontSize: '0.82rem', color: '#94a3b8', textAlign: 'center' }}>
+                {search ? 'No conversations match your search.' : 'No conversations yet.'}
+              </div>
+            )}
+            {filteredConversations.map(chat => {
               const otherUser = chat.participants.find(p => p._id !== user._id);
               const unread = chat.unreadCount?.[user._id] || 0;
               return (
@@ -143,8 +198,8 @@ const ClientMessages = () => {
                   );
                 })()}
                 <div className="cl-chat-window__actions">
-                  <button className="cl-btn cl-btn--ghost cl-btn--sm">📞</button>
-                  <button className="cl-btn cl-btn--ghost cl-btn--sm">🎥</button>
+                  <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled title="Voice calls coming soon" style={{ opacity: 0.45, cursor: 'not-allowed' }}>📞</button>
+                  <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled title="Video calls coming soon" style={{ opacity: 0.45, cursor: 'not-allowed' }}>🎥</button>
                 </div>
               </header>
 
@@ -153,6 +208,23 @@ const ClientMessages = () => {
                 {messages.map(msg => (
                   <div key={msg._id} className={`cl-msg${msg.sender._id === user._id ? ' cl-msg--own' : ''}`}>
                     <div className="cl-msg__bubble">
+                      {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                        <div className="cl-msg__attachments">
+                          {msg.attachments.map((att, i) => {
+                            const a = typeof att === 'string' ? { url: att, name: 'Attachment' } : att;
+                            const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
+                            return isImg ? (
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer">
+                                <img src={a.url} alt={a.name} className="cl-msg__att-img" />
+                              </a>
+                            ) : (
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="cl-msg__att-file">
+                                📄 {a.name || 'Document'}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
                       {msg.content}
                       <span className="cl-msg__time">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -164,10 +236,25 @@ const ClientMessages = () => {
 
               {/* Message Input */}
               <form className="cl-chat-input" onSubmit={sendMessage}>
-                <button type="button" className="cl-chat-input__attach">📎</button>
-                <input 
-                  type="text" 
-                  placeholder="Type a message..." 
+                <input
+                  type="file"
+                  ref={fileRef}
+                  style={{ display: 'none' }}
+                  accept="image/*,.pdf,.doc,.docx"
+                  onChange={handleAttach}
+                />
+                <button
+                  type="button"
+                  className="cl-chat-input__attach"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  title="Attach a file"
+                >
+                  {uploading ? '⏳' : '📎'}
+                </button>
+                <input
+                  type="text"
+                  placeholder="Type a message..."
                   value={msgInput}
                   onChange={e => setMsgInput(e.target.value)}
                   className="cl-input"
@@ -269,6 +356,14 @@ const ClientMessages = () => {
         
         .cl-chat-input { padding: 1rem; border-top: 1px solid #e5edf5; display: flex; align-items: center; gap: 0.75rem; }
         .cl-chat-input__attach { background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b; }
+        .cl-chat-input__attach:disabled { cursor: wait; }
+        .cl-msg__attachments { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.4rem; }
+        .cl-msg__att-img { max-width: 200px; max-height: 200px; border-radius: 8px; display: block; }
+        .cl-msg__att-file {
+          display: inline-block; padding: 0.4rem 0.7rem; background: rgba(0,0,0,0.06);
+          border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: inherit;
+        }
+        .cl-msg--own .cl-msg__att-file { background: rgba(255,255,255,0.2); }
       `}</style>
     </div>
   );

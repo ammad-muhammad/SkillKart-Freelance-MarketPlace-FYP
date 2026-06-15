@@ -56,13 +56,14 @@ const generateTest = asyncHandler(async (req, res) => {
   
   let rawQuestions = [];
   let attempts = 0;
+  let mcqFallback = false; // true if we accepted a test below the 65% MCQ target
   const MAX_GEN_ATTEMPTS = 2; // Reduced to 2 to save quota/tokens
 
   while (attempts < MAX_GEN_ATTEMPTS) {
     attempts++;
     try {
       rawQuestions = await ai.generateSkillTest(skillsToTest, questionCount);
-      
+
       // Validate MCQ distribution
       const mcqCount = rawQuestions.filter(q => q.type === 'mcq').length;
       const mcqPercentage = (mcqCount / rawQuestions.length) * 100;
@@ -72,6 +73,7 @@ const generateTest = asyncHandler(async (req, res) => {
       // If we met the requirement OR it's our last attempt, accept it
       if (mcqPercentage >= 65 || attempts >= MAX_GEN_ATTEMPTS) {
         if (mcqPercentage < 65) {
+          mcqFallback = true;
           console.warn(`[SkillTest] MCQ percentage (${mcqPercentage.toFixed(1)}%) is below target, but using it to avoid further API calls.`);
         }
         break;
@@ -110,10 +112,11 @@ const generateTest = asyncHandler(async (req, res) => {
 
   sendSuccess(res, {
     message: 'New skill test generated successfully',
-    data: { 
-      questions: attempt.questions, 
+    data: {
+      questions: attempt.questions,
       skills: skillsToTest,
-      attemptId: attempt._id 
+      attemptId: attempt._id,
+      mcqFallback // UI can note the test mix is below the usual MCQ ratio
     }
   });
 });

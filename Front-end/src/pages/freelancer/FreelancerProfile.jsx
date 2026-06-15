@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../api/auth';
 import { 
   Plus, Trash2, Edit3, Briefcase, Award, GraduationCap, MapPin, 
   DollarSign, Clock, Globe, Github, Linkedin, ExternalLink,
@@ -8,10 +9,11 @@ import {
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
-import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import { timezones } from '../../utils/timezones';
 import { LANGUAGES } from '../../data/languages';
 import TagInput from '../../Components/common/TagInput/TagInput';
+import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
@@ -21,11 +23,52 @@ const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const FreelancerProfile = () => {
   const { profile, saveProfile, showToast } = useFreelancer();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  // Two-step OTP-secured account deletion (reuses the backend deletion flow).
+  const [deleteStep, setDeleteStep] = useState(1); // 1 = confirm, 2 = enter OTP
+  const [deleteOtp, setDeleteOtp] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const requestDeleteOtp = async () => {
+    setDeleteBusy(true);
+    try {
+      await authAPI.requestDeletion();
+      setDeleteStep(2);
+      showToast('We sent a verification code to your email.', 'info');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not start account deletion.', 'error');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteOtp.trim()) { showToast('Enter the code from your email.', 'error'); return; }
+    setDeleteBusy(true);
+    try {
+      await authAPI.confirmDeletion(deleteOtp.trim());
+      showToast('Your account has been permanently deleted.', 'info');
+      setDeleteModal(false);
+      await logout('Account deleted.');
+      navigate('/');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Invalid or expired code.', 'error');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteBusy) return;
+    setDeleteModal(false);
+    setDeleteStep(1);
+    setDeleteOtp('');
+  };
   const [form, setForm] = useState(profile?.personalInfo ? { ...profile.personalInfo } : {});
   const [skills, setSkills] = useState(Array.isArray(profile?.skills) ? [...profile.skills] : []);
   const [languages, setLanguages] = useState(Array.isArray(profile?.languages) ? [...profile.languages] : []);
@@ -194,11 +237,12 @@ const FreelancerProfile = () => {
             <div key={key} className="fl-form-group">
               <label className="fl-label">{label}</label>
               {type === 'select' ? (
-                <CustomSelect
+                <ComboSelect
                   options={opts}
                   value={editing ? form[key] : profile?.personalInfo?.[key]}
                   onChange={(val) => setForm((p) => ({ ...p, [key]: val }))}
                   disabled={!editing}
+                  placeholder={editing ? `Type to search ${label.toLowerCase()}…` : ''}
                 />
               ) : (
                 <input
@@ -443,6 +487,18 @@ const FreelancerProfile = () => {
               <>
                 <TagInput tags={skills} onChange={setSkills} placeholder="e.g. React, Node.js" />
                 {skills.length === 0 && <span className="fl-error">⚠ At least one skill is required</span>}
+                {/* AI suggest — skills + experience level from the freelancer's title/bio */}
+                <AiSuggestFill
+                  label="Suggest skills & level (AI)"
+                  getContext={() => ({
+                    title: form.title || form.headline || '',
+                    description: [form.title, form.bio].filter(Boolean).join('. '),
+                    skills,
+                  })}
+                  existingSkills={skills}
+                  onSkills={(newSkills) => setSkills((prev) => Array.from(new Set([...prev, ...newSkills])))}
+                  onExperience={(level) => setForm((p) => ({ ...p, experienceLevel: level }))}
+                />
               </>
             ) : (
               <div className="fl-tags-display">
@@ -699,21 +755,42 @@ const FreelancerProfile = () => {
             {saving ? 'Saving...' : '✔ Save Changes'}
           </button>
           <button className="fl-btn fl-btn--ghost" onClick={cancel}>Cancel</button>
-          <button className="fl-btn fl-btn--danger" style={{ marginLeft: 'auto' }} onClick={() => setDeleteModal(true)}>
-            🗑 Delete Profile
+          <button className="fl-btn fl-btn--danger" style={{ marginLeft: 'auto' }} onClick={() => { setDeleteStep(1); setDeleteOtp(''); setDeleteModal(true); }}>
+            🗑 Delete Account
           </button>
         </div>
       )}
 
-      {/* Delete Modal */}
-      <Modal open={deleteModal} title="Delete Profile" onClose={() => setDeleteModal(false)} danger>
-        <p>Are you sure you want to permanently delete your profile? This action cannot be undone.</p>
-        <div className="fl-actions" style={{ marginTop: '1.25rem' }}>
-          <button className="fl-btn fl-btn--danger" onClick={() => { setDeleteModal(false); showToast('Profile deletion simulated.', 'info'); }}>
-            Yes, Delete
-          </button>
-          <button className="fl-btn fl-btn--ghost" onClick={() => setDeleteModal(false)}>Cancel</button>
-        </div>
+      {/* Delete Account — OTP-secured, cascade-deletes profile, gigs & proposals */}
+      <Modal open={deleteModal} title="Delete Account" onClose={closeDeleteModal} danger>
+        {deleteStep === 1 ? (
+          <>
+            <p>This permanently deletes your account, profile, gigs, and proposals. <strong>This cannot be undone.</strong> We'll email you a verification code to confirm.</p>
+            <div className="fl-actions" style={{ marginTop: '1.25rem' }}>
+              <button className={`fl-btn fl-btn--danger${deleteBusy ? ' fl-btn--loading' : ''}`} disabled={deleteBusy} onClick={requestDeleteOtp}>
+                {deleteBusy ? 'Sending…' : 'Send verification code'}
+              </button>
+              <button className="fl-btn fl-btn--ghost" onClick={closeDeleteModal} disabled={deleteBusy}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p>Enter the verification code we sent to <strong>{user?.email}</strong> to permanently delete your account.</p>
+            <input
+              className="fl-input"
+              style={{ marginTop: '0.75rem', letterSpacing: '0.3em', textAlign: 'center' }}
+              placeholder="000000"
+              value={deleteOtp}
+              onChange={(e) => setDeleteOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            />
+            <div className="fl-actions" style={{ marginTop: '1.25rem' }}>
+              <button className={`fl-btn fl-btn--danger${deleteBusy ? ' fl-btn--loading' : ''}`} disabled={deleteBusy} onClick={confirmDelete}>
+                {deleteBusy ? 'Deleting…' : 'Permanently delete'}
+              </button>
+              <button className="fl-btn fl-btn--ghost" onClick={closeDeleteModal} disabled={deleteBusy}>Cancel</button>
+            </div>
+          </>
+        )}
       </Modal>
 
       <style>{`

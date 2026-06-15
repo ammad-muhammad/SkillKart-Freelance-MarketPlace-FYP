@@ -1,20 +1,38 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import { aiAPI } from '../../../api/ai';
+import { useAuth } from '../../../hooks/useAuth';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './AiTools.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const GUEST_LIMIT = 3;
+const GUEST_KEY = 'buddyGuestUsed'; // shared with the floating BuddyWidget
+
 export default function BuddyAI() {
+    const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
     const [messages, setMessages] = useState([
         { role: 'ai', text: "Hello! I'm your SkillKart Buddy. How can I assist you with your freelance journey today?" }
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [limitReached, setLimitReached] = useState(false);
     const scrollRef = useRef(null);
     const pageRef = useRef(null);
+
+    const guestUsed = () => Number(sessionStorage.getItem(GUEST_KEY) || 0);
+    const guestRemaining = isAuthenticated ? Infinity : Math.max(0, GUEST_LIMIT - guestUsed());
+
+    // Reflect an already-spent guest quota on mount, and clear lock once logged in.
+    useEffect(() => {
+        if (isAuthenticated) { setLimitReached(false); return; }
+        if (guestUsed() >= GUEST_LIMIT) setLimitReached(true);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         document.title = "Buddy AI Assistant | SkillKart";
@@ -56,27 +74,50 @@ export default function BuddyAI() {
         }
     }, [messages]);
 
-    const handleSend = (textInput) => {
+    const handleSend = async (textInput) => {
         const msg = textInput || input;
-        if (!msg.trim()) return;
+        if (!msg.trim() || isTyping || limitReached) return;
 
-        const newMessages = [...messages, { role: 'user', text: msg }];
-        setMessages(newMessages);
+        // Guest gate (client-side; the server enforces it too).
+        if (!isAuthenticated && guestUsed() >= GUEST_LIMIT) {
+            setLimitReached(true);
+            return;
+        }
+
+        // Build the conversation history from prior messages BEFORE this one.
+        // Our internal role 'ai' maps to the API role 'assistant'.
+        const history = messages.map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.text
+        }));
+
+        setMessages(prev => [...prev, { role: 'user', text: msg }]);
         setInput('');
         setIsTyping(true);
 
-        // Simulate AI Response
-        setTimeout(() => {
-            let response = "That's a great question! Based on top earners, I recommend focusing on clear value propositions and mentioning your specific tools like React or Figma.";
-            if (msg.toLowerCase().includes('proposal')) {
-                response = "To write a winning proposal: 1. Address the client's problem first. 2. Mention a similar past project. 3. Propose a clear timeline and outcome. Would you like me to draft a template for you?";
-            } else if (msg.toLowerCase().includes('pricing')) {
-                response = "For 2-3 years of experience, the sweet spot is usually $35-$50/hr. Don't go too low, as it signals lower quality. High-ticket clients value reliability over cheap rates.";
+        try {
+            const res = await aiAPI.buddy(msg, history);
+            const d = res?.data?.data || {};
+            setMessages(prev => [...prev, { role: 'ai', text: d.reply || "Sorry, I'm having trouble right now — please try again." }]);
+            if (!isAuthenticated) {
+                const used = d.guestRemaining != null ? (GUEST_LIMIT - d.guestRemaining) : guestUsed() + 1;
+                sessionStorage.setItem(GUEST_KEY, String(used));
+                if (d.guestRemaining === 0) setLimitReached(true);
             }
-
-            setMessages(prev => [...prev, { role: 'ai', text: response }]);
+        } catch (err) {
+            if (err.response?.status === 403 && err.response?.data?.data?.loginRequired) {
+                sessionStorage.setItem(GUEST_KEY, String(GUEST_LIMIT));
+                setLimitReached(true);
+            } else {
+                console.error('Buddy AI request failed:', err);
+                setMessages(prev => [...prev, {
+                    role: 'ai',
+                    text: "Sorry, I'm having trouble right now — please try again."
+                }]);
+            }
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     const suggestions = [
@@ -143,37 +184,60 @@ export default function BuddyAI() {
                             )}
                         </div>
 
-                        <div style={{ padding: '0 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                            {suggestions.map((s, i) => (
-                                <button 
-                                    key={i} 
-                                    onClick={() => handleSend(s)}
-                                    style={{ padding: '0.4rem 0.8rem', background: '#f1f5f9', borderRadius: '20px', fontSize: '0.8rem', color: '#4a5568', fontWeight: 600, border: '1px solid #e2e8f0', cursor: 'pointer' }}
-                                >
-                                    {s}
+                        {limitReached ? (
+                            <div style={{ margin: '0 1.5rem 1.25rem', padding: '1.1rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '14px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '0.9rem', color: '#3730a3', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                                    You've used your {GUEST_LIMIT} free messages. Log in to keep chatting with Buddy — it's free and unlimited.
+                                </p>
+                                <button className="ai-btn-primary" style={{ width: 'auto', padding: '0.6rem 1.5rem' }} onClick={() => navigate('/login')}>
+                                    Log in to continue
                                 </button>
-                            ))}
-                        </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{ padding: '0 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                                    {suggestions.map((s, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleSend(s)}
+                                            disabled={isTyping}
+                                            style={{ padding: '0.4rem 0.8rem', background: '#f1f5f9', borderRadius: '20px', fontSize: '0.8rem', color: '#4a5568', fontWeight: 600, border: '1px solid #e2e8f0', cursor: 'pointer' }}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
 
-                        <div className="buddy-chat-input-wrap">
-                            <input 
-                                type="text" 
-                                className="ai-input" 
-                                style={{ borderRadius: '24px' }}
-                                placeholder="Ask Buddy anything about your freelance project..."
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyPress={e => e.key === 'Enter' && handleSend()}
-                            />
-                            <button 
-                                onClick={() => handleSend()}
-                                className="ai-btn-primary" 
-                                style={{ borderRadius: '50%', width: '48px', height: '48px', padding: 0, flexShrink: 0 }}
-                                disabled={!input.trim() || isTyping}
-                            >
-                                ➔
-                            </button>
-                        </div>
+                                <div className="buddy-chat-input-wrap">
+                                    <input
+                                        type="text"
+                                        className="ai-input"
+                                        style={{ borderRadius: '24px' }}
+                                        placeholder="Ask Buddy anything about your freelance project..."
+                                        value={input}
+                                        onChange={e => setInput(e.target.value)}
+                                        onKeyPress={e => e.key === 'Enter' && handleSend()}
+                                    />
+                                    <button
+                                        onClick={() => handleSend()}
+                                        className="ai-btn-primary"
+                                        style={{ borderRadius: '50%', width: '48px', height: '48px', padding: 0, flexShrink: 0 }}
+                                        disabled={!input.trim() || isTyping}
+                                    >
+                                        ➔
+                                    </button>
+                                </div>
+
+                                {!isAuthenticated && (
+                                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', margin: '0.6rem 1.5rem 0' }}>
+                                        {guestRemaining} free message{guestRemaining === 1 ? '' : 's'} left ·{' '}
+                                        <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: 'var(--color-primary, #042e4c)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.75rem' }}>
+                                            log in
+                                        </button>{' '}for unlimited
+                                    </p>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </section>

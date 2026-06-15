@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Tag } from "lucide-react";
 import TagInput from "../common/TagInput/TagInput";
+import AiSuggestFill from "../common/AiSuggest/AiSuggestFill";
 
 const StepSkills = ({ formData, setFormData, errors }) => {
   const skills = formData.skills || [];
@@ -26,10 +27,26 @@ const StepSkills = ({ formData, setFormData, errors }) => {
           Your Skills*
         </label>
         
-        <TagInput 
-          tags={skills} 
+        <TagInput
+          tags={skills}
           onChange={handleSkillsChange}
           placeholder="Type a skill (e.g. React) and press Enter..."
+        />
+
+        {/* AI suggest — skills + experience level inferred from the title/bio */}
+        <AiSuggestFill
+          label="Suggest skills & level (AI)"
+          getContext={() => ({
+            title: formData.title || '',
+            description: [formData.title, formData.bio].filter(Boolean).join('. '),
+            skills,
+          })}
+          existingSkills={skills}
+          onSkills={(newSkills) => setFormData((prev) => ({
+            ...prev,
+            skills: Array.from(new Set([...(prev.skills || []), ...newSkills])),
+          }))}
+          onExperience={(level) => setFormData((prev) => ({ ...prev, experienceLevel: level }))}
         />
 
         <p className="fob-hint" style={{ marginTop: '0.75rem' }}>

@@ -1,20 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { Bot, Users, Star, CheckCircle2 } from 'lucide-react';
 import './Hero.css';
+import { publicAPI } from '../../../api/publicData';
 
-/* ── Floating stat cards ── */
-const STATS = [
-  { value: '50K+', label: 'Verified Freelancers', Icon: Users },
-  { value: '98%',  label: 'Client Satisfaction',  Icon: Star },
-  { value: '12K+', label: 'Projects Completed',   Icon: CheckCircle2 },
+/* ── Floating stat cards (real values only — populated from /public/stats) ── */
+const STAT_DEFS = [
+  { key: 'freelancers', label: 'Verified Freelancers', Icon: Users, fmt: (n) => `${n.toLocaleString()}+` },
+  { key: 'successRate', label: 'Client Satisfaction',  Icon: Star, fmt: (n) => `${n}%` },
+  { key: 'completedJobs', label: 'Projects Completed', Icon: CheckCircle2, fmt: (n) => `${n.toLocaleString()}+` },
 ];
 
-/* ── Trusted companies mock logos ── */
-const COMPANIES = ['Google', 'Microsoft', 'Amazon', 'Meta', 'Spotify'];
-
-/* ── Animated skill pills ── */
+/* ── Animated skill pills (decorative category labels) ── */
 const SKILL_PILLS = [
   'React Developer', 'UI/UX Design', 'AI Engineer',
   'Data Science', 'Mobile App Dev', 'Content Writing',
@@ -31,6 +29,36 @@ export default function Hero() {
   const visualRef = useRef(null);
   const pillsRef = useRef(null);
   const bgRef = useRef(null);
+
+  // Real platform stats only — no fabricated fallbacks. Cards with no real
+  // value are simply not rendered.
+  const [stats, setStats] = useState([]);
+  const [trustCount, setTrustCount] = useState(null); // real user count, or null
+
+  useEffect(() => {
+    let active = true;
+
+    publicAPI.getStats()
+      .then((res) => {
+        if (!active) return;
+        const s = res?.data?.data || {};
+        const totalUsers = Number(s.totalUsers) || 0;
+        if (totalUsers > 0) setTrustCount(`${totalUsers.toLocaleString()}+`);
+
+        // Only include a stat card when its real value exists (> 0 / non-null).
+        const real = STAT_DEFS
+          .map((def) => {
+            const v = s[def.key];
+            if (v == null || Number(v) <= 0) return null;
+            return { label: def.label, Icon: def.Icon, value: def.fmt(Number(v)) };
+          })
+          .filter(Boolean);
+        setStats(real);
+      })
+      .catch(() => { if (active) setStats([]); });
+
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     /* ── Entrance timeline ── */
@@ -150,19 +178,21 @@ export default function Hero() {
             </Link>
           </div>
 
-          {/* ── Social proof ── */}
-          <div className="hero__trust">
-            <div className="hero__trust-avatars">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="hero__avatar" style={{ background: `hsl(${200 + i * 20}, 50%, ${40 + i * 5}%)` }}>
-                  {String.fromCharCode(64 + i)}
-                </div>
-              ))}
+          {/* ── Social proof (only with a real member count) ── */}
+          {trustCount && (
+            <div className="hero__trust">
+              <div className="hero__trust-avatars">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="hero__avatar" style={{ background: `hsl(${200 + i * 20}, 50%, ${40 + i * 5}%)` }}>
+                    {String.fromCharCode(64 + i)}
+                  </div>
+                ))}
+              </div>
+              <span className="hero__trust-text">
+                Trusted by <strong>{trustCount}</strong> students & graduates
+              </span>
             </div>
-            <span className="hero__trust-text">
-              Trusted by <strong>20,000+</strong> students & graduates
-            </span>
-          </div>
+          )}
         </div>
 
         {/* ── Right: Visual ── */}
@@ -235,7 +265,7 @@ export default function Hero() {
           </div>
 
           {/* ── Floating stat cards ── */}
-          {STATS.map((stat, i) => (
+          {stats.map((stat, i) => (
             <div key={stat.label} className={`hero__stat-card hero__stat-card--${i + 1}`}>
               <span className="hero__stat-icon"><stat.Icon size={18} /></span>
               <div>

@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Check if we are in development
-const isDev = import.meta.env.VITE_ENVIONMENT === 'Development';
+// Check if we are in development. Use Vite's built-in DEV boolean (true during
+// `vite dev`, false in production builds) rather than a custom env var that
+// may be unset/misspelled.
+const isDev = import.meta.env.DEV;
 
 // Generic log function
 export const log = (...args) => {

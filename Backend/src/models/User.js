@@ -193,6 +193,12 @@ const userSchema = new mongoose.Schema({
   passwordResetToken: String,
   passwordResetExpires: Date,
   lastLogin: Date,
+  // Bumping this invalidates every JWT issued before the bump → "log out all
+  // devices" and forced sign-out after a password change.
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
   loginAttempts: {
     type: Number,
     default: 0

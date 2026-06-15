@@ -1,16 +1,22 @@
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award } from 'lucide-react';
+import ShareStory from './components/ShareStory';
 import './FreelancerDashboard.css';
 
-const StatCard = ({ icon, value, label }) => (
-  <div className="fl-stat-card">
-    <div className="fl-stat-card__bg">{icon}</div>
-    <div className="fl-stat-card__icon">{icon}</div>
-    <div className="fl-stat-card__value">{value}</div>
-    <div className="fl-stat-card__label">{label}</div>
-  </div>
-);
+const StatCard = ({ icon, value, label, to }) => {
+  const inner = (
+    <>
+      <div className="fl-stat-card__bg">{icon}</div>
+      <div className="fl-stat-card__icon">{icon}</div>
+      <div className="fl-stat-card__value">{value}</div>
+      <div className="fl-stat-card__label">{label}</div>
+    </>
+  );
+  return to
+    ? <Link to={to} className="fl-stat-card fl-stat-card--link">{inner}</Link>
+    : <div className="fl-stat-card">{inner}</div>;
+};
 
 const DashboardOverview = () => {
   const { profile, gigs, proposals, loading } = useFreelancer();
@@ -38,10 +44,10 @@ const DashboardOverview = () => {
     .slice(0, 2);
 
   const statsData = [
-    { icon: <Package size={20} />,     value: gigs.length,                              label: 'Total Gigs'       },
-    { icon: <Zap size={20} />,         value: activeProposals,                          label: 'Active Bids'    },
-    { icon: <CheckCircle2 size={20} />, value: acceptedProposals,                        label: 'Accepted' },
-    { icon: <Eye size={20} />,         value: (profile?.stats?.profileViews || 0).toLocaleString(),    label: 'Profile Views'    },
+    { icon: <Package size={20} />,     value: gigs.length,                              label: 'Total Gigs',     to: '/freelancer/gigs' },
+    { icon: <Zap size={20} />,         value: activeProposals,                          label: 'Active Bids',    to: '/freelancer/proposals' },
+    { icon: <CheckCircle2 size={20} />, value: acceptedProposals,                        label: 'Accepted',       to: '/freelancer/proposals' },
+    { icon: <Eye size={20} />,         value: (profile?.stats?.profileViews || 0).toLocaleString(),    label: 'Profile Views',  to: '/freelancer/profile' },
   ];
 
   return (
@@ -68,7 +74,7 @@ const DashboardOverview = () => {
             <p className="fl-dashboard-hero__meta">
               <span><MapPin size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.location}</span>
               <span><Calendar size={13} style={{display:'inline',verticalAlign:'middle'}} /> Member since {personalInfo.memberSince}</span>
-              <span><Star size={13} style={{display:'inline',verticalAlign:'middle',fill:'#facc15',color:'#facc15'}} /> 4.9 Rating</span>
+              <span><Star size={13} style={{display:'inline',verticalAlign:'middle',fill:'#facc15',color:'#facc15'}} /> {profile?.stats?.rating > 0 ? `${profile.stats.rating.toFixed(1)} Rating` : 'New'}</span>
             </p>
           </div>
           <Link to="/freelancer/profile" className="fl-btn fl-btn--outline">
@@ -122,6 +128,21 @@ const DashboardOverview = () => {
       </div>
 
       {/* Quick Actions */}
+      <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
+        <h3 className="fl-section-title">
+          <Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions
+        </h3>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link to="/browse-projects" className="fl-btn fl-btn--primary">🔍 Find Work</Link>
+          <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline">＋ Create New Gig</Link>
+          <Link to="/freelancer/proposals" className="fl-btn fl-btn--ghost">📋 My Proposals</Link>
+          <Link to="/freelancer/messages" className="fl-btn fl-btn--ghost">💬 Messages</Link>
+          <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost">🤖 AI Matchmaking</Link>
+        </div>
+      </div>
+
+      {/* Share Success Story → appears on the public homepage */}
+      <ShareStory />
 
       {/* Skill Verification Center */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>

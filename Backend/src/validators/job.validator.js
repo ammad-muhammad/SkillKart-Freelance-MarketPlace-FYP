@@ -1,5 +1,5 @@
 const { body, query, param } = require('express-validator');
-const { JOB_STATUS, PROPOSAL_STATUS } = require('../utils/constants');
+const { JOB_STATUS, PROPOSAL_STATUS, JOB_CATEGORIES } = require('../utils/constants');
 
 /**
  * Validation rules for job and proposal endpoints
@@ -50,7 +50,11 @@ const createJobValidation = [
   body('category')
     .optional()
     .trim()
-    .isLength({ max: 50 }).withMessage('Category too long'),
+    .isIn(JOB_CATEGORIES).withMessage(`Category must be one of: ${JOB_CATEGORIES.join(', ')}`),
+
+  body('status')
+    .optional()
+    .isIn(['draft', 'open']).withMessage('Status must be draft or open'),
 
   body('experienceLevel')
     .optional()
@@ -62,9 +66,10 @@ const createJobValidation = [
     .isLength({ max: 50 }).withMessage('Duration too long'),
 
   body('deadline')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid deadline format')
     .custom((value) => {
+      if (!value) return true;
       const deadline = new Date(value);
       const now = new Date();
       if (deadline <= now) {
@@ -322,6 +327,22 @@ const withdrawProposalValidation = [
     .isLength({ max: 500 }).withMessage('Reason must not exceed 500 characters')
 ];
 
+const recommendCategoryValidation = [
+  body('title')
+    .optional()
+    .trim()
+    .isLength({ max: 200 }).withMessage('Title too long'),
+
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 5000 }).withMessage('Description too long'),
+
+  body('skills')
+    .optional()
+    .isArray().withMessage('Skills must be an array')
+];
+
 // Close job validation
 const closeJobValidation = [
   param('id')
@@ -382,5 +403,6 @@ module.exports = {
   withdrawProposalValidation,
   closeJobValidation,
   hireFreelancerValidation,
-  rateFreelancerValidation
+  rateFreelancerValidation,
+  recommendCategoryValidation
 };

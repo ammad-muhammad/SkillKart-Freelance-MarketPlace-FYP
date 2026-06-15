@@ -23,8 +23,21 @@ const getStrength = (pwd) => {
 
 const ClientSecurity = () => {
   const { profile, updateProfile, showToast } = useClient();
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+
+  // Revoke all sessions server-side (bumps tokenVersion), then sign out here.
+  const handleLogoutAll = async () => {
+    setLoggingOutAll(true);
+    try {
+      await authAPI.logoutAllDevices();
+      await logout('Signed out from all devices.');
+    } catch {
+      showToast('Could not sign out from all devices. Please try again.', 'error');
+      setLoggingOutAll(false);
+    }
+  };
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPwd, setShowPwd] = useState({ currentPassword: false, newPassword: false, confirmPassword: false });
   const [errors, setErrors] = useState({});
@@ -372,8 +385,8 @@ const ClientSecurity = () => {
       <div className="cl-card">
         <h3 className="cl-section-title" style={{ color: '#dc2626' }}>⚠️ Danger Zone</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button className="cl-btn cl-btn--ghost" onClick={() => showToast('Logged out from all devices (simulated).', 'info')}>
-            🚪 Logout from All Devices
+          <button className="cl-btn cl-btn--ghost" onClick={handleLogoutAll} disabled={loggingOutAll}>
+            🚪 {loggingOutAll ? 'Signing out…' : 'Logout from All Devices'}
           </button>
           <button className="cl-btn cl-btn--danger" onClick={() => { setDeactivateStep(1); setDeactivateOtp(''); setDeactivateModal(true); }}>
             🗑 Deactivate Account

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Rocket, Trophy, Bot, Heart } from 'lucide-react';
+import { toast } from 'react-toastify';
 import './Footer.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -12,29 +13,27 @@ const FOOTER_LINKS = [
   {
     heading: 'Platform',
     links: [
-      { label: 'Browse Freelancers', href: '#' },
-      { label: 'Post a Project', href: '#' },
-      { label: 'AI Matchmaking', href: '#' },
-      { label: 'Skill Verification', href: '#' },
-      { label: 'Pricing Plans', href: '#' },
+      { label: 'Browse Freelancers', to: '/browse-freelancers' },
+      { label: 'Browse Projects', to: '/browse-projects' },
+      { label: 'Post a Project', to: '/post-project' },
+      { label: 'AI Matchmaking', to: '/ai-matchmaking' },
+      { label: 'Categories', to: '/categories' },
     ],
   },
   {
     heading: 'For Freelancers',
     links: [
-      { label: 'Create Profile', href: '#' },
-      { label: 'Build Portfolio', href: '#' },
-      { label: 'Skill Tests', href: '#' },
-      { label: 'Buddy AI Assistant', href: '#' },
-      { label: 'Earnings Dashboard', href: '#' },
+      { label: 'Create Profile', to: '/registration' },
+      { label: 'Find Work', to: '/browse-projects' },
+      { label: 'Buddy AI Assistant', to: '/ai/buddy' },
+      { label: 'Cost Estimator', to: '/ai/cost-estimator' },
+      { label: 'Help Center', to: '/help' },
     ],
   },
   {
     heading: 'AI Tools',
     links: [
-      { label: 'AI Verify Credentials', to: '/ai/verify' },
       { label: 'Buddy AI Assistant', to: '/ai/buddy' },
-      { label: 'Profile Analyzer', to: '/ai/profile-analyzer' },
       { label: 'Cost Estimator', to: '/ai/cost-estimator' },
       { label: 'AI Matchmaking', to: '/ai-matchmaking' },
     ],
@@ -43,7 +42,6 @@ const FOOTER_LINKS = [
     heading: 'Company',
     links: [
       { label: 'About SkillKart', to: '/about' },
-      { label: 'Blog & Resources', to: '/blog' },
       { label: 'Careers', to: '/careers' },
       { label: 'Press Kit', to: '/press' },
       { label: 'Contact Us', to: '/contact' },
@@ -92,6 +90,15 @@ const SOCIAL = [
 
 export default function Footer() {
   const footerRef = useRef(null);
+  const [email, setEmail] = useState('');
+
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    if (!ok) { toast.error('Please enter a valid email address.'); return; }
+    toast.success("You're subscribed! Watch your inbox for weekly tips. 🚀");
+    setEmail('');
+  };
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -120,14 +127,16 @@ export default function Footer() {
               Weekly AI tips, trending skills, and opportunities for students.
             </p>
           </div>
-          <div className="footer__newsletter-form">
+          <form className="footer__newsletter-form" onSubmit={handleSubscribe}>
             <input
               type="email"
               placeholder="Enter your university email"
               className="footer__newsletter-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
-            <button className="footer__newsletter-btn">Subscribe</button>
-          </div>
+            <button type="submit" className="footer__newsletter-btn">Subscribe</button>
+          </form>
         </div>
       </div>
 
@@ -157,9 +166,9 @@ export default function Footer() {
               </p>
               <div className="footer__social">
                 {SOCIAL.map(s => (
-                  <a key={s.name} href="#" className="footer__social-link" aria-label={s.name}>
+                  <Link key={s.name} to="/contact" className="footer__social-link" aria-label={`${s.name} — contact us`}>
                     {s.icon}
-                  </a>
+                  </Link>
                 ))}
               </div>
               <div className="footer__badges">

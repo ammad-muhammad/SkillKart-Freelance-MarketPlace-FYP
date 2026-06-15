@@ -1,8 +1,10 @@
 const Proposal = require('../models/Proposal');
 const Job = require('../models/Job');
+const FreelancerProfile = require('../models/FreelancerProfile');
 const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
+const { getAIProvider } = require('../services/ai');
 
 /**
  * Create proposal
@@ -191,6 +193,43 @@ const deleteProposal = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * AI: draft a proposal cover letter for a job, personalised to the logged-in
+ * freelancer's profile. Freelancer-only. Returns { coverLetter }.
+ */
+const draftProposal = asyncHandler(async (req, res) => {
+  const { jobId } = req.body;
+  const userId = req.user._id;
+
+  const job = await Job.findById(jobId).select('title description skills category budget');
+  if (!job) throw new NotFoundError('Job not found');
+
+  const profile = await FreelancerProfile.findOne({ userId }).lean();
+  const u = req.user;
+
+  const result = await getAIProvider().draftProposal(
+    {
+      title: job.title,
+      description: job.description,
+      skills: job.skills,
+      category: job.category,
+      budget: job.budget,
+    },
+    {
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+      title: profile?.title || '',
+      bio: profile?.bio || '',
+      experienceLevel: profile?.experienceLevel || '',
+      skills: (profile?.skills || []).map((s) => (typeof s === 'object' ? s.name : s)).filter(Boolean),
+    }
+  );
+
+  sendSuccess(res, {
+    message: 'Proposal draft generated',
+    data: result,
+  });
+});
+
 module.exports = {
   createProposal,
   updateProposal,
@@ -199,5 +238,6 @@ module.exports = {
   acceptProposal,
   rejectProposal,
   withdrawProposal,
-  deleteProposal
+  deleteProposal,
+  draftProposal
 };

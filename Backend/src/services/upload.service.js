@@ -10,20 +10,64 @@ cloudinary.config({
   api_secret: config.cloudinary.apiSecret
 });
 
+const IMAGE_MIME_PREFIX = 'image/';
+
+const extensionFromName = (name = '') => {
+  const parts = name.split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+};
+
+const resolveResourceType = (mimetype = '') =>
+  mimetype.startsWith(IMAGE_MIME_PREFIX) ? 'image' : 'raw';
+
+/**
+ * Build a browser-friendly URL for uploaded job documents (PDF, DOC, etc.)
+ */
+const buildDocumentDeliveryUrl = (result, originalName = '') => {
+  const ext = extensionFromName(originalName) || result.format || '';
+
+  if (result.resource_type === 'raw') {
+    return result.secure_url;
+  }
+
+  // PDFs sometimes land as image resource — rebuild URL for inline viewing
+  if (ext === 'pdf' || result.format === 'pdf') {
+    return cloudinary.url(result.public_id, {
+      resource_type: 'image',
+      format: 'pdf',
+      secure: true
+    });
+  }
+
+  return result.secure_url;
+};
+
 /**
  * Upload file to Cloudinary
  */
-const uploadToCloudinary = async (file, folder = 'uploads') => {
+const uploadToCloudinary = async (file, folder = 'uploads', options = {}) => {
   try {
+    const resourceType = options.resource_type || resolveResourceType(file.mimetype);
+    const ext = extensionFromName(file.originalname);
+
+    const uploadOptions = {
+      folder,
+      resource_type: resourceType,
+      access_mode: 'public',
+      use_filename: true,
+      unique_filename: true
+    };
+
+    if (resourceType === 'raw' && ext) {
+      uploadOptions.format = ext;
+    }
+
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: 'auto'
-        },
-        (error, result) => {
+        uploadOptions,
+        (error, uploadResult) => {
           if (error) reject(error);
-          else resolve(result);
+          else resolve(uploadResult);
         }
       );
 
@@ -34,6 +78,21 @@ const uploadToCloudinary = async (file, folder = 'uploads') => {
   } catch (error) {
     throw new FileUploadError('File upload failed');
   }
+};
+
+/**
+ * Upload job attachment (image or document) with correct Cloudinary resource type
+ */
+const uploadJobAttachment = async (file) => {
+  const result = await uploadToCloudinary(file, 'skillkart/jobs/attachments');
+  const isImage = file.mimetype?.startsWith(IMAGE_MIME_PREFIX);
+
+  return {
+    url: isImage ? result.secure_url : buildDocumentDeliveryUrl(result, file.originalname),
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+    resourceType: result.resource_type
+  };
 };
 
 /**
@@ -160,6 +219,7 @@ const getUserFiles = async (userId, fileType = null) => {
 
 module.exports = {
   uploadToCloudinary,
+  uploadJobAttachment,
   uploadFromUrl,
   uploadProfilePicture,
   uploadCV,

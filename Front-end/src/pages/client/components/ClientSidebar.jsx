@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useClient } from '../../../context/ClientContext';
 import { useAuth } from '../../../hooks/useAuth';
 import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
@@ -7,6 +7,7 @@ import './ClientSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/client/dashboard', icon: '📊', label: 'Dashboard' },
+  { to: '/browse-freelancers', icon: '🔍', label: 'Find Freelancers' },
   { to: '/client/profile', icon: '👤', label: 'My Profile' },
   { to: '/client/projects', icon: '📁', label: 'My Projects' },
   { to: '/client/projects/create', icon: '✚', label: 'Post New Project' },
@@ -20,15 +21,7 @@ const ClientSidebar = () => {
   const [open, setOpen] = useState(false);
   const { profile } = useClient();
   const { logout } = useAuth();
-  const navigate = useNavigate();
   const { fullName, companyName, avatar } = profile.personalInfo;
-
-  const initials = fullName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
 
   return (
     <>

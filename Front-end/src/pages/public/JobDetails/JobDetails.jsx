@@ -19,6 +19,7 @@ export default function JobDetails() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [proposalData, setProposalData] = useState({
     coverLetter: '',
@@ -44,6 +45,22 @@ export default function JobDetails() {
     }
   };
 
+  // Gate the Apply button BEFORE opening the modal so a logged-out user is sent
+  // to login (and returned here after) instead of filling the form then bouncing.
+  const handleApplyClick = () => {
+    if (!user) {
+      toast.info('Please log in as a freelancer to apply.');
+      try { sessionStorage.setItem('postLoginRedirect', `/jobs/${id}`); } catch { /* non-fatal */ }
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'freelancer') {
+      toast.warning('Only freelancers can apply for projects. Switch to a freelancer account to apply.');
+      return;
+    }
+    setShowApplyModal(true);
+  };
+
   const handleApply = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -64,12 +81,36 @@ export default function JobDetails() {
       });
       toast.success('Proposal submitted successfully! 🚀');
       setShowApplyModal(false);
-      // Optional: Redirect to "My Proposals"
+      // Send the freelancer to their applications so they can track status.
+      navigate('/freelancer/proposals');
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to submit proposal.';
       toast.error(msg);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // AI assist: draft a personalised cover letter for this job.
+  const handleDraft = async () => {
+    if (!user || user.role !== 'freelancer') {
+      toast.info('Log in as a freelancer to use AI assist.');
+      return;
+    }
+    setDrafting(true);
+    try {
+      const { data } = await proposalsAPI.draftProposal(id);
+      const draft = data?.data?.coverLetter;
+      if (draft) {
+        setProposalData(prev => ({ ...prev, coverLetter: draft }));
+        toast.success('Draft ready — edit it to make it yours ✨');
+      } else {
+        toast.error('Could not generate a draft right now.');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'AI assist is unavailable right now.');
+    } finally {
+      setDrafting(false);
     }
   };
 
@@ -172,7 +213,7 @@ export default function JobDetails() {
               <div className="jd-sidebar__card jd-apply">
                 <button 
                   className="jd-apply__btn"
-                  onClick={() => setShowApplyModal(true)}
+                  onClick={handleApplyClick}
                   disabled={job.status !== 'open'}
                 >
                   {job.status === 'open' ? 'Apply Now' : 'Job Closed'}
@@ -222,10 +263,24 @@ export default function JobDetails() {
               </div>
 
               <div className="jd-form-group">
-                <label>Cover Letter</label>
-                <textarea 
-                  required 
-                  placeholder="Introduce yourself and explain why you're a good fit for this project..."
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ margin: 0 }}>Cover Letter</label>
+                  <button
+                    type="button"
+                    onClick={handleDraft}
+                    disabled={drafting}
+                    style={{
+                      background: 'none', border: '1px solid #6366f1', color: '#4338ca',
+                      borderRadius: '8px', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700,
+                      cursor: drafting ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {drafting ? '✨ Writing…' : '✨ Help me write'}
+                  </button>
+                </div>
+                <textarea
+                  required
+                  placeholder="Introduce yourself and explain why you're a good fit for this project... or tap ✨ Help me write."
                   rows={6}
                   value={proposalData.coverLetter}
                   onChange={e => setProposalData({ ...proposalData, coverLetter: e.target.value })}

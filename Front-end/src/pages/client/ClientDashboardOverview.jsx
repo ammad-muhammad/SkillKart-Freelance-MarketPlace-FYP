@@ -3,14 +3,19 @@ import { useClient } from '../../context/ClientContext';
 import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, CheckCircle2 } from 'lucide-react';
 import './ClientDashboard.css';
 
-const StatCard = ({ icon, value, label }) => (
-  <div className="cl-stat-card">
-    <div className="cl-stat-card__bg">{icon}</div>
-    <div className="cl-stat-card__icon">{icon}</div>
-    <div className="cl-stat-card__value">{value}</div>
-    <div className="cl-stat-card__label">{label}</div>
-  </div>
-);
+const StatCard = ({ icon, value, label, to }) => {
+  const inner = (
+    <>
+      <div className="cl-stat-card__bg">{icon}</div>
+      <div className="cl-stat-card__icon">{icon}</div>
+      <div className="cl-stat-card__value">{value}</div>
+      <div className="cl-stat-card__label">{label}</div>
+    </>
+  );
+  return to
+    ? <Link to={to} className="cl-stat-card cl-stat-card--link">{inner}</Link>
+    : <div className="cl-stat-card">{inner}</div>;
+};
 
 const ClientDashboardOverview = () => {
   const { profile, projects, loading } = useClient();
@@ -34,10 +39,10 @@ const ClientDashboardOverview = () => {
     .split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const statsData = [
-    { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects'      },
-    { icon: <Zap size={20} />,        value: openProjects,                             label: 'Open Jobs'     },
-    { icon: <Users2 size={20} />,     value: hiredCount,                               label: 'Freelancers Hired'   },
-    { icon: <DollarSign size={20} />, value: `$${totalSpent.toLocaleString()}`,        label: 'Total Spent'         },
+    { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects',    to: '/client/projects' },
+    { icon: <Zap size={20} />,        value: openProjects,                             label: 'Open Jobs',         to: '/client/projects' },
+    { icon: <Users2 size={20} />,     value: hiredCount,                               label: 'Freelancers Hired', to: '/client/saved' },
+    { icon: <DollarSign size={20} />, value: `$${totalSpent.toLocaleString()}`,        label: 'Total Spent',       to: '/client/projects' },
   ];
 
   const recentProjects = projects.slice(0, 3);
@@ -91,9 +96,10 @@ const ClientDashboardOverview = () => {
         <h3 className="cl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/client/projects/create" className="cl-btn cl-btn--primary">＋ Post New Project</Link>
+          <Link to="/browse-freelancers" className="cl-btn cl-btn--outline">🔍 Find Freelancers</Link>
           <Link to="/client/projects" className="cl-btn cl-btn--ghost">View My Projects</Link>
-          <Link to="/client/profile" className="cl-btn cl-btn--ghost">Update Profile</Link>
-          <Link to="/client/settings" className="cl-btn cl-btn--ghost">Account Settings</Link>
+          <Link to="/client/messages" className="cl-btn cl-btn--ghost">💬 Messages</Link>
+          <Link to="/ai-matchmaking" className="cl-btn cl-btn--ghost">🤖 AI Matchmaking</Link>
         </div>
       </div>
 
@@ -110,17 +116,17 @@ const ClientDashboardOverview = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {recentProjects.map((p) => (
-              <div key={p.id} className="cl-recent-proj">
+              <Link key={p.id} to={`/client/projects/${p.id}/proposals`} className="cl-recent-proj cl-recent-proj--link">
                 <div className="cl-recent-proj__info">
                   <p className="cl-recent-proj__title">{p.title}</p>
                   <p className="cl-recent-proj__meta">
-                    {p.category} · Budget: ${p.budget.min}–${p.budget.max} · {p.createdAt}
+                    {p.category} · Budget: ${p.budget.min}–${p.budget.max} · {p.proposals?.length || 0} proposal{(p.proposals?.length || 0) === 1 ? '' : 's'}
                   </p>
                 </div>
                 <span className={`cl-badge cl-badge--${p.status.replace(' ', '-')}`}>
                   {p.status === 'open' ? <><CheckCircle2 size={12} style={{color:'#16a34a'}} /> Open</> : p.status === 'in-progress' ? 'In Progress' : <><CheckCircle2 size={12} /> Completed</>}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -152,6 +158,10 @@ const ClientDashboardOverview = () => {
         }
         .cl-recent-proj__title { font-size: 0.875rem; font-weight: 600; color: var(--color-text-dark); margin-bottom: 0.2rem; }
         .cl-recent-proj__meta { font-size: 0.78rem; color: var(--color-text-light); }
+        .cl-recent-proj--link { text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .cl-recent-proj--link:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(4,46,76,0.08); border-color: var(--color-primary); }
+        .cl-stat-card--link { text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .cl-stat-card--link:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(4,46,76,0.1); }
 
         .cl-loading-container {
           display: flex; flex-direction: column; align-items: center; justify-content: center;

@@ -17,9 +17,19 @@
   padding: 2rem;
   width: 100%;
   max-width: 480px;
+  /* Cap to the viewport so tall forms never overflow the screen; the body
+     (below) scrolls instead, keeping the header/title pinned. */
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 24px 60px rgba(4, 46, 76, 0.25);
   animation: fl-modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* Width variants (opt-in via the Modal `size` prop) */
+.fl-modal--sm { max-width: 480px; }
+.fl-modal--md { max-width: 640px; }
+.fl-modal--lg { max-width: 820px; }
 
 .fl-modal--danger .fl-modal__title { color: #dc2626; }
 
@@ -28,6 +38,7 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.25rem;
+  flex-shrink: 0; /* keep title/close pinned while the body scrolls */
 }
 
 .fl-modal__title {
@@ -49,7 +60,25 @@
   color: var(--color-text-dark);
 }
 
-.fl-modal__body { font-size: 0.9rem; color: var(--color-text-mid); }
+.fl-modal__body {
+  font-size: 0.9rem;
+  color: var(--color-text-mid);
+  /* Scroll the content when it exceeds the capped modal height. The negative
+     margin + matching padding let the scrollbar sit at the modal edge without
+     clipping focus rings on inputs. */
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-right: -0.75rem;
+  padding-right: 0.75rem;
+}
+
+/* Slim, on-brand scrollbar for the modal body */
+.fl-modal__body::-webkit-scrollbar { width: 8px; }
+.fl-modal__body::-webkit-scrollbar-thumb {
+  background: #cbd5e1; border-radius: 8px;
+}
+.fl-modal__body::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 @keyframes fl-overlay-in {
   from { opacity: 0; }

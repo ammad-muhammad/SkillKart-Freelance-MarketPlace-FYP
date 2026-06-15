@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link } from 'react-router-dom';
@@ -6,24 +6,42 @@ import {
   Globe, Palette, Bot, BarChart2, Smartphone, PenLine,
   Film, TrendingUp, Brush, ShieldCheck, CloudCog, Link as LinkIcon, Briefcase
 } from 'lucide-react';
+import { publicAPI } from '../../../api/publicData';
 import './SkillsSlider.css';
+
+// Maps each slider card to the backend category whose REAL gig count it should
+// show. (Slider names are broad UI groupings; we map them to a canonical category.)
+const COUNT_CATEGORY = {
+  'Web Development': 'Web Development',
+  'UI/UX Design': 'UI/UX Design',
+  'AI & Machine Learning': 'Data Science & AI',
+  'Data Science': 'Data Science & AI',
+  'Mobile Development': 'Mobile Development',
+  'Content Writing': 'Content & Writing',
+  'Video Editing': 'Video & Animation',
+  'SEO & Marketing': 'Digital Marketing',
+  'Graphic Design': 'UI/UX Design',
+  'Cybersecurity': 'Cybersecurity',
+  'Cloud Computing': 'DevOps & Cloud',
+  'Blockchain': 'Data Science & AI',
+};
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* ── Skills data ── */
+/* ── Skill categories (real gig counts overlaid from the API; no fake counts) ── */
 const SKILLS = [
-  { name: 'Web Development',      Icon: Globe,       count: '2.4k freelancers', color: '#e8f4fd', slug: 'development-tech' },
-  { name: 'UI/UX Design',         Icon: Palette,     count: '1.8k freelancers', color: '#fef3e8', slug: 'design-creative' },
-  { name: 'AI & Machine Learning',Icon: Bot,         count: '950 freelancers',  color: '#edf9f0', slug: 'ai-emerging-tech' },
-  { name: 'Data Science',         Icon: BarChart2,   count: '1.2k freelancers', color: '#f3f0fd', slug: 'ai-emerging-tech' },
-  { name: 'Mobile Development',   Icon: Smartphone,  count: '1.5k freelancers', color: '#fef0f0', slug: 'development-tech' },
-  { name: 'Content Writing',      Icon: PenLine,     count: '3.1k freelancers', color: '#fff8e8', slug: 'writing-content' },
-  { name: 'Video Editing',        Icon: Film,        count: '870 freelancers',  color: '#f0f8f0', slug: 'video-audio-animation' },
-  { name: 'SEO & Marketing',      Icon: TrendingUp,  count: '2.0k freelancers', color: '#e8f0fd', slug: 'marketing' },
-  { name: 'Graphic Design',       Icon: Brush,       count: '2.6k freelancers', color: '#fdf0f8', slug: 'design-creative' },
-  { name: 'Cybersecurity',        Icon: ShieldCheck, count: '640 freelancers',  color: '#f0fdf4', slug: 'development-tech' },
-  { name: 'Cloud Computing',      Icon: CloudCog,    count: '780 freelancers',  color: '#e8f4f9', slug: 'development-tech' },
-  { name: 'Blockchain',           Icon: LinkIcon,    count: '420 freelancers',  color: '#fdf8e8', slug: 'ai-emerging-tech' },
+  { name: 'Web Development',      Icon: Globe,       color: '#e8f4fd', slug: 'development-tech' },
+  { name: 'UI/UX Design',         Icon: Palette,     color: '#fef3e8', slug: 'design-creative' },
+  { name: 'AI & Machine Learning',Icon: Bot,         color: '#edf9f0', slug: 'ai-emerging-tech' },
+  { name: 'Data Science',         Icon: BarChart2,   color: '#f3f0fd', slug: 'ai-emerging-tech' },
+  { name: 'Mobile Development',   Icon: Smartphone,  color: '#fef0f0', slug: 'development-tech' },
+  { name: 'Content Writing',      Icon: PenLine,     color: '#fff8e8', slug: 'writing-content' },
+  { name: 'Video Editing',        Icon: Film,        color: '#f0f8f0', slug: 'video-audio-animation' },
+  { name: 'SEO & Marketing',      Icon: TrendingUp,  color: '#e8f0fd', slug: 'marketing' },
+  { name: 'Graphic Design',       Icon: Brush,       color: '#fdf0f8', slug: 'design-creative' },
+  { name: 'Cybersecurity',        Icon: ShieldCheck, color: '#f0fdf4', slug: 'development-tech' },
+  { name: 'Cloud Computing',      Icon: CloudCog,    color: '#e8f4f9', slug: 'development-tech' },
+  { name: 'Blockchain',           Icon: LinkIcon,    color: '#fdf8e8', slug: 'ai-emerging-tech' },
 ];
 
 /* Double the array so the loop is seamless */
@@ -34,6 +52,29 @@ export default function SkillsSlider() {
   const headerRef = useRef(null);
   const trackRef = useRef(null);
   const tweenRef = useRef(null);
+  // Real active-gig counts per backend category (by display name).
+  const [counts, setCounts] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    publicAPI.getCategories()
+      .then((res) => {
+        if (!active) return;
+        const map = {};
+        (res.data?.data?.categories || []).forEach((c) => { map[c.name] = c.totalServices; });
+        setCounts(map);
+      })
+      .catch(() => { /* keep neutral labels */ });
+    return () => { active = false; };
+  }, []);
+
+  // Real count label for a card, or a neutral CTA when there's no real data yet.
+  const countLabel = (skill) => {
+    const cat = COUNT_CATEGORY[skill.name];
+    const n = cat ? counts[cat] : undefined;
+    if (n && n > 0) return `${n.toLocaleString()} gig${n === 1 ? '' : 's'}`;
+    return 'Explore →';
+  };
 
   /* ── Section entrance ── */
   useEffect(() => {
@@ -115,7 +156,7 @@ export default function SkillsSlider() {
               </div>
               <div className="skills-slider__card-info">
                 <h3>{skill.name}</h3>
-                <p>{skill.count}</p>
+                <p>{countLabel(skill)}</p>
               </div>
               <div className="skills-slider__card-arrow">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

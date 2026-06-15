@@ -4,6 +4,8 @@ const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
 const cloudinaryService = require('../services/upload.service');
 
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * Create Gig
  */
@@ -42,25 +44,64 @@ const updateGig = asyncHandler(async (req, res) => {
 });
 
 /**
- * List Gigs (with filters)
+ * List Gigs (with filters). Public: defaults to active gigs only.
+ * Supports: category, subcategory, skill, search (q), price range, rating,
+ * sort (newest|price_asc|price_desc|rating), plus owner/status overrides.
  */
 const listGigs = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { freelancerId, category, status } = req.query;
-  
+  const { freelancerId, category, subcategory, skill, q, minPrice, maxPrice, minRating, sort, status } = req.query;
+
   const query = {};
-  if (freelancerId) query.freelancerId = freelancerId;
+  if (freelancerId) {
+    query.freelancerId = freelancerId;
+    if (status) query.status = status; // owner can view own drafts/paused
+  } else {
+    // Public listing only shows active gigs.
+    query.status = status || 'active';
+  }
   if (category) query.category = category;
-  if (status) query.status = status;
-  
+  if (subcategory) query.subcategory = subcategory;
+  if (skill) query.skills = { $in: [new RegExp(`^${escapeRegex(skill)}$`, 'i')] };
+  if (q) {
+    const rx = new RegExp(escapeRegex(q), 'i');
+    query.$or = [{ title: rx }, { shortDescription: rx }, { skills: rx }];
+  }
+  if (minPrice || maxPrice) {
+    query['pricing.basic.price'] = {};
+    if (minPrice) query['pricing.basic.price'].$gte = Number(minPrice);
+    if (maxPrice) query['pricing.basic.price'].$lte = Number(maxPrice);
+  }
+  if (minRating) query['stats.rating'] = { $gte: Number(minRating) };
+
+  let sortSpec = { createdAt: -1 };
+  if (sort === 'price_asc') sortSpec = { 'pricing.basic.price': 1 };
+  else if (sort === 'price_desc') sortSpec = { 'pricing.basic.price': -1 };
+  else if (sort === 'rating') sortSpec = { 'stats.rating': -1, 'stats.reviewsCount': -1 };
+
   const total = await Gig.countDocuments(query);
   const gigs = await Gig.find(query)
-    .populate('freelancerId', 'firstName lastName profilePicture')
+    .populate('freelancerId', 'firstName lastName profilePicture rating')
     .skip(skip)
     .limit(limit)
-    .sort({ createdAt: -1 });
-  
+    .sort(sortSpec);
+
   sendPaginated(res, { data: gigs, page, limit, total });
+});
+
+/**
+ * Get a single gig by id (public). Increments view count.
+ */
+const getGigById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const gig = await Gig.findById(id)
+    .populate('freelancerId', 'firstName lastName profilePicture rating');
+  if (!gig) throw new NotFoundError('Gig not found');
+
+  // best-effort view increment (don't block the response)
+  Gig.updateOne({ _id: id }, { $inc: { 'stats.views': 1 } }).catch(() => {});
+
+  sendSuccess(res, { message: 'Gig retrieved', data: { gig } });
 });
 
 /**
@@ -138,6 +179,7 @@ module.exports = {
   createGig,
   updateGig,
   listGigs,
+  getGigById,
   listMyGigs,
   deleteGig,
   toggleStatus,

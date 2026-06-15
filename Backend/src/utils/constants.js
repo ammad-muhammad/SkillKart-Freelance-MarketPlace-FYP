@@ -64,6 +64,20 @@ const ONBOARDING_STEPS = {
   ]
 };
 
+// Job / project categories (platform-wide — AI must pick from this list only)
+const JOB_CATEGORIES = [
+  'Web Development',
+  'Mobile Development',
+  'UI/UX Design',
+  'Data Science & AI',
+  'Content & Writing',
+  'Video & Animation',
+  'Digital Marketing',
+  'Cybersecurity',
+  'DevOps & Cloud',
+  'Other'
+];
+
 // Job Status
 const JOB_STATUS = {
   DRAFT: 'draft',
@@ -300,6 +314,7 @@ module.exports = {
   USER_STATUS,
   ONBOARDING_STEPS,
   JOB_STATUS,
+  JOB_CATEGORIES,
   PROPOSAL_STATUS,
   CMS_STATUS,
   CMS_PAGE_TYPES,

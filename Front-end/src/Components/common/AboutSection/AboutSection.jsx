@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link } from 'react-router-dom';
 import './AboutSection.css';
 import AnimatedCounter from '../AnimatedCounter/AnimatedCounter';
+import { publicAPI } from '../../../api/publicData';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,18 +50,38 @@ const FEATURES = [
   },
 ];
 
-const NUMBERS = [
-  { value: '50K+', label: 'Verified Profiles' },
-  { value: '12K+', label: 'Projects Done' },
-  { value: '98%', label: 'Success Rate' },
-  { value: '120+', label: 'Skill Categories' },
-];
-
 export default function AboutSection() {
   const sectionRef = useRef(null);
   const headerRef = useRef(null);
   const cardsRef = useRef(null);
   const numbersRef = useRef(null);
+
+  // Real platform numbers only — no fabricated fallbacks. A number is shown
+  // only when it has a genuine value; otherwise it's omitted.
+  const [numbers, setNumbers] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    publicAPI.getStats()
+      .then((res) => {
+        if (!active) return;
+        const s = res?.data?.data || {};
+        const freelancers = Number(s.freelancers) || 0;
+        const projectsDone = (Number(s.completedJobs) || 0) + (Number(s.openJobs) || 0);
+        const categories = Number(s.categories) || 0;
+
+        const real = [];
+        if (freelancers > 0) real.push({ value: freelancers.toLocaleString(), label: 'Verified Profiles' });
+        if (projectsDone > 0) real.push({ value: projectsDone.toLocaleString(), label: 'Projects Done' });
+        if (s.successRate != null) real.push({ value: `${s.successRate}%`, label: 'Success Rate' });
+        if (categories > 0) real.push({ value: String(categories), label: 'Skill Categories' });
+        setNumbers(real);
+      })
+      .catch(() => { if (active) setNumbers([]); });
+
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -81,8 +102,19 @@ export default function AboutSection() {
           scrollTrigger: { trigger: cardsRef.current, start: 'top 80%' },
         }
       );
+    }, sectionRef);
 
-      /* ── Numbers counter animation ── */
+    return () => ctx.revert();
+  }, []);
+
+  /* ── Numbers counter animation ── runs only once the real stats have loaded.
+     Animating the children on mount (while empty) and then having React insert
+     the counter divs into a GSAP-tracked node corrupts the reconciler and
+     throws "Failed to execute 'insertBefore'". Keying on `numbers` means GSAP
+     only touches the container after React has placed its children. */
+  useEffect(() => {
+    if (!numbers.length) return undefined;
+    const ctx = gsap.context(() => {
       gsap.fromTo(numbersRef.current.children,
         { y: 30, opacity: 0 },
         {
@@ -93,7 +125,7 @@ export default function AboutSection() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [numbers]);
 
   return (
     <section ref={sectionRef} className="about">
@@ -161,19 +193,19 @@ export default function AboutSection() {
                   </li>
                 ))}
               </ul>
-              <a href="#" className="about__card-link">
+              <Link to="/about" className="about__card-link">
                 Learn more
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor"
                     strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </a>
+              </Link>
             </div>
           ))}
         </div>
 
-        <div ref={numbersRef} className="about__numbers">
-          {NUMBERS.map(n => (
+        <div ref={numbersRef} className="about__numbers" style={numbers.length ? undefined : { display: 'none' }}>
+          {numbers.map(n => (
             <div key={n.label} className="about__number-item">
               <AnimatedCounter value={n.value} />
               <span className="about__number-lbl">{n.label}</span>

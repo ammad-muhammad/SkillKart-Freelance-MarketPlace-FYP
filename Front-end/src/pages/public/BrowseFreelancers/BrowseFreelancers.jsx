@@ -1,14 +1,38 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { freelancersAPI } from '../../../api/freelancers';
-import { MOCK_FREELANCERS, ALL_SKILLS, LOCATIONS } from '../../../utils/mockData';
+import { publicAPI } from '../../../api/publicData';
+import { ALL_SKILLS, LOCATIONS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import { useClient } from '../../../context/ClientContext';
 import './BrowseFreelancers.css';
+
+/* Map a FreelancerProfile (with populated userId) from the API → card shape */
+const mapProfileToCard = (p) => {
+    const u = p.userId || {};
+    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || (u.email ? u.email.split('@')[0] : 'Freelancer');
+    return {
+        id: String(u._id || p.userId || p._id),
+        name: fullName,
+        avatar: u.profilePicture ? null : (u.firstName?.[0]?.toUpperCase() || 'U'),
+        avatarUrl: u.profilePicture || null,
+        avatarBg: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+        role: p.title || 'Freelancer',
+        bio: p.bio || '',
+        skills: (p.skills || []).map((s) => (typeof s === 'object' ? s.name : s)).filter(Boolean),
+        rating: p.rating || u.rating || 0,
+        reviewCount: p.completedProjects || 0,
+        hourlyRate: p.hourlyRate || 0,
+        currency: 'USD',
+        isVerified: p.verificationStatus === 'verified',
+        isOnline: false,
+        location: p.timezone || 'Global',
+    };
+};
 
 /* ─── helpers ─── */
 const RATINGS = [5, 4, 3];
@@ -47,7 +71,7 @@ function SkeletonCard({ list }) {
 /* ── Freelancer Card ── */
 function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
     const {
-        id, name, avatar, avatarBg, role, bio, skills,
+        id, name, avatar, avatarUrl, avatarBg, role, bio, skills,
         rating, reviewCount, hourlyRate, currency,
         isVerified, isOnline, location,
     } = freelancer;
@@ -63,7 +87,9 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
             </button>
             <div className="bf-card__header">
                 <div className="bf-card__avatar" style={{ background: avatarBg }}>
-                    {avatar}
+                    {avatarUrl
+                        ? <img src={avatarUrl} alt={name} style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                        : avatar}
                     {isOnline && <span className="bf-card__online" title="Online now" />}
                 </div>
                 <div className="bf-card__info">
@@ -111,6 +137,7 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
 
 /* ─────────────── MAIN PAGE ─────────────── */
 export default function BrowseFreelancers() {
+    const navigate = useNavigate();
     const { savedFreelancers, toggleSavedFreelancer } = useClient();
     /* filter state */
     const [query, setQuery] = useState('');
@@ -120,14 +147,31 @@ export default function BrowseFreelancers() {
     const [selectedSkills, setSelectedSkills] = useState([]);
     const [location, setLocation] = useState('');
     const [sortBy, setSortBy] = useState('relevance');
+    const [heroStats, setHeroStats] = useState([]); // real-only hero chips
+
+    useEffect(() => {
+        let on = true;
+        publicAPI.getStats()
+            .then((res) => {
+                if (!on) return;
+                const s = res?.data?.data || {};
+                const chips = [];
+                if (Number(s.freelancers) > 0) chips.push(`✅ ${Number(s.freelancers).toLocaleString()} Verified Profiles`);
+                if (s.avgRating != null) chips.push(`⭐ Avg ${s.avgRating} Rating`);
+                if (Number(s.categories) > 0) chips.push(`🌍 ${s.categories} Skill Categories`);
+                setHeroStats(chips);
+            })
+            .catch(() => { if (on) setHeroStats([]); });
+        return () => { on = false; };
+    }, []);
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [page, setPage] = useState(1);
     const PER_PAGE = 6;
 
     /* data state */
-    const [freelancers, setFreelancers] = useState(() => MOCK_FREELANCERS.slice(0, PER_PAGE));
-    const [total, setTotal] = useState(MOCK_FREELANCERS.length);
-    const [loading, setLoading] = useState(false);
+    const [freelancers, setFreelancers] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const isMounted = useRef(true);
@@ -146,8 +190,9 @@ export default function BrowseFreelancers() {
 
     }, []);
 
-    /* fetch – tries real API; silently falls back to mock on error */
+    /* fetch real freelancers from the API (no mock fallback) */
     const fetchFreelancers = useCallback(async () => {
+        setLoading(true);
         setError(null);
         try {
             const params = {
@@ -156,50 +201,26 @@ export default function BrowseFreelancers() {
                 maxRate: maxRate < 100 ? maxRate : undefined,
                 skills: selectedSkills.length ? selectedSkills.join(',') : undefined,
                 location: location || undefined,
-                sort: sortBy,
+                sortBy,
                 page,
                 limit: PER_PAGE,
             };
-            const { data } = await freelancersAPI.search(params);
+            const res = await freelancersAPI.search(params);
             if (!isMounted.current) return;
-            setFreelancers((data?.data?.items || []).map(p => ({
-                id: p.userId?._id,
-                name: `${p.userId?.firstName} ${p.userId?.lastName}`,
-                avatar: p.userId?.profilePicture ? <img src={p.userId.profilePicture} /> : (p.userId?.firstName?.[0] || 'U'),
-                avatarBg: 'var(--color-primary-light)',
-                role: p.title,
-                bio: p.bio,
-                skills: p.skills?.map(s => s.name) || [],
-                rating: p.rating || 0,
-                reviewCount: 0,
-                hourlyRate: p.hourlyRate,
-                currency: 'USD',
-                isVerified: p.verificationStatus === 'verified',
-                isOnline: true,
-                location: p.timezone || 'Global'
-            })));
-            setTotal(data?.data?.total ?? 0);
-        } catch {
-            /* silently keep / refresh from mock */
+            // sendPaginated → { data: [...profiles], meta: { pagination: { total } } }
+            const items = Array.isArray(res.data?.data) ? res.data.data : [];
+            setFreelancers(items.map(mapProfileToCard));
+            setTotal(res.data?.meta?.pagination?.total ?? items.length);
+        } catch (err) {
             if (!isMounted.current) return;
-            let filtered = [...MOCK_FREELANCERS];
-            if (query) filtered = filtered.filter(f =>
-                f.name.toLowerCase().includes(query.toLowerCase()) ||
-                f.role.toLowerCase().includes(query.toLowerCase()) ||
-                f.skills.some(s => s.toLowerCase().includes(query.toLowerCase()))
+            setFreelancers([]);
+            setTotal(0);
+            setError(
+                err.response?.data?.message ||
+                'Could not load freelancers right now. Please try again.'
             );
-            if (minRating > 0) filtered = filtered.filter(f => f.rating >= minRating);
-            if (maxRate < 100) filtered = filtered.filter(f => f.hourlyRate <= maxRate);
-            if (selectedSkills.length) filtered = filtered.filter(f =>
-                selectedSkills.every(sk => f.skills.includes(sk))
-            );
-            if (location) filtered = filtered.filter(f => f.location === location);
-            if (sortBy === 'rating') filtered.sort((a, b) => b.rating - a.rating);
-            if (sortBy === 'rate_asc') filtered.sort((a, b) => a.hourlyRate - b.hourlyRate);
-            if (sortBy === 'rate_desc') filtered.sort((a, b) => b.hourlyRate - a.hourlyRate);
-            if (sortBy === 'projects') filtered.sort((a, b) => b.projectsCompleted - a.projectsCompleted);
-            setTotal(filtered.length);
-            setFreelancers(filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE));
+        } finally {
+            if (isMounted.current) setLoading(false);
         }
     }, [query, minRating, maxRate, selectedSkills, location, sortBy, page]);
 
@@ -218,7 +239,7 @@ export default function BrowseFreelancers() {
     };
 
     const handleSearch = (e) => { e.preventDefault(); setQuery(draftQuery); setPage(1); };
-    const handleInvite = (id) => { /* navigate to profile or open modal */ console.log('View profile', id); };
+    const handleInvite = (id) => { if (id) navigate(`/freelancers/${id}`); };
 
     const totalPages = Math.ceil(total / PER_PAGE);
 
@@ -248,12 +269,13 @@ export default function BrowseFreelancers() {
                         <button type="submit" className="bf-search__btn">Search</button>
                     </form>
 
-                    <div className="bf-hero-stats">
-                        <span className="bf-hero-stat">✅ 50K+ Verified Profiles</span>
-                        <span className="bf-hero-stat">⭐ Avg 4.8 Rating</span>
-                        <span className="bf-hero-stat">🌍 40+ Skill Categories</span>
-                        <span className="bf-hero-stat">⚡ 1-hr Avg Response</span>
-                    </div>
+                    {heroStats.length > 0 && (
+                        <div className="bf-hero-stats">
+                            {heroStats.map((chip) => (
+                                <span key={chip} className="bf-hero-stat">{chip}</span>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div className="bf-hero__wave">
                     <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -376,10 +398,12 @@ export default function BrowseFreelancers() {
                             </div>
                         )}
 
-                        {/* Loading */}
+                        {/* Loading — skeleton cards */}
                         {loading && !error && (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-mid)', fontSize: '0.9rem' }}>
-                                Updating results…
+                            <div className={viewMode === 'grid' ? 'bf-grid' : 'bf-list-view'}>
+                                {Array.from({ length: PER_PAGE }).map((_, i) => (
+                                    <SkeletonCard key={i} list={viewMode === 'list'} />
+                                ))}
                             </div>
                         )}
 

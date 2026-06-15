@@ -80,7 +80,35 @@ export const uploadJobAttachment = async (file) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 
-  return data.data.url;
+  const payload = data.data || {};
+  return {
+    url: payload.url,
+    name: payload.originalName || file.name,
+    mimeType: payload.mimeType || file.type
+  };
+};
+
+/**
+ * Upload a chat message attachment (image or document). Uses the messages
+ * upload endpoint, available to any authenticated user (unlike the job
+ * attachment endpoint which is client-only).
+ * @param {File} file
+ * @returns {Promise<{url:string, name:string, mimeType:string}>}
+ */
+export const uploadMessageAttachment = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const { data } = await client.post('/messages/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
+  const payload = data.data || {};
+  return {
+    url: payload.url,
+    name: payload.name || file.name,
+    mimeType: payload.mimeType || file.type
+  };
 };
 
 /**

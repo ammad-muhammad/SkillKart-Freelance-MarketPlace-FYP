@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { freelancersAPI } from '../api/freelancers';
 import { authAPI } from '../api/auth';
 import { gigsAPI } from '../api/gigs';
@@ -148,11 +148,15 @@ export const FreelancerProvider = ({ children }) => {
           passwordChangeAlerts: dbProfile.securitySettings?.passwordChangeAlerts !== false,
           emailVerified: activeUser?.isEmailVerified || false,
         },
+        // Must be mapped here — saveProfile() reads & re-sends notificationSettings,
+        // so omitting it would overwrite the DB with `undefined` on every save.
+        notificationSettings: dbProfile.notificationSettings || emptyProfile.notificationSettings,
         stats: {
           totalGigs: gigsRes.data.meta?.pagination?.total || (gigsRes.data.data?.length || 0),
           activeOrders: 0,
           completedOrders: dbProfile.completedProjects || 0,
           profileViews: 0,
+          rating: dbProfile.rating || activeUser?.rating || 0,
         },
         verificationStatus: dbProfile.verificationStatus || 'unverified',
         verificationDetails: dbProfile.verificationDetails || emptyProfile.verificationDetails
@@ -311,15 +315,19 @@ export const FreelancerProvider = ({ children }) => {
     return { success: true };
   };
 
+  // All gig mutators return a consistent { success, error?, gig? } contract so
+  // callers can branch reliably instead of guessing the return shape.
   const addGig = async (gig) => {
     setLoading(true);
     try {
       const res = await gigsAPI.createGig(gig);
       await fetchFreelancerData();
       showToast('Gig published successfully! 🎉');
-      return res.data.data.gig;
+      return { success: true, gig: res.data.data.gig };
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to publish gig', 'error');
+      const message = error.response?.data?.message || 'Failed to publish gig';
+      showToast(message, 'error');
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
@@ -331,8 +339,11 @@ export const FreelancerProvider = ({ children }) => {
       await gigsAPI.updateGig(id, data);
       await fetchFreelancerData();
       showToast('Gig updated successfully!');
+      return { success: true };
     } catch (error) {
-      showToast('Failed to update gig', 'error');
+      const message = error.response?.data?.message || 'Failed to update gig';
+      showToast(message, 'error');
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
@@ -344,8 +355,10 @@ export const FreelancerProvider = ({ children }) => {
       await gigsAPI.deleteGig(id);
       await fetchFreelancerData();
       showToast('Gig deleted.', 'info');
+      return { success: true };
     } catch (error) {
       showToast('Failed to delete gig', 'error');
+      return { success: false, error: error.response?.data?.message };
     } finally {
       setLoading(false);
     }
@@ -357,8 +370,10 @@ export const FreelancerProvider = ({ children }) => {
       await gigsAPI.toggleStatus(id);
       await fetchFreelancerData();
       showToast('Gig status updated!');
+      return { success: true };
     } catch (error) {
       showToast('Failed to update gig status', 'error');
+      return { success: false };
     } finally {
       setLoading(false);
     }
@@ -418,29 +433,32 @@ export const FreelancerProvider = ({ children }) => {
     }
   };
 
+  // Memoized so consumers don't re-render on every provider render (keyed on
+  // the state slices; handler identities are intentionally excluded).
+  const value = useMemo(() => ({
+    profile,
+    gigs,
+    proposals,
+    savedProjects,
+    loading,
+    updateProfile,
+    toggleSavedProject,
+    refreshProfile: fetchFreelancerData,
+    addGig,
+    updateGig,
+    deleteGig,
+    toggleGigStatus,
+    addPortfolioItem,
+    updatePortfolioItem,
+    deletePortfolioItem,
+    toasts,
+    showToast,
+    saveProfile
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [profile, gigs, proposals, savedProjects, loading, toasts, fetchFreelancerData]);
+
   return (
-    <FreelancerContext.Provider
-      value={{ 
-        profile,
-        gigs,
-        proposals,
-        savedProjects,
-        loading,
-        updateProfile,
-        toggleSavedProject,
-        refreshProfile: fetchFreelancerData,
-        addGig,
-        updateGig,
-        deleteGig,
-        toggleGigStatus,
-        addPortfolioItem,
-        updatePortfolioItem,
-        deletePortfolioItem,
-        toasts,
-        showToast,
-        saveProfile
-      }}
-    >
+    <FreelancerContext.Provider value={value}>
       {children}
     </FreelancerContext.Provider>
   );

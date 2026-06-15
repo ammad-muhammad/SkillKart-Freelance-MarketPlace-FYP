@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/client.controller');
+const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
@@ -125,10 +126,23 @@ router.post('/onboarding/submit',
   clientController.submitOnboardingProfile
 );
 
-// Check username availability (must be before /:id)
+// Check username availability (must be before /:id). Uses the shared
+// authController implementation (same logic as freelancer routes).
 router.get('/check-username',
   requireRole('client'),
-  clientController.checkUsername
+  authController.checkUsername
+);
+
+// Saved freelancers (client-owned). MUST be declared before the `/:id` route
+// below — otherwise Express matches `/saved-freelancers` against `/:id` (with
+// id="saved-freelancers"), which is admin-only, and a client gets a 403.
+router.post('/saved-freelancers',
+  requireRole('client'),
+  clientController.toggleSavedFreelancer
+);
+router.get('/saved-freelancers',
+  requireRole('client'),
+  clientController.getSavedFreelancers
 );
 
 // Get client by ID (Admin only)
@@ -158,9 +172,6 @@ router.get('/stats/overview',
   requireRole('admin', 'superadmin'),
   clientController.getStats
 );
-
-router.post('/saved-freelancers', clientController.toggleSavedFreelancer);
-router.get('/saved-freelancers', clientController.getSavedFreelancers);
 
 // AI-assisted Industry recommendation route
 router.post('/ai/recommend-industry', requireRole('client'), clientController.recommendIndustry);

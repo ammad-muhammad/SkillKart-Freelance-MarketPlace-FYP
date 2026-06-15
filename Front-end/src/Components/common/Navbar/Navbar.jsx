@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import './Navbar.css';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, MessageSquareCode, UserSearch, Calculator, Newspaper, Users, HelpCircle, Search, FileEdit, Zap } from 'lucide-react';
+import { MessageSquareCode, Calculator, HelpCircle, Search, FileEdit, Zap } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 
 /* ── Nav data ── */
@@ -99,10 +99,9 @@ const NAV_ITEMS = [
       {
         isSpecial: true,
         links: [
-          { label: 'Explore more',         href: '/skills/design-creative'  },
-          { label: 'Ways to earn',         href: '/browse-freelancers'      },
-          { label: 'Win work with ads',    href: '/ai-matchmaking'          },
-          { label: 'Join Freelancer Plus', href: '/onboarding'              },
+          { label: 'Browse all projects',  href: '/browse-projects'         },
+          { label: 'AI Matchmaking',       href: '/ai-matchmaking'          },
+          { label: 'Explore skills',       href: '/categories'              },
         ],
       },
     ],
@@ -110,17 +109,13 @@ const NAV_ITEMS = [
   {
     label: 'AI Tools',
     children: [
-      { label: 'Verify Credentials', sub: 'AI-powered verification', href: '/ai/verify',            icon: <ShieldCheck size={18} /> },
       { label: 'Buddy AI Assistant', sub: 'Your smart work buddy',   href: '/ai/buddy',             icon: <MessageSquareCode size={18} /> },
-      { label: 'Profile Analyzer',   sub: 'Get actionable insights', href: '/ai/profile-analyzer',  icon: <UserSearch size={18} /> },
       { label: 'Cost Estimator',     sub: 'Price your projects',     href: '/ai/cost-estimator',    icon: <Calculator size={18} /> },
     ],
   },
   {
     label: 'Resources',
     children: [
-      { label: 'Blog',        sub: 'Tips & tutorials',  href: '/blog',      icon: <Newspaper size={18} /> },
-      { label: 'Community',   sub: 'Connect with peers',href: '/community', icon: <Users size={18} /> },
       { label: 'Help Center', sub: 'Guides & support',  href: '/help',      icon: <HelpCircle size={18} /> },
     ],
   },

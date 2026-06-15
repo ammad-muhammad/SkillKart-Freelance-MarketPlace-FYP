@@ -1,9 +1,10 @@
-import { useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Search, ChevronRight, Briefcase, TrendingUp, Users, ArrowRight } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, Briefcase, TrendingUp, Users, ArrowRight } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { categories } from "../../../data/categories";
+import { categories as staticCategories } from "../../../data/categories";
+import { publicAPI } from "../../../api/publicData";
 import Navbar from "../../../Components/common/Navbar/Navbar";
 import Footer from "../../../Components/common/Footer/Footer";
 import "./Categories.css";
@@ -13,6 +14,48 @@ gsap.registerPlugin(ScrollTrigger);
 export default function Categories() {
   const heroRef = useRef(null);
   const gridRef = useRef(null);
+  const navigate = useNavigate();
+  // Static taxonomy provides the descriptions/icons (no DB source) but NOT the
+  // counts — those start at 0 and are filled with REAL gig counts from the API.
+  const [categories, setCategories] = useState(
+    staticCategories.map((c) => ({ ...c, totalServices: 0, isLiveCount: true }))
+  );
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    publicAPI.getCategories()
+      .then((res) => {
+        if (!active) return;
+        const live = res.data?.data?.categories || [];
+        // Backend categories are JOB_CATEGORIES (e.g. "Web Development"); the
+        // static marketing categories use broader groupings. Map each static
+        // category → the backend categories it covers, then sum real counts.
+        const byName = new Map(live.map((c) => [c.name, c.totalServices || 0]));
+        const STATIC_TO_BACKEND = {
+          'admin-support': ['Other'],
+          'design-creative': ['UI/UX Design'],
+          'marketing': ['Digital Marketing'],
+          'writing-content': ['Content & Writing'],
+          'ai-emerging-tech': ['Data Science & AI', 'Cybersecurity'],
+          'development-tech': ['Web Development', 'Mobile Development', 'DevOps & Cloud'],
+          'video-audio-animation': ['Video & Animation'],
+        };
+        setCategories(staticCategories.map((c) => {
+          const mapped = STATIC_TO_BACKEND[c.slug] || [];
+          const real = mapped.reduce((sum, name) => sum + (byName.get(name) || 0), 0);
+          // Real count only (even 0 = honest "no gigs yet"); never the fake static number.
+          return { ...c, totalServices: real, isLiveCount: true };
+        }));
+      })
+      .catch(() => { /* keep static counts on failure */ });
+    return () => { active = false; };
+  }, []);
+
+  const onSearch = (e) => {
+    e.preventDefault();
+    navigate(search.trim() ? `/browse-projects?q=${encodeURIComponent(search.trim())}` : '/browse-projects');
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -63,11 +106,15 @@ export default function Categories() {
               Find the perfect talent filtered by category, rating, and expertise.
             </p>
 
-            <div className="cats-hero__search">
+            <form className="cats-hero__search" onSubmit={onSearch}>
               <Search size={18} color="rgba(255,255,255,0.55)" />
-              <input placeholder="Search for any service or category..." />
-              <button>Search</button>
-            </div>
+              <input
+                placeholder="Search for any service or category..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <button type="submit">Search</button>
+            </form>
           </div>
 
           <div className="cats-hero__wave">
@@ -98,7 +145,11 @@ export default function Categories() {
                   <div className="cat-card__footer">
                     <div className="cat-card__stat">
                       <Users size={14} />
-                      <span>{cat.totalServices.toLocaleString()} Services</span>
+                      <span>
+                        {cat.isLiveCount
+                          ? `${cat.totalServices.toLocaleString()} ${cat.totalServices === 1 ? 'gig' : 'gigs'}`
+                          : `${cat.totalServices.toLocaleString()} Services`}
+                      </span>
                     </div>
                     <div className="cat-card__arrow">
                       <ArrowRight size={16} />

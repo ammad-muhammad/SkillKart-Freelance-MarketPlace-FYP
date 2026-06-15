@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes";
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
-import { useAuth } from "./hooks/useAuth";
+import BuddyWidget from "./Components/common/BuddyWidget/BuddyWidget";
 import { log, logStatus } from './utils/logger';
 
 function App() {
@@ -20,6 +20,7 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <AppRoutes />
+      <BuddyWidget />
     </BrowserRouter>
   );
 }

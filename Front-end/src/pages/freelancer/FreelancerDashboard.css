@@ -362,3 +362,7 @@
 @media (max-width: 480px) {
   .fl-stat-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* Clickable stat cards (dashboard drill-down) */
+.fl-stat-card--link { text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.fl-stat-card--link:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(4,46,76,0.1); }
