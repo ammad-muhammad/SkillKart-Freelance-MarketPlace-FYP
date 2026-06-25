@@ -530,6 +530,14 @@ const CreateGig = () => {
     setPublishing(false);
     if (result?.success) {
       navigate('/freelancer/gigs');
+    } else if (result?.skillTestRequired) {
+      // Freelancer hasn't passed a skill test for this gig's skills. Send them to
+      // the baseline skill test (covers their unverified profile skills). We
+      // intentionally don't force ?skill= — a per-skill test requires that skill
+      // to already be on their profile, which may not be the case yet.
+      if (window.confirm('You must pass the skill test for this gig’s skills before publishing. Take the test now?')) {
+        navigate('/freelancer/skill-test');
+      }
     }
   };
 

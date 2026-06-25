@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { jobsAPI } from '../../api/jobs';
+import { paymentsAPI } from '../../api/payments';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import Modal from '../freelancer/components/Modal';
 import TagInput from '../../Components/common/TagInput/TagInput';
-import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
+import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import './ClientDashboard.css';
 
-const STATUS_FILTERS = ['all', 'open', 'in-progress', 'completed', 'expired', 'closed'];
-const EDIT_STATUS_OPTIONS = ['draft', 'open', 'in-progress', 'completed', 'expired', 'closed'];
+const STATUS_FILTERS = ['all', 'open', 'in-progress', 'delivered', 'completed', 'expired', 'closed'];
 const EXPERIENCE_OPTIONS = ['Entry', 'Intermediate', 'Expert'];
 
 // `<input type="date">` needs YYYY-MM-DD; the API stores an ISO timestamp.
@@ -23,21 +23,82 @@ const toDateInput = (value) => {
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const ClientProjects = () => {
-  const { projects, deleteProject, updateProject, showToast } = useClient();
+  const { projects, deleteProject, updateProject, requestRevision, showToast, fetchProfile } = useClient();
   const [filter, setFilter] = useState('all');
   const [deleteModal, setDeleteModal] = useState(null);
   const [editingProject, setEditingProject] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editErrors, setEditErrors] = useState({});
+  const [reviewing, setReviewing] = useState(null);   // the delivered project under review
+  const [revisionNote, setRevisionNote] = useState('');
+  const [actioning, setActioning] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(null); // { jobId, targetName }
 
   const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter);
 
-  const statusOptions = ['open', 'in-progress', 'completed', 'expired', 'closed'];
+  const openReview = async (proj) => {
+    setRevisionNote('');
+    const projectId = proj._id || proj.id;
+    setReviewing({ id: projectId, title: proj.title });
+    // Fetch the full job to show the freelancer's delivery details.
+    try {
+      const { data } = await jobsAPI.getJobById(projectId);
+      const job = data?.data?.job || data?.data || {};
+      const freelancerName = job.hiredFreelancer ? `${job.hiredFreelancer.firstName} ${job.hiredFreelancer.lastName}` : 'Freelancer';
+      setReviewing({ id: projectId, title: proj.title, delivery: job.delivery || null, revisionCount: job.revisionCount || 0, freelancerName });
+    } catch {
+      /* keep the modal open with no delivery detail */
+    }
+  };
 
-  const handleStatusChange = (id, status) => {
-    updateProject(id, { status });
-    showToast(`Project status updated to "${status}".`, 'info');
+  const handleAccept = async () => {
+    if (!reviewing) return;
+    setActioning(true);
+    // Try to complete; backend returns paymentRequired when the final 50% is
+    // still owed → send the client to the final checkout.
+    try {
+      const { data } = await jobsAPI.acceptDelivery(reviewing.id);
+      const payload = data?.data || {};
+      if (payload.paymentRequired) {
+        const { data: pay } = await paymentsAPI.startFinal(reviewing.id);
+        const url = pay?.data?.checkoutUrl;
+        if (url) { window.location.assign(url); return; }
+        showToast('Could not start the final payment. Please try again.', 'error');
+      } else {
+        showToast('Delivery accepted. Project completed! 🎉');
+        setShowReviewModal({ 
+          jobId: reviewing.id, 
+          targetName: reviewing.freelancerName || 'Freelancer' 
+        });
+        setReviewing(null);
+        await fetchProfile();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to accept delivery', 'error');
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const fundDeposit = async (projId) => {
+    try {
+      const { data } = await paymentsAPI.startDeposit(projId);
+      const url = data?.data?.checkoutUrl;
+      if (url) { window.location.assign(url); return; }
+      showToast('Could not start the deposit checkout.', 'error');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Deposit could not be started (it may already be paid).', 'info');
+    }
+  };
+
+  const handleRequestRevision = async () => {
+    if (!reviewing) return;
+    if (!revisionNote.trim()) { showToast('Add a note describing the changes needed.', 'error'); return; }
+    setActioning(true);
+    const res = await requestRevision(reviewing.id, revisionNote.trim());
+    setActioning(false);
+    if (res?.success) setReviewing(null);
   };
 
   // Open the edit modal with the FULL job (context only keeps a truncated
@@ -84,6 +145,7 @@ const ClientProjects = () => {
     if (!p.category) e.category = 'Select a category.';
     if (!p.skills || p.skills.length === 0) e.skills = 'Add at least one skill.';
     if (!p.description || p.description.trim().length < 50) e.description = 'Description must be at least 50 characters.';
+    else if (p.description.trim().length > 5000) e.description = 'Description must be at most 5000 characters.';
     const min = Number(p.budget?.min); const max = Number(p.budget?.max);
     if (Number.isNaN(min) || min <= 0) e.budgetMin = 'Enter a valid minimum budget.';
     if (Number.isNaN(max) || max <= 0) e.budgetMax = 'Enter a valid maximum budget.';
@@ -91,6 +153,7 @@ const ClientProjects = () => {
     if (p.deadline) {
       const d = new Date(p.deadline);
       if (Number.isNaN(d.getTime())) e.deadline = 'Invalid date.';
+      else if (d.getTime() <= Date.now()) e.deadline = 'Deadline must be in the future.';
     }
     return e;
   };
@@ -118,7 +181,7 @@ const ClientProjects = () => {
       },
       duration: editingProject.duration,
       deadline: editingProject.deadline ? new Date(editingProject.deadline).toISOString() : null,
-      status: editingProject.status,
+      // status is NOT sent — it's controlled by the lifecycle, not this form.
     };
 
     setSavingEdit(true);
@@ -179,10 +242,11 @@ const ClientProjects = () => {
                   </p>
                 </div>
                 <span className={`cl-badge cl-badge--${proj.status}`}>
-                  {proj.status === 'open' ? '🟢 Open' : 
-                   proj.status === 'in-progress' ? '🔵 In Progress' : 
+                  {proj.status === 'open' ? '🟢 Open' :
+                   proj.status === 'in-progress' ? '🔵 In Progress' :
+                   proj.status === 'delivered' ? '📦 Delivered — review needed' :
                    proj.status === 'completed' ? '✅ Completed' :
-                   proj.status === 'expired' ? '⏰ Expired' : 
+                   proj.status === 'expired' ? '⏰ Expired' :
                    '⚪ Closed'}
                 </span>
               </div>
@@ -210,15 +274,28 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-proj-card__actions">
-                  {/* Status toggle */}
-                  <CustomSelect
-                    options={statusOptions}
-                    value={proj.status}
-                    onChange={(val) => handleStatusChange(proj.id, val)}
-                    compact
-                    className="cl-status-select"
-                  />
+                  {/* Status is read-only — it advances only through the gated
+                      lifecycle (accept proposal → pay deposit → deliver →
+                      review → pay final → completed), never manual override. */}
                   <div className="cl-proj-card__btns">
+                    {proj.status === 'in-progress' && (
+                      <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
+                        💳 Fund Deposit
+                      </button>
+                    )}
+                    {proj.status === 'completed' && (
+                      <button 
+                        className="cl-btn cl-btn--ghost cl-btn--sm"
+                        onClick={() => setShowReviewModal({ jobId: proj.id, targetName: 'Freelancer' })}
+                      >
+                        ⭐️ Leave Review
+                      </button>
+                    )}
+                    {proj.status === 'delivered' && (
+                      <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={() => openReview(proj)}>
+                        📦 Review Delivery
+                      </button>
+                    )}
                     <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
                       👥 View Proposals ({proj.proposals?.length || 0})
                     </Link>
@@ -380,13 +457,11 @@ const ClientProjects = () => {
               {editErrors.deadline && <span className="cl-error">⚠ {editErrors.deadline}</span>}
             </div>
 
+            {/* Status is intentionally NOT editable here — it's driven by the
+                gated lifecycle, not manual override. */}
             <div className="cl-form-group">
               <label className="cl-label">Status</label>
-              <CustomSelect
-                options={EDIT_STATUS_OPTIONS}
-                value={editingProject.status}
-                onChange={val => setField({ status: val })}
-              />
+              <div className="cl-input" style={{ background: '#f8fafc', textTransform: 'capitalize' }}>{editingProject.status}</div>
             </div>
 
             <div className="cl-form-group full">
@@ -411,6 +486,74 @@ const ClientProjects = () => {
         )}
       </Modal>
 
+      {/* Review Delivery Modal */}
+      <Modal
+        open={!!reviewing}
+        title="Review Delivery"
+        size="lg"
+        onClose={() => !actioning && setReviewing(null)}
+      >
+        {reviewing && (
+          <div>
+            <h4 style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.75rem' }}>{reviewing.title}</h4>
+            {reviewing.revisionCount > 0 && (
+              <p style={{ fontSize: '0.8rem', color: '#b45309', marginBottom: '0.75rem' }}>
+                Revision #{reviewing.revisionCount} — this is a resubmission.
+              </p>
+            )}
+
+            {reviewing.delivery ? (
+              <div className="cl-card" style={{ background: '#f8fafc', padding: '1rem', marginBottom: '1.25rem' }}>
+                {reviewing.delivery.message && (
+                  <>
+                    <span className="cl-label">Delivery note</span>
+                    <p style={{ fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap', marginBottom: '0.75rem' }}>{reviewing.delivery.message}</p>
+                  </>
+                )}
+                {Array.isArray(reviewing.delivery.links) && reviewing.delivery.links.length > 0 && (
+                  <>
+                    <span className="cl-label">Links</span>
+                    <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.1rem' }}>
+                      {reviewing.delivery.links.map((l, i) => (
+                        <li key={i}><a href={l} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', wordBreak: 'break-all' }}>{l}</a></li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {reviewing.delivery.submittedAt && (
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.75rem' }}>
+                    Submitted {new Date(reviewing.delivery.submittedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Loading delivery details…</p>
+            )}
+
+            <div className="cl-form-group" style={{ marginBottom: '1rem' }}>
+              <label className="cl-label">Need changes? Describe what to revise (optional for accept)</label>
+              <textarea
+                className="cl-textarea"
+                rows={3}
+                placeholder="e.g. Please adjust the colour scheme and fix the mobile layout…"
+                value={revisionNote}
+                onChange={(e) => setRevisionNote(e.target.value)}
+              />
+            </div>
+
+            <div className="cl-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button className="cl-btn cl-btn--primary" onClick={handleAccept} disabled={actioning}>
+                {actioning ? 'Working…' : '✅ Accept & Complete'}
+              </button>
+              <button className="cl-btn cl-btn--outline" onClick={handleRequestRevision} disabled={actioning} style={{ color: '#d97706', borderColor: '#d97706' }}>
+                🔁 Request Revision
+              </button>
+              <button className="cl-btn cl-btn--ghost" onClick={() => setReviewing(null)} disabled={actioning}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* Delete Confirmation Modal */}
       <Modal
         open={!!deleteModal}
@@ -429,6 +572,14 @@ const ClientProjects = () => {
           <button className="cl-btn cl-btn--ghost" onClick={() => setDeleteModal(null)}>Cancel</button>
         </div>
       </Modal>
+
+      {showReviewModal && (
+        <ReviewModal
+          jobId={showReviewModal.jobId}
+          targetName={showReviewModal.targetName}
+          onClose={() => setShowReviewModal(null)}
+        />
+      )}
 
       <style>{`
         .cl-proj-card { display: flex; flex-direction: column; gap: 0.75rem; }

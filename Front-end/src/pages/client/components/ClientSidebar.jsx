@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useClient } from '../../../context/ClientContext';
 import { useAuth } from '../../../hooks/useAuth';
 import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
+import { useNotification } from '../../../context/NotificationContext';
 import './ClientSidebar.css';
 
 const NAV_ITEMS = [
@@ -11,14 +12,17 @@ const NAV_ITEMS = [
   { to: '/client/profile', icon: '👤', label: 'My Profile' },
   { to: '/client/projects', icon: '📁', label: 'My Projects' },
   { to: '/client/projects/create', icon: '✚', label: 'Post New Project' },
+  { to: '/client/wallet', icon: '💳', label: 'Billing & Payments' },
   { to: '/client/saved', icon: '🔖', label: 'Saved Freelancers' },
   { to: '/client/messages', icon: '💬', label: 'Messages' },
+  { to: '/client/notifications', icon: '🔔', label: 'Notifications' },
   { to: '/client/settings', icon: '⚙️', label: 'Settings' },
   { to: '/client/security', icon: '🔒', label: 'Security' },
 ];
 
 const ClientSidebar = () => {
   const [open, setOpen] = useState(false);
+  const { unreadCount } = useNotification();
   const { profile } = useClient();
   const { logout } = useAuth();
   const { fullName, companyName, avatar } = profile.personalInfo;
@@ -79,6 +83,9 @@ const ClientSidebar = () => {
             >
               <span className="cl-sidebar__icon">{item.icon}</span>
               <span>{item.label}</span>
+              {item.to === '/client/notifications' && unreadCount > 0 && (
+                <span className="cl-sidebar__notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+              )}
             </NavLink>
           ))}
         </nav>

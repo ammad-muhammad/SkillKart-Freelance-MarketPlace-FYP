@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes";
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 import BuddyWidget from "./Components/common/BuddyWidget/BuddyWidget";
+import NotificationBell from "./Components/common/NotificationBell/NotificationBell";
 import { log, logStatus } from './utils/logger';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
       <ScrollToTop />
       <AppRoutes />
       <BuddyWidget />
+      <NotificationBell />
     </BrowserRouter>
   );
 }

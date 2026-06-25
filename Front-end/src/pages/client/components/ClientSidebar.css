@@ -216,3 +216,29 @@
   .cl-hamburger { display: flex; }
   .cl-overlay { display: block; }
 }
+
+/* ── Sidebar notification badge ── */
+.cl-sidebar__link {
+  position: relative;
+}
+.cl-sidebar__notif-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: cl-notif-pulse 2s ease-in-out infinite;
+}
+@keyframes cl-notif-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+}
+

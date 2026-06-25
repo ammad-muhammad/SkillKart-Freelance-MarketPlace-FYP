@@ -23,6 +23,10 @@ import FreelancerMessages from "../pages/freelancer/FreelancerMessages";
 import FreelancerSavedProjects from "../pages/freelancer/FreelancerSavedProjects";
 import FreelancerProposals from "../pages/freelancer/FreelancerProposals";
 import SkillTest from "../pages/freelancer/SkillTest";
+import FreelancerWork from "../pages/freelancer/FreelancerWork";
+import FreelancerWallet from "../pages/freelancer/FreelancerWallet";
+import PaymentConfirm from "../pages/public/PaymentConfirm/PaymentConfirm";
+import NotificationsPage from "../pages/common/NotificationsPage";
 
 // Client Pages
 import ClientLayout from "../layouts/ClientLayout";
@@ -34,6 +38,7 @@ import ClientProjects from "../pages/client/ClientProjects";
 import ClientPostProject from "../pages/client/PostProject";
 import ClientSavedFreelancers from "../pages/client/ClientSavedFreelancers";
 import ClientMessages from "../pages/client/ClientMessages";
+import ClientWallet from "../pages/client/ClientWallet";
 import ReviewProposals from "../pages/client/ReviewProposals";
 
 // Public Pages
@@ -137,6 +142,17 @@ const AppRoutes = () => {
             <Route path="/skills/:categorySlug/:skillSlug" element={<SkillPage />} />
           </Route>
 
+          {/* Payment confirmation landing (Stripe success redirect). Standalone,
+              no layout chrome — must be logged in as the paying client. */}
+          <Route
+            path="/payment/confirm"
+            element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <PaymentConfirm />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ================= FREELANCER ROUTES ================= */}
           <Route
             path="/freelancer"
@@ -157,7 +173,10 @@ const AppRoutes = () => {
             <Route path="messages" element={<FreelancerMessages />} />
             <Route path="saved" element={<FreelancerSavedProjects />} />
             <Route path="proposals" element={<FreelancerProposals />} />
+            <Route path="work" element={<FreelancerWork />} />
+            <Route path="wallet" element={<FreelancerWallet />} />
             <Route path="skill-test" element={<SkillTest />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
 
           {/* ================= CLIENT ROUTES ================= */}
@@ -177,7 +196,9 @@ const AppRoutes = () => {
             <Route path="projects" element={<ClientProjects />} />
             <Route path="projects/create" element={<ClientPostProject />} />
             <Route path="saved" element={<ClientSavedFreelancers />} />
+            <Route path="wallet" element={<ClientWallet />} />
             <Route path="messages" element={<ClientMessages />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="projects/:jobId/proposals" element={<ReviewProposals />} />
           </Route>
 

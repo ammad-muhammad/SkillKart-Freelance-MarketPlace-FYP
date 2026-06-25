@@ -1,5 +1,6 @@
 import client from './client';
 
 export const skillsAPI = {
-  validate: (input) => client.post('/skills/validate', { input }),
+  // Fires on every keystroke in TagInput → suppress the global error toast.
+  validate: (input) => client.post('/skills/validate', { input }, { suppressErrorToast: true }),
 };

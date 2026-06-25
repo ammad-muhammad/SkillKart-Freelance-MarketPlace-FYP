@@ -1,9 +1,11 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
+const User = require('../models/User');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError, BadRequestError } = require('../utils/apiError');
 const { uploadJobAttachment: uploadAttachmentToCloud } = require('../services/upload.service');
+const notifications = require('../services/notification.service');
 
 /**
  * Get all conversations for current user
@@ -50,6 +52,13 @@ const getMessages = asyncHandler(async (req, res) => {
   conversation.unreadCount.set(userId.toString(), 0);
   await conversation.save();
   
+  // Clear any global notifications for messages since the user is actively viewing chats
+  const Notification = require('../models/Notification');
+  await Notification.updateMany(
+    { userId, type: 'new_message', read: false },
+    { $set: { read: true, readAt: new Date() } }
+  );
+  
   sendSuccess(res, { data: messages });
 });
 
@@ -87,7 +96,17 @@ const sendMessage = asyncHandler(async (req, res) => {
   conversation.unreadCount.set(recipientId.toString(), currentUnread + 1);
   
   await conversation.save();
-  
+
+  // Notify the recipient (deep-link by their role). Fire-and-forget.
+  User.findById(recipientId).select('role').lean()
+    .then((recipient) => {
+      notifications.onNewMessage(recipientId, {
+        senderName: [req.user.firstName, req.user.lastName].filter(Boolean).join(' ') || 'Someone',
+        role: recipient?.role,
+      });
+    })
+    .catch(() => { /* non-fatal */ });
+
   sendCreated(res, 'Message sent', { message });
 });
 

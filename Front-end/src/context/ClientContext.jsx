@@ -412,6 +412,38 @@ export const ClientProvider = ({ children }) => {
     }
   };
 
+  // Accept a freelancer's delivered work → project completed.
+  const acceptDelivery = async (id) => {
+    setLoading(true);
+    try {
+      await jobsAPI.acceptDelivery(id);
+      await fetchProfile();
+      showToast('Delivery accepted. Project completed! 🎉');
+      return { success: true };
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to accept delivery', 'error');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Send the project back to the freelancer for changes.
+  const requestRevision = async (id, note) => {
+    setLoading(true);
+    try {
+      await jobsAPI.requestRevision(id, note);
+      await fetchProfile();
+      showToast('Revision requested. The freelancer will make changes.', 'info');
+      return { success: true };
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to request revision', 'error');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteProject = async (id) => {
     setLoading(true);
     try {
@@ -463,6 +495,8 @@ export const ClientProvider = ({ children }) => {
     setProjects,
     addProject,
     updateProject,
+    acceptDelivery,
+    requestRevision,
     deleteProject,
     savedFreelancers,
     setSavedFreelancers,

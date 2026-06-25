@@ -1,5 +1,6 @@
 const FreelancerProfile = require('../models/FreelancerProfile');
 const User = require('../models/User');
+const Review = require('../models/Review');
 const { uploadProfilePicture, uploadPortfolioImage } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
@@ -186,10 +187,16 @@ const getFreelancerById = asyncHandler(async (req, res) => {
   if (!profile) {
     throw new NotFoundError('Freelancer not found');
   }
+
+  // Fetch reviews targeting this freelancer
+  const reviews = await Review.find({ revieweeId: id, type: 'client_to_freelancer' })
+    .populate('reviewerId', 'firstName lastName profilePicture')
+    .sort({ createdAt: -1 })
+    .limit(10);
   
   sendSuccess(res, {
     message: 'Freelancer retrieved successfully',
-    data: { profile }
+    data: { profile, reviews }
   });
 });
 

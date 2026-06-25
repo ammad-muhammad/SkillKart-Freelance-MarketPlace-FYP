@@ -19,6 +19,13 @@ router.get('/my-gigs',
 // Public single gig detail
 router.get('/:id', gigController.getGigById);
 
+// Order a gig (client buys a tier → creates a job that enters the escrow flow)
+router.post('/:id/order',
+  authenticate,
+  requireRole('client'),
+  gigController.createGigOrder
+);
+
 // Protected routes (Freelancers)
 router.post('/', 
   authenticate, 

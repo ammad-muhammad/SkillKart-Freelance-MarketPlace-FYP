@@ -73,6 +73,23 @@ export default function JobDetails() {
       return;
     }
 
+    // Client-side validation mirroring the backend (coverLetter 100–2000,
+    // proposedRate > 0) so the user gets immediate, specific feedback.
+    const cover = proposalData.coverLetter.trim();
+    if (cover.length < 100) {
+      toast.error(`Cover letter must be at least 100 characters (currently ${cover.length}).`);
+      return;
+    }
+    if (cover.length > 2000) {
+      toast.error('Cover letter must be at most 2000 characters.');
+      return;
+    }
+    const rate = Number(proposalData.proposedRate);
+    if (!rate || rate <= 0) {
+      toast.error('Enter a valid proposed rate greater than 0.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await proposalsAPI.submitProposal({
@@ -85,7 +102,20 @@ export default function JobDetails() {
       navigate('/freelancer/proposals');
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to submit proposal.';
-      toast.error(msg);
+      const gate = error.response?.data?.errors;
+      // Skill-gating block (403): route the freelancer to the skill test.
+      if (error.response?.status === 403 && gate?.skillTestRequired) {
+        toast.error(msg);
+        setShowApplyModal(false);
+        // Route to the baseline skill test (covers their unverified profile
+        // skills). A per-skill ?skill= test requires the skill already be on
+        // their profile, so we avoid forcing it here.
+        if (window.confirm('You must pass the skill test for this project’s required skills before applying. Take the test now?')) {
+          navigate('/freelancer/skill-test');
+        }
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -195,16 +225,19 @@ export default function JobDetails() {
                   </div>
                   <div>
                     <div className="jd-client__name">{job.clientId?.firstName} {job.clientId?.lastName}</div>
-                    <div className="jd-client__meta">Client · ⭐ 4.8</div>
+                    <div className="jd-client__meta">
+                      Client
+                      {job.clientStats?.rating > 0 && <> · ⭐ {job.clientStats.rating.toFixed(1)}</>}
+                    </div>
                   </div>
                 </div>
                 <div className="jd-client__stats">
                   <div className="jd-client__stat">
-                    <span>Verified ✓</span>
-                    <label>Payment Method</label>
+                    <span>{job.clientStats?.verified ? 'Verified ✓' : 'Unverified'}</span>
+                    <label>Identity</label>
                   </div>
                   <div className="jd-client__stat">
-                    <span>12</span>
+                    <span>{job.clientStats?.jobsPosted ?? 0}</span>
                     <label>Jobs Posted</label>
                   </div>
                 </div>
@@ -280,12 +313,20 @@ export default function JobDetails() {
                 </div>
                 <textarea
                   required
+                  maxLength={2000}
                   placeholder="Introduce yourself and explain why you're a good fit for this project... or tap ✨ Help me write."
                   rows={6}
                   value={proposalData.coverLetter}
                   onChange={e => setProposalData({ ...proposalData, coverLetter: e.target.value })}
                 />
-                <span className="jd-char-count">{proposalData.coverLetter.length} / 2000</span>
+                <span
+                  className="jd-char-count"
+                  style={{ color: proposalData.coverLetter.trim().length < 100 ? '#ef4444' : '#16a34a' }}
+                >
+                  {proposalData.coverLetter.trim().length < 100
+                    ? `${proposalData.coverLetter.trim().length} / 100 min`
+                    : `${proposalData.coverLetter.length} / 2000`}
+                </span>
               </div>
 
               <div className="jd-modal__footer">

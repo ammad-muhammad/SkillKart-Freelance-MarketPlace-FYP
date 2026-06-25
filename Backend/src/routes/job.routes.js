@@ -12,7 +12,8 @@ const {
   listJobsValidation,
   searchJobsValidation,
   closeJobValidation,
-  recommendCategoryValidation
+  recommendCategoryValidation,
+  reviewJobValidation
 } = require('../validators/job.validator');
 
 const multer = require('multer');
@@ -60,6 +61,13 @@ router.get('/',
 router.get('/my-projects',
   authenticate,
   jobController.getMyProjects
+);
+
+// Get freelancer's contracts (hired jobs + escrow) — before /:id
+router.get('/my-contracts',
+  authenticate,
+  requireRole('freelancer'),
+  jobController.getMyContracts
 );
 
 router.post('/ai/recommend-category',
@@ -139,6 +147,37 @@ router.post('/:id/close',
   closeJobValidation,
   validate,
   jobController.closeJob
+);
+
+// ── Delivery lifecycle ──
+// Freelancer submits work (in-progress → delivered)
+router.post('/:id/deliver',
+  authenticate,
+  requireRole('freelancer'),
+  jobController.submitDelivery
+);
+
+// Client accepts delivery (delivered → completed)
+router.post('/:id/accept-delivery',
+  authenticate,
+  requireRole('client'),
+  jobController.acceptDelivery
+);
+
+// Client requests a revision (delivered → in-progress)
+router.post('/:id/request-revision',
+  authenticate,
+  requireRole('client'),
+  jobController.requestRevision
+);
+
+// Review a completed job
+router.post('/:id/review',
+  authenticate,
+  requireRole('client', 'freelancer'),
+  reviewJobValidation,
+  validate,
+  jobController.reviewJob
 );
 
 // Delete job

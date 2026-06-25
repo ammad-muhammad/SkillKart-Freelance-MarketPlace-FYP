@@ -14,6 +14,11 @@ export const gigsAPI = {
   getGig: (id) =>
     client.get(`/gigs/${id}`),
 
+  // Order a gig tier (client) → creates a job that enters the escrow flow.
+  // tier: 'basic' | 'standard' | 'premium'
+  orderGig: (id, tier) =>
+    client.post(`/gigs/${id}/order`, { tier }),
+
   // List my own gigs (Freelancer Dashboard)
   listMyGigs: (params) => 
     client.get('/gigs/my-gigs', { params }),

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { jobsAPI } from '../../api/jobs';
 import { messagesAPI } from '../../api/messages';
+import { paymentsAPI } from '../../api/payments';
 import { useClient } from '../../context/ClientContext';
 import { 
   User, CheckCircle2, XCircle, Clock, 
@@ -40,25 +41,27 @@ export default function ReviewProposals() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [jobId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [jobRes, propRes] = await Promise.all([
         jobsAPI.getJobById(jobId),
         proposalsAPI.listProposals({ jobId })
       ]);
       setJob(jobRes.data.data.job);
-      setProposals(propRes.data.data.items || []);
+      // listProposals returns a paginated body: { data: [...proposals], meta }.
+      // The array is at data.data (NOT data.data.items).
+      setProposals(Array.isArray(propRes.data.data) ? propRes.data.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load proposals.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAccept = async (id) => {
     const message = prompt('Send a welcome message to the freelancer:');
@@ -67,9 +70,22 @@ export default function ReviewProposals() {
     setProcessingId(id);
     try {
       await proposalsAPI.acceptProposal(id, message);
-      toast.success('Proposal accepted! Freelancer notified.');
+      toast.success('Proposal accepted! Now fund the 50% deposit to start the work.');
       await fetchProfile(); // Sync global state
-      fetchData(); // Refresh local view
+
+      // Escrow: take the client straight to the 50% deposit checkout. Work can't
+      // be delivered until the deposit is funded.
+      try {
+        const { data } = await paymentsAPI.startDeposit(jobId);
+        const url = data?.data?.checkoutUrl;
+        if (url) {
+          window.location.assign(url);
+          return;
+        }
+      } catch (payErr) {
+        toast.info(payErr.response?.data?.message || 'You can pay the 50% deposit from My Projects.');
+      }
+      fetchData(); // Refresh local view if we didn't redirect
     } catch (error) {
       toast.error('Failed to accept proposal.');
     } finally {
@@ -181,7 +197,7 @@ export default function ReviewProposals() {
                     </>
                   ) : (
                     <span className="rp-responded">
-                      Responded on {new Date(prop.respondedAt).toLocaleDateString()}
+                      {prop.respondedAt ? `Responded on ${new Date(prop.respondedAt).toLocaleDateString()}` : 'Auto-rejected'}
                     </span>
                   )}
                   <button

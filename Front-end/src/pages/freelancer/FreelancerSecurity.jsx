@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
+import { validatePassword } from '../../utils/validation';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -37,11 +38,8 @@ const FreelancerSecurity = () => {
   const validatePw = () => {
     const errs = {};
     if (!pwForm.currentPassword) errs.currentPassword = 'Current password is required';
-    if (!pwForm.newPassword) {
-      errs.newPassword = 'New password is required';
-    } else if (pwForm.newPassword.length < 8) {
-      errs.newPassword = 'At least 8 characters required';
-    }
+    const pwErr = validatePassword(pwForm.newPassword);
+    if (pwErr) errs.newPassword = pwErr;
     if (pwForm.newPassword !== pwForm.confirmPassword) errs.confirmPassword = 'Passwords do not match';
     return errs;
   };

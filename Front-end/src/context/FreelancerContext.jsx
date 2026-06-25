@@ -326,6 +326,13 @@ export const FreelancerProvider = ({ children }) => {
       return { success: true, gig: res.data.data.gig };
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to publish gig';
+      // Skill-gating block (403): surface the flag so the caller can route the
+      // freelancer to the skill test instead of just showing an error toast.
+      const gate = error.response?.data?.errors;
+      if (error.response?.status === 403 && gate?.skillTestRequired) {
+        showToast(message, 'error');
+        return { success: false, error: message, skillTestRequired: true, requiredSkills: gate.requiredSkills || [], category: gate.category || '' };
+      }
       showToast(message, 'error');
       return { success: false, error: message };
     } finally {

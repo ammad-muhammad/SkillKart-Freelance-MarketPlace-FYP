@@ -64,6 +64,7 @@ const clientProfileSchema = new mongoose.Schema({
   rating: { type: Number, default: 0, min: 0, max: 5 },
   totalProjectsPosted: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
+  walletBalance: { type: Number, default: 0 },
   savedFreelancers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 

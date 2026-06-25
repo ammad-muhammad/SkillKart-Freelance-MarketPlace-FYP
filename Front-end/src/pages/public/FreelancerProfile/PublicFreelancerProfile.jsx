@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { freelancersAPI } from '../../../api/freelancers';
+import { messagesAPI } from '../../../api/messages';
 import { useAuth } from '../../../hooks/useAuth';
 import { useClient } from '../../../context/ClientContext';
 import './PublicFreelancerProfile.css';
@@ -27,6 +28,7 @@ export default function PublicFreelancerProfile() {
   const { savedFreelancers, toggleSavedFreelancer } = useClient();
 
   const [profile, setProfile] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -40,8 +42,10 @@ export default function PublicFreelancerProfile() {
       .then((res) => {
         if (!active) return;
         const p = res.data?.data?.profile;
+        const r = res.data?.data?.reviews || [];
         if (!p) { setError('notfound'); return; }
         setProfile(p);
+        setReviews(r);
         const u = p.userId || {};
         const name = `${u.firstName || ''} ${u.lastName || ''}`.trim();
         if (name) document.title = `${name} — SkillKart`;
@@ -73,9 +77,22 @@ export default function PublicFreelancerProfile() {
     });
   };
 
-  const handleContact = () => {
+  const handleContact = async () => {
     if (!user) { navigate('/login'); return; }
-    // Messaging is initiated from the dashboard; send the client there.
+    
+    const targetId = u._id || id;
+    
+    // Actually start a conversation with the freelancer (not just navigate).
+    if (isClient && targetId) {
+      try {
+        await messagesAPI.startConversation(targetId, `Hi ${u.firstName || 'there'}, I'd like to discuss a project with you.`);
+        navigate('/client/messages');
+        return;
+      } catch {
+        /* fall through to the messages page */
+      }
+    }
+    
     navigate(isClient ? '/client/messages' : '/freelancer/messages');
   };
 
@@ -207,6 +224,39 @@ export default function PublicFreelancerProfile() {
               </div>
 
               <aside className="pfp-col-side">
+                {/* Reviews */}
+                {reviews.length > 0 && (
+                  <section className="pfp-card">
+                    <h2 className="pfp-section-title">Client Reviews</h2>
+                    <div className="pfp-reviews-list">
+                      {reviews.map((rev) => (
+                        <div key={rev._id} className="pfp-review-item" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e2e8f0', overflow: 'hidden' }}>
+                              {rev.reviewerId?.profilePicture ? (
+                                <img src={rev.reviewerId.profilePicture} alt="Client" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#64748b' }}>
+                                  {rev.reviewerId?.firstName?.charAt(0) || 'C'}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>
+                                {rev.reviewerId?.firstName} {rev.reviewerId?.lastName?.charAt(0)}.
+                              </div>
+                              <div style={{ display: 'flex', color: '#facc15', fontSize: '0.8rem' }}>
+                                {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                              </div>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: '0.9rem', color: 'var(--color-text-light)', margin: 0 }}>"{rev.comment}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 {/* Skills */}
                 <section className="pfp-card">
                   <h2 className="pfp-section-title">Skills</h2>

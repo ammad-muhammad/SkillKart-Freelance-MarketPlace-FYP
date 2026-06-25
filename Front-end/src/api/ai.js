@@ -22,8 +22,8 @@ export const aiAPI = {
     client.post('/ai/suggest-brief', { description, title }, { timeout: AI_TIMEOUT }),
 
   // Public (no-auth) skill validation + related suggestions, for type-ahead in
-  // free tools like the Cost Estimator. Mirrors skillsAPI.validate but works
-  // for logged-out visitors.
+  // free tools like the Cost Estimator. Fires on every keystroke → suppress the
+  // global error toast (the input handles failures inline/silently).
   validateSkill: (input) =>
-    client.post('/ai/validate-skill', { input }, { timeout: AI_TIMEOUT }),
+    client.post('/ai/validate-skill', { input }, { timeout: AI_TIMEOUT, suppressErrorToast: true }),
 };

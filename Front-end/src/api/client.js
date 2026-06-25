@@ -1,7 +1,21 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { tokenManager } from '../utils/tokenManager';
+import { extractApiError } from '../utils/apiError';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
+// Global error-toast de-dup: avoid showing the same message twice when a form
+// also surfaces it. Tracks the last toasted message + timestamp.
+let lastToast = { msg: '', at: 0 };
+const toastApiError = (error) => {
+  const { message } = extractApiError(error);
+  if (!message) return;
+  const now = Date.now();
+  if (message === lastToast.msg && now - lastToast.at < 2000) return;
+  lastToast = { msg: message, at: now };
+  toast.error(message);
+};
 
 // 🚀 Request Deduplication Layer
 // Stores in-flight GET requests to prevent duplicate network calls for identical resources
@@ -42,18 +56,25 @@ axiosInstance.interceptors.response.use(
     // Safety check for originalRequest
     if (!originalRequest) return Promise.reject(error);
 
-    const isAuthRoute = originalRequest.url?.includes('/auth/login') || 
+    const isAuthRoute = originalRequest.url?.includes('/auth/login') ||
                         originalRequest.url?.includes('/auth/register') ||
                         originalRequest.url?.includes('/auth/otp') ||
                         originalRequest.url?.includes('/auth/refresh');
-    
+
+    // Auth routes own their UX (the login/register forms render their own
+    // errors); don't double-toast those.
     if (isAuthRoute) {
       return Promise.reject(error);
     }
 
+    // Opt-out: a caller can set { suppressErrorToast: true } to handle the
+    // error entirely on its own (e.g. live skill-validate typeahead).
+    const suppress = originalRequest.suppressErrorToast;
+
     // Network error (no response)
     if (!error.response) {
       console.error('Network error:', error.message);
+      if (!suppress) toastApiError(error);
       return Promise.reject(error);
     }
 
@@ -91,10 +112,16 @@ axiosInstance.interceptors.response.use(
     // endpoint guarded for a different role) should not destroy a valid session.
     // Let the calling code handle the 403 locally. We only end the session on a
     // genuine auth failure (401 with a failed refresh, handled above).
+    // Note: skill-gating 403s carry their own UX (a "take the test" prompt), so
+    // we don't toast those generically — the caller handles them.
     if (error.response?.status === 403) {
+      const gated = error.response?.data?.errors?.skillTestRequired;
+      if (!suppress && !gated) toastApiError(error);
       return Promise.reject(error);
     }
 
+    // Everything else (400/404/409/422/429/5xx): surface the backend message.
+    if (!suppress) toastApiError(error);
     return Promise.reject(error);
   }
 );

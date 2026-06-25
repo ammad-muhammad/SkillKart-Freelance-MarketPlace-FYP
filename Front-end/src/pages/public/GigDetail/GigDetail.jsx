@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { gigsAPI } from '../../../api/gigs';
+import { paymentsAPI } from '../../../api/payments';
+import { messagesAPI } from '../../../api/messages';
 import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
@@ -21,6 +23,7 @@ export default function GigDetail() {
   const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [ordering, setOrdering] = useState(null); // tier key being ordered
 
   useEffect(() => {
     let active = true;
@@ -46,13 +49,56 @@ export default function GigDetail() {
     return () => { active = false; };
   }, [id]);
 
-  const handleContact = () => {
+  const handleContact = async () => {
     if (!user) {
       toast.info('Please log in to contact this freelancer.');
       navigate('/login');
       return;
     }
+    const freelancerId = gig?.freelancerId?._id;
+    // Actually start a conversation with the gig owner (not just navigate).
+    if (user.role === 'client' && freelancerId) {
+      try {
+        await messagesAPI.startConversation(freelancerId, `Hi! I'm interested in your gig "${gig?.title || ''}".`);
+        navigate('/client/messages');
+        return;
+      } catch {
+        /* fall through to the messages page */
+      }
+    }
     navigate(user.role === 'freelancer' ? '/freelancer/messages' : '/client/messages');
+  };
+
+  const handleOrder = async (tier) => {
+    if (!user) {
+      toast.info('Please log in as a client to order this gig.');
+      try { sessionStorage.setItem('postLoginRedirect', `/gigs/${id}`); } catch { /* non-fatal */ }
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'client') {
+      toast.warning('Only clients can order gigs. Switch to a client account to purchase.');
+      return;
+    }
+    setOrdering(tier);
+    try {
+      // Create the order (a job under the hood), then go straight to the 50%
+      // deposit checkout — same escrow flow as hiring on a posted project.
+      const orderRes = await gigsAPI.orderGig(id, tier);
+      const jobId = orderRes.data?.data?.order?._id;
+      if (!jobId) { toast.error('Could not create the order. Please try again.'); return; }
+
+      const payRes = await paymentsAPI.startDeposit(jobId);
+      const url = payRes.data?.data?.checkoutUrl;
+      if (url) { window.location.assign(url); return; }
+      toast.info('Order created. You can fund the deposit from My Projects.');
+      navigate('/client/projects');
+    } catch (err) {
+      // The global interceptor already toasts the backend message.
+      if (!err.response) toast.error('Could not place the order.');
+    } finally {
+      setOrdering(null);
+    }
   };
 
   if (loading) {
@@ -82,6 +128,8 @@ export default function GigDetail() {
   const freelancerName = `${freelancer.firstName || ''} ${freelancer.lastName || ''}`.trim() || 'Freelancer';
   const freelancerInitial = (freelancer.firstName || freelancer.lastName || 'F').charAt(0).toUpperCase();
   const bannerSrc = gig.media?.banner || gig.media?.images?.[0] || null;
+  // Hide ordering when the logged-in freelancer is viewing their OWN gig.
+  const isOwnGig = user && freelancer._id && String(user._id || user.id) === String(freelancer._id);
 
   const tiers = TIER_ORDER
     .map((key) => ({ key, ...(gig.pricing?.[key] || {}) }))
@@ -208,8 +256,18 @@ export default function GigDetail() {
                           ))}
                         </ul>
                       )}
+                      {!isOwnGig && (
+                        <button
+                          className="gd-tier__order"
+                          onClick={() => handleOrder(tier.key)}
+                          disabled={!!ordering}
+                        >
+                          {ordering === tier.key ? 'Starting…' : `Order · $${tier.price}`}
+                        </button>
+                      )}
                     </div>
                   ))}
+                  <p className="gd-pricing__note">You’ll pay 50% now to start; the rest is released when you accept the delivery.</p>
                 </div>
               )}
 

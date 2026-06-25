@@ -102,10 +102,9 @@ const updateJobValidation = [
     .trim()
     .isLength({ min: 50, max: 5000 }).withMessage('Description must be 50-5000 characters'),
 
-  body('status')
-    .optional()
-    .isIn(Object.values(JOB_STATUS))
-    .withMessage('Invalid job status'),
+  // NOTE: `status` is intentionally NOT accepted here. Project status is driven
+  // only by the gated lifecycle endpoints (accept proposal, deliver,
+  // accept-delivery, payment confirm), so it can't be forced via a plain update.
 
   body('deadline')
     .optional()
@@ -386,6 +385,21 @@ const rateFreelancerValidation = [
     .isLength({ max: 1000 }).withMessage('Review must not exceed 1000 characters')
 ];
 
+const reviewJobValidation = [
+  param('id')
+    .notEmpty().withMessage('Job ID is required')
+    .isMongoId().withMessage('Invalid job ID'),
+
+  body('rating')
+    .notEmpty().withMessage('Rating is required')
+    .isFloat({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+
+  body('comment')
+    .notEmpty().withMessage('Comment is required')
+    .trim()
+    .isLength({ min: 5, max: 1000 }).withMessage('Comment must be between 5 and 1000 characters')
+];
+
 module.exports = {
   createJobValidation,
   updateJobValidation,
@@ -404,5 +418,6 @@ module.exports = {
   closeJobValidation,
   hireFreelancerValidation,
   rateFreelancerValidation,
-  recommendCategoryValidation
+  recommendCategoryValidation,
+  reviewJobValidation
 };

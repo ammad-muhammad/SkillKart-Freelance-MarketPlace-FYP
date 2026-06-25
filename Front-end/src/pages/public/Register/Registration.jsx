@@ -43,7 +43,9 @@ const Registration = () => {
 
     const validateForm = () => {
         if (!formData.firstName) { setError("First name is required"); return false; }
+        if (formData.firstName.trim().length < 2 || formData.firstName.trim().length > 50) { setError("First name must be 2–50 characters"); return false; }
         if (!formData.lastName) { setError("Last name is required"); return false; }
+        if (formData.lastName.trim().length < 2 || formData.lastName.trim().length > 50) { setError("Last name must be 2–50 characters"); return false; }
         if (!formData.email) { setError("Email is required"); return false; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { setError("Please enter a valid email"); return false; }
         if (!formData.password) { setError("Password is required"); return false; }

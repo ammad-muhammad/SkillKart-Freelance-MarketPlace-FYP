@@ -141,6 +141,8 @@ const skillRoutes = require('./routes/skill.routes');
 const matchmakingRoutes = require('./routes/matchmaking.routes');
 const aiRoutes = require('./routes/ai.routes');
 const testimonialRoutes = require('./routes/testimonial.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 // Mount routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
@@ -160,6 +162,8 @@ app.use(`${API_PREFIX}/skills`, skillRoutes);
 app.use(`${API_PREFIX}/matchmaking`, matchmakingRoutes);
 app.use(`${API_PREFIX}/ai`, aiRoutes);
 app.use(`${API_PREFIX}/testimonials`, testimonialRoutes);
+app.use(`${API_PREFIX}/payments`, paymentRoutes);
+app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 
 // Webhook routes (no API prefix)
 const supabaseWebhook = require('./webhooks/supabase.webhook');

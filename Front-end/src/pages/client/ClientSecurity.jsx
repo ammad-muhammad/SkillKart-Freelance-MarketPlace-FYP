@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
+import { validatePassword } from '../../utils/validation';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
 
@@ -70,7 +71,8 @@ const ClientSecurity = () => {
   const validate = () => {
     const e = {};
     if (!passwords.currentPassword) e.currentPassword = 'Current password is required';
-    if (!passwords.newPassword || passwords.newPassword.length < 8) e.newPassword = 'Minimum 8 characters';
+    const pwErr = validatePassword(passwords.newPassword);
+    if (pwErr) e.newPassword = pwErr;
     if (passwords.newPassword !== passwords.confirmPassword) e.confirmPassword = 'Passwords do not match';
     setErrors(e);
     return Object.keys(e).length === 0;

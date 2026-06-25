@@ -70,6 +70,7 @@ const freelancerProfileSchema = new mongoose.Schema({
   rating: { type: Number, default: 0, min: 0, max: 5 },
   completedProjects: { type: Number, default: 0 },
   totalEarnings: { type: Number, default: 0 },
+  walletBalance: { type: Number, default: 0 },
   verificationDetails: {
     emailVerified: { type: Boolean, default: false },
     onboardingCompleted: { type: Boolean, default: false },

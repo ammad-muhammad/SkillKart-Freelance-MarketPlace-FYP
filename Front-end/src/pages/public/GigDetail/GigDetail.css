@@ -390,6 +390,31 @@
   margin-top: 0.2rem;
 }
 
+.gd-tier__order {
+  width: 100%;
+  margin-top: 0.85rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-primary, #042e4c);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.gd-tier__order:hover:not(:disabled) { opacity: 0.92; }
+.gd-tier__order:active:not(:disabled) { transform: translateY(1px); }
+.gd-tier__order:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.gd-pricing__note {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.85rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 @media (max-width: 1024px) {
   .gd-layout {
     grid-template-columns: 1fr;

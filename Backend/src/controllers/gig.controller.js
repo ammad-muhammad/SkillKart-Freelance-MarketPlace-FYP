@@ -1,23 +1,42 @@
 const Gig = require('../models/Gig');
-const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiResponse');
+const Job = require('../models/Job');
+const { sendSuccess, sendCreated, sendPaginated, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
-const { NotFoundError } = require('../utils/apiError');
+const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
 const cloudinaryService = require('../services/upload.service');
+const { checkSkillGate } = require('../utils/skillGating');
+const notifications = require('../services/notification.service');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * Create Gig
+ * Create Gig.
+ * Skill-gated: the freelancer must have passed (verified) at least one skill
+ * matching the gig's required skills / category before they can offer it.
  */
 const createGig = asyncHandler(async (req, res) => {
   const gigData = req.body;
   const freelancerId = req.user._id;
-  
+
+  const gate = await checkSkillGate(freelancerId, gigData.skills, gigData.category);
+  if (!gate.allowed) {
+    return sendError(res, {
+      statusCode: 403,
+      message: 'You need to pass the skill test for this gig’s skills before you can publish it. Verify at least one of the required skills to continue.',
+      errors: {
+        skillTestRequired: true,
+        requiredSkills: gigData.skills || [],
+        category: gigData.category || '',
+        verifiedSkills: gate.verifiedSkills,
+      },
+    });
+  }
+
   const gig = new Gig({
     ...gigData,
     freelancerId
   });
-  
+
   await gig.save();
   sendCreated(res, 'Gig created successfully', { gig });
 });
@@ -28,12 +47,25 @@ const createGig = asyncHandler(async (req, res) => {
 const updateGig = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
-  
+
   const gig = await Gig.findOne({ _id: id, freelancerId: req.user._id });
   if (!gig) {
     throw new NotFoundError('Gig not found or unauthorized');
   }
-  
+
+  // Skill-gate edits too — otherwise a freelancer could create a gig with a
+  // verified skill, then edit in unverified skills/category, defeating the gate.
+  const nextSkills = updates.skills !== undefined ? updates.skills : gig.skills;
+  const nextCategory = updates.category !== undefined ? updates.category : gig.category;
+  const gate = await checkSkillGate(req.user._id, nextSkills, nextCategory);
+  if (!gate.allowed) {
+    return sendError(res, {
+      statusCode: 403,
+      message: 'You need to pass the skill test for this gig’s skills before saving these changes.',
+      errors: { skillTestRequired: true, requiredSkills: nextSkills || [], category: nextCategory || '', verifiedSkills: gate.verifiedSkills },
+    });
+  }
+
   Object.assign(gig, updates);
   await gig.save();
   
@@ -102,6 +134,57 @@ const getGigById = asyncHandler(async (req, res) => {
   Gig.updateOne({ _id: id }, { $inc: { 'stats.views': 1 } }).catch(() => {});
 
   sendSuccess(res, { message: 'Gig retrieved', data: { gig } });
+});
+
+/**
+ * Order a gig (client buys a pricing tier).
+ * Creates a Job linked to the gig (source='gig') that enters the SAME escrow +
+ * delivery lifecycle as a hired project: hiredFreelancer = the gig owner,
+ * clientId = the buyer, status = in-progress, budget = the chosen tier price.
+ * The client then funds the 50% deposit via the existing payment flow.
+ */
+const createGigOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { tier = 'basic' } = req.body;
+
+  if (!['basic', 'standard', 'premium'].includes(tier)) {
+    throw new BadRequestError('Invalid pricing tier');
+  }
+
+  const gig = await Gig.findById(id);
+  if (!gig) throw new NotFoundError('Gig not found');
+  if (gig.status !== 'active') throw new BadRequestError('This gig is not available for ordering');
+  if (String(gig.freelancerId) === String(req.user._id)) {
+    throw new ForbiddenError('You cannot order your own gig');
+  }
+
+  const tierData = gig.pricing?.[tier];
+  const price = Number(tierData?.price);
+  if (!price || price <= 0) {
+    throw new BadRequestError(`The "${tier}" package isn’t available for this gig`);
+  }
+
+  // Create the work item (a Job) representing this order.
+  const order = await Job.create({
+    title: `${gig.title} — ${tier.charAt(0).toUpperCase() + tier.slice(1)} package`,
+    description: gig.fullDescription || gig.shortDescription || gig.title,
+    clientId: req.user._id,
+    hiredFreelancer: gig.freelancerId,
+    budget: { min: price, max: price, type: 'fixed' },
+    skills: Array.isArray(gig.skills) ? gig.skills : [],
+    category: gig.category,
+    subcategory: gig.subcategory,
+    duration: tierData.deliveryTime || '',
+    status: 'in-progress',
+    source: 'gig',
+    gigId: gig._id,
+    gigTier: tier,
+  });
+
+  // Notify the freelancer (gig owner) of the new order.
+  notifications.onGigOrdered(gig.freelancerId, { job: order, gigId: gig._id });
+
+  sendCreated(res, 'Gig ordered successfully. Fund the deposit to start the work.', { order });
 });
 
 /**
@@ -180,6 +263,7 @@ module.exports = {
   updateGig,
   listGigs,
   getGigById,
+  createGigOrder,
   listMyGigs,
   deleteGig,
   toggleStatus,
