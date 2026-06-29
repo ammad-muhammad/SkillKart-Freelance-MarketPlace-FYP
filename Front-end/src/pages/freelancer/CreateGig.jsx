@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
-import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
+import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import Stepper from './components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
-import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
+import { aiAPI } from '../../api/ai';
 import './FreelancerDashboard.css';
 import './CreateGig.css';
 
@@ -13,12 +13,10 @@ const STEPS = ['Basic Info', 'Pricing', 'Description', 'Media', 'Publish'];
 
 // Canonical platform taxonomy so gigs save with countable category names.
 const CATEGORIES = JOB_CATEGORIES;
-const SUBCATEGORIES = GIG_SUBCATEGORIES;
 
 const EMPTY_GIG = {
   title: '',
   category: CATEGORIES[0],
-  subcategory: SUBCATEGORIES[CATEGORIES[0]][0],
   skills: [],
   shortDescription: '',
   pricing: {
@@ -34,7 +32,7 @@ const EMPTY_GIG = {
 
 /* ──────────────────────── STEP COMPONENTS ──────────────────────── */
 
-const Step1 = ({ gig, set }) => (
+const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills }) => (
   <div className="fl-step-body">
     <h2 className="fl-step-body__title">Step 1: Basic Information</h2>
 
@@ -50,44 +48,28 @@ const Step1 = ({ gig, set }) => (
       <span className="fl-char-count">{gig.title.length}/80</span>
     </div>
 
-    {/* AI suggest & fill — infers category + skills from the title/description */}
-    <AiSuggestFill
-      label="Suggest category & skills (AI)"
-      getContext={() => ({
-        title: gig.title,
-        description: [gig.shortDescription, gig.fullDescription].filter(Boolean).join('\n'),
-        skills: gig.skills,
-      })}
-      allowedCategories={CATEGORIES}
-      existingSkills={gig.skills}
-      onCategory={(cat) => set('category', cat, cat)}
-      onSkills={(newSkills) => set('skills', Array.from(new Set([...gig.skills, ...newSkills])))}
-    />
 
-    <div className="fl-form-grid" style={{ marginBottom: '1.25rem', marginTop: '0.75rem' }}>
-      <div className="fl-form-group">
-        <label className="fl-label">Category *</label>
-        <ComboSelect
-          options={CATEGORIES}
-          value={gig.category}
-          onChange={(val) => set('category', val, val)}
-          placeholder="Type to search categories…"
-        />
-      </div>
-      <div className="fl-form-group">
-        <label className="fl-label">Subcategory</label>
-        <ComboSelect
-          options={SUBCATEGORIES[gig.category] || ['Other']}
-          value={gig.subcategory}
-          onChange={(val) => set('subcategory', val)}
-          placeholder="Type to search subcategories…"
-        />
-      </div>
+
+    <div className="fl-form-group full" style={{ marginBottom: '1.25rem', marginTop: '0.75rem' }}>
+      <label className="fl-label">Category * {validatingCategory && <span style={{fontSize: '0.8rem', color: 'var(--color-primary)'}}>(Validating by AI...)</span>}</label>
+      <ComboSelect
+        options={CATEGORIES}
+        value={gig.category}
+        onChange={onCategoryChange}
+        placeholder="Type to search categories or enter a new one…"
+        allowFreeText={true}
+        disabled={validatingCategory}
+      />
     </div>
 
     <div className="fl-form-group full" style={{ marginBottom: '1.25rem' }}>
-      <label className="fl-label">Required Skills (press Enter)</label>
-      <TagInput tags={gig.skills} onChange={(val) => set('skills', val)} placeholder="e.g. React, Node.js..." />
+      <label className="fl-label">Required Skills</label>
+      <TagInput 
+        tags={gig.skills} 
+        onChange={(val) => set('skills', val)} 
+        options={passedSkills}
+        placeholder={passedSkills.length ? "Search your verified skills..." : "Pass skill tests to add skills!"} 
+      />
     </div>
 
     <div className="fl-form-group full">
@@ -388,7 +370,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
           <span>Title:</span> <strong>{gig.title || '—'}</strong>
         </div>
         <div className="fl-review-row">
-          <span>Category:</span> <strong>{gig.category} › {gig.subcategory}</strong>
+          <span>Category:</span> <strong>{gig.category}</strong>
         </div>
         <div className="fl-review-row">
           <span>Skills:</span>
@@ -462,19 +444,47 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
 /* ──────────────────────── MAIN WIZARD ──────────────────────── */
 
 const CreateGig = () => {
-  const { addGig, showToast } = useFreelancer();
+  const { addGig, showToast, profile } = useFreelancer();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [gig, setGig] = useState(EMPTY_GIG);
   const [publishing, setPublishing] = useState(false);
+  const [validatingCategory, setValidatingCategory] = useState(false);
 
-  const set = (key, value, resetSub) => {
-    setGig((prev) => {
-      const next = { ...prev, [key]: value };
-      if (resetSub && key === 'category') {
-        next.subcategory = (SUBCATEGORIES[value] || ['Other'])[0];
+  // Only allow skills the freelancer has passed tests for (isVerified === true)
+  const passedSkills = useMemo(() => {
+    return profile?.verifiedSkills
+      ?.filter(s => s.isVerified)
+      ?.map(s => s.name) || [];
+  }, [profile]);
+
+  const handleCategoryChange = async (val) => {
+    if (CATEGORIES.includes(val)) {
+      set('category', val);
+      return;
+    }
+    
+    setValidatingCategory(true);
+    showToast('Checking category relevance...', 'info');
+    try {
+      const res = await aiAPI.validateSkill(val);
+      if (res.data?.data?.valid) {
+        set('category', res.data.data.skill);
+        showToast('Valid category added!', 'success');
+      } else {
+        const msg = res.data?.data?.message || 'Invalid category';
+        showToast(`The category should be related to digital work. AI says: ${msg}`, 'error');
       }
-      return next;
+    } catch (err) {
+      showToast('Validation failed. Please select from the dropdown.', 'error');
+    } finally {
+      setValidatingCategory(false);
+    }
+  };
+
+  const set = (key, value) => {
+    setGig((prev) => {
+      return { ...prev, [key]: value };
     });
   };
 
@@ -551,7 +561,7 @@ const CreateGig = () => {
       <Stepper steps={STEPS} current={step} />
 
       <div className="fl-card fl-create-gig-card">
-        {step === 0 && <Step1 gig={gig} set={set} />}
+        {step === 0 && <Step1 gig={gig} set={set} onCategoryChange={handleCategoryChange} validatingCategory={validatingCategory} passedSkills={passedSkills} />}
         {step === 1 && <Step2 gig={gig} set={set} />}
         {step === 2 && <Step3 gig={gig} set={set} />}
         {step === 3 && <Step4 gig={gig} set={set} />}

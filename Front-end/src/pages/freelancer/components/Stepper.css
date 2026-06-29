@@ -42,8 +42,8 @@
 }
 
 .fl-step--done .fl-step__circle {
-  border-color: #10b981;
-  background: #10b981;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -57,7 +57,7 @@
 }
 
 .fl-step--active .fl-step__label { color: var(--color-primary); }
-.fl-step--done .fl-step__label { color: #10b981; }
+.fl-step--done .fl-step__label { color: var(--color-primary); }
 
 .fl-step__line {
   position: absolute;
@@ -69,7 +69,7 @@
   z-index: 0;
 }
 
-.fl-step__line--done { background: #10b981; }
+.fl-step__line--done { background: var(--color-primary); }
 
 @media (max-width: 600px) {
   .fl-step__label { font-size: 0.65rem; }

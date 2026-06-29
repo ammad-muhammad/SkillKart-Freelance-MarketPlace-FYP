@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
+import { useClient } from '../../context/ClientContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare } from 'lucide-react';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './ClientDashboard.css';
 
 const ClientMessages = () => {
   const { user } = useAuth();
+  const { showToast } = useClient();
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -63,7 +66,7 @@ const ClientMessages = () => {
     }
   };
 
-  const sendMessage = async (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!msgInput.trim() || !activeChat) return;
 
@@ -73,7 +76,7 @@ const ClientMessages = () => {
       setMsgInput('');
       fetchMessages(activeChat._id);
     } catch (err) {
-      console.error('Failed to send message:', err);
+      showToast(err.response?.data?.message || 'Failed to send message', 'error');
     }
   };
 
@@ -87,7 +90,7 @@ const ClientMessages = () => {
       allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf',
         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     });
-    if (!check.valid) { alert(check.error); return; }
+    if (!check.valid) { showToast(check.error, 'error'); return; }
 
     const recipient = activeChat.participants.find(p => p._id !== user._id);
     setUploading(true);
@@ -96,8 +99,7 @@ const ClientMessages = () => {
       await messagesAPI.sendMessage(recipient._id, att.name, [att]);
       fetchMessages(activeChat._id);
     } catch (err) {
-      console.error('Attachment failed:', err);
-      alert('Could not send attachment. Please try again.');
+      showToast(err.response?.data?.message || 'Could not send attachment. Please try again.', 'error');
     } finally {
       setUploading(false);
     }
@@ -181,6 +183,8 @@ const ClientMessages = () => {
               <header className="cl-chat-window__header">
                 {(() => {
                   const otherUser = activeChat.participants.find(p => p._id !== user._id);
+                  const isOnline = otherUser?.lastActive && (new Date() - new Date(otherUser.lastActive) < 5 * 60 * 1000);
+
                   return (
                     <>
                       <div className="cl-chat-window__avatar">
@@ -189,18 +193,17 @@ const ClientMessages = () => {
                         ) : (
                           <span>{otherUser?.firstName?.charAt(0)}</span>
                         )}
+                        {isOnline && <div className="cl-chat-status-dot active"></div>}
                       </div>
                       <div>
                         <h4 className="cl-chat-window__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
-                        <span className="cl-chat-window__status">Active</span>
+                        <span className="cl-chat-window__status">
+                          {isOnline ? 'Active' : 'Offline'}
+                        </span>
                       </div>
                     </>
                   );
                 })()}
-                <div className="cl-chat-window__actions">
-                  <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled title="Voice calls coming soon" style={{ opacity: 0.45, cursor: 'not-allowed' }}>📞</button>
-                  <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled title="Video calls coming soon" style={{ opacity: 0.45, cursor: 'not-allowed' }}>🎥</button>
-                </div>
               </header>
 
               {/* Messages Feed */}
@@ -235,7 +238,7 @@ const ClientMessages = () => {
               </div>
 
               {/* Message Input */}
-              <form className="cl-chat-input" onSubmit={sendMessage}>
+              <form className="cl-chat-input" onSubmit={handleSendMessage}>
                 <input
                   type="file"
                   ref={fileRef}
@@ -263,9 +266,12 @@ const ClientMessages = () => {
               </form>
             </>
           ) : (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-              <MessageSquare size={48} style={{ marginBottom: '1rem' }} />
-              <p>Select a conversation to start chatting</p>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+              <EmptyState 
+                icon={MessageSquare}
+                title="Your Messages"
+                message="Select a conversation from the sidebar to start chatting."
+              />
             </div>
           )}
         </main>
@@ -323,14 +329,24 @@ const ClientMessages = () => {
         
         .cl-chat-window { flex: 1; display: flex; flex-direction: column; background: #fff; }
         .cl-chat-window__header { padding: 0.75rem 1.25rem; border-bottom: 1px solid #e5edf5; display: flex; align-items: center; gap: 0.85rem; }
-        .cl-chat-window__avatar {
-          width: 36px; height: 36px; border-radius: 50%;
-          background: var(--gradient-primary); color: #fff;
-          display: flex; align-items: center; justify-content: center;
-          font-weight: 700; position: relative;
-          overflow: hidden;
+        .cl-chat-window__avatar { 
+          width: 45px; height: 45px; border-radius: 50%; background: #e5edf5; 
+          display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary);
+          position: relative;
         }
-        .cl-chat-window__avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .cl-chat-window__avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        
+        .cl-chat-status-dot {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 12px;
+          height: 12px;
+          background-color: #94a3b8;
+          border: 2px solid #fff;
+          border-radius: 50%;
+        }
+        .cl-chat-status-dot.active { background-color: #22c55e; }
         .cl-chat-window__online {
           position: absolute; bottom: 0; right: -2px; width: 8px; height: 8px;
           border-radius: 50%; background: #22c55e; border: 2px solid #fff;

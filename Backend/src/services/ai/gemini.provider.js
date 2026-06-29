@@ -197,32 +197,29 @@ Output ONLY a JSON object:
     }
 
     const prompt = `
-You are a professional skills classifier for SkillKart, a digital freelancing platform.
-Your task is to validate if a given string is a valid DIGITAL or PROFESSIONAL skill relevant to online freelancing.
+You are a STRICT skills classifier for SkillKart, a digital freelancing platform.
+Validate if the input is a valid DIGITAL or PROFESSIONAL skill relevant to online freelancing.
 
-Allowed Categories: Software/Web/Mobile Development, UI/UX Design, Graphic Design, Video Editing, Content Writing, SEO, Digital Marketing, Data Science, AI/ML, Cybersecurity, Cloud/DevOps, Business/Virtual Assistance, No-Code/Automation, Finance/Accounting, Professional online services.
-
-Strict Rejection Rules:
-- Reject HOBBIES (e.g., Cooking, Traveling).
-- Reject SPORTS/PHYSICAL ACTIVITIES (e.g., Cricket, Football, Swimming, Skating).
-- Reject ENTERTAINMENT-ONLY skills (e.g., Dancing, Magic tricks).
-- Reject UNRELATED REAL-WORLD activities (e.g., Driving).
+CRITICAL REJECTION RULES - YOU MUST RETURN {"valid": false} FOR:
+1. ANY NSFW, Adult content, Pornography, or sexually explicit services.
+2. ANY OFFLINE or PHYSICAL TASKS (e.g., Mobile Repairing, Plumbing, Delivery, Cleaning, Carpentry).
+3. HOBBIES, SPORTS, PHYSICAL ACTIVITIES (e.g., Cooking, Traveling, Cricket, Swimming).
+4. ENTERTAINMENT-ONLY skills (e.g., Dancing, Magic tricks).
+5. UNRELATED REAL-WORLD activities (e.g., Driving).
 
 Input: "${input}"
 
-Rules:
-1. Determine if it's a valid professional/digital skill. 
-2. If it's a common typo or variation (e.g., "reactjs"), normalize it (e.g., "React.js").
-3. If it's valid, provide 3 related professional skill suggestions.
-4. If it's invalid (non-digital, hobby, sport, or garbage), set "valid": false, explain why in "message", and suggest 3 common professional digital skills.
+EXCEPTIONS:
+- YOU MUST ALLOW creative freelance skills that can be delivered digitally (e.g., Photography, Photo Editing, Video Editing, Illustration).
 
-Output ONLY valid JSON:
-{
-  "valid": boolean,
-  "skill": "Normalized Name or Original if no normalization needed",
-  "suggestions": ["Skill 1", "Skill 2", "Skill 3"],
-  "message": "Reason if invalid (e.g. 'SkillKart only accepts professional digital/tech skills. This appears to be a hobby or physical activity.'), otherwise null"
-}
+Instructions:
+If the input violates ANY of the CRITICAL REJECTION RULES above, YOU MUST output:
+{ "valid": false, "skill": "${input}", "message": "Reason why it is rejected based on the rules.", "suggestions": ["Digital Skill 1", "Digital Skill 2", "Digital Skill 3"] }
+
+If the input IS a valid, digital, professional skill (like Web Development, Graphic Design, Content Writing):
+{ "valid": true, "skill": "Normalized Name", "message": null, "suggestions": ["Related 1", "Related 2", "Related 3"] }
+
+Output ONLY valid JSON.
 `;
 
     try {
@@ -231,10 +228,48 @@ Output ONLY valid JSON:
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
-      return JSON.parse(response.text);
+      const result = JSON.parse(response.text);
+      return {
+        valid: result.valid || false,
+        skill: result.skill || input,
+        suggestions: result.suggestions || [],
+        message: result.message || ''
+      };
     } catch (error) {
       console.error("Gemini Skill Validation Error:", error);
-      throw new Error('Failed to validate skill with AI');
+      throw error;
+    }
+  }
+
+  async expandSearchSkills(query) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+
+    const prompt = `
+You are a skills expansion assistant for a digital freelancing platform.
+The user is searching for freelancers using a broad term like "${query}".
+Return a JSON array of 5 to 8 specific, actionable technical skills associated with this category.
+For example, if the query is "Web Development", you might return ["JavaScript", "React", "HTML", "CSS", "Node.js"].
+If the query is already a highly specific skill, return an array with just that skill and a few closely related ones.
+
+Output ONLY a JSON array of strings:
+["Skill 1", "Skill 2", "Skill 3"]
+`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      const parsed = JSON.parse(response.text);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed.skills && Array.isArray(parsed.skills)) return parsed.skills;
+      return [];
+    } catch (error) {
+      console.error("Gemini Skill Expansion Error:", error);
+      return [];
     }
   }
 

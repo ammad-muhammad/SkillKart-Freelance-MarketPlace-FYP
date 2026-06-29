@@ -2,6 +2,7 @@ import client from './client';
 
 export const freelancersAPI = {
   search: (params) => client.get('/freelancers/search', { params }),
+  getLocations: () => client.get('/freelancers/locations'),
   getById: (id) => client.get(`/freelancers/${id}`),
   getProfile: () => client.get('/freelancers/profile/me'),
   checkUsername: (username) =>

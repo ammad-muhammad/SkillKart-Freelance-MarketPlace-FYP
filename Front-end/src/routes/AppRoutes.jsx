@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import ProtectedRoute from '../hooks/ProtectedRoute';
 import { ClientProvider } from '../context/ClientContext';
 import { FreelancerProvider } from '../context/FreelancerContext';
+import ErrorBoundary from '../Components/common/ErrorBoundary/ErrorBoundary';
 
 // Layouts
 import PublicLayout from "../layouts/PublicLayout";
@@ -81,8 +82,9 @@ const NotFound = () => <h1>404 – Page Not Found</h1>;
 
 const AppRoutes = () => {
   return (
-    <ClientProvider>
-      <FreelancerProvider>
+    <ErrorBoundary>
+      <ClientProvider>
+        <FreelancerProvider>
         <Routes>
 
           {/* ================= PUBLIC ROUTES ================= */}
@@ -207,6 +209,7 @@ const AppRoutes = () => {
         </Routes>
       </FreelancerProvider>
     </ClientProvider >
+    </ErrorBoundary>
   );
 };
 

@@ -1,17 +1,49 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { paymentsAPI } from '../../api/payments';
 import { Wallet, DollarSign, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './ClientDashboard.css';
 
 export default function ClientWallet() {
   const { profile, loading: profileLoading } = useClient();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [depositModal, setDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositing, setDepositing] = useState(false);
   const [walletBalance, setWalletBalance] = useState(profile?.walletBalance || 0);
+  const depositConfirmed = useRef(false);
+
+  // Sync with context profile when it loads/updates
+  useEffect(() => {
+    if (profile && profile.walletBalance !== undefined) {
+      setWalletBalance(profile.walletBalance);
+    }
+  }, [profile?.walletBalance]);
+
+  useEffect(() => {
+    // Process Stripe session return if present
+    const sessionId = searchParams.get('session_id');
+    if (sessionId && !depositConfirmed.current) {
+      depositConfirmed.current = true;
+      setLoading(true);
+      paymentsAPI.depositFunds(sessionId)
+        .then(({ data }) => {
+          setWalletBalance(data?.data?.walletBalance || 0);
+          alert('Wallet successfully funded!');
+          navigate('/client/wallet', { replace: true });
+        })
+        .catch(err => {
+          alert('Failed to verify wallet deposit: ' + (err.response?.data?.message || err.message));
+          navigate('/client/wallet', { replace: true });
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [searchParams, navigate]);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -40,14 +72,16 @@ export default function ClientWallet() {
     if (!depositAmount || Number(depositAmount) <= 0) return;
     setDepositing(true);
     try {
-      const { data } = await paymentsAPI.depositFunds(depositAmount);
-      setWalletBalance(data?.data?.walletBalance || 0);
-      alert(`Successfully simulated adding $${depositAmount} to your wallet.`);
-      setDepositAmount('');
-      setDepositModal(false);
+      const { data } = await paymentsAPI.startWalletDeposit(depositAmount);
+      const url = data?.data?.checkoutUrl;
+      if (url) {
+        window.location.assign(url);
+        return;
+      }
+      alert('Failed to get checkout URL');
+      setDepositing(false);
     } catch (err) {
-      alert('Failed to deposit funds: ' + (err.response?.data?.message || err.message));
-    } finally {
+      alert('Failed to initiate checkout: ' + (err.response?.data?.message || err.message));
       setDepositing(false);
     }
   };
@@ -89,11 +123,15 @@ export default function ClientWallet() {
         <div className="cl-card__header">
           <h2 className="cl-card__title">Transaction History</h2>
         </div>
-        <div className="cl-card__body" style={{ padding: '0' }}>
+        <div className="cl-card__body" style={{ padding: payments.length === 0 ? '2rem' : '0' }}>
           {payments.length === 0 ? (
-            <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748b' }}>
-              No transactions found.
-            </div>
+            <EmptyState 
+              icon={DollarSign}
+              title="No Transactions Yet"
+              message="Your payment history will appear here once you deposit funds or pay freelancers."
+              actionText="Add Funds"
+              actionClick={() => setDepositModal(true)}
+            />
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -113,10 +151,10 @@ export default function ClientWallet() {
                         {new Date(payment.createdAt).toLocaleDateString()}
                       </td>
                       <td style={{ padding: '1rem', fontWeight: '500' }}>
-                        {payment.jobId?.title || 'Unknown Project'}
+                        {payment.type === 'wallet_deposit' ? 'Wallet Deposit' : (payment.jobId?.title || 'Unknown Project')}
                       </td>
                       <td style={{ padding: '1rem', color: '#475569' }}>
-                        {payment.freelancerId?.firstName} {payment.freelancerId?.lastName}
+                        {payment.type === 'wallet_deposit' ? 'Self' : (payment.freelancerId ? `${payment.freelancerId.firstName} ${payment.freelancerId.lastName}` : 'N/A')}
                       </td>
                       <td style={{ padding: '1rem', fontWeight: '600' }}>
                         ${payment.totalAmount?.toLocaleString()}
@@ -164,7 +202,7 @@ export default function ClientWallet() {
                 />
               </div>
               <p style={{ fontSize: '0.85rem', color: 'var(--color-text-light)', marginTop: '1rem' }}>
-                Note: In this demo environment, adding funds is simulated. Projects currently use direct-to-escrow payments via Stripe Checkout instead of a pre-funded wallet balance.
+                Note: You will be redirected to our secure Stripe Checkout to complete this transaction.
               </p>
             </div>
             <div className="cl-modal__footer">
@@ -174,7 +212,7 @@ export default function ClientWallet() {
                 disabled={!depositAmount || Number(depositAmount) <= 0 || depositing}
                 onClick={handleDeposit}
               >
-                {depositing ? 'Processing...' : 'Simulate Deposit'}
+                {depositing ? 'Redirecting...' : 'Proceed to Checkout'}
               </button>
             </div>
           </div>

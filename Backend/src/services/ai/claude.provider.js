@@ -194,6 +194,8 @@ Output ONLY a JSON object. Do not output anything else.
       Allowed Categories: Software/Web/Mobile Development, UI/UX Design, Graphic Design, Video Editing, Content Writing, SEO, Digital Marketing, Data Science, AI/ML, Cybersecurity, Cloud/DevOps, Business/Virtual Assistance, No-Code/Automation, Finance/Accounting, Professional online services.
 
       Strict Rejection Rules:
+      - Reject NSFW/ADULT CONTENT (e.g., Pornography, Adult services).
+      - Reject OFFLINE/PHYSICAL TASKS (e.g., Mobile Repairing, Plumbing, Delivery, Cleaning, Carpentry).
       - Reject HOBBIES (e.g., Cooking, Traveling).
       - Reject SPORTS/PHYSICAL ACTIVITIES (e.g., Cricket, Football, Swimming, Skating).
       - Reject ENTERTAINMENT-ONLY skills (e.g., Dancing, Magic tricks).
@@ -201,10 +203,13 @@ Output ONLY a JSON object. Do not output anything else.
 
       Input: "${input}"
       
+      EXCEPTIONS:
+      - YOU MUST ALLOW creative freelance skills that can be delivered digitally (e.g., Photography, Photo Editing, Video Editing, Illustration).
+
       Tasks:
-      1. Determine if it's a valid professional/digital skill.
+      1. Determine if it's a valid professional/digital skill. IF IT IS A PHYSICAL OR OFFLINE TASK (like mobile repair, cleaning, delivery), IT IS STRICTLY INVALID.
       2. If it's a variation (e.g., "reactjs"), normalize it to the standard professional name (e.g., "React.js").
-      3. If it's invalid (non-digital, hobby, sport, or garbage), mark as valid: false and provide a reason.
+      3. If it's invalid (violates ANY Strict Rejection Rules like offline task, hobby, sport, nsfw, or garbage), mark as valid: false and provide a reason.
       4. Provide a list of 3-5 closely related professional digital skills as suggestions.
 
       Output ONLY valid JSON. Do not output anything else.

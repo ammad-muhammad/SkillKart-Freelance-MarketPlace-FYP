@@ -17,6 +17,11 @@ const TYPES = {
   PAYMENT_RELEASED: 'payment_released',
   PROJECT_COMPLETED: 'project_completed',
   NEW_MESSAGE: 'new_message',
+  WITHDRAWAL_REQUESTED: 'withdrawal_requested',
+  WITHDRAWAL_COMPLETED: 'withdrawal_completed',
+  ESCROW_REFUNDED: 'escrow_refunded',
+  REVIEW_SUBMITTED: 'review_submitted',
+  JOB_CANCELLED: 'job_cancelled',
 };
 
 /**
@@ -112,6 +117,44 @@ const onNewMessage = (recipientId, { senderName, role }) => notify(recipientId, 
   link: role === 'freelancer' ? '/freelancer/messages' : '/client/messages',
 });
 
+const onWithdrawalRequested = (freelancerId, { amount, method }) => notify(freelancerId, {
+  type: TYPES.WITHDRAWAL_REQUESTED,
+  title: 'Withdrawal Requested',
+  message: `Your request to withdraw $${amount} via ${method} has been received and is pending processing.`,
+  link: '/freelancer/wallet',
+});
+
+const onWithdrawalCompleted = (freelancerId, { amount }) => notify(freelancerId, {
+  type: TYPES.WITHDRAWAL_COMPLETED,
+  title: 'Withdrawal Completed 💸',
+  message: `Your withdrawal of $${amount} has been successfully processed.`,
+  link: '/freelancer/wallet',
+});
+
+const onEscrowRefunded = (clientId, { amount, job }) => notify(clientId, {
+  type: TYPES.ESCROW_REFUNDED,
+  title: 'Escrow Refunded',
+  message: `$${amount} has been refunded to your wallet for the cancelled project "${job?.title}".`,
+  link: '/client/wallet',
+  jobId: job?._id,
+});
+
+const onReviewSubmitted = (recipientId, { reviewerName, job }) => notify(recipientId, {
+  type: TYPES.REVIEW_SUBMITTED,
+  title: 'New Review!',
+  message: `${reviewerName} just left you a review for "${job?.title}".`,
+  link: '/profile',
+  jobId: job?._id,
+});
+
+const onJobCancelled = (userId, { job }) => notify(userId, {
+  type: TYPES.JOB_CANCELLED,
+  title: 'Project Cancelled',
+  message: `The project "${job?.title}" has been cancelled.`,
+  link: '/messages',
+  jobId: job?._id,
+});
+
 module.exports = {
   TYPES,
   notify,
@@ -124,4 +167,9 @@ module.exports = {
   onRevisionRequested,
   onPaymentReleased,
   onNewMessage,
+  onWithdrawalRequested,
+  onWithdrawalCompleted,
+  onEscrowRefunded,
+  onReviewSubmitted,
+  onJobCancelled,
 };

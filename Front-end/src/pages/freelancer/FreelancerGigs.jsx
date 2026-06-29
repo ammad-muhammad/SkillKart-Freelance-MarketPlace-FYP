@@ -579,68 +579,93 @@ const FreelancerGigs = () => {
         }
         
         .fl-gig-card {
-          background: #fff; border-radius: 16px; overflow: hidden;
-          border: 1px solid rgba(183,201,226,0.35);
-          box-shadow: 0 2px 12px rgba(4,46,76,0.07);
-          transition: transform 0.2s, box-shadow 0.2s;
-          display: flex; flex-direction: column;
+          background: var(--color-bg);
+          border-radius: var(--radius-xl);
+          overflow: hidden;
+          border: 1px solid var(--color-secondary);
+          box-shadow: var(--shadow-md);
+          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+          display: flex;
+          flex-direction: column;
+          position: relative;
         }
-        .fl-gig-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(4,46,76,0.14); }
+        .fl-gig-card:hover { 
+          transform: translateY(-6px); 
+          box-shadow: var(--shadow-lg); 
+          border-color: var(--color-accent);
+        }
         
         .fl-gig-card__banner {
-          height: 160px; background: var(--gradient-primary);
-          position: relative; overflow: hidden;
+          height: 160px; 
+          background: var(--gradient-primary);
+          position: relative; 
+          overflow: hidden;
         }
-        .fl-gig-card__banner img { width: 100%; height: 100%; object-fit: cover; }
+        .fl-gig-card__banner img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .fl-gig-card:hover .fl-gig-card__banner img { transform: scale(1.08); }
         .fl-gig-card__placeholder {
           width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
           font-size: 3.5rem; opacity: 0.5;
         }
         
-        .fl-gig-card__badges { position: absolute; top: 0.75rem; right: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+        .fl-gig-card__badges { position: absolute; top: 1rem; right: 1rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 2; }
+        .fl-badge { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .fl-gig-card__stats-overlay {
-          position: absolute; bottom: 0.75rem; left: 0.75rem; right: 0.75rem;
-          display: flex; justify-content: space-between; pointer-events: none;
+          position: absolute; bottom: 1rem; left: 1rem; right: 1rem;
+          display: flex; justify-content: space-between; pointer-events: none; z-index: 2;
         }
         .fl-stat-chip {
           background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
-          padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: var(--color-primary);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          padding: 0.2rem 0.5rem; border-radius: var(--radius-md); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--color-primary);
+          box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 0.2rem;
         }
         
-        .fl-gig-card__body { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; }
-        .fl-gig-card__category { font-size: 0.7rem; font-weight: 800; color: var(--color-text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
-        .fl-gig-card__title {
-          font-family: var(--font-heading); font-size: 1rem; font-weight: 700;
-          color: var(--color-primary); margin-bottom: 0.5rem;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        .fl-gig-card__body { padding: var(--space-5); flex-grow: 1; display: flex; flex-direction: column; }
+        .fl-gig-card__category { 
+          font-size: 0.65rem; font-weight: var(--fw-bold); color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em; 
+          margin-bottom: var(--space-2);
         }
+        .fl-gig-card__title {
+          font-family: var(--font-heading); font-size: var(--fs-md); font-weight: var(--fw-bold);
+          color: var(--color-primary-dark); margin-bottom: var(--space-2); line-height: var(--lh-snug);
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+          transition: color 0.2s;
+        }
+        .fl-gig-card:hover .fl-gig-card__title { color: var(--color-primary-light); }
         .fl-gig-card__desc {
-          font-size: 0.85rem; color: var(--color-text-mid); margin-bottom: 0.5rem; 
+          font-size: var(--fs-sm); color: var(--color-text-mid); margin-bottom: var(--space-3); line-height: var(--lh-normal);
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
         .fl-gig-card__full-desc-preview {
-          font-size: 0.75rem; color: var(--color-text-light); font-style: italic;
-          margin-bottom: 0.75rem; line-height: 1.4; flex-grow: 1;
+          display: none;
         }
         
-        .fl-gig-card__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1rem; }
+        .fl-gig-card__tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: var(--space-4); }
+        .fl-gig-card__tags .fl-tag { 
+          font-size: var(--fs-xs); 
+          padding: 0.25rem 0.6rem; 
+          border-radius: var(--radius-xl); 
+          background: var(--color-primary); 
+          color: var(--color-white); 
+          font-weight: var(--fw-bold);
+        }
         
         .fl-gig-card__pricing-tiers {
           display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
-          margin-bottom: 1.25rem; background: #f8fafc; padding: 0.75rem; border-radius: 12px;
+          margin-bottom: var(--space-4); background: var(--color-secondary); 
+          padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--color-accent);
         }
-        .fl-tier-preview { text-align: center; display: flex; flex-direction: column; gap: 0.15rem; }
-        .fl-tier-preview span { font-size: 0.6rem; color: var(--color-text-light); text-transform: uppercase; font-weight: 700; }
-        .fl-tier-preview strong { font-size: 0.9rem; color: var(--color-primary); }
+        .fl-tier-preview { text-align: center; display: flex; flex-direction: column; gap: 0.2rem; }
+        .fl-tier-preview span { font-size: 0.65rem; color: var(--color-text-mid); text-transform: uppercase; font-weight: var(--fw-bold); letter-spacing: 0.05em; }
+        .fl-tier-preview strong { font-size: var(--fs-md); color: var(--color-primary-dark); font-weight: var(--fw-bold); }
 
         .fl-gig-card__footer {
           display: flex; align-items: center; justify-content: space-between;
-          padding-top: 1rem; border-top: 1px solid #f1f5f9; margin-top: auto;
+          padding-top: var(--space-4); border-top: 1px solid var(--color-secondary); margin-top: auto;
         }
-        .fl-gig-card__orders { font-size: 0.75rem; color: var(--color-text-mid); }
-        .fl-gig-card__orders strong { color: var(--color-primary); font-weight: 700; }
-        .fl-gig-card__actions { display: flex; gap: 0.5rem; }
+        .fl-gig-card__orders { font-size: var(--fs-sm); color: var(--color-text-mid); display: flex; align-items: center; gap: 0.3rem; }
+        .fl-gig-card__orders strong { color: var(--color-primary-dark); font-weight: var(--fw-bold); font-size: var(--fs-md); }
+        .fl-gig-card__actions { display: flex; gap: var(--space-2); }
 
         /* Edit Form Styles */
         .fl-edit-form__scroll { max-height: 60vh; overflow-y: auto; padding-right: 0.75rem; }

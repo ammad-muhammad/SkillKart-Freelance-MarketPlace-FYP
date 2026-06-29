@@ -24,7 +24,10 @@ export const paymentsAPI = {
   // Get all transaction history for the logged-in user
   getHistory: () => client.get('/payments/history'),
 
-  // Simulated Wallet endpoints
-  depositFunds: (amount) => client.post('/payments/wallet/deposit', { amount }),
+  // Start a Stripe Checkout session to add funds to the wallet
+  startWalletDeposit: (amount) => client.post('/payments/wallet/checkout', { amount }),
+
+  // Confirm a wallet deposit
+  depositFunds: (sessionId) => client.post('/payments/wallet/deposit', { sessionId }),
   withdrawFunds: (amount, method) => client.post('/payments/wallet/withdraw', { amount, method })
 };

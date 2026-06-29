@@ -441,6 +441,7 @@
     overflow-y: auto;
     box-shadow: var(--shadow-xl);
     animation: modalIn .3s cubic-bezier(.34, 1.56, .64, 1);
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 @keyframes modalIn {

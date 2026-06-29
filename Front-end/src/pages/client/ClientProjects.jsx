@@ -9,6 +9,8 @@ import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import { FolderOpen } from 'lucide-react';
 import './ClientDashboard.css';
 
 const STATUS_FILTERS = ['all', 'open', 'in-progress', 'delivered', 'completed', 'expired', 'closed'];
@@ -220,14 +222,13 @@ const ClientProjects = () => {
 
       {/* Project List */}
       {filtered.length === 0 ? (
-        <div className="cl-card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📁</div>
-          <h3 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>No Projects Yet</h3>
-          <p style={{ color: 'var(--color-text-light)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Post your first project and start finding talented freelancers.
-          </p>
-          <Link to="/client/projects/create" className="cl-btn cl-btn--primary">＋ Post a Project</Link>
-        </div>
+        <EmptyState 
+          icon={FolderOpen}
+          title={filter === 'all' ? "No Projects Yet" : `No ${filter} projects`}
+          message={filter === 'all' ? "Post your first project and start finding talented freelancers." : "You don't have any projects matching this status."}
+          actionText={filter === 'all' ? "＋ Post a Project" : null}
+          actionLink={filter === 'all' ? "/client/projects/create" : null}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filtered.map((proj) => (

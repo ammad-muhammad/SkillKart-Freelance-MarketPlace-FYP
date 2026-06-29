@@ -43,6 +43,18 @@ router.get('/search',
   freelancerController.searchFreelancers
 );
 
+/**
+ * @swagger
+ * /api/v1/freelancers/locations:
+ *   get:
+ *     summary: Get distinct locations
+ *     tags: [Freelancers]
+ *     responses:
+ *       200:
+ *         description: Locations retrieved
+ */
+router.get('/locations', freelancerController.getLocations);
+
 
 
 /**

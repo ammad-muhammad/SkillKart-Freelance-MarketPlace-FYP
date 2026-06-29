@@ -17,6 +17,12 @@ const createProposal = asyncHandler(async (req, res) => {
   const proposalData = req.body;
   const freelancerId = req.user._id;
 
+  // Prevent duplicate applications
+  const existingProposal = await Proposal.findOne({ jobId: proposalData.jobId, freelancerId });
+  if (existingProposal) {
+    throw new BadRequestError('You have already applied to this project.');
+  }
+
   // Need the job's required skills + category to gate the application.
   const job = await Job.findById(proposalData.jobId).select('skills category clientId title');
   if (!job) {
@@ -122,9 +128,21 @@ const listProposals = asyncHandler(async (req, res) => {
   if (status) query.status = status;
   if (freelancerId) query.freelancerId = freelancerId;
 
-  // Security: If freelancer, only show their own proposals unless jobId is specified (even then, usually not allowed)
+  // Security: If freelancer, only show their own proposals.
+  // If client, only show proposals for jobs they own.
   if (req.user.role === 'freelancer') {
     query.freelancerId = req.user._id;
+  } else if (req.user.role === 'client') {
+    const myJobs = await Job.find({ clientId: req.user._id }).select('_id');
+    const myJobIds = myJobs.map(j => String(j._id));
+    
+    if (jobId) {
+      if (!myJobIds.includes(String(jobId))) {
+        throw new ForbiddenError("You cannot view proposals for projects you don't own.");
+      }
+    } else {
+      query.jobId = { $in: myJobIds };
+    }
   }
   
   const total = await Proposal.countDocuments(query);
@@ -244,12 +262,15 @@ const withdrawProposal = asyncHandler(async (req, res) => {
 const deleteProposal = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const proposal = await Proposal.findById(id).select('freelancerId jobId');
+  const proposal = await Proposal.findById(id).select('freelancerId jobId status');
   if (!proposal) {
     throw new NotFoundError('Proposal not found');
   }
   if (String(proposal.freelancerId) !== String(req.user._id)) {
     throw new ForbiddenError('You can only delete your own proposals');
+  }
+  if (proposal.status === 'accepted') {
+    throw new BadRequestError('You cannot delete an accepted proposal. Contact the client to cancel the contract.');
   }
 
   // Keep the job's proposals array consistent.

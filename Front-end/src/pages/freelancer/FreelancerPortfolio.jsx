@@ -270,19 +270,21 @@ const FreelancerPortfolio = () => {
         }
 
         .fl-gig-card {
-          background: #fff;
-          border-radius: 24px;
+          background: var(--color-bg);
+          border-radius: var(--radius-xl);
           overflow: hidden;
-          border: 1px solid rgba(226, 232, 240, 0.7);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-          transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+          border: 1px solid var(--color-secondary);
+          box-shadow: var(--shadow-md);
+          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
           display: flex;
           flex-direction: column;
+          position: relative;
         }
 
         .fl-gig-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 16px 32px rgba(4, 46, 76, 0.1);
+          transform: translateY(-6px); 
+          box-shadow: var(--shadow-lg); 
+          border-color: var(--color-accent);
         }
 
         .fl-gig-card__banner {
@@ -368,32 +370,42 @@ const FreelancerPortfolio = () => {
         }
 
         .fl-gig-card__body {
-          padding: 1.5rem;
+          padding: var(--space-5);
           flex-grow: 1;
+          display: flex;
+          flex-direction: column;
         }
 
         .fl-gig-card__category {
           font-size: 0.65rem;
-          font-weight: 800;
+          font-weight: var(--fw-bold);
+          color: var(--color-primary);
           text-transform: uppercase;
-          color: #94a3b8;
           letter-spacing: 0.05em;
-          margin-bottom: 0.5rem;
+          margin-bottom: var(--space-2);
         }
 
         .fl-gig-card__title {
           font-family: var(--font-heading);
-          font-size: 1.15rem;
-          font-weight: 800;
-          color: var(--color-primary);
-          margin-bottom: 0.75rem;
-          line-height: 1.4;
+          font-size: var(--fs-md);
+          font-weight: var(--fw-bold);
+          color: var(--color-primary-dark);
+          margin-bottom: var(--space-2);
+          line-height: var(--lh-snug);
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          transition: color 0.2s;
         }
 
+        .fl-gig-card:hover .fl-gig-card__title { color: var(--color-primary-light); }
+
         .fl-gig-card__desc {
-          font-size: 0.85rem;
-          color: #64748b;
-          line-height: 1.6;
+          font-size: var(--fs-sm);
+          color: var(--color-text-mid);
+          margin-bottom: var(--space-3);
+          line-height: var(--lh-normal);
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;

@@ -6,8 +6,10 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { freelancersAPI } from '../../../api/freelancers';
 import { publicAPI } from '../../../api/publicData';
+import { aiAPI } from '../../../api/ai';
 import { ALL_SKILLS, LOCATIONS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import TagInput from '../../../Components/common/TagInput/TagInput';
 import { useClient } from '../../../context/ClientContext';
 import './BrowseFreelancers.css';
 
@@ -78,13 +80,7 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
 
     return (
         <div className={`bf-card${list ? ' bf-card--list' : ''}`}>
-            <button 
-                className={`bf-card__save ${isSaved ? 'bf-card__save--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onToggleSave(freelancer); }}
-                title={isSaved ? "Remove from saved" : "Save freelancer"}
-            >
-                {isSaved ? '🔖' : '📑'}
-            </button>
+
             <div className="bf-card__header">
                 <div className="bf-card__avatar" style={{ background: avatarBg }}>
                     {avatarUrl
@@ -101,10 +97,20 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
                         </div>
                     )}
                 </div>
-                <div className="bf-card__rating">
-                    <span className="star">★</span>
-                    <span>{rating.toFixed(1)}</span>
-                    <span className="count">({reviewCount})</span>
+                <div className="bf-card__rating-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <button 
+                        className={`bf-card__save ${isSaved ? 'bf-card__save--active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); onToggleSave(freelancer); }}
+                        title={isSaved ? "Remove from saved" : "Save freelancer"}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: 0 }}
+                    >
+                        {isSaved ? '🔖' : '📑'}
+                    </button>
+                    <div className="bf-card__rating">
+                        <span className="star">★</span>
+                        <span>{rating.toFixed(1)}</span>
+                        <span className="count">({reviewCount})</span>
+                    </div>
                 </div>
             </div>
 
@@ -146,6 +152,7 @@ export default function BrowseFreelancers() {
     const [maxRate, setMaxRate] = useState(100);
     const [selectedSkills, setSelectedSkills] = useState([]);
     const [location, setLocation] = useState('');
+    const [dynamicLocations, setDynamicLocations] = useState([]);
     const [sortBy, setSortBy] = useState('relevance');
     const [heroStats, setHeroStats] = useState([]); // real-only hero chips
 
@@ -162,8 +169,18 @@ export default function BrowseFreelancers() {
                 setHeroStats(chips);
             })
             .catch(() => { if (on) setHeroStats([]); });
+            
+        freelancersAPI.getLocations()
+            .then((res) => {
+                if (on && res.data?.data) {
+                    setDynamicLocations(res.data.data);
+                }
+            })
+            .catch(() => {});
+            
         return () => { on = false; };
     }, []);
+
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [page, setPage] = useState(1);
     const PER_PAGE = 6;
@@ -333,16 +350,14 @@ export default function BrowseFreelancers() {
 
                         {/* Skills */}
                         <div className="bf-filter-group">
-                            <label className="bf-filter-label">Skills</label>
-                            <div className="bf-skill-list">
-                                {SKILL_PREVIEW.map(skill => (
-                                    <label key={skill} className="bf-skill-opt">
-                                        <input type="checkbox" checked={selectedSkills.includes(skill)}
-                                            onChange={() => toggleSkill(skill)} />
-                                        <span>{skill}</span>
-                                    </label>
-                                ))}
-                            </div>
+                            <label className="bf-filter-label" style={{ marginBottom: '0.5rem' }}>Skills</label>
+                            <TagInput 
+                                tags={selectedSkills}
+                                onChange={(tags) => { setSelectedSkills(tags); setPage(1); }}
+                                validateFn={aiAPI.validateSkill}
+                                placeholder="E.g. Web Development, React..."
+                                hintText={<span>Type a skill and press <strong>Enter</strong>. AI will suggest valid alternatives.</span>}
+                            />
                         </div>
 
                         {/* Location */}
@@ -354,7 +369,7 @@ export default function BrowseFreelancers() {
                                 placeholder="All locations"
                                 options={[
                                     { value: '', label: 'All locations' },
-                                    ...LOCATIONS.map(l => ({ value: l, label: l }))
+                                    ...dynamicLocations.map(l => ({ value: l, label: l }))
                                 ]}
                             />
                         </div>

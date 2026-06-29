@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award } from 'lucide-react';
 import ShareStory from './components/ShareStory';
+import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import './FreelancerDashboard.css';
 
 const StatCard = ({ icon, value, label, to }) => {
@@ -20,6 +22,7 @@ const StatCard = ({ icon, value, label, to }) => {
 
 const DashboardOverview = () => {
   const { profile, gigs, proposals, loading } = useFreelancer();
+  const [showAllSkills, setShowAllSkills] = useState(false);
   const personalInfo = profile?.personalInfo || {};
   
   // Real stats calculation
@@ -28,9 +31,31 @@ const DashboardOverview = () => {
 
   if (loading) {
     return (
-      <div className="fl-loading-container">
-        <div className="fl-loader"></div>
-        <p>Syncing your dashboard...</p>
+      <div>
+        <div className="fl-page-header">
+          <Skeleton width="300px" height="32px" style={{ marginBottom: '0.5rem' }} />
+          <Skeleton width="400px" height="20px" />
+        </div>
+        
+        <div className="fl-card fl-dashboard-hero" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          <Skeleton variant="circle" width="72px" height="72px" />
+          <div style={{ flex: 1 }}>
+            <Skeleton width="200px" height="24px" style={{ marginBottom: '0.5rem' }} />
+            <Skeleton width="150px" height="16px" style={{ marginBottom: '0.5rem' }} />
+            <Skeleton width="300px" height="16px" />
+          </div>
+          <Skeleton width="120px" height="40px" />
+        </div>
+
+        <div className="fl-stat-grid">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="fl-stat-card">
+              <Skeleton width="32px" height="32px" style={{ marginBottom: '0.6rem' }} />
+              <Skeleton width="60px" height="32px" style={{ marginBottom: '0.25rem' }} />
+              <Skeleton width="100px" height="16px" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -158,7 +183,7 @@ const DashboardOverview = () => {
         </div>
         
         <div className="fl-skill-grid">
-          {(profile.verifiedSkills || []).map((skill) => (
+          {(profile.verifiedSkills || []).slice(0, showAllSkills ? undefined : 8).map((skill) => (
             <div key={skill._id || skill.name} className="fl-skill-item">
               <div className="fl-skill-item__header">
                 <span className="fl-skill-name">{skill.name}</span>
@@ -193,6 +218,17 @@ const DashboardOverview = () => {
             </div>
           )}
         </div>
+        {(profile.verifiedSkills || []).length > 8 && (
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button 
+              type="button"
+              className="fl-btn fl-btn--primary fl-btn--sm" 
+              onClick={() => setShowAllSkills(!showAllSkills)}
+            >
+              {showAllSkills ? 'Show Less' : `Show More (${profile.verifiedSkills.length - 8} hidden)`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Recent Gigs */}

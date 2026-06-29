@@ -14,19 +14,13 @@ class TokenManager {
     this.accessToken = this.restoreAccessToken();
   }
 
-  // Decrypt without side effects — a corrupt/foreign stored token during
-  // bootstrap should simply be ignored, never trigger a logout cascade.
+  // Restore the access token from sessionStorage
   restoreAccessToken() {
     try {
-      const encrypted = sessionStorage.getItem(ACCESS_TOKEN_KEY);
-      if (!encrypted) return null;
-      const key = this.generateKey();
-      const decoded = atob(encrypted)
-        .split('')
-        .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
-        .join('');
-      // A valid JWT has two dots; reject anything that didn't decrypt cleanly.
-      return decoded && decoded.split('.').length === 3 ? decoded : null;
+      const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+      if (!token) return null;
+      // A valid JWT has two dots; reject anything that is completely malformed.
+      return token.split('.').length === 3 ? token : null;
     } catch {
       return null;
     }
@@ -46,15 +40,12 @@ class TokenManager {
   setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
 
-    // Persist the access token so it survives a full page reload (it used to
-    // live in memory only, which is why reloading the dashboard dropped the
-    // session and bounced the user to the home/login page).
     if (accessToken) {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, this.encryptToken(accessToken));
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     }
 
     if (refreshToken) {
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, this.encryptToken(refreshToken));
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
 
     this.scheduleTokenRefresh();
@@ -70,8 +61,7 @@ class TokenManager {
   }
 
   getRefreshToken() {
-    const encrypted = sessionStorage.getItem(REFRESH_TOKEN_KEY);
-    return encrypted ? this.decryptToken(encrypted) : null;
+    return sessionStorage.getItem(REFRESH_TOKEN_KEY);
   }
 
   clearTokens() {
@@ -86,34 +76,7 @@ class TokenManager {
     }
   }
 
-  encryptToken(token) {
-    const key = this.generateKey();
-    return btoa(
-      token.split('').map((char, i) => 
-        String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length))
-      ).join('')
-    );
-  }
 
-  decryptToken(encrypted) {
-    try {
-      const key = this.generateKey();
-      return atob(encrypted)
-        .split('')
-        .map((char, i) => 
-          String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length))
-        )
-        .join('');
-    } catch (error) {
-      console.error('Token decryption failed:', error);
-      this.triggerLogout('Invalid session'); // ✅ Auto-logout on decrypt failure
-      return null;
-    }
-  }
-
-  generateKey() {
-    return `${navigator.userAgent}-${window.location.hostname}`.slice(0, 50);
-  }
 
   scheduleTokenRefresh() {
     if (this.tokenRefreshTimeout) {

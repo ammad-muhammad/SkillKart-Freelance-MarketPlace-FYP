@@ -32,9 +32,9 @@ const isLive = () => !!stripe && !STRIPE_DUMMY;
  * @param {string} opts.description  line-item description
  * @returns {Promise<{ id: string, url: string, simulated: boolean }>}
  */
-async function createCheckoutSession({ jobId, phase, amount, description }) {
-  const successUrl = `${CLIENT_URL}/payment/confirm?job=${jobId}&phase=${phase}&session={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${CLIENT_URL}/payment/cancel?job=${jobId}&phase=${phase}`;
+async function createCheckoutSession({ jobId, phase, amount, description, metadata, customSuccessUrl, customCancelUrl }) {
+  const successUrl = customSuccessUrl || `${CLIENT_URL}/payment/confirm?job=${jobId}&phase=${phase}&session={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = customCancelUrl || `${CLIENT_URL}/payment/cancel?job=${jobId}&phase=${phase}`;
 
   if (!isLive()) {
     // Simulated session — synthetic id; success URL resolves the placeholder so
@@ -58,7 +58,7 @@ async function createCheckoutSession({ jobId, phase, amount, description }) {
       },
       quantity: 1,
     }],
-    metadata: { jobId: String(jobId), phase },
+    metadata: { jobId: String(jobId), phase, ...(metadata || {}) },
     success_url: successUrl,
     cancel_url: cancelUrl,
   });
@@ -73,10 +73,13 @@ async function createCheckoutSession({ jobId, phase, amount, description }) {
  * @returns {Promise<{ paid: boolean, paymentIntent: string|null, simulated: boolean }>}
  */
 async function verifyCheckoutSession(sessionId) {
-  if (!sessionId) return { paid: false, paymentIntent: null, simulated: false };
+  if (!sessionId) return { paid: false, paymentIntent: null, simulated: false, amount_total: 0 };
 
   if (sessionId.startsWith('sim_') || !isLive()) {
-    return { paid: true, paymentIntent: `sim_pi_${sessionId}`, simulated: true };
+    // Format: sim_{phase}_{jobId}_{amountCents}
+    const parts = sessionId.split('_');
+    const amountCents = parseInt(parts[parts.length - 1], 10) || 0;
+    return { paid: true, paymentIntent: `sim_pi_${sessionId}`, simulated: true, amount_total: amountCents };
   }
 
   const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -84,6 +87,7 @@ async function verifyCheckoutSession(sessionId) {
     paid: session.payment_status === 'paid',
     paymentIntent: session.payment_intent || null,
     simulated: false,
+    amount_total: session.amount_total || 0,
   };
 }
 

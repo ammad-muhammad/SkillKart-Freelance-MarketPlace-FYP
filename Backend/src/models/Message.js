@@ -15,7 +15,7 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  attachments: [String],
+  attachments: [mongoose.Schema.Types.Mixed],
   readBy: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

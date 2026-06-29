@@ -224,22 +224,82 @@ const getMyPayments = asyncHandler(async (req, res) => {
 });
 
 /**
- * Add funds to wallet (Client)
+ * POST /payments/wallet/checkout
+ * Start a Stripe checkout session to add funds to the wallet.
  */
-const depositFunds = asyncHandler(async (req, res) => {
+const checkoutWalletDeposit = asyncHandler(async (req, res) => {
   const { amount } = req.body;
   if (!amount || Number(amount) <= 0) {
     throw new BadRequestError('Invalid deposit amount');
   }
+
+  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';
   
+  const session = await createCheckoutSession({
+    jobId: 'wallet', // Special ID for wallet
+    phase: 'wallet',
+    amount: Number(amount),
+    description: `SkillKart — Wallet Deposit`,
+    customSuccessUrl: `${CLIENT_URL}/client/wallet?session_id={CHECKOUT_SESSION_ID}`,
+    customCancelUrl: `${CLIENT_URL}/client/wallet`,
+    metadata: { userId: String(req.user._id) }
+  });
+
+  sendSuccess(res, {
+    message: 'Wallet checkout created',
+    data: { checkoutUrl: session.url, sessionId: session.id, simulated: session.simulated },
+  });
+});
+
+/**
+ * Add funds to wallet (Client) by confirming Stripe session
+ */
+const depositFunds = asyncHandler(async (req, res) => {
+  const { sessionId } = req.body;
+  if (!sessionId) {
+    throw new BadRequestError('Missing session ID');
+  }
+  
+  const result = await verifyCheckoutSession(sessionId);
+  if (!result.paid) throw new BadRequestError('Payment was not completed');
+
+  // result.amount_total is in cents
+  const amountDeposited = (result.amount_total || 0) / 100;
+  if (amountDeposited <= 0) {
+    throw new BadRequestError('Invalid payment amount recorded');
+  }
+  // Idempotency Check: Ensure we haven't already processed this session
+  const existingProfile = await ClientProfile.findOne({ userId: req.user._id });
+  if (existingProfile && existingProfile.processedSessions && existingProfile.processedSessions.includes(sessionId)) {
+    // The webhook already processed it, just return the current balance gracefully
+    return sendSuccess(res, { message: 'Funds deposited successfully', data: { walletBalance: existingProfile.walletBalance } });
+  }
+
   const profile = await ClientProfile.findOneAndUpdate(
     { userId: req.user._id },
-    { $inc: { walletBalance: Number(amount) } },
+    { 
+      $inc: { walletBalance: amountDeposited },
+      $addToSet: { processedSessions: sessionId }
+    },
     { new: true }
   );
+
+  const Payment = require('../models/Payment');
+  await Payment.create({
+    clientId: req.user._id,
+    type: 'wallet_deposit',
+    totalAmount: amountDeposited,
+    depositAmount: amountDeposited,
+    finalAmount: 0,
+    status: 'released', // Show as completed
+    depositPaidAt: new Date(),
+    stripe: { depositSessionId: sessionId }
+  });
   
   sendSuccess(res, { message: 'Funds deposited successfully', data: { walletBalance: profile.walletBalance } });
 });
+
+const Withdrawal = require('../models/Withdrawal');
 
 /**
  * Withdraw funds from wallet (Freelancer)
@@ -250,6 +310,11 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     throw new BadRequestError('Invalid withdrawal amount');
   }
   
+  const allowedMethods = ['bank_transfer', 'paypal', 'stripe'];
+  if (!allowedMethods.includes(method)) {
+    throw new BadRequestError('Invalid withdrawal method');
+  }
+
   const profile = await FreelancerProfile.findOne({ userId: req.user._id });
   if (!profile) throw new NotFoundError('Profile not found');
   
@@ -257,10 +322,20 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     throw new BadRequestError('Insufficient funds available for withdrawal.');
   }
   
+  // Create Withdrawal Request first
+  const withdrawal = await Withdrawal.create({
+    userId: req.user._id,
+    amount: Number(amount),
+    method
+  });
+
   profile.walletBalance -= Number(amount);
   await profile.save();
   
-  sendSuccess(res, { message: `Withdrawal of $${amount} via ${method} initiated`, data: { walletBalance: profile.walletBalance } });
+  // Trigger notification
+  notifications.onWithdrawalRequested(req.user._id, { amount, method });
+
+  sendSuccess(res, { message: `Withdrawal of $${amount} via ${method} initiated`, data: { withdrawal, walletBalance: profile.walletBalance } });
 });
 
 module.exports = {
@@ -269,6 +344,7 @@ module.exports = {
   confirmPayment,
   getJobPayment,
   getMyPayments,
+  checkoutWalletDeposit,
   depositFunds,
   withdrawFunds,
   FEE_RATE

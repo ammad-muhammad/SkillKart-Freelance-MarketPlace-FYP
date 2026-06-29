@@ -167,7 +167,9 @@ app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 
 // Webhook routes (no API prefix)
 const supabaseWebhook = require('./webhooks/supabase.webhook');
+const stripeWebhook = require('./webhooks/stripe.webhook');
 app.post('/webhooks/supabase', supabaseWebhook.handleWebhook);
+app.use('/webhooks/stripe', stripeWebhook);
 
 // Temporary route placeholder
 app.get(`${API_PREFIX}/status`, (req, res) => {
@@ -272,7 +274,7 @@ app.use((err, req, res, next) => {
 
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
+  console.error(err ? (err.name || 'Unknown Error') : 'No error object', err ? (err.message || err) : '');
   process.exit(1);
 });
 

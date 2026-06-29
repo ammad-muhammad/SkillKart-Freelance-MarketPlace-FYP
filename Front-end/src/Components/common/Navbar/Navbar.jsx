@@ -121,9 +121,9 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Navbar() {
+export default function Navbar({ alwaysSticky = false }) {
   const [visible, setVisible] = useState(true);
-  const [isSticky, setIsSticky] = useState(false);
+  const [isSticky, setIsSticky] = useState(alwaysSticky);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState(null);
@@ -168,7 +168,7 @@ export default function Navbar() {
       const isScrollingUp = currentScrollY < lastScrollY.current;
       
       // 1. At the very top: Show normal absolute navbar
-      if (currentScrollY < 120) {
+      if (currentScrollY < 120 && !alwaysSticky) {
         setIsSticky(false);
         setVisible(true);
       } 

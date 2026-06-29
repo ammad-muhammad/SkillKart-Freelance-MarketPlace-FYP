@@ -64,6 +64,7 @@ const emptyProfile = {
     freelancersHired: 0,
     totalSpent: 0,
   },
+  walletBalance: 0,
   verificationStatus: 'unverified'
 };
 
@@ -178,6 +179,7 @@ export const ClientProvider = ({ children }) => {
           freelancersHired: 0, 
           totalSpent: dbProfile?.totalSpent || 0,
         },
+        walletBalance: dbProfile?.walletBalance || 0,
         verificationStatus: dbProfile?.verificationStatus || 'unverified'
       };
 

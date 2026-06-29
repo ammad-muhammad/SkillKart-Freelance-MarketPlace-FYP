@@ -3,7 +3,7 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
-const { NotFoundError, BadRequestError } = require('../utils/apiError');
+const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
 const { uploadJobAttachment: uploadAttachmentToCloud } = require('../services/upload.service');
 const notifications = require('../services/notification.service');
 
@@ -16,7 +16,7 @@ const getConversations = asyncHandler(async (req, res) => {
   const conversations = await Conversation.find({
     participants: userId
   })
-  .populate('participants', 'firstName lastName profilePicture')
+  .populate('participants', 'firstName lastName profilePicture role lastActive')
   .populate('lastMessage')
   .sort({ updatedAt: -1 });
   
@@ -68,7 +68,52 @@ const getMessages = asyncHandler(async (req, res) => {
 const sendMessage = asyncHandler(async (req, res) => {
   const { recipientId, content, attachments } = req.body;
   const senderId = req.user._id;
-  
+
+  if (!recipientId) throw new BadRequestError('Recipient ID is required');
+
+  const recipientUser = await User.findById(recipientId).select('role');
+  if (!recipientUser) throw new NotFoundError('Recipient not found');
+
+  // --- CONTACT INFO BLOCKER LOGIC ---
+  let modifiedContent = content || '';
+  let contactInfoDetected = false;
+
+  if (modifiedContent) {
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    // Aggressive regex for phone numbers: catches 8+ digits optionally separated by spaces, dashes, dots, or parentheses
+    const phoneRegex = /(?:\+?\d[\s\-.()]*){7,}\d/g;
+    
+    if (emailRegex.test(modifiedContent) || phoneRegex.test(modifiedContent)) {
+      contactInfoDetected = true;
+      modifiedContent = modifiedContent.replace(emailRegex, '*** [CONTACT INFO BLOCKED] ***');
+      modifiedContent = modifiedContent.replace(phoneRegex, '*** [CONTACT INFO BLOCKED] ***');
+    }
+  }
+
+  if (contactInfoDetected) {
+    const sender = await User.findById(senderId);
+    sender.contactViolations = (sender.contactViolations || 0) + 1;
+    
+    if (sender.contactViolations >= 2) {
+      sender.isBlocked = true;
+      sender.blockedReason = 'Repeated sharing of off-platform contact details';
+      sender.blockedAt = new Date();
+      await sender.save();
+      throw new ForbiddenError('Your account has been blocked for repeatedly sharing contact details.');
+    } else {
+      await sender.save();
+      // Trigger a system warning notification
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: senderId,
+        type: 'system_warning',
+        title: 'Platform Warning',
+        message: 'Sharing contact information in chat is against our policies. Your message was masked. Further violations will result in account suspension.'
+      });
+    }
+  }
+  // ----------------------------------
+
   // 1. Find or create conversation
   let conversation = await Conversation.findOne({
     participants: { $all: [senderId, recipientId] }
@@ -84,7 +129,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   const message = await Message.create({
     conversationId: conversation._id,
     sender: senderId,
-    content,
+    content: modifiedContent,
     attachments
   });
   

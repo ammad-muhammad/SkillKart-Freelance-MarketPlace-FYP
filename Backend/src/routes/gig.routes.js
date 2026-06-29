@@ -3,8 +3,8 @@ const router = express.Router();
 const gigController = require('../controllers/gig.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
+const { uploadSingle } = require('../middleware/upload.middleware');
+const upload = { single: uploadSingle };
 
 // Public routes
 router.get('/', gigController.listGigs);

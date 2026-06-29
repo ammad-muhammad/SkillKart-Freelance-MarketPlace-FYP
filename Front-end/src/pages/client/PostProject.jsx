@@ -850,7 +850,7 @@ const PostProject = () => {
       </div>
 
       <div className="cl-card animate-slide-up" style={{ maxWidth: '850px', margin: '0 auto' }}>
-        <Stepper currentStep={step} steps={STEPS} />
+        <Stepper current={step - 1} steps={STEPS} />
 
         <div className="cl-wizard-content">
           {renderStep()}

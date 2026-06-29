@@ -11,7 +11,11 @@ const createRateLimiter = (options = {}) => {
   return rateLimit({ ...defaults, ...options });
 };
 
-const authLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 1000 });
+const authLimiter = createRateLimiter({ 
+  windowMs: 15 * 60 * 1000, 
+  max: 5,
+  message: 'Too many authentication attempts from this IP, please try again after 15 minutes.'
+});
 const apiLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 100 });
 const strictLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 10 });
 

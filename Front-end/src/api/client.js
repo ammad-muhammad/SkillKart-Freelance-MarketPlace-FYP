@@ -115,6 +115,13 @@ axiosInstance.interceptors.response.use(
     // Note: skill-gating 403s carry their own UX (a "take the test" prompt), so
     // we don't toast those generically — the caller handles them.
     if (error.response?.status === 403) {
+      const apiError = extractApiError(error);
+      const isBlockedError = apiError.message && apiError.message.toLowerCase().includes('blocked');
+      
+      if (isBlockedError) {
+        window.dispatchEvent(new CustomEvent('account-blocked', { detail: apiError.message }));
+      }
+
       const gated = error.response?.data?.errors?.skillTestRequired;
       if (!suppress && !gated) toastApiError(error);
       return Promise.reject(error);

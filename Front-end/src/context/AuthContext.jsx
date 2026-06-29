@@ -1,5 +1,6 @@
 // src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../api/auth';
 import { tokenManager } from '../utils/tokenManager';
 import { normalizeAuthUser } from '../utils/user';
@@ -8,6 +9,8 @@ import { toast } from 'react-toastify';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const inactivityTimeout = useRef(null);
@@ -41,6 +44,7 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('account-blocked', handleAccountBlocked);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -48,7 +52,12 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('account-blocked', handleAccountBlocked);
     };
+  };
+
+  const handleAccountBlocked = (e) => {
+    setUser(prev => prev ? { ...prev, isBlocked: true, blockedReason: e.detail } : null);
   };
 
   const setupInactivityTimer = () => {
@@ -79,7 +88,7 @@ export const AuthProvider = ({ children }) => {
       tokenManager.clearTokens();
       setUser(null);
       toast.info('Logged out from another tab');
-      window.location.href = '/login';
+      // ProtectedRoutes will handle redirection gracefully without a hard reload.
     }
   };
 
@@ -121,7 +130,7 @@ export const AuthProvider = ({ children }) => {
   const handleAutoLogout = (reason) => {
     setUser(null);
     toast.error(reason);
-    window.location.href = '/login';
+    // ProtectedRoutes will handle redirection gracefully without a hard reload.
   };
 
   const checkAuth = async (force = false) => {
@@ -270,6 +279,7 @@ export const AuthProvider = ({ children }) => {
       setTimeout(() => localStorage.removeItem('logout-event'), 100);
       
       toast.info(message);
+      navigate('/login');
     }
   };
 

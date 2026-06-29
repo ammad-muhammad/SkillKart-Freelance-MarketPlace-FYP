@@ -25,6 +25,7 @@ router.get('/jobs/:jobId', authenticate, paymentController.getJobPayment);
 router.get('/history', authenticate, paymentController.getMyPayments);
 
 // Wallet endpoints (Simulated balances)
+router.post('/wallet/checkout', authenticate, requireRole('client'), paymentController.checkoutWalletDeposit);
 router.post('/wallet/deposit', authenticate, requireRole('client'), paymentController.depositFunds);
 router.post('/wallet/withdraw', authenticate, requireRole('freelancer'), paymentController.withdrawFunds);
 

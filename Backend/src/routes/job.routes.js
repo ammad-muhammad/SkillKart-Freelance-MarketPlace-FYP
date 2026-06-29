@@ -16,8 +16,8 @@ const {
   reviewJobValidation
 } = require('../validators/job.validator');
 
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
+const { uploadSingle } = require('../middleware/upload.middleware');
+const upload = { single: uploadSingle };
 
 /**
  * Public routes
@@ -147,6 +147,13 @@ router.post('/:id/close',
   closeJobValidation,
   validate,
   jobController.closeJob
+);
+
+// Cancel job (in-progress/delivered)
+router.post('/:id/cancel',
+  authenticate,
+  requireRole('client'),
+  jobController.cancelJob
 );
 
 // ── Delivery lifecycle ──

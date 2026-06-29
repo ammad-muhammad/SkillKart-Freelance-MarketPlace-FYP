@@ -44,7 +44,7 @@ export default function ComboSelect({
     [options]
   );
 
-  const selected = items.find((o) => o.value === value);
+  const selected = items.find((o) => o.value === value) || (allowFreeText && value ? { value, label: value } : undefined);
 
   // When closed, the input shows the selected label; when open, it shows the
   // user's live query (so they can type to filter).

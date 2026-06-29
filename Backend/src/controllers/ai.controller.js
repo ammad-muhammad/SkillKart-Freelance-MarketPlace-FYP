@@ -100,4 +100,18 @@ const validateSkill = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Skill validated', data: result });
 });
 
-module.exports = { buddyChat, estimateCost, suggestBrief, validateSkill };
+/**
+ * POST /ai/expand-skills — Semantic skill search
+ * Body: { query }
+ */
+const expandSkills = asyncHandler(async (req, res) => {
+  const { query } = req.body;
+  if (!query || !String(query).trim()) {
+    throw new BadRequestError('query is required');
+  }
+
+  const result = await getAIProvider().expandSearchSkills(String(query).slice(0, 100));
+  sendSuccess(res, { message: 'Skills expanded', data: result });
+});
+
+module.exports = { buddyChat, estimateCost, suggestBrief, validateSkill, expandSkills };

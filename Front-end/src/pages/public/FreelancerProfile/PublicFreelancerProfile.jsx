@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { 
+  MapPin, Star, Clock, Briefcase, Award, GraduationCap, 
+  ExternalLink, MessageSquare, Bookmark, CheckCircle, 
+  Github, Linkedin, Link as LinkIcon, AlertCircle, Search, 
+  Calendar, Code, ChevronRight, Loader2, BookmarkCheck, FileEdit, Camera
+} from 'lucide-react';
+
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { freelancersAPI } from '../../../api/freelancers';
@@ -15,11 +23,25 @@ const fmtDate = (d) => {
 };
 
 const availabilityLabel = (a) => ({
-  'full-time': 'Available full-time',
-  'part-time': 'Available part-time',
-  'contract': 'Open to contracts',
-  'not-available': 'Not available',
+  'full-time': 'Available Full-time',
+  'part-time': 'Available Part-time',
+  'contract': 'Open to Contracts',
+  'not-available': 'Not Available',
 }[a] || 'Availability on request');
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
+};
 
 export default function PublicFreelancerProfile() {
   const { id } = useParams();
@@ -63,6 +85,7 @@ export default function PublicFreelancerProfile() {
   const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Freelancer';
   const isSaved = savedFreelancers.some((f) => f.id === (u._id || id));
   const isClient = user?.role === 'client';
+  const isOwner = user && (user._id === u._id || user._id === id);
 
   const handleSave = () => {
     toggleSavedFreelancer({
@@ -82,225 +105,403 @@ export default function PublicFreelancerProfile() {
     
     const targetId = u._id || id;
     
-    // Actually start a conversation with the freelancer (not just navigate).
     if (isClient && targetId) {
       try {
         await messagesAPI.startConversation(targetId, `Hi ${u.firstName || 'there'}, I'd like to discuss a project with you.`);
         navigate('/client/messages');
         return;
       } catch {
-        /* fall through to the messages page */
+        // Fall through to standard navigation if fails
       }
     }
     
     navigate(isClient ? '/client/messages' : '/freelancer/messages');
   };
 
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="pfp-page pfp-centered">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pfp-loading-card">
+            <Loader2 className="pfp-spinner" />
+            <p>Loading premium profile...</p>
+          </motion.div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (error === 'notfound') {
+    return (
+      <>
+        <Navbar />
+        <div className="pfp-page pfp-centered">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pfp-error-card">
+            <div className="pfp-error-icon-bg"><Search size={32} /></div>
+            <h2>Freelancer Not Found</h2>
+            <p>This profile doesn't exist or is no longer available in our directory.</p>
+            <Link to="/browse-freelancers" className="pfp-btn pfp-btn-primary">Browse Top Talent</Link>
+          </motion.div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <div className="pfp-page pfp-centered">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pfp-error-card">
+            <div className="pfp-error-icon-bg pfp-error-icon-bg-red"><AlertCircle size={32} /></div>
+            <h2>Couldn't load profile</h2>
+            <p>{error}</p>
+            <button className="pfp-btn pfp-btn-primary" onClick={() => navigate(0)}>Try Again</button>
+          </motion.div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
       <div className="pfp-page">
-        {loading ? (
-          <div className="pfp-state">
-            <div className="pfp-spinner" />
-            <p>Loading profile…</p>
-          </div>
-        ) : error === 'notfound' ? (
-          <div className="pfp-state">
-            <div className="pfp-state__icon">🔍</div>
-            <h2>Freelancer not found</h2>
-            <p>This profile doesn’t exist or is no longer available.</p>
-            <Link to="/browse-freelancers" className="pfp-btn pfp-btn--primary">Browse Freelancers</Link>
-          </div>
-        ) : error ? (
-          <div className="pfp-state">
-            <div className="pfp-state__icon">⚠️</div>
-            <h2>Couldn’t load profile</h2>
-            <p>{error}</p>
-            <button className="pfp-btn pfp-btn--primary" onClick={() => navigate(0)}>Try Again</button>
-          </div>
-        ) : (
-          <div className="container pfp-container">
-            {/* Header card */}
-            <div className="pfp-card pfp-header">
-              <div className="pfp-header__avatar">
-                {u.profilePicture
-                  ? <img src={u.profilePicture} alt={fullName} />
-                  : <span>{(u.firstName?.[0] || 'F').toUpperCase()}</span>}
-              </div>
-              <div className="pfp-header__main">
-                <div className="pfp-header__top">
-                  <h1 className="pfp-name">{fullName}</h1>
-                  {profile.verificationStatus === 'verified' && (
-                    <span className="pfp-verified">✓ Verified</span>
-                  )}
+        {/* Dynamic Background Elements */}
+        <div className="pfp-bg-blob pfp-bg-blob-1"></div>
+        <div className="pfp-bg-blob pfp-bg-blob-2"></div>
+        
+        <div className="container pfp-container">
+          
+          <motion.div 
+            className="pfp-hero-card"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+            <div className="pfp-hero-banner">
+              <div className="pfp-hero-overlay"></div>
+              {isOwner && (
+                <button 
+                  className="pfp-edit-cover-btn"
+                  onClick={() => navigate('/freelancer/settings')}
+                >
+                  <Camera size={16} />
+                  <span>Update Cover</span>
+                </button>
+              )}
+            </div>
+            
+            <div className="pfp-hero-content">
+              <div className="pfp-avatar-wrapper">
+                <div className="pfp-avatar">
+                  {u.profilePicture
+                    ? <img src={u.profilePicture} alt={fullName} />
+                    : <span>{(u.firstName?.[0] || 'F').toUpperCase()}</span>}
                 </div>
-                <p className="pfp-title">{profile.title || 'Freelancer'}</p>
-                <div className="pfp-meta">
-                  <span>★ {(profile.rating || 0).toFixed(1)}</span>
-                  <span className="pfp-meta__sep">·</span>
-                  <span>{profile.completedProjects || 0} projects</span>
-                  <span className="pfp-meta__sep">·</span>
-                  <span>📍 {profile.timezone || 'Global'}</span>
-                  <span className="pfp-meta__sep">·</span>
-                  <span>{availabilityLabel(profile.availability)}</span>
-                </div>
-              </div>
-              <div className="pfp-header__aside">
-                {profile.hourlyRate ? (
-                  <div className="pfp-rate"><strong>${profile.hourlyRate}</strong><span>/hr</span></div>
-                ) : null}
-                <button className="pfp-btn pfp-btn--primary" onClick={handleContact}>Contact</button>
-                {isClient && (
-                  <button className="pfp-btn pfp-btn--ghost" onClick={handleSave}>
-                    {isSaved ? '🔖 Saved' : '📑 Save'}
+                {isOwner && (
+                  <button 
+                    className="pfp-edit-avatar-btn"
+                    onClick={() => navigate('/freelancer/settings')}
+                    title="Update Profile Picture"
+                  >
+                    <Camera size={16} />
                   </button>
                 )}
+                {profile.verificationStatus === 'verified' && !isOwner && (
+                  <div className="pfp-verified-badge" title="Verified Freelancer">
+                    <CheckCircle size={18} />
+                  </div>
+                )}
+              </div>
+              
+              <div className="pfp-hero-main">
+                <div className="pfp-hero-header">
+                  <h1 className="pfp-name">{fullName}</h1>
+                  <p className="pfp-title">{profile.title || 'Professional Freelancer'}</p>
+                </div>
+                
+                <div className="pfp-meta-tags">
+                  <div className="pfp-meta-tag pfp-meta-rating">
+                    <Star size={16} className="pfp-icon-star" fill="currentColor" />
+                    <span>{(profile.rating || 0).toFixed(1)}</span>
+                  </div>
+                  <div className="pfp-meta-tag">
+                    <Briefcase size={16} />
+                    <span>{profile.completedProjects || 0} Projects</span>
+                  </div>
+                  <div className="pfp-meta-tag">
+                    <MapPin size={16} />
+                    <span>{profile.timezone || 'Global'}</span>
+                  </div>
+                  <div className="pfp-meta-tag">
+                    <Clock size={16} />
+                    <span>{availabilityLabel(profile.availability)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pfp-hero-actions">
+                {profile.hourlyRate && (
+                  <div className="pfp-rate-box">
+                    <span className="pfp-rate-currency">$</span>
+                    <span className="pfp-rate-amount">{profile.hourlyRate}</span>
+                    <span className="pfp-rate-period">/hr</span>
+                  </div>
+                )}
+                <div className="pfp-action-buttons">
+                  {!isOwner ? (
+                    <button className="pfp-btn pfp-btn-primary pfp-btn-contact" onClick={handleContact}>
+                      <MessageSquare size={18} /> Contact Me
+                    </button>
+                  ) : (
+                    <button className="pfp-btn pfp-btn-secondary pfp-btn-contact" onClick={() => navigate('/freelancer/settings')}>
+                      <FileEdit size={18} /> Edit Profile
+                    </button>
+                  )}
+                  {isClient && !isOwner && (
+                    <button className={`pfp-btn pfp-btn-icon ${isSaved ? 'pfp-btn-saved' : 'pfp-btn-secondary'}`} onClick={handleSave} title={isSaved ? "Remove from saved" : "Save freelancer"}>
+                      {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+          </motion.div>
 
-            <div className="pfp-grid">
-              <div className="pfp-col-main">
-                {/* About */}
-                {profile.bio && (
-                  <section className="pfp-card">
-                    <h2 className="pfp-section-title">About</h2>
+          <motion.div 
+            className="pfp-grid"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {/* MAIN COLUMN */}
+            <div className="pfp-col-main">
+              {profile.bio && (
+                <motion.section variants={itemVariants} className="pfp-card pfp-card-glass">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">About Me</h2>
+                  </div>
+                  <div className="pfp-card-body">
                     <p className="pfp-bio">{profile.bio}</p>
-                  </section>
-                )}
+                  </div>
+                </motion.section>
+              )}
 
-                {/* Portfolio */}
-                {Array.isArray(profile.portfolio) && profile.portfolio.length > 0 && (
-                  <section className="pfp-card">
-                    <h2 className="pfp-section-title">Portfolio</h2>
-                    <div className="pfp-portfolio">
+              {Array.isArray(profile.portfolio) && profile.portfolio.length > 0 && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">Portfolio Showcase</h2>
+                  </div>
+                  <div className="pfp-card-body">
+                    <div className="pfp-portfolio-grid">
                       {profile.portfolio.map((item, i) => (
-                        <div key={i} className="pfp-portfolio__item">
-                          {item.images?.[0] && <img src={item.images[0]} alt={item.title} />}
-                          <div className="pfp-portfolio__body">
+                        <motion.div 
+                          key={i} 
+                          className="pfp-portfolio-item"
+                          whileHover={{ y: -5 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          <div className="pfp-portfolio-img-wrapper">
+                            {item.images?.[0] ? (
+                              <img src={item.images[0]} alt={item.title} />
+                            ) : (
+                              <div className="pfp-portfolio-img-placeholder"><Code size={40} /></div>
+                            )}
+                            {item.url && (
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="pfp-portfolio-link-overlay">
+                                <ExternalLink size={24} color="white" />
+                              </a>
+                            )}
+                          </div>
+                          <div className="pfp-portfolio-content">
                             <h3>{item.title}</h3>
                             {item.description && <p>{item.description}</p>}
-                            {item.url && (
-                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="pfp-link">
-                                View project →
-                              </a>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.section>
+              )}
+
+              {Array.isArray(profile.education) && profile.education.length > 0 && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">Education</h2>
+                  </div>
+                  <div className="pfp-card-body">
+                    <div className="pfp-timeline">
+                      {profile.education.map((e, i) => (
+                        <div key={i} className="pfp-timeline-item">
+                          <div className="pfp-timeline-icon"><GraduationCap size={16} /></div>
+                          <div className="pfp-timeline-content">
+                            <h3 className="pfp-timeline-title">{e.degree}{e.field ? ` in ${e.field}` : ''}</h3>
+                            <h4 className="pfp-timeline-subtitle">{e.institution}</h4>
+                            {(e.startDate || e.endDate) && (
+                              <div className="pfp-timeline-date">
+                                <Calendar size={14} /> 
+                                <span>{fmtDate(e.startDate)} — {e.endDate ? fmtDate(e.endDate) : 'Present'}</span>
+                              </div>
                             )}
                           </div>
                         </div>
                       ))}
                     </div>
-                  </section>
-                )}
+                  </div>
+                </motion.section>
+              )}
 
-                {/* Education */}
-                {Array.isArray(profile.education) && profile.education.length > 0 && (
-                  <section className="pfp-card">
-                    <h2 className="pfp-section-title">Education</h2>
-                    {profile.education.map((e, i) => (
-                      <div key={i} className="pfp-entry">
-                        <div className="pfp-entry__title">{e.degree}{e.field ? `, ${e.field}` : ''}</div>
-                        <div className="pfp-entry__sub">{e.institution}</div>
-                        {(e.startDate || e.endDate) && (
-                          <div className="pfp-entry__date">{fmtDate(e.startDate)} – {e.endDate ? fmtDate(e.endDate) : 'Present'}</div>
-                        )}
-                      </div>
-                    ))}
-                  </section>
-                )}
-
-                {/* Certifications */}
-                {Array.isArray(profile.certifications) && profile.certifications.length > 0 && (
-                  <section className="pfp-card">
-                    <h2 className="pfp-section-title">Certifications</h2>
-                    {profile.certifications.map((c, i) => (
-                      <div key={i} className="pfp-entry">
-                        <div className="pfp-entry__title">{c.name}</div>
-                        <div className="pfp-entry__sub">{c.issuer}{c.issueDate ? ` · ${fmtDate(c.issueDate)}` : ''}</div>
-                        {c.url && <a href={c.url} target="_blank" rel="noopener noreferrer" className="pfp-link">View credential →</a>}
-                      </div>
-                    ))}
-                  </section>
-                )}
-              </div>
-
-              <aside className="pfp-col-side">
-                {/* Reviews */}
-                {reviews.length > 0 && (
-                  <section className="pfp-card">
-                    <h2 className="pfp-section-title">Client Reviews</h2>
-                    <div className="pfp-reviews-list">
-                      {reviews.map((rev) => (
-                        <div key={rev._id} className="pfp-review-item" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e2e8f0', overflow: 'hidden' }}>
-                              {rev.reviewerId?.profilePicture ? (
-                                <img src={rev.reviewerId.profilePicture} alt="Client" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#64748b' }}>
-                                  {rev.reviewerId?.firstName?.charAt(0) || 'C'}
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>
-                                {rev.reviewerId?.firstName} {rev.reviewerId?.lastName?.charAt(0)}.
-                              </div>
-                              <div style={{ display: 'flex', color: '#facc15', fontSize: '0.8rem' }}>
-                                {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
-                              </div>
-                            </div>
+              {Array.isArray(profile.certifications) && profile.certifications.length > 0 && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">Licenses & Certifications</h2>
+                  </div>
+                  <div className="pfp-card-body">
+                    <div className="pfp-cert-list">
+                      {profile.certifications.map((c, i) => (
+                        <div key={i} className="pfp-cert-card">
+                          <div className="pfp-cert-icon"><Award size={24} /></div>
+                          <div className="pfp-cert-info">
+                            <h3>{c.name}</h3>
+                            <p>{c.issuer}{c.issueDate ? ` · Issued ${fmtDate(c.issueDate)}` : ''}</p>
                           </div>
-                          <p style={{ fontSize: '0.9rem', color: 'var(--color-text-light)', margin: 0 }}>"{rev.comment}"</p>
+                          {c.url && (
+                            <a href={c.url} target="_blank" rel="noopener noreferrer" className="pfp-cert-link">
+                              <ExternalLink size={18} />
+                            </a>
+                          )}
                         </div>
                       ))}
                     </div>
-                  </section>
-                )}
+                  </div>
+                </motion.section>
+              )}
+            </div>
 
-                {/* Skills */}
-                <section className="pfp-card">
-                  <h2 className="pfp-section-title">Skills</h2>
+            {/* SIDEBAR */}
+            <div className="pfp-col-side">
+              
+              <motion.section variants={itemVariants} className="pfp-card pfp-card-gradient">
+                <div className="pfp-card-header">
+                  <h2 className="pfp-section-title">Top Skills</h2>
+                </div>
+                <div className="pfp-card-body">
                   {Array.isArray(profile.skills) && profile.skills.length > 0 ? (
-                    <div className="pfp-skills">
+                    <div className="pfp-skills-cloud">
                       {profile.skills.map((s, i) => (
-                        <span key={i} className={`pfp-skill${s.isVerified ? ' pfp-skill--verified' : ''}`}>
-                          {s.name}{s.isVerified && <span title="AI-verified"> ✓</span>}
+                        <span key={i} className={`pfp-skill-tag ${s.isVerified ? 'pfp-skill-verified' : ''}`}>
+                          {s.name}
+                          {s.isVerified && <CheckCircle size={12} className="pfp-skill-check" />}
                         </span>
                       ))}
                     </div>
-                  ) : <p className="pfp-muted">No skills listed yet.</p>}
-                </section>
+                  ) : <p className="pfp-empty-text">No skills listed yet.</p>}
+                </div>
+              </motion.section>
 
-                {/* Languages */}
-                {Array.isArray(profile.languages) && profile.languages.length > 0 && (
-                  <section className="pfp-card">
+              {Array.isArray(profile.languages) && profile.languages.length > 0 && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
                     <h2 className="pfp-section-title">Languages</h2>
-                    <ul className="pfp-langs">
+                  </div>
+                  <div className="pfp-card-body">
+                    <ul className="pfp-lang-list">
                       {profile.languages.map((l, i) => (
-                        <li key={i}><span>{typeof l.language === 'object' ? l.language?.name : l.language}</span><span className="pfp-muted">{l.proficiency}</span></li>
+                        <li key={i}>
+                          <span className="pfp-lang-name">{typeof l.language === 'object' ? l.language?.name : l.language}</span>
+                          <span className="pfp-lang-level">{l.proficiency}</span>
+                        </li>
                       ))}
                     </ul>
-                  </section>
-                )}
+                  </div>
+                </motion.section>
+              )}
 
-                {/* Links */}
-                {(profile.socialLinks?.github || profile.socialLinks?.linkedin || profile.socialLinks?.website || (profile.portfolioLinks?.length > 0)) && (
-                  <section className="pfp-card">
-                    <h2 className="pfp-section-title">Links</h2>
-                    <div className="pfp-social">
-                      {profile.socialLinks?.github && <a href={profile.socialLinks.github} target="_blank" rel="noopener noreferrer" className="pfp-link">GitHub</a>}
-                      {profile.socialLinks?.linkedin && <a href={profile.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="pfp-link">LinkedIn</a>}
-                      {profile.socialLinks?.website && <a href={profile.socialLinks.website} target="_blank" rel="noopener noreferrer" className="pfp-link">Website</a>}
+              {(profile.socialLinks?.github || profile.socialLinks?.linkedin || profile.socialLinks?.website || (profile.portfolioLinks?.length > 0)) && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">On The Web</h2>
+                  </div>
+                  <div className="pfp-card-body">
+                    <div className="pfp-links-list">
+                      {profile.socialLinks?.github && (
+                        <a href={profile.socialLinks.github} target="_blank" rel="noopener noreferrer" className="pfp-web-link">
+                          <div className="pfp-link-icon-wrap"><Github size={18} /></div>
+                          <span>GitHub</span>
+                          <ChevronRight size={16} className="pfp-link-arrow" />
+                        </a>
+                      )}
+                      {profile.socialLinks?.linkedin && (
+                        <a href={profile.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="pfp-web-link">
+                          <div className="pfp-link-icon-wrap pfp-linkedin"><Linkedin size={18} /></div>
+                          <span>LinkedIn</span>
+                          <ChevronRight size={16} className="pfp-link-arrow" />
+                        </a>
+                      )}
+                      {profile.socialLinks?.website && (
+                        <a href={profile.socialLinks.website} target="_blank" rel="noopener noreferrer" className="pfp-web-link">
+                          <div className="pfp-link-icon-wrap pfp-website"><LinkIcon size={18} /></div>
+                          <span>Personal Website</span>
+                          <ChevronRight size={16} className="pfp-link-arrow" />
+                        </a>
+                      )}
                       {(profile.portfolioLinks || []).map((l, i) => (
-                        <a key={i} href={l} target="_blank" rel="noopener noreferrer" className="pfp-link">{l.replace(/^https?:\/\//, '').slice(0, 28)}</a>
+                        <a key={i} href={l} target="_blank" rel="noopener noreferrer" className="pfp-web-link">
+                          <div className="pfp-link-icon-wrap pfp-portfolio-link"><ExternalLink size={18} /></div>
+                          <span>{l.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]}</span>
+                          <ChevronRight size={16} className="pfp-link-arrow" />
+                        </a>
                       ))}
                     </div>
-                  </section>
-                )}
-              </aside>
+                  </div>
+                </motion.section>
+              )}
+
+              {reviews.length > 0 && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">Client Reviews</h2>
+                  </div>
+                  <div className="pfp-card-body pfp-reviews-container">
+                    {reviews.map((rev) => (
+                      <div key={rev._id} className="pfp-review-card">
+                        <div className="pfp-review-header">
+                          <div className="pfp-reviewer-avatar">
+                            {rev.reviewerId?.profilePicture ? (
+                              <img src={rev.reviewerId.profilePicture} alt="Client" />
+                            ) : (
+                              <span>{rev.reviewerId?.firstName?.charAt(0) || 'C'}</span>
+                            )}
+                          </div>
+                          <div className="pfp-reviewer-info">
+                            <h4>{rev.reviewerId?.firstName} {rev.reviewerId?.lastName?.charAt(0)}.</h4>
+                            <div className="pfp-review-stars">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <Star 
+                                  key={star} 
+                                  size={12} 
+                                  fill={star <= rev.rating ? "#f59e0b" : "transparent"} 
+                                  color={star <= rev.rating ? "#f59e0b" : "#cbd5e1"} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="pfp-review-text">"{rev.comment}"</p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.section>
+              )}
+
             </div>
-          </div>
-        )}
+          </motion.div>
+        </div>
       </div>
       <Footer />
     </>

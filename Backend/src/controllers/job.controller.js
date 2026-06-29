@@ -261,9 +261,9 @@ const deleteJob = asyncHandler(async (req, res) => {
   }
 
   // Don't allow deleting a job that is mid-contract or has money in escrow —
-  // that would strand a hired freelancer and any deposit.
-  if (['in-progress', 'delivered'].includes(job.status)) {
-    throw new BadRequestError('You cannot delete a project that is in progress or delivered. Complete or cancel it first.');
+  // that would strand a hired freelancer and any deposit. Also protect completed jobs.
+  if (['in-progress', 'delivered', 'completed'].includes(job.status)) {
+    throw new BadRequestError('You cannot delete a project that is in progress, delivered, or completed.');
   }
   const activePayment = await Payment.findOne({ jobId: id, status: { $in: ['deposit_paid'] } }).select('_id');
   if (activePayment) {
@@ -302,6 +302,12 @@ const closeJob = asyncHandler(async (req, res) => {
 
   job.status = 'closed';
   await job.save();
+
+  // Reject pending proposals
+  await Proposal.updateMany(
+    { jobId: id, status: 'pending' },
+    { $set: { status: 'rejected', clientResponse: 'Job closed', respondedAt: new Date() } }
+  );
 
   sendSuccess(res, {
     message: 'Job closed successfully',
@@ -503,6 +509,60 @@ const uploadAttachment = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Cancel an in-progress or delivered job.
+ * Only the client can cancel. Refunds the 50% deposit if applicable.
+ */
+const cancelJob = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const job = await Job.findById(id);
+  if (!job) throw new NotFoundError('Job not found');
+
+  if (String(job.clientId) !== String(req.user._id)) {
+    throw new ForbiddenError('Only the project owner can cancel the project');
+  }
+
+  // Prevent clients from cancelling and refunding themselves AFTER work is delivered.
+  // Disputes on delivered work must be handled by support in the MVP.
+  if (!['in-progress'].includes(job.status)) {
+    if (job.status === 'delivered') {
+      throw new BadRequestError('Cannot cancel a project after work has been delivered. Please request a revision or contact support to dispute the delivery.');
+    }
+    throw new BadRequestError(`Cannot cancel a project that is "${job.status}".`);
+  }
+
+  job.status = 'cancelled';
+  await job.save();
+
+  // Refund the deposit
+  const payment = await Payment.findOne({ jobId: id, status: 'deposit_paid' });
+  if (payment) {
+    payment.status = 'refunded';
+    await payment.save();
+    
+    // Simulate refund by adding funds to client wallet since this is test mode
+    await ClientProfile.findOneAndUpdate(
+      { userId: job.clientId },
+      { $inc: { walletBalance: payment.depositAmount } }
+    );
+  }
+
+  if (job.hiredFreelancer) {
+    notifications.notify(job.hiredFreelancer, {
+      type: 'contract_cancelled',
+      title: 'Contract Cancelled',
+      message: `The client has cancelled the contract for "${job.title}".`,
+      link: `/jobs/${job._id}`
+    });
+  }
+
+  sendSuccess(res, {
+    message: 'Project cancelled successfully and deposit refunded',
+    data: { job }
+  });
+});
+
 module.exports = {
   createJob,
   updateJob,
@@ -518,5 +578,6 @@ module.exports = {
   submitDelivery,
   acceptDelivery,
   requestRevision,
-  reviewJob
+  reviewJob,
+  cancelJob
 };

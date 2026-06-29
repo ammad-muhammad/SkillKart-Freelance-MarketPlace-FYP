@@ -13,5 +13,6 @@ router.post('/buddy', strictLimiter, optionalAuth, aiController.buddyChat);
 router.post('/cost-estimate', strictLimiter, aiController.estimateCost);
 router.post('/suggest-brief', strictLimiter, aiController.suggestBrief);
 router.post('/validate-skill', strictLimiter, aiController.validateSkill);
+router.post('/expand-skills', strictLimiter, aiController.expandSkills);
 
 module.exports = router;

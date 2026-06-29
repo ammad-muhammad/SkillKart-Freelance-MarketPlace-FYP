@@ -58,6 +58,11 @@ export default function JobDetails() {
       toast.warning('Only freelancers can apply for projects. Switch to a freelancer account to apply.');
       return;
     }
+    if (!user.isOnBoardingCompleted) {
+      toast.warning('You must complete your freelancer profile before applying to projects.');
+      navigate('/freelancer/onboarding');
+      return;
+    }
     setShowApplyModal(true);
   };
 

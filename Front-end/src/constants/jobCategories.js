@@ -29,3 +29,18 @@ export const GIG_SUBCATEGORIES = {
   'DevOps & Cloud': ['CI/CD', 'AWS', 'Azure', 'Kubernetes', 'Infrastructure'],
   'Other': ['Other'],
 };
+
+export const PREDEFINED_SKILLS = [
+  'React', 'Node.js', 'JavaScript', 'HTML', 'CSS', 'Python', 'Django', 'Flask',
+  'Ruby on Rails', 'PHP', 'Laravel', 'WordPress', 'Shopify', 'Magento',
+  'iOS', 'Android', 'React Native', 'Flutter', 'Swift', 'Kotlin',
+  'UI Design', 'UX Design', 'Figma', 'Adobe XD', 'Sketch', 'Logo Design',
+  'Graphic Design', 'Photoshop', 'Illustrator', 'InDesign',
+  'Data Science', 'Machine Learning', 'Data Analysis', 'Python', 'R', 'SQL',
+  'Content Writing', 'Copywriting', 'SEO Writing', 'Technical Writing', 'Translation',
+  'Video Editing', 'Premiere Pro', 'After Effects', 'Final Cut Pro', 'Animation',
+  'Digital Marketing', 'SEO', 'Social Media Marketing', 'Google Ads', 'Facebook Ads',
+  'Cybersecurity', 'Penetration Testing', 'Network Security', 'Ethical Hacking',
+  'DevOps', 'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes', 'CI/CD',
+  'Photography', 'Photo Editing', 'Illustration', 'Digital Art', '3D Modeling'
+].sort();

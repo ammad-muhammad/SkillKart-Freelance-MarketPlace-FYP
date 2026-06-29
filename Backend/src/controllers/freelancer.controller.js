@@ -7,6 +7,10 @@ const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
 const { applyUsernameUpdate } = require('../utils/username');
 const { syncFreelancerVerification } = require('../services/verification.service');
+const { getAIProvider } = require('../services/ai');
+
+// Simple in-memory cache for semantic skill expansion
+const skillExpansionCache = new Map();
 
 /**
  * Calculate profile completion percentage
@@ -205,12 +209,70 @@ const getFreelancerById = asyncHandler(async (req, res) => {
  */
 const searchFreelancers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { skills, minRate, maxRate, availability, isVerified, sortBy } = req.query;
+  const { q, skills, minRate, maxRate, availability, isVerified, sortBy, minRating, location } = req.query;
   
   const query = {};
   
+  if (q) {
+    const regex = new RegExp(q, 'i');
+    // Find matching users by name or username
+    const User = require('../models/User');
+    const matchedUsers = await User.find({
+      $or: [
+        { firstName: regex },
+        { lastName: regex },
+        { username: regex }
+      ]
+    }).select('_id');
+    const userIds = matchedUsers.map(u => u._id);
+
+    query.$or = [
+      { title: regex },
+      { bio: regex },
+      { 'skills.name': regex },
+      ...(userIds.length > 0 ? [{ userId: { $in: userIds } }] : [])
+    ];
+  }
+  
   if (skills) {
-    query['skills.name'] = { $in: Array.isArray(skills) ? skills : skills.split(',') };
+    const skillsArray = Array.isArray(skills) ? skills : skills.split(',');
+    
+    // Semantic Expansion
+    let expandedSkills = [...skillsArray];
+    try {
+      const aiProvider = getAIProvider();
+      const expansionPromises = skillsArray.map(async (s) => {
+        const lowerS = s.toLowerCase().trim();
+        if (skillExpansionCache.has(lowerS)) {
+           return skillExpansionCache.get(lowerS);
+        }
+        const expanded = await aiProvider.expandSearchSkills(s);
+        if (expanded && expanded.length > 0) {
+           skillExpansionCache.set(lowerS, expanded);
+           return expanded;
+        }
+        return [];
+      });
+      const results = await Promise.all(expansionPromises);
+      results.forEach(res => {
+         if (Array.isArray(res)) expandedSkills.push(...res);
+      });
+    } catch (err) {
+      console.error("AI Expansion failed during search:", err);
+    }
+    
+    // Deduplicate
+    expandedSkills = [...new Set(expandedSkills)];
+
+    query['skills.name'] = { $in: expandedSkills.map(s => new RegExp(`^${s}$`, 'i')) };
+  }
+  
+  if (minRating && !isNaN(minRating)) {
+    query.rating = { $gte: Number(minRating) };
+  }
+  
+  if (location) {
+    query.timezone = { $regex: new RegExp(location, 'i') };
   }
   
   if (minRate || maxRate) {
@@ -417,6 +479,19 @@ const uploadPortfolioMedia = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get distinct locations (timezones)
+ */
+const getLocations = asyncHandler(async (req, res) => {
+  const locations = await FreelancerProfile.distinct('timezone');
+  // Filter out null/empty and sort
+  const validLocations = locations.filter(Boolean).sort();
+  sendSuccess(res, {
+    message: 'Locations retrieved successfully',
+    data: validLocations
+  });
+});
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -430,5 +505,6 @@ module.exports = {
   uploadAvatar,
   uploadPortfolioMedia,
   toggleSavedJob,
-  getSavedJobs
+  getSavedJobs,
+  getLocations
 };

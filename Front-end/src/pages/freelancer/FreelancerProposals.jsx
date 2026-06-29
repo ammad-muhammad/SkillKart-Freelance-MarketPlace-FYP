@@ -4,9 +4,10 @@ import { proposalsAPI } from '../../api/proposals';
 import { jobsAPI } from '../../api/jobs';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  Clock, DollarSign, ExternalLink, UploadCloud, X
+  Clock, DollarSign, ExternalLink, UploadCloud, X, FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
 
 export default function FreelancerProposals() {
@@ -91,12 +92,13 @@ export default function FreelancerProposals() {
       </div>
 
       {proposals.length === 0 ? (
-        <div className="fl-empty-state">
-          <div className="fl-empty-state__icon">📄</div>
-          <h3>No Proposals Found</h3>
-          <p>You haven't submitted any proposals yet. Explore projects to find work!</p>
-          <Link to="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</Link>
-        </div>
+        <EmptyState 
+          icon={FileText}
+          title="No Proposals Found"
+          message="You haven't submitted any proposals yet. Explore projects to find work!"
+          actionText="Browse Projects"
+          actionLink="/browse-projects"
+        />
       ) : (
         <div className="fl-card-list">
           {proposals.map((prop) => (

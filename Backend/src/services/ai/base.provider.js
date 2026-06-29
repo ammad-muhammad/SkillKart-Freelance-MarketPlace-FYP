@@ -26,6 +26,15 @@ class AIProvider {
   }
 
   /**
+   * Expands a broad search query into specific skills.
+   * @param {string} query - The search query (e.g. "Web Development").
+   * @returns {Promise<string[]>} Array of specific skills.
+   */
+  async expandSearchSkills(query) {
+    throw new Error('Method expandSearchSkills() must be implemented by the provider.');
+  }
+
+  /**
    * Recommends a list of industries based on client profile details.
    * @param {string} companyName - The name of the company.
    * @param {string} bio - The bio/description of the company.

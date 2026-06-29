@@ -168,6 +168,10 @@ const userSchema = new mongoose.Schema({
     ref: 'User'
   },
   blockedAt: Date,
+  contactViolations: {
+    type: Number,
+    default: 0
+  },
 
   // SuperAdmin/Admin Specific
   createdBy: {
@@ -193,6 +197,7 @@ const userSchema = new mongoose.Schema({
   passwordResetToken: String,
   passwordResetExpires: Date,
   lastLogin: Date,
+  lastActive: Date,
   // Bumping this invalidates every JWT issued before the bump → "log out all
   // devices" and forced sign-out after a password change.
   tokenVersion: {
@@ -368,6 +373,8 @@ userSchema.methods.toAuthJSON = function () {
     authProvider: this.authProvider,
     isOnBoardingCompleted: this.isOnBoardingCompleted,
     supabaseId: this.supabaseId,
+    isBlocked: this.isBlocked,
+    blockedReason: this.blockedReason,
     createdAt: this.createdAt
   };
 };

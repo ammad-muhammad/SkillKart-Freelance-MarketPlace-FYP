@@ -26,4 +26,8 @@ export const aiAPI = {
   // global error toast (the input handles failures inline/silently).
   validateSkill: (input) =>
     client.post('/ai/validate-skill', { input }, { timeout: AI_TIMEOUT, suppressErrorToast: true }),
+    
+  // Semantic skill search: given a broad query, returns a list of specific skills
+  expandSearchSkills: (query) =>
+    client.post('/ai/expand-skills', { query }, { timeout: AI_TIMEOUT, suppressErrorToast: true }),
 };

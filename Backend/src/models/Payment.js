@@ -14,9 +14,10 @@ const mongoose = require('mongoose');
  * Amounts are stored in whole currency units (USD dollars), not cents.
  */
 const paymentSchema = new mongoose.Schema({
-  jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true, index: true },
+  jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', index: true },
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  freelancerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  freelancerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  type: { type: String, enum: ['job_escrow', 'wallet_deposit'], default: 'job_escrow' },
 
   totalAmount: { type: Number, required: true },     // agreed project amount
   depositAmount: { type: Number, required: true },   // 50% upfront

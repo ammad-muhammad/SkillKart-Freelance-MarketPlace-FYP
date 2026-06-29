@@ -106,13 +106,16 @@ Validate if a given string is a valid DIGITAL or PROFESSIONAL skill relevant to 
 
 Allowed Categories: Software/Web/Mobile Development, UI/UX Design, Graphic Design, Video Editing, Content Writing, SEO, Digital Marketing, Data Science, AI/ML, Cybersecurity, Cloud/DevOps, Business/Virtual Assistance, No-Code/Automation, Finance/Accounting, Professional online services.
 
-Reject hobbies, sports/physical activities, entertainment-only skills, and unrelated real-world activities.
+Reject offline/physical tasks (like mobile repairing, delivery), NSFW/Adult content, hobbies, sports/physical activities, entertainment-only skills, and unrelated real-world activities.
 
 Input: "${input}"
 
-1. Determine if it's a valid professional/digital skill.
+EXCEPTIONS:
+- YOU MUST ALLOW creative freelance skills that can be delivered digitally (e.g., Photography, Photo Editing, Video Editing, Illustration).
+
+1. Determine if it's a valid professional/digital skill. IF IT IS A PHYSICAL OR OFFLINE TASK, IT IS STRICTLY INVALID.
 2. If it's a variation (e.g., "reactjs"), normalize it (e.g., "React.js").
-3. If invalid, set "valid": false and explain why.
+3. If invalid (violates ANY Strict Rejection Rules like offline task, hobby, sport, nsfw, or garbage), set "valid": false and explain why.
 4. Provide 3-5 related professional digital skills.
 
 Output ONLY valid JSON:

@@ -22,7 +22,10 @@ const authenticate = async (req, res, next) => {
     const user = await User.findById(decoded.userId).select('-password').lean();
     if (!user) throw new UnauthorizedError('User not found');
     if (!user.isActive) throw new UnauthorizedError('Account is inactive');
-    if (user.isBlocked) throw new UnauthorizedError('Account has been blocked');
+    if (user.isBlocked && req.method !== 'GET' && !req.originalUrl.includes('/logout')) {
+      const { ForbiddenError } = require('../utils/apiError');
+      throw new ForbiddenError('Account has been blocked. You can no longer perform actions.');
+    }
     if (user.lockUntil && user.lockUntil > Date.now()) throw new UnauthorizedError('Account is temporarily locked');
     // Reject tokens issued before a "log out all devices" / password change.
     if ((decoded.tv || 0) !== (user.tokenVersion || 0)) {
@@ -31,6 +34,13 @@ const authenticate = async (req, res, next) => {
 
     req.user = user;
     req.userId = user._id;
+
+    // Update lastActive (debounce by 2 minutes to save DB writes)
+    const now = new Date();
+    if (!user.lastActive || now.getTime() - new Date(user.lastActive).getTime() > 2 * 60 * 1000) {
+      User.updateOne({ _id: user._id }, { $set: { lastActive: now } }).catch(() => {});
+    }
+
     next();
   } catch (error) {
     next(error);
@@ -53,9 +63,14 @@ const optionalAuth = async (req, res, next) => {
       }
 
       const user = await User.findById(decoded.userId).select('-password').lean();
-      if (user && user.isActive && !user.isBlocked) {
+      if (user && user.isActive) {
         req.user = user;
         req.userId = user._id;
+
+        const now = new Date();
+        if (!user.lastActive || now.getTime() - new Date(user.lastActive).getTime() > 2 * 60 * 1000) {
+          User.updateOne({ _id: user._id }, { $set: { lastActive: now } }).catch(() => {});
+        }
       }
     } catch (error) {
       // Ignore errors for optional auth

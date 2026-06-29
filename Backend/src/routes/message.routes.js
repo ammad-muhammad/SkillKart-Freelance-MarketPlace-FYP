@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const messageController = require('../controllers/message.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const { uploadSingle } = require('../middleware/upload.middleware');
+const upload = { single: uploadSingle };
 
 router.use(authenticate);
 

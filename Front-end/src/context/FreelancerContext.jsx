@@ -58,6 +58,7 @@ const emptyProfile = {
     completedOrders: 0,
     profileViews: 0,
   },
+  walletBalance: 0,
   verificationStatus: 'unverified',
   verificationDetails: {
     emailVerified: false,
@@ -158,6 +159,7 @@ export const FreelancerProvider = ({ children }) => {
           profileViews: 0,
           rating: dbProfile.rating || activeUser?.rating || 0,
         },
+        walletBalance: dbProfile.walletBalance || 0,
         verificationStatus: dbProfile.verificationStatus || 'unverified',
         verificationDetails: dbProfile.verificationDetails || emptyProfile.verificationDetails
       };

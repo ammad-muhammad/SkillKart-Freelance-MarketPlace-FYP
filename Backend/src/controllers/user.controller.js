@@ -103,11 +103,20 @@ const deleteUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new NotFoundError('User not found');
   }
+
+  // Cascade Deletion
+  const mongoose = require('mongoose');
   
-  await User.deleteOne({ _id: id });
+  await Promise.all([
+    mongoose.model('Job') ? mongoose.model('Job').deleteMany({ clientId: id }) : Promise.resolve(),
+    mongoose.model('ClientProfile') ? mongoose.model('ClientProfile').deleteOne({ userId: id }) : Promise.resolve(),
+    mongoose.model('FreelancerProfile') ? mongoose.model('FreelancerProfile').deleteOne({ userId: id }) : Promise.resolve(),
+    mongoose.model('Proposal') ? mongoose.model('Proposal').deleteMany({ freelancerId: id }) : Promise.resolve(),
+    User.deleteOne({ _id: id })
+  ]);
   
   sendSuccess(res, {
-    message: 'User deleted successfully'
+    message: 'User and associated data deleted successfully'
   });
 });
 

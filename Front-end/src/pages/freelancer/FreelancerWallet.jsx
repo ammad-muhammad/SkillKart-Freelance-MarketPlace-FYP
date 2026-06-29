@@ -3,6 +3,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { paymentsAPI } from '../../api/payments';
 import { Wallet, DollarSign, ArrowDownToLine, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'react-toastify';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
 
 export default function FreelancerWallet() {
@@ -104,11 +105,13 @@ export default function FreelancerWallet() {
         <div className="fl-card__header">
           <h2 className="fl-card__title">Transaction History</h2>
         </div>
-        <div className="fl-card__body" style={{ padding: '0' }}>
+        <div className="fl-card__body" style={{ padding: payments.length === 0 ? '2rem' : '0' }}>
           {payments.length === 0 ? (
-            <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748b' }}>
-              No transactions found.
-            </div>
+            <EmptyState 
+              icon={DollarSign}
+              title="No Transactions Yet"
+              message="Your payment history will appear here once you complete jobs and receive funds."
+            />
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>

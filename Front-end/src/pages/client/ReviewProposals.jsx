@@ -11,6 +11,7 @@ import {
   Mail, Star, ExternalLink
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import './ReviewProposals.css';
 
 export default function ReviewProposals() {
@@ -68,6 +69,8 @@ export default function ReviewProposals() {
     if (message === null) return;
 
     setProcessingId(id);
+    setJob(prev => prev ? { ...prev, status: 'in_progress' } : prev);
+    
     try {
       await proposalsAPI.acceptProposal(id, message);
       toast.success('Proposal accepted! Now fund the 50% deposit to start the work.');
@@ -88,6 +91,7 @@ export default function ReviewProposals() {
       fetchData(); // Refresh local view if we didn't redirect
     } catch (error) {
       toast.error('Failed to accept proposal.');
+      setJob(prev => prev ? { ...prev, status: 'open' } : prev);
     } finally {
       setProcessingId(null);
     }
@@ -110,7 +114,37 @@ export default function ReviewProposals() {
     }
   };
 
-  if (loading) return <div className="rp-loading">Loading proposals...</div>;
+  if (loading) {
+    return (
+      <div className="rp-container">
+        <div className="cl-page-header">
+          <Skeleton width="150px" height="20px" style={{ marginBottom: '1rem' }} />
+          <Skeleton width="300px" height="32px" style={{ marginBottom: '0.5rem' }} />
+          <Skeleton width="250px" height="20px" />
+        </div>
+        <div className="rp-grid">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="rp-card">
+              <div className="rp-card__header" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <Skeleton variant="circle" width="48px" height="48px" />
+                <div style={{ flex: 1 }}>
+                  <Skeleton width="150px" height="20px" style={{ marginBottom: '0.25rem' }} />
+                  <Skeleton width="100px" height="16px" />
+                </div>
+              </div>
+              <div className="rp-card__body">
+                <Skeleton width="100%" height="60px" style={{ marginBottom: '1rem' }} />
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <Skeleton width="100px" height="20px" />
+                  <Skeleton width="100px" height="20px" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rp-page">
@@ -183,14 +217,14 @@ export default function ReviewProposals() {
                       <button 
                         className="rp-btn rp-btn--accept"
                         onClick={() => handleAccept(prop._id)}
-                        disabled={!!processingId}
+                        disabled={!!processingId || job?.status !== 'open'}
                       >
                         <CheckCircle2 size={18} /> Accept
                       </button>
                       <button 
                         className="rp-btn rp-btn--reject"
                         onClick={() => handleReject(prop._id)}
-                        disabled={!!processingId}
+                        disabled={!!processingId || job?.status !== 'open'}
                       >
                         <XCircle size={18} /> Reject
                       </button>

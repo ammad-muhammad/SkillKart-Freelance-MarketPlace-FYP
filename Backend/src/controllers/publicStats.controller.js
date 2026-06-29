@@ -7,6 +7,8 @@ const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError } = require('../utils/apiError');
 const { JOB_CATEGORIES } = require('../utils/constants');
+const { sendEmail } = require('../services/email.service');
+const config = require('../config');
 
 const slugify = (s) =>
   String(s).toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -243,6 +245,35 @@ const submitContact = asyncHandler(async (req, res) => {
     message: String(message).slice(0, 4000),
     meta: { ip: req.ip, userAgent: req.get('User-Agent') },
   });
+
+  // Send the email via SMTP to the platform's support inbox (using the configured sender email)
+  const supportEmail = config.email.from || config.email.user || 'support@skillkart.app';
+  const emailSubject = `New Contact Form Submission: ${subject || 'General Inquiry'}`;
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #4F46E5; margin-top: 0;">New Contact Form Submission</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject || 'None provided'}</p>
+        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+        <p><strong>Message:</strong></p>
+        <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; white-space: pre-wrap;">
+          ${message}
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  try {
+    await sendEmail(supportEmail, emailSubject, emailHtml);
+  } catch (err) {
+    console.error("Failed to send contact SMTP email:", err);
+    // Don't fail the request if the email fails, since it's already saved to the database.
+  }
 
   sendCreated(res, 'Message received', { received: true });
 });
