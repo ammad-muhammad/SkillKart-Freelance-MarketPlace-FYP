@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadAvatar as apiUploadAvatar } from '../../utils/uploadHelper';
+import { uploadAvatar as apiUploadAvatar, uploadPortfolioImage as apiUploadCover } from '../../utils/uploadHelper';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import { timezones } from '../../utils/timezones';
 import { LANGUAGES } from '../../data/languages';
@@ -77,6 +77,7 @@ const FreelancerProfile = () => {
   const [portfolioLinks, setPortfolioLinks] = useState(Array.isArray(profile?.portfolioLinks) ? [...profile.portfolioLinks] : []);
   const [socialLinks, setSocialLinks] = useState(profile?.socialLinks ? { ...profile.socialLinks } : {});
   const fileRef = useRef(null);
+  const coverRef = useRef(null);
 
   const startEdit = () => {
     setForm({ ...profile.personalInfo });
@@ -151,6 +152,22 @@ const FreelancerProfile = () => {
     }
   };
 
+  const handleCoverChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setSaving(true);
+    try {
+      const url = await apiUploadCover(file);
+      setForm((p) => ({ ...p, coverPhoto: url }));
+      showToast('Cover photo uploaded! Save to persist changes.');
+    } catch (error) {
+      showToast('Cover upload failed', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const addPortfolioLink = () => setPortfolioLinks((prev) => [...prev, '']);
   const removePortfolioLink = (i) => setPortfolioLinks((prev) => prev.filter((_, idx) => idx !== i));
   const updatePortfolioLink = (i, val) =>
@@ -169,11 +186,31 @@ const FreelancerProfile = () => {
       </div>
 
       {/* Profile Hero */}
-      <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <div className="fl-profile-hero">
+      <div className="fl-card" style={{ marginBottom: '1.5rem', position: 'relative' }}>
+        <div 
+          className="fl-profile-cover" 
+          style={{ 
+            height: '120px', 
+            background: data.coverPhoto ? `url(${data.coverPhoto}) center/cover no-repeat` : 'var(--gradient-primary)',
+            borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+            margin: '-1.5rem -1.5rem 1.5rem -1.5rem',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          {editing && (
+            <div style={{ position: 'absolute', bottom: '1rem', right: '1rem' }}>
+              <button className="fl-btn fl-btn--outline" style={{ background: 'white' }} onClick={() => coverRef.current?.click()}>
+                📷 Change Cover
+              </button>
+              <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCoverChange} />
+            </div>
+          )}
+        </div>
+        <div className="fl-profile-hero" style={{ position: 'relative', zIndex: 2, alignItems: 'flex-start' }}>
           {/* Avatar */}
-          <div className="fl-profile-hero__avatar-wrap">
-            <div className="fl-profile-hero__avatar">
+          <div className="fl-profile-hero__avatar-wrap" style={{ marginTop: '-4rem', marginLeft: '1rem' }}>
+            <div className="fl-profile-hero__avatar" style={{ border: '4px solid var(--color-bg)' }}>
               <UserAvatar 
                 src={editing ? form.avatar : profile?.personalInfo?.avatar}
                 fullName={data.fullName}

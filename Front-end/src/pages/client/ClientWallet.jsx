@@ -62,7 +62,7 @@ export default function ClientWallet() {
   }, [loadHistory]);
 
   const totalSpent = profile?.stats?.totalSpent || profile?.totalSpent || 0;
-  
+
   // Calculate active escrow: deposit is paid, but final isn't released
   const activeEscrow = payments
     .filter(p => p.status === 'deposit_paid')
@@ -97,21 +97,34 @@ export default function ClientWallet() {
           <h1 className="cl-page-title">Billing & Payments</h1>
           <p className="cl-page-sub">Manage your wallet, active escrow funds, and transaction history.</p>
         </div>
-        <button className="cl-btn cl-btn--primary" onClick={() => setDepositModal(true)}>
-          + Add Funds
+        <button
+          className="cl-btn cl-btn--primary"
+          onClick={() => setDepositModal(true)}
+          disabled={depositing}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <ArrowUpRight size={18} />
+          {depositing ? 'Processing...' : 'Add Funds'}
         </button>
       </div>
 
-      <div className="cl-dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', marginBottom: '2rem' }}>
-        <div className="cl-stat-card">
-          <div className="cl-stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
-            <Wallet size={24} />
+      <div className="fl-stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', marginBottom: '2rem' }}>
+        <div className="cl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
+          <div className="cl-stat-card__bg" style={{ opacity: 0.1 }}>
+            <DollarSign size={100} />
           </div>
-          <div className="cl-stat-card__value">${walletBalance.toLocaleString()}</div>
-          <div className="cl-stat-card__label">Available Wallet Balance</div>
+          <div className="cl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
+            <DollarSign size={24} />
+          </div>
+          <div className="cl-stat-card__value" style={{ color: 'var(--color-white)' }}>${walletBalance.toLocaleString()}</div>
+          <div className="cl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available Wallet Balance</div>
         </div>
+
         <div className="cl-stat-card">
-          <div className="cl-stat-card__icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+          <div className="cl-stat-card__bg">
+            <Wallet size={100} />
+          </div>
+          <div className="cl-stat-card__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
             <Wallet size={24} />
           </div>
           <div className="cl-stat-card__value">${activeEscrow.toLocaleString()}</div>
@@ -120,12 +133,12 @@ export default function ClientWallet() {
       </div>
 
       <div className="cl-card">
-        <div className="cl-card__header">
+        <div className="cl-card__header" style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-secondary)' }}>
           <h2 className="cl-card__title">Transaction History</h2>
         </div>
-        <div className="cl-card__body" style={{ padding: payments.length === 0 ? '2rem' : '0' }}>
+        <div className="cl-card__body">
           {payments.length === 0 ? (
-            <EmptyState 
+            <EmptyState
               icon={DollarSign}
               title="No Transactions Yet"
               message="Your payment history will appear here once you deposit funds or pay freelancers."
@@ -136,40 +149,40 @@ export default function ClientWallet() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Date</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Project</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Freelancer</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Amount</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Status</th>
+                  <tr style={{ borderBottom: '2px solid var(--color-secondary)' }}>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Date</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Project</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Freelancer</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Amount</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map(payment => (
-                    <tr key={payment._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '1rem', color: '#64748b' }}>
+                    <tr key={payment._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {new Date(payment.createdAt).toLocaleDateString()}
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: '500' }}>
+                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-primary-dark)', fontSize: 'var(--fs-sm)' }}>
                         {payment.type === 'wallet_deposit' ? 'Wallet Deposit' : (payment.jobId?.title || 'Unknown Project')}
                       </td>
-                      <td style={{ padding: '1rem', color: '#475569' }}>
+                      <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {payment.type === 'wallet_deposit' ? 'Self' : (payment.freelancerId ? `${payment.freelancerId.firstName} ${payment.freelancerId.lastName}` : 'N/A')}
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: '600' }}>
-                        ${payment.totalAmount?.toLocaleString()}
+                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: payment.type === 'wallet_deposit' ? '#10b981' : '#ef4444' }}>
+                        {payment.type === 'wallet_deposit' ? '+' : '-'}${payment.totalAmount?.toLocaleString()}
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {payment.status === 'released' ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#16a34a', fontSize: '0.875rem' }}>
-                            <CheckCircle2 size={16} /> Paid in Full
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <CheckCircle2 size={14} /> Paid in Full
                           </span>
                         ) : payment.status === 'deposit_paid' ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#d97706', fontSize: '0.875rem' }}>
-                            <Clock size={16} /> Escrow Active (50%)
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#f59e0b', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <Clock size={14} /> Escrow Active (50%)
                           </span>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{payment.status}</span>
+                          <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)' }}>{payment.status}</span>
                         )}
                       </td>
                     </tr>
@@ -207,8 +220,8 @@ export default function ClientWallet() {
             </div>
             <div className="cl-modal__footer">
               <button className="cl-btn cl-btn--ghost" onClick={() => setDepositModal(false)} disabled={depositing}>Cancel</button>
-              <button 
-                className="cl-btn cl-btn--primary" 
+              <button
+                className="cl-btn cl-btn--primary"
                 disabled={!depositAmount || Number(depositAmount) <= 0 || depositing}
                 onClick={handleDeposit}
               >

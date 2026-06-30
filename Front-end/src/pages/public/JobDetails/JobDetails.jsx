@@ -7,14 +7,16 @@ import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { 
   Clock, DollarSign, Tag, Briefcase, ChevronLeft, 
-  Send, AlertCircle, CheckCircle2, User, Calendar
+  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark
 } from 'lucide-react';
+import { useFreelancer } from '../../../context/FreelancerContext';
 import { toast } from 'react-toastify';
 import './JobDetails.css';
 
 export default function JobDetails() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { savedProjects, toggleSavedProject } = useFreelancer();
   const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -152,6 +154,19 @@ export default function JobDetails() {
   if (loading) return <div className="jd-loading">Loading project details...</div>;
   if (!job) return <div className="jd-error">Project not found.</div>;
 
+  const isFreelancer = user?.role === 'freelancer';
+  const hasApplied = job.proposals?.some(p => p.freelancerId?._id === user?._id);
+  const isSaved = Array.isArray(savedProjects) && savedProjects.some(sj => (sj._id || sj) === job._id);
+
+  const handleToggleSave = async () => {
+    if (!user) {
+      toast.info('Please log in as a freelancer to save jobs.');
+      return navigate('/login');
+    }
+    if (!isFreelancer) return toast.warning('Only freelancers can save jobs.');
+    await toggleSavedProject(job);
+  };
+
   return (
     <>
       <Navbar />
@@ -164,9 +179,22 @@ export default function JobDetails() {
           <div className="jd-layout">
             <main className="jd-main">
               <div className="jd-card jd-header">
-                <div className="jd-header__top">
-                  <span className="jd-category">{job.category}</span>
-                  <span className="jd-posted">Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                <div className="jd-header__top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div>
+                    <span className="jd-category">{job.category}</span>
+                    <span className="jd-posted" style={{ marginLeft: '1rem', color: 'var(--color-text-light)', fontSize: '0.85rem' }}>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {(!user || isFreelancer) && (
+                    <button 
+                      className={`fl-btn ${isSaved ? 'fl-btn--primary' : 'fl-btn--outline'}`} 
+                      onClick={handleToggleSave}
+                      style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                      title={isSaved ? 'Unsave Job' : 'Save Job'}
+                    >
+                      <Bookmark size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                      {isSaved ? 'Saved' : 'Save Job'}
+                    </button>
+                  )}
                 </div>
                 <h1 className="jd-title">{job.title}</h1>
                 <div className="jd-meta">
@@ -249,13 +277,22 @@ export default function JobDetails() {
               </div>
 
               <div className="jd-sidebar__card jd-apply">
-                <button 
-                  className="jd-apply__btn"
-                  onClick={handleApplyClick}
-                  disabled={job.status !== 'open'}
-                >
-                  {job.status === 'open' ? 'Apply Now' : 'Job Closed'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <button 
+                    className={`jd-apply__btn ${hasApplied && job.status === 'open' ? 'jd-apply__btn--applied' : ''}`}
+                    onClick={hasApplied ? undefined : handleApplyClick}
+                    disabled={job.status !== 'open' || hasApplied}
+                    style={{ flex: 1 }}
+                  >
+                    {job.status !== 'open' ? (
+                      'Closed'
+                    ) : hasApplied ? (
+                      <><CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied</>
+                    ) : (
+                      'Apply Now'
+                    )}
+                  </button>
+                </div>
                 <p className="jd-apply__note">
                   {job.proposals?.length || 0} proposals already submitted.
                 </p>

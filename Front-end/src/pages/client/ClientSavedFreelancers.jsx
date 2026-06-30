@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
+import { BookmarkMinus, MapPin, Star } from 'lucide-react';
 import './ClientDashboard.css';
 
 const ClientSavedFreelancers = () => {
@@ -47,7 +48,7 @@ const ClientSavedFreelancers = () => {
                 onClick={() => removeSaved(f)}
                 title="Remove from saved"
               >
-                🔖
+                <BookmarkMinus size={20} />
               </button>
               
               <div className="cl-freelancer-card__header">
@@ -56,21 +57,31 @@ const ClientSavedFreelancers = () => {
                 </div>
                 <div>
                   <h3 className="cl-freelancer-card__name">{f.name}</h3>
-                  <p className="cl-freelancer-card__title">{f.title}</p>
+                  <p className="cl-freelancer-card__title">{f.title || 'Freelancer'}</p>
                 </div>
               </div>
 
               <div className="cl-freelancer-card__stats">
-                <span>⭐ {f.rating} ({f.reviews})</span>
-                <span>📍 {f.location}</span>
+                <span><Star size={14} fill="currentColor" style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> {f.rating || 0} ({f.reviews || 0})</span>
+                {f.location && <span><MapPin size={14} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> {f.location}</span>}
               </div>
 
+              {f.description && (
+                <p className="cl-freelancer-card__desc" style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginBottom: '1rem', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {f.description}
+                </p>
+              )}
+
               <div className="cl-freelancer-card__skills">
-                {f.skills.map(s => <span key={s} className="cl-tag">{s}</span>)}
+                {f.skills?.length > 0 ? (
+                  f.skills.map(s => <span key={s} className="cl-tag">{s}</span>)
+                ) : (
+                  <span className="cl-tag" style={{ opacity: 0.6 }}>No skills listed</span>
+                )}
               </div>
 
               <div className="cl-freelancer-card__footer">
-                <span className="cl-freelancer-card__rate"><strong>${f.hourlyRate}</strong> / hr</span>
+                <span className="cl-freelancer-card__rate"><strong>${f.hourlyRate || 0}</strong> / hr</span>
                 <button
                   className="cl-btn cl-btn--primary cl-btn--sm"
                   onClick={() => navigate(`/freelancers/${f.id}`)}
@@ -86,33 +97,47 @@ const ClientSavedFreelancers = () => {
       <style>{`
         .cl-saved-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 1.25rem;
+          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+          gap: 1.5rem;
+        }
+        @media (min-width: 1024px) {
+          .cl-saved-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
         .cl-freelancer-card {
           position: relative;
           display: flex;
           flex-direction: column;
-          gap: 1rem;
-          transition: transform 0.2s;
+          gap: 1.25rem;
+          padding: 1.5rem;
+          background: var(--color-bg);
+          border: 1px solid var(--color-secondary);
+          border-radius: var(--radius-xl);
+          box-shadow: var(--shadow-sm);
+          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
         }
-        .cl-freelancer-card:hover { transform: translateY(-4px); }
+        .cl-freelancer-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--color-accent); }
         .cl-freelancer-card__unsave {
-          position: absolute; top: 1.25rem; right: 1.25rem;
-          background: none; border: none; font-size: 1.25rem;
-          cursor: pointer; opacity: 0.8; transition: opacity 0.2s;
+          position: absolute; top: 1.5rem; right: 1.5rem;
+          background: rgba(4,46,76,0.05); border: none; 
+          width: 36px; height: 36px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; color: var(--color-text-light); transition: all 0.2s;
         }
-        .cl-freelancer-card__unsave:hover { opacity: 1; color: var(--color-primary); }
-        .cl-freelancer-card__header { display: flex; align-items: center; gap: 0.75rem; }
+        .cl-freelancer-card__unsave:hover { color: #dc2626; background: rgba(220,38,38,0.1); }
+        .cl-freelancer-card__header { display: flex; align-items: center; gap: 1rem; padding-right: 2.5rem; }
         .cl-freelancer-card__avatar {
-          width: 50px; height: 50px; border-radius: 50%;
+          width: 64px; height: 64px; border-radius: 50%;
           background: var(--gradient-primary); color: #fff;
           display: flex; align-items: center; justify-content: center;
-          font-weight: 700; font-size: 1.2rem; flex-shrink: 0;
+          font-weight: var(--fw-bold); font-size: 1.5rem; flex-shrink: 0;
+          overflow: hidden;
         }
-        .cl-freelancer-card__name { font-size: 1rem; font-weight: 700; color: var(--color-primary); }
-        .cl-freelancer-card__title { font-size: 0.8rem; color: var(--color-text-light); }
-        .cl-freelancer-card__stats { display: flex; gap: 1rem; font-size: 0.75rem; color: var(--color-text-mid); font-weight: 600; }
+        .cl-freelancer-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .cl-freelancer-card__name { font-size: var(--fs-md); font-family: var(--font-heading); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
+        .cl-freelancer-card__title { font-size: var(--fs-sm); color: var(--color-text-mid); margin-top: 0.25rem; }
+        .cl-freelancer-card__stats { display: flex; gap: 1.5rem; font-size: var(--fs-sm); color: var(--color-text-mid); font-weight: var(--fw-medium); }
         .cl-freelancer-card__skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
         .cl-freelancer-card__footer {
           margin-top: auto; padding-top: 1rem; border-top: 1px solid #f0f4f8;

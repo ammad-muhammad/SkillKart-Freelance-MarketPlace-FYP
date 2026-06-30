@@ -126,6 +126,7 @@ export const FreelancerProvider = ({ children }) => {
           phone: dbProfile.phone || '',
           bio: dbProfile.bio || '',
           title: dbProfile.title || '',
+          coverPhoto: dbProfile.coverPhoto || null,
           location: dbProfile.timezone || 'Global',
           memberSince: new Date(activeUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
           avatar: activeUser.profilePicture || null,
@@ -160,6 +161,7 @@ export const FreelancerProvider = ({ children }) => {
           rating: dbProfile.rating || activeUser?.rating || 0,
         },
         walletBalance: dbProfile.walletBalance || 0,
+        totalEarnings: dbProfile.totalEarnings || 0,
         verificationStatus: dbProfile.verificationStatus || 'unverified',
         verificationDetails: dbProfile.verificationDetails || emptyProfile.verificationDetails
       };
@@ -237,6 +239,7 @@ export const FreelancerProvider = ({ children }) => {
         username: personalInfo.username,
         bio: personalInfo.bio,
         title: personalInfo.title,
+        coverPhoto: personalInfo.coverPhoto,
         phone: personalInfo.phone,
         hourlyRate: personalInfo.hourlyRate,
         availability: personalInfo.availability,
@@ -390,10 +393,13 @@ export const FreelancerProvider = ({ children }) => {
 
   const toggleSavedProject = async (project) => {
     try {
-      await freelancersAPI.toggleSavedJob(project._id || project.id);
+      const res = await freelancersAPI.toggleSavedJob(project._id || project.id);
       await fetchFreelancerData();
+      showToast(res.data?.message || 'Saved jobs updated!', 'success');
+      return true;
     } catch (error) {
       showToast('Failed to save project', 'error');
+      return false;
     }
   };
 

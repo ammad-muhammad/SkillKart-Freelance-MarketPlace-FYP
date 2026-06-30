@@ -20,13 +20,16 @@
 .fl-sidebar::-webkit-scrollbar {
   width: 5px;
 }
+
 .fl-sidebar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .fl-sidebar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 10px;
 }
+
 .fl-sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35);
 }
@@ -56,6 +59,7 @@
   border-radius: 6px;
   transition: background 0.2s;
 }
+
 .fl-sidebar__close:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
@@ -86,6 +90,7 @@
   overflow: hidden;
   border: 2px solid rgba(183, 201, 226, 0.5);
 }
+
 .fl-sidebar__avatar img {
   width: 100%;
   height: 100%;
@@ -120,7 +125,7 @@
 }
 
 .fl-verified-badge {
-  background: #3b82f6;
+  background: rgb(16, 185, 129);
   color: white;
   font-size: 0.65rem;
   width: 14px;
@@ -202,6 +207,7 @@
   color: rgba(255, 255, 255, 0.6);
   transition: all 0.2s ease;
 }
+
 .fl-sidebar__logout:hover {
   background: rgba(239, 68, 68, 0.18);
   color: #fca5a5;
@@ -240,6 +246,7 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
 .fl-hamburger span {
   display: block;
   width: 22px;
@@ -254,10 +261,12 @@
 .fl-hamburger--open span:nth-child(1) {
   transform: translateY(7px) rotate(45deg);
 }
+
 .fl-hamburger--open span:nth-child(2) {
   opacity: 0;
   transform: translateX(-10px);
 }
+
 .fl-hamburger--open span:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
 }
@@ -277,18 +286,23 @@
   .fl-sidebar {
     transform: translateX(-100%);
   }
+
   .fl-sidebar--open {
     transform: translateX(0);
   }
+
   .fl-sidebar__close {
     display: flex;
   }
+
   .fl-mobile-header {
     display: flex;
   }
+
   .fl-hamburger {
     display: flex;
   }
+
   .fl-overlay {
     display: block;
   }
@@ -298,6 +312,7 @@
 .fl-sidebar__link {
   position: relative;
 }
+
 .fl-sidebar__notif-badge {
   margin-left: auto;
   min-width: 20px;
@@ -314,8 +329,15 @@
   flex-shrink: 0;
   animation: notif-pulse 2s ease-in-out infinite;
 }
-@keyframes notif-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
-}
 
+@keyframes notif-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+  }
+}

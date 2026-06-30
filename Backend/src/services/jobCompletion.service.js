@@ -38,6 +38,7 @@ async function finalizeJobCompletion(job, opts = {}) {
         $inc: {
           completedProjects: 1,
           totalEarnings: Math.round(freelancerEarning),
+          walletBalance: Number(freelancerEarning.toFixed(2)),
         },
       }
     );

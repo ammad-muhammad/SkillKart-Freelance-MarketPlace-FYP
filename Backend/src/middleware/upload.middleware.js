@@ -5,14 +5,23 @@ const { FileUploadError } = require('../utils/apiError');
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp|pdf|doc|docx/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const allowedExts = ['.jpeg', '.jpg', '.png', '.webp', '.pdf', '.doc', '.docx', '.txt'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ];
 
-  if (extname && mimetype) {
+  if (allowedExts.includes(ext) && allowedMimeTypes.includes(file.mimetype)) {
     return cb(null, true);
   }
-  cb(new FileUploadError('Invalid file type'));
+  cb(new FileUploadError('Invalid file type. Only PDF, DOC, DOCX, TXT, and images are allowed.'));
 };
 
 const upload = multer({

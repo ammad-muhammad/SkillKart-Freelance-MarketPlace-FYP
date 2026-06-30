@@ -265,3 +265,27 @@ button {
 /* Tablet:  768px – 1023px */
 /* Desktop: 1024px – 1279px */
 /* Wide:    ≥ 1280px */
+
+/* ================================================
+   Global Custom Scrollbar
+   ================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(4, 46, 76, 0.15); /* Subtle primary color tint */
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(4, 46, 76, 0.3);
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(4, 46, 76, 0.15) transparent;
+}

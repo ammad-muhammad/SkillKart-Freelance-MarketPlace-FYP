@@ -54,4 +54,10 @@ const deleteNotification = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Notification deleted' });
 });
 
-module.exports = { listNotifications, getUnreadCount, markRead, markAllRead, deleteNotification };
+/** DELETE /notifications/clear-all — remove all of the caller's notifications. */
+const clearAllNotifications = asyncHandler(async (req, res) => {
+  await Notification.deleteMany({ userId: req.user._id });
+  sendSuccess(res, { message: 'All notifications cleared' });
+});
+
+module.exports = { listNotifications, getUnreadCount, markRead, markAllRead, deleteNotification, clearAllNotifications };

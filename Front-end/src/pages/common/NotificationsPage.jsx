@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Trash2, Inbox } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { notificationsAPI } from '../../api/notifications';
 import { useNotification } from '../../context/NotificationContext';
 import './NotificationsPage.css';
@@ -62,6 +63,19 @@ export default function NotificationsPage() {
     setItems((arr) => arr.filter((x) => x._id !== id));
   };
 
+  const clearAll = async () => {
+    if (!window.confirm('Are you sure you want to clear all notifications?')) return;
+    try {
+      await notificationsAPI.clearAll();
+      setItems([]);
+      setUnread(0);
+      markAllReadLocal();
+      toast.success('All notifications cleared.');
+    } catch {
+      toast.error('Failed to clear notifications.');
+    }
+  };
+
   return (
     <div className="np-page">
       <div className="np-header">
@@ -69,11 +83,22 @@ export default function NotificationsPage() {
           <h1 className="np-title"><Bell size={22} /> Notifications</h1>
           <p className="np-sub">{unread > 0 ? `${unread} unread` : 'All caught up'}</p>
         </div>
-        {unread > 0 && (
-          <button className="np-markall" onClick={markAll}>
-            <CheckCheck size={16} /> Mark all read
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          {unread > 0 && (
+            <button className="np-markall" onClick={markAll}>
+              <CheckCheck size={16} /> Mark all read
+            </button>
+          )}
+          {items.length > 0 && (
+            <button 
+              className="np-markall" 
+              style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }} 
+              onClick={clearAll}
+            >
+              <Trash2 size={16} /> Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="np-filters">

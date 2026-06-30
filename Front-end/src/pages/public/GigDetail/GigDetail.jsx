@@ -80,6 +80,11 @@ export default function GigDetail() {
       toast.warning('Only clients can order gigs. Switch to a client account to purchase.');
       return;
     }
+    
+    if (!window.confirm("Have you contacted the freelancer to discuss your project requirements?\n\nIt is highly recommended to do so before placing an order.\n\nClick 'OK' to proceed to checkout if you are ready.")) {
+      return;
+    }
+
     setOrdering(tier);
     try {
       // Create the order (a job under the hood), then go straight to the 50%
@@ -89,6 +94,11 @@ export default function GigDetail() {
       if (!jobId) { toast.error('Could not create the order. Please try again.'); return; }
 
       const payRes = await paymentsAPI.startDeposit(jobId);
+      if (payRes.data?.data?.walletPaid) {
+        toast.success('Order placed and 50% deposit funded successfully from your wallet balance! 🚀');
+        navigate('/client/projects');
+        return;
+      }
       const url = payRes.data?.data?.checkoutUrl;
       if (url) { window.location.assign(url); return; }
       toast.info('Order created. You can fund the deposit from My Projects.');
@@ -235,6 +245,13 @@ export default function GigDetail() {
               {tiers.length > 0 && (
                 <div className="gd-sidebar__card gd-pricing">
                   <h3 className="gd-sidebar__title">Packages</h3>
+                  {!isOwnGig && (
+                    <div style={{ background: '#f0f9ff', padding: '0.85rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', borderLeft: '3px solid #0ea5e9' }}>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#0369a1', lineHeight: '1.4' }}>
+                        <strong>Tip:</strong> It's highly recommended to <button style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 'bold', cursor: 'pointer', padding: 0, textDecoration: 'underline' }} onClick={handleContact}>contact the freelancer</button> to discuss your requirements before placing an order.
+                      </p>
+                    </div>
+                  )}
                   {tiers.map((tier) => (
                     <div key={tier.key} className="gd-tier">
                       <div className="gd-tier__head">

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import Modal from './components/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
@@ -37,6 +38,7 @@ const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
 
 const FreelancerPortfolio = () => {
   const { profile, gigs, addPortfolioItem, updatePortfolioItem, deletePortfolioItem, showToast } = useFreelancer();
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -112,7 +114,16 @@ const FreelancerPortfolio = () => {
           <h1 className="fl-page-title">Portfolio Projects</h1>
           <p className="fl-page-sub">Showcase your best professional work and side projects.</p>
         </div>
-        <button className="fl-btn fl-btn--primary" onClick={handleOpenAdd}>＋ Add Project</button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <Link 
+            to={`/freelancers/${user?._id || user?.id}`} 
+            className="fl-btn fl-btn--outline" 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+          >
+            👁️ View Public Profile
+          </Link>
+          <button className="fl-btn fl-btn--primary" onClick={handleOpenAdd}>＋ Add Project</button>
+        </div>
       </div>
 
       {/* Main Portfolio Grid */}
@@ -173,78 +184,109 @@ const FreelancerPortfolio = () => {
       </div>
 
       {/* Add/Edit Modal */}
-      <Modal open={isModalOpen} title={editTarget ? 'Edit Portfolio Project' : 'Add New Project'} onClose={() => setIsModalOpen(false)}>
+      <Modal open={isModalOpen} title={editTarget ? 'Edit Portfolio Project' : 'Add New Project'} onClose={() => setIsModalOpen(false)} size="lg">
         <form onSubmit={handleSubmit} className="fl-edit-form">
-          <div className="fl-form-group">
-            <label>Project Title</label>
-            <input 
-              type="text" 
-              placeholder="e.g. E-Commerce Dashboard Design"
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              required 
-            />
-          </div>
-          <div className="fl-form-group">
-            <label>Description</label>
-            <textarea 
-              rows={4}
-              placeholder="What did you build? What technologies did you use?"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              required 
-            />
-          </div>
-          <div className="fl-form-group">
-            <label>Project URL (Optional)</label>
-            <input 
-              type="url" 
-              placeholder="https://github.com/..."
-              value={formData.url}
-              onChange={(e) => setFormData({...formData, url: e.target.value})}
-            />
-          </div>
-          
-          <div className="fl-form-group">
-            <label>Project Image</label>
-            <div 
-              className="fl-p-upload-zone"
-              onClick={() => !isUploading && fileInputRef.current.click()}
-              style={{ opacity: isUploading ? 0.6 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}
-            >
-              {formData.images?.[0] ? (
-                <img src={formData.images[0]} alt="preview" />
-              ) : (
-                <div className="fl-p-upload-zone__content">
-                  <span>{isUploading ? '⌛' : '📸'}</span>
-                  <p>{isUploading ? 'Uploading Image...' : 'Click to upload (WEBP, PNG, JPG)'}</p>
+          <div className="fl-edit-form__scroll" style={{ paddingRight: '0.75rem', marginRight: '-0.75rem' }}>
+            
+            <div className="fl-form-group">
+              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Project Title</label>
+              <input 
+                type="text" 
+                placeholder="e.g. E-Commerce Dashboard Design"
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                required 
+                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '1rem', background: '#f8fafc', transition: 'all 0.2s' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
+
+            <div className="fl-form-group" style={{ marginTop: '1.25rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Description & Technologies</label>
+              <textarea 
+                rows={5}
+                placeholder="What did you build? What technologies did you use?"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                required 
+                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: '#f8fafc', resize: 'vertical', transition: 'all 0.2s' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
+
+            <div className="fl-form-group" style={{ marginTop: '1.25rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Project URL (Optional)</label>
+              <input 
+                type="url" 
+                placeholder="https://..."
+                value={formData.url}
+                onChange={(e) => setFormData({...formData, url: e.target.value})}
+                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+              />
+            </div>
+            
+            <div className="fl-form-group" style={{ marginTop: '1.5rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Project Cover Image</label>
+              <div 
+                className="fl-p-upload-zone"
+                onClick={() => !isUploading && fileInputRef.current.click()}
+                style={{ 
+                  height: '220px', 
+                  border: '2px dashed var(--color-primary-light)', 
+                  borderRadius: '12px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  cursor: isUploading ? 'not-allowed' : 'pointer',
+                  overflow: 'hidden',
+                  background: 'rgba(4,46,76,0.02)',
+                  opacity: isUploading ? 0.6 : 1,
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => !isUploading && (e.currentTarget.style.background = 'rgba(4,46,76,0.05)')}
+                onMouseOut={e => !isUploading && (e.currentTarget.style.background = 'rgba(4,46,76,0.02)')}
+              >
+                {formData.images?.[0] ? (
+                  <img src={formData.images[0]} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div className="fl-p-upload-zone__content" style={{ textAlign: 'center', color: 'var(--color-primary)' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', opacity: 0.8 }}>{isUploading ? '⌛' : '🖼️'}</div>
+                    <p style={{ fontSize: '1rem', fontWeight: 600 }}>{isUploading ? 'Uploading Image...' : 'Click to upload a cover image'}</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', marginTop: '0.25rem' }}>(WEBP, PNG, JPG accepted)</p>
+                  </div>
+                )}
+              </div>
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept="image/*" 
+                hidden 
+                onChange={handleImageUpload} 
+              />
+              {formData.images?.[0] && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+                  <button 
+                    type="button" 
+                    className="fl-btn fl-btn--outline fl-btn--sm" 
+                    onClick={(e) => { e.stopPropagation(); setFormData({...formData, images: []}); }}
+                  >
+                    Remove Image
+                  </button>
                 </div>
               )}
             </div>
-            <input 
-              ref={fileInputRef}
-              type="file" 
-              accept="image/*" 
-              hidden 
-              onChange={handleImageUpload} 
-            />
-            {formData.images?.[0] && (
-              <button 
-                type="button" 
-                className="fl-btn fl-btn--sm fl-btn--ghost" 
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => setFormData({...formData, images: []})}
-              >
-                Change Image
-              </button>
-            )}
+
           </div>
 
-          <div className="fl-actions" style={{ marginTop: '1.5rem' }}>
+          <div className="fl-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-secondary)' }}>
+            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setIsModalOpen(false)}>Cancel</button>
             <button type="submit" className="fl-btn fl-btn--primary" disabled={isUploading}>
               {editTarget ? 'Update Project' : 'Save Project'}
             </button>
-            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setIsModalOpen(false)}>Cancel</button>
           </div>
         </form>
       </Modal>
@@ -436,7 +478,7 @@ const FreelancerPortfolio = () => {
 
         .fl-p-upload-zone {
           border: 2px dashed #cbd5e1;
-          border-radius: 20px;
+          border-radius: var(--radius-xl);
           height: 180px;
           display: flex;
           align-items: center;
@@ -448,8 +490,25 @@ const FreelancerPortfolio = () => {
 
         .fl-p-upload-zone:hover {
           border-color: var(--color-primary);
-          background: #f1f5f9;
+          background: #f0f4f8;
         }
+
+        .fl-p-upload-zone img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .fl-p-upload-zone__content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--color-text-mid);
+        }
+
+        .fl-p-upload-zone__content span { font-size: 2rem; }
+        .fl-p-upload-zone__content p { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
 
         .fl-placeholder-icon {
           font-size: 4rem;

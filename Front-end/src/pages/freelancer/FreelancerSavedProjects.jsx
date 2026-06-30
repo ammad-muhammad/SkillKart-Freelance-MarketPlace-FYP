@@ -3,15 +3,18 @@ import { Link } from 'react-router-dom';
 import './FreelancerSavedProjects.css';
 
 export default function FreelancerSavedProjects() {
-    const { savedProjects, toggleSavedProject } = useFreelancer();
+    const { savedProjects, toggleSavedProject, proposals } = useFreelancer();
 
     return (
         <div className="fsp-container">
-            <header className="fsp-header">
+            <header className="fsp-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h1 className="fsp-title">Saved Projects</h1>
                     <p className="fsp-subtitle">Manage projects you've bookmarked for later</p>
                 </div>
+                {savedProjects.length > 0 && (
+                    <Link to="/browse-projects" className="fsp-empty__btn" style={{ margin: 0, padding: '0.6rem 1.2rem' }}>Browse Projects</Link>
+                )}
             </header>
 
             {savedProjects.length === 0 ? (
@@ -68,12 +71,32 @@ export default function FreelancerSavedProjects() {
                                 <Link to={`/jobs/${project._id || project.id}`} className="fsp-card__btn">
                                     View Details
                                 </Link>
-                                <Link
-                                    to={`/jobs/${project._id || project.id}`}
-                                    className="fsp-card__btn fsp-card__btn--primary"
-                                >
-                                    Apply Now
-                                </Link>
+                                {(() => {
+                                    const isCompleted = project.status === 'Completed' || project.status === 'Closed';
+                                    const myProposal = proposals?.find(p => (p.jobId?._id || p.jobId) === (project._id || project.id));
+                                    
+                                    if (isCompleted) {
+                                        return (
+                                            <span className="fsp-card__btn" style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}>
+                                                Completed
+                                            </span>
+                                        );
+                                    }
+                                    
+                                    if (myProposal) {
+                                        return (
+                                            <Link to="/freelancer/proposals" className="fsp-card__btn" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
+                                                Applied
+                                            </Link>
+                                        );
+                                    }
+
+                                    return (
+                                        <Link to={`/jobs/${project._id || project.id}`} className="fsp-card__btn fsp-card__btn--primary">
+                                            Apply Now
+                                        </Link>
+                                    );
+                                })()}
                             </div>
                         </div>
                     ))}

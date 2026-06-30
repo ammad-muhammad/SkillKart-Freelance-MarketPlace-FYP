@@ -272,41 +272,41 @@ const FreelancerGigs = () => {
       )}
 
       {/* Edit Modal */}
-      <Modal open={!!editTarget} title="Edit Gig Details" onClose={() => setEditTarget(null)}>
+      <Modal open={!!editTarget} title="Edit Gig Details" onClose={() => setEditTarget(null)} size="xl">
         <form onSubmit={handleUpdate} className="fl-edit-form">
-          <div className="fl-edit-form__scroll">
             <h4 className="fl-edit-section-title">General Info</h4>
-            <div className="fl-form-group">
-              <label>Gig Title</label>
-              <input 
-                type="text" 
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                required 
-              />
-            </div>
-            {/* AI suggest & fill — category + skills from the gig title/description */}
-            <AiSuggestFill
-              label="Suggest category & skills (AI)"
-              getContext={() => ({
-                title: formData.title,
-                description: [formData.shortDescription, formData.fullDescription].filter(Boolean).join('\n'),
-                skills: formData.skills,
-              })}
-              allowedCategories={CATEGORIES}
-              existingSkills={formData.skills}
-              onCategory={(cat) => setFormData((p) => ({
-                ...p,
-                category: cat,
-                subcategory: (SUBCATEGORIES[cat] || ['Other'])[0],
-              }))}
-              onSkills={(newSkills) => setFormData((p) => ({
-                ...p,
-                skills: Array.from(new Set([...(p.skills || []), ...newSkills])),
-              }))}
-            />
-
             <div className="fl-form-grid">
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Gig Title</label>
+                <input 
+                  type="text" 
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  required 
+                />
+              </div>
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <AiSuggestFill
+                  label="Suggest category & skills (AI)"
+                  getContext={() => ({
+                    title: formData.title,
+                    description: [formData.shortDescription, formData.fullDescription].filter(Boolean).join('\n'),
+                    skills: formData.skills,
+                  })}
+                  allowedCategories={CATEGORIES}
+                  existingSkills={formData.skills}
+                  onCategory={(cat) => setFormData((p) => ({
+                    ...p,
+                    category: cat,
+                    subcategory: (SUBCATEGORIES[cat] || ['Other'])[0],
+                  }))}
+                  onSkills={(newSkills) => setFormData((p) => ({
+                    ...p,
+                    skills: Array.from(new Set([...(p.skills || []), ...newSkills])),
+                  }))}
+                />
+              </div>
+
               <div className="fl-form-group">
                 <label>Category</label>
                 <ComboSelect
@@ -329,109 +329,115 @@ const FreelancerGigs = () => {
                   placeholder="Type to search subcategories…"
                 />
               </div>
-            </div>
-            <div className="fl-form-group">
-              <label>Short Description (for cards)</label>
-              <textarea 
-                value={formData.shortDescription}
-                onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
-                rows={2}
-                required 
-              />
-            </div>
-            <div className="fl-form-group">
-              <label>Full Description</label>
-              <textarea 
-                value={formData.fullDescription}
-                onChange={(e) => setFormData({...formData, fullDescription: e.target.value})}
-                rows={5}
-                required 
-              />
-            </div>
-            <div className="fl-form-group">
-              <label>Skills</label>
-              <TagInput 
-                tags={formData.skills} 
-                onChange={(tags) => setFormData({...formData, skills: tags})} 
-                placeholder="e.g. React, Node.js" 
-              />
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Short Description (for cards)</label>
+                <textarea 
+                  value={formData.shortDescription}
+                  onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
+                  rows={2}
+                  required 
+                />
+              </div>
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Full Description</label>
+                <textarea 
+                  value={formData.fullDescription}
+                  onChange={(e) => setFormData({...formData, fullDescription: e.target.value})}
+                  rows={5}
+                  required 
+                />
+              </div>
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Skills</label>
+                <TagInput 
+                  tags={formData.skills} 
+                  onChange={(tags) => setFormData({...formData, skills: tags})} 
+                  placeholder="e.g. React, Node.js" 
+                />
+              </div>
             </div>
 
             <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Media & Portfolio</h4>
             
-            <div className="fl-form-group">
-              <label>Banner Image</label>
-              <div 
-                className="fl-upload-box" 
-                onClick={() => bannerRef.current?.click()}
-                style={{ 
-                  height: '140px', 
-                  border: '2px dashed #e2e8f0', 
-                  borderRadius: '12px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  background: '#f8fafc'
-                }}
-              >
-                {formData.media?.banner ? (
-                  <img src={formData.media.banner} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                    <Upload size={24} style={{ marginBottom: '0.5rem' }} />
-                    <p style={{ fontSize: '0.75rem' }}>Click to upload banner</p>
-                  </div>
-                )}
+            <div className="fl-form-grid">
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Banner Image</label>
+                <div 
+                  className="fl-upload-box" 
+                  onClick={() => bannerRef.current?.click()}
+                  style={{ 
+                    height: '160px', 
+                    border: '2px dashed var(--color-primary-light)', 
+                    borderRadius: '12px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    background: 'rgba(4,46,76,0.02)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(4,46,76,0.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(4,46,76,0.02)'}
+                >
+                  {formData.media?.banner ? (
+                    <img src={formData.media.banner} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: 'var(--color-primary)' }}>
+                      <Upload size={32} style={{ marginBottom: '0.75rem', opacity: 0.8 }} />
+                      <p style={{ fontSize: '0.9rem', fontWeight: 'var(--fw-medium)' }}>Click to upload banner image</p>
+                    </div>
+                  )}
+                </div>
+                <input ref={bannerRef} type="file" hidden onChange={handleBannerUpload} accept="image/*" />
               </div>
-              <input ref={bannerRef} type="file" hidden onChange={handleBannerUpload} accept="image/*" />
-            </div>
 
-            <div className="fl-form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <label>Portfolio Images (Max 5)</label>
-                <button type="button" className="fl-btn fl-btn--ghost fl-btn--xs" onClick={() => imagesRef.current?.click()}>
-                  <Plus size={12} /> Add
-                </button>
+              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
+                  <label style={{ margin: 0 }}>Portfolio Images (Max 5)</label>
+                  <button type="button" className="fl-btn fl-btn--outline fl-btn--xs" onClick={() => imagesRef.current?.click()}>
+                    <Plus size={14} /> Add Images
+                  </button>
+                </div>
+                <input ref={imagesRef} type="file" hidden multiple onChange={handleImagesUpload} accept="image/*" />
+                <div className="fl-edit-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                  {(formData.media?.images || []).map((img, i) => (
+                    <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-secondary)' }}>
+                      <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button 
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, media: { ...p.media, images: p.media.images.filter((_, idx) => idx !== i) } }))}
+                        style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', transition: 'transform 0.2s' }}
+                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <input ref={imagesRef} type="file" hidden multiple onChange={handleImagesUpload} accept="image/*" />
-              <div className="fl-edit-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
-                {(formData.media?.images || []).map((img, i) => (
-                  <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden' }}>
-                    <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <button 
-                      type="button"
-                      onClick={() => setFormData(p => ({ ...p, media: { ...p.media, images: p.media.images.filter((_, idx) => idx !== i) } }))}
-                      style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(255,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px' }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="fl-form-group">
-              <label>Video Link (YouTube/Vimeo)</label>
-              <input 
-                type="url" 
-                value={formData.media?.videoLink || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  media: { ...formData.media, videoLink: e.target.value }
-                })}
-                placeholder="https://..."
-              />
-            </div>
-
-            <div className="fl-form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <label>Portfolio Links</label>
-                <button type="button" className="fl-btn fl-btn--ghost fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: [...(p.media.portfolioLinks || []), ''] } }))}>
-                  <Plus size={12} /> Add Link
-                </button>
+              <div className="fl-form-group">
+                <label>Video Link (YouTube/Vimeo)</label>
+                <input 
+                  type="url" 
+                  value={formData.media?.videoLink || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    media: { ...formData.media, videoLink: e.target.value }
+                  })}
+                  placeholder="https://..."
+                />
               </div>
+
+              <div className="fl-form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
+                  <label style={{ margin: 0 }}>Portfolio Links</label>
+                  <button type="button" className="fl-btn fl-btn--outline fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: [...(p.media.portfolioLinks || []), ''] } }))}>
+                    <Plus size={14} /> Add Link
+                  </button>
+                </div>
               <div className="fl-links-edit-list">
                 {(formData.media?.portfolioLinks || []).map((link, i) => (
                   <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -451,8 +457,9 @@ const FreelancerGigs = () => {
                   </div>
                 ))}
               </div>
+              </div>
             </div>
-
+            
             <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Frequently Asked Questions</h4>
             <div className="fl-faqs-edit-list">
               {formData.faqs.map((faq, i) => (
@@ -538,11 +545,10 @@ const FreelancerGigs = () => {
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="fl-actions" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
-            <button type="submit" className="fl-btn fl-btn--primary">Save Full Gig</button>
+          <div className="fl-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-secondary)' }}>
             <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setEditTarget(null)}>Cancel</button>
+            <button type="submit" className="fl-btn fl-btn--primary">Save Changes</button>
           </div>
         </form>
       </Modal>
@@ -668,29 +674,65 @@ const FreelancerGigs = () => {
         .fl-gig-card__actions { display: flex; gap: var(--space-2); }
 
         /* Edit Form Styles */
-        .fl-edit-form__scroll { max-height: 60vh; overflow-y: auto; padding-right: 0.75rem; }
-        .fl-edit-form__scroll::-webkit-scrollbar { width: 5px; }
-        .fl-edit-form__scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .fl-edit-section-title { 
           font-size: 0.8rem; font-weight: 800; color: var(--color-primary); 
           text-transform: uppercase; border-bottom: 2px solid #f1f5f9; 
           padding-bottom: 0.5rem; margin-bottom: 1.25rem; 
         }
-        .fl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
-        .fl-pricing-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-        .fl-tier-edit { background: #f8fafc; padding: 1.25rem; border-radius: 14px; border: 1px solid #e2e8f0; }
-        .fl-tier-edit--basic { border-left: 5px solid #cd7f32; }
-        .fl-tier-edit--standard { border-left: 5px solid #94a3b8; }
-        .fl-tier-edit--premium { border-left: 5px solid #fbbf24; }
-        .fl-tier-edit__label { font-size: 0.85rem; font-weight: 800; margin-bottom: 1rem; color: var(--color-primary); }
+        .fl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .fl-pricing-edit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+        @media (max-width: 800px) { .fl-pricing-edit-grid { grid-template-columns: 1fr; } }
+        
+        .fl-tier-edit { 
+          background: #ffffff; 
+          padding: 1.5rem; 
+          border-radius: 16px; 
+          border: 1px solid #e2e8f0; 
+          box-shadow: 0 4px 12px rgba(4, 46, 76, 0.03);
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s ease;
+        }
+        .fl-tier-edit:hover {
+          box-shadow: 0 8px 24px rgba(4, 46, 76, 0.08);
+          transform: translateY(-2px);
+          border-color: #cbd5e1;
+        }
+        
+        .fl-tier-edit::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 5px;
+        }
+        .fl-tier-edit--basic { border-color: #f1e2d3; }
+        .fl-tier-edit--basic::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+        .fl-tier-edit--standard { border-color: #e2e8f0; }
+        .fl-tier-edit--standard::before { background: linear-gradient(90deg, #64748b, #94a3b8); }
+        .fl-tier-edit--premium { border-color: #fef3c7; }
+        .fl-tier-edit--premium::before { background: linear-gradient(90deg, #059669, #34d399); } /* changed to emerald/green for premium distinction, or we can use purple */
+
+        .fl-tier-edit__label { 
+          display: inline-block;
+          font-size: 0.75rem; 
+          font-weight: 800; 
+          margin-bottom: 1.5rem; 
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 0.4rem 0.9rem;
+          border-radius: 20px;
+        }
+        .fl-tier-edit--basic .fl-tier-edit__label { background: #fffbeb; color: #d97706; }
+        .fl-tier-edit--standard .fl-tier-edit__label { background: #f8fafc; color: #475569; }
+        .fl-tier-edit--premium .fl-tier-edit__label { background: #ecfdf5; color: #059669; }
         
         .fl-form-group { margin-bottom: 1.25rem; }
         .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.5rem; }
-        .fl-form-group input, .fl-form-group textarea {
+        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field), .fl-form-group textarea {
           width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #e2e8f0;
-          font-size: 0.9rem; transition: all 0.2s;
+          font-size: 0.9rem; transition: all 0.2s; background: #f8fafc;
         }
-        .fl-form-group input:focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); }
+        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: #fff; }
         
         .fl-empty-message { text-align: center; padding: 4rem 2rem; }
         @media (max-width: 600px) {

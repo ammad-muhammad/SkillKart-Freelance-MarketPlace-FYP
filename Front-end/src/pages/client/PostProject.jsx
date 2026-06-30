@@ -558,18 +558,7 @@ const PostProject = () => {
                 />
                 <FieldError message={errors.deadline} />
               </div>
-              <div className="cl-form-group full">
-                <div className="cl-toggle">
-                  <div className="cl-toggle__info">
-                    <span className="cl-toggle__label">Milestone-based Payments</span>
-                    <span className="cl-toggle__desc">Would you like to pay in installments based on deliverables?</span>
-                  </div>
-                  <div
-                    className={`cl-toggle__switch ${form.milestones ? 'cl-toggle__switch--on' : ''}`}
-                    onClick={() => updateForm({ milestones: !form.milestones })}
-                  />
-                </div>
-              </div>
+
             </div>
           </div>
         );

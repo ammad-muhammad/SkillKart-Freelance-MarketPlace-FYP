@@ -69,6 +69,27 @@ const startDeposit = asyncHandler(async (req, res) => {
     throw new BadRequestError('Deposit has already been paid for this project');
   }
 
+  // If client has enough balance in their wallet, deduct it directly
+  const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
+  if (clientProfile && clientProfile.walletBalance >= payment.depositAmount) {
+    clientProfile.walletBalance = round2(clientProfile.walletBalance - payment.depositAmount);
+    await clientProfile.save();
+
+    payment.status = 'deposit_paid';
+    payment.depositPaidAt = new Date();
+    payment.stripe.simulated = true;
+    await payment.save();
+
+    if (job.hiredFreelancer) {
+      notifications.onDepositFunded(job.hiredFreelancer, { job });
+    }
+
+    return sendSuccess(res, {
+      message: 'Deposit funded successfully from your wallet balance',
+      data: { walletPaid: true, payment }
+    });
+  }
+
   const session = await createCheckoutSession({
     jobId: String(job._id),
     phase: 'deposit',
@@ -100,6 +121,42 @@ const startFinal = asyncHandler(async (req, res) => {
   if (!payment) throw new BadRequestError('No payment record — pay the deposit first');
   if (payment.status === 'deposit_pending') throw new BadRequestError('Pay the 50% deposit before the final payment');
   if (payment.status === 'released') throw new BadRequestError('This project has already been fully paid');
+
+  // If client has enough balance in their wallet, deduct it directly
+  const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
+  if (clientProfile && clientProfile.walletBalance >= payment.finalAmount) {
+    clientProfile.walletBalance = round2(clientProfile.walletBalance - payment.finalAmount);
+    await clientProfile.save();
+
+    payment.platformFee = round2(payment.totalAmount * payment.feeRate);
+    payment.freelancerPayout = round2(payment.totalAmount - payment.platformFee);
+    payment.status = 'released';
+    payment.releasedAt = new Date();
+    payment.stripe.simulated = true;
+    await payment.save();
+
+    if (job.status !== 'completed') {
+      job.status = 'completed';
+      job.completedAt = new Date();
+      await job.save();
+      try {
+        await finalizeJobCompletion(job, {
+          freelancerEarning: payment.freelancerPayout,
+          clientSpend: payment.totalAmount,
+        });
+      } catch (e) {
+        console.error('[startFinal] stats roll-up failed:', e.message);
+      }
+      if (job.hiredFreelancer) {
+        notifications.onPaymentReleased(job.hiredFreelancer, { job, amount: payment.freelancerPayout });
+      }
+    }
+
+    return sendSuccess(res, {
+      message: 'Final payment funded successfully from your wallet balance. Project completed!',
+      data: { walletPaid: true, payment }
+    });
+  }
 
   const session = await createCheckoutSession({
     jobId: String(job._id),

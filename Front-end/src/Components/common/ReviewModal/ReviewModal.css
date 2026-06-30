@@ -11,11 +11,11 @@
 }
 
 .rm-modal {
-  background: var(--color-surface);
+  background: #ffffff;
   border-radius: 16px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1);
   overflow: hidden;
   animation: rm-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -7,14 +7,13 @@ import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
 
 export default function FreelancerWallet() {
-  const { profile, loading: profileLoading } = useFreelancer();
+  const { profile, loading: profileLoading, refreshProfile } = useFreelancer();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod, setWithdrawMethod] = useState('bank');
   const [withdrawing, setWithdrawing] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(profile?.walletBalance || 0);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -30,8 +29,13 @@ export default function FreelancerWallet() {
 
   useEffect(() => {
     loadHistory();
-  }, [loadHistory]);
+    // Also refresh profile to ensure wallet stats are completely up to date
+    if (refreshProfile) {
+      refreshProfile();
+    }
+  }, [loadHistory, refreshProfile]);
 
+  const walletBalance = profile?.walletBalance || 0;
   const totalEarned = profile?.totalEarnings || 0;
   
   // Calculate active escrow: deposit is paid, but final isn't released
@@ -51,10 +55,11 @@ export default function FreelancerWallet() {
   const executeWithdraw = async () => {
     setWithdrawing(true);
     try {
-      const { data } = await paymentsAPI.withdrawFunds(withdrawAmount, withdrawMethod);
-      setWalletBalance(data?.data?.walletBalance || 0);
+      await paymentsAPI.withdrawFunds(withdrawAmount, withdrawMethod);
       toast.success(`Successfully initiated withdrawal of $${withdrawAmount} via ${withdrawMethod === 'bank' ? 'Bank Transfer' : 'PayPal'}.`);
       setWithdrawModal(false);
+      // Refresh profile so the wallet balance syncs
+      if (refreshProfile) refreshProfile();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to process withdrawal.');
     } finally {
@@ -84,28 +89,45 @@ export default function FreelancerWallet() {
         </button>
       </div>
 
-      <div className="fl-work-stats" style={{ marginBottom: '2rem' }}>
-        <div className="fl-stat-card">
-          <div className="fl-stat-card__icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
+      <div className="fl-stat-grid" style={{ marginBottom: '2rem' }}>
+        <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
+          <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}>
+            <DollarSign size={100} />
+          </div>
+          <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
             <DollarSign size={24} />
           </div>
-          <div className="fl-stat-card__value">${walletBalance.toLocaleString()}</div>
-          <div className="fl-stat-card__label">Available for Withdrawal</div>
+          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>${walletBalance.toLocaleString()}</div>
+          <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available for Withdrawal</div>
         </div>
-        <div className="fl-work-stat">
-          <div style={{ color: '#d97706' }}><Wallet size={24} /></div>
-          <div>
-            <strong>${activeEscrow.toLocaleString()}</strong>
-            <span>Funds in Active Escrow</span>
+
+        <div className="fl-stat-card">
+          <div className="fl-stat-card__bg">
+            <Wallet size={100} />
           </div>
+          <div className="fl-stat-card__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+            <Wallet size={24} />
+          </div>
+          <div className="fl-stat-card__value">${activeEscrow.toLocaleString()}</div>
+          <div className="fl-stat-card__label">Funds in Active Escrow</div>
+        </div>
+        <div className="fl-stat-card">
+          <div className="fl-stat-card__bg">
+            <CheckCircle2 size={100} />
+          </div>
+          <div className="fl-stat-card__icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+            <CheckCircle2 size={24} />
+          </div>
+          <div className="fl-stat-card__value">${totalEarned.toLocaleString()}</div>
+          <div className="fl-stat-card__label">Total Lifetime Earnings</div>
         </div>
       </div>
 
       <div className="fl-card">
-        <div className="fl-card__header">
+        <div className="fl-card__header" style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-secondary)' }}>
           <h2 className="fl-card__title">Transaction History</h2>
         </div>
-        <div className="fl-card__body" style={{ padding: payments.length === 0 ? '2rem' : '0' }}>
+        <div className="fl-card__body">
           {payments.length === 0 ? (
             <EmptyState 
               icon={DollarSign}
@@ -116,40 +138,40 @@ export default function FreelancerWallet() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Date</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Project</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Client</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Amount</th>
-                    <th style={{ padding: '1rem', fontWeight: '500', color: '#475569' }}>Status</th>
+                  <tr style={{ borderBottom: '2px solid var(--color-secondary)' }}>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Date</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Project</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Client</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Amount</th>
+                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map(payment => (
-                    <tr key={payment._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '1rem', color: '#64748b' }}>
+                    <tr key={payment._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {new Date(payment.createdAt).toLocaleDateString()}
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: '500' }}>
+                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-primary-dark)', fontSize: 'var(--fs-sm)' }}>
                         {payment.jobId?.title || 'Unknown Project'}
                       </td>
-                      <td style={{ padding: '1rem', color: '#475569' }}>
+                      <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {payment.clientId?.firstName} {payment.clientId?.lastName}
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: '600' }}>
-                        ${payment.status === 'released' ? payment.freelancerPayout?.toLocaleString() : payment.totalAmount?.toLocaleString()}
+                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: '#10b981' }}>
+                        +${payment.status === 'released' ? payment.freelancerPayout?.toLocaleString() : payment.totalAmount?.toLocaleString()}
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {payment.status === 'released' ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#16a34a', fontSize: '0.875rem' }}>
-                            <CheckCircle2 size={16} /> Funds Released
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <CheckCircle2 size={14} /> Released
                           </span>
                         ) : payment.status === 'deposit_paid' ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#d97706', fontSize: '0.875rem' }}>
-                            <Clock size={16} /> In Escrow (50%)
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#f59e0b', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <Clock size={14} /> Escrow (50%)
                           </span>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{payment.status}</span>
+                          <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)' }}>{payment.status}</span>
                         )}
                       </td>
                     </tr>

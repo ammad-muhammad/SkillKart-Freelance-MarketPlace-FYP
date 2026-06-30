@@ -84,6 +84,7 @@ const normalizeSavedFreelancer = (u) => {
     skills: (fp.skills || []).map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).slice(0, 4),
     avatar: u.profilePicture || null,
     location: fp.timezone || '',
+    description: fp.bio || '',
   };
 };
 

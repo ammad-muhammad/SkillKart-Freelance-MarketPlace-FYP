@@ -435,7 +435,7 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
   const profile = await FreelancerProfile.findOne({ userId });
   if (!profile) throw new NotFoundError('Profile not found');
   
-  const index = profile.savedJobs.indexOf(jobId);
+  const index = profile.savedJobs.findIndex(id => String(id) === String(jobId));
   if (index === -1) {
     profile.savedJobs.push(jobId);
   } else {
@@ -443,7 +443,10 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
   }
   
   await profile.save();
-  sendSuccess(res, { message: index === -1 ? 'Job saved' : 'Job unsaved' });
+  sendSuccess(res, { 
+    message: index === -1 ? 'Job saved' : 'Job unsaved',
+    data: { savedJobs: profile.savedJobs } 
+  });
 });
 
 /**
@@ -458,7 +461,7 @@ const getSavedJobs = asyncHandler(async (req, res) => {
   
   if (!profile) throw new NotFoundError('Profile not found');
   
-  sendSuccess(res, { data: profile.savedJobs });
+  sendSuccess(res, { data: { savedJobs: profile.savedJobs } });
 });
 
 /**

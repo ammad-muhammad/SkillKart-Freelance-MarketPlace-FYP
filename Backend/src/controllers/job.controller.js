@@ -76,6 +76,11 @@ const updateJob = asyncHandler(async (req, res) => {
     throw new BadRequestError(`A project that is "${job.status}" can no longer be edited.`);
   }
 
+  // Allow transitioning from draft to open
+  if (job.status === 'draft' && req.body.status === 'open') {
+    job.status = 'open';
+  }
+
   // Apply only whitelisted content fields.
   for (const key of EDITABLE_JOB_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(req.body, key)) {

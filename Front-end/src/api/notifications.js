@@ -12,4 +12,6 @@ export const notificationsAPI = {
   markAllRead: () => client.patch('/notifications/read-all'),
 
   remove: (id) => client.delete(`/notifications/${id}`),
+
+  clearAll: () => client.delete('/notifications/clear-all'),
 };

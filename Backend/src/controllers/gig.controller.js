@@ -113,10 +113,25 @@ const listGigs = asyncHandler(async (req, res) => {
 
   const total = await Gig.countDocuments(query);
   const gigs = await Gig.find(query)
-    .populate('freelancerId', 'firstName lastName profilePicture rating')
+    .populate('freelancerId', 'firstName lastName profilePicture rating freelancerProfile')
     .skip(skip)
     .limit(limit)
-    .sort(sortSpec);
+    .sort(sortSpec)
+    .lean();
+
+  if (gigs && gigs.length > 0) {
+    const FreelancerProfile = require('../models/FreelancerProfile');
+    const userIds = gigs.map(g => g.freelancerId?._id).filter(Boolean);
+    const profiles = await FreelancerProfile.find({ userId: { $in: userIds } }).select('userId rating').lean();
+    const ratingMap = {};
+    profiles.forEach(p => ratingMap[p.userId.toString()] = p.rating || 0);
+
+    gigs.forEach(g => {
+      if (g.freelancerId) {
+        g.freelancerId.rating = ratingMap[g.freelancerId._id.toString()] || 0;
+      }
+    });
+  }
 
   sendPaginated(res, { data: gigs, page, limit, total });
 });
@@ -127,13 +142,22 @@ const listGigs = asyncHandler(async (req, res) => {
 const getGigById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const gig = await Gig.findById(id)
-    .populate('freelancerId', 'firstName lastName profilePicture rating');
+    .populate('freelancerId', 'firstName lastName profilePicture rating freelancerProfile');
+  
   if (!gig) throw new NotFoundError('Gig not found');
 
   // best-effort view increment (don't block the response)
   Gig.updateOne({ _id: id }, { $inc: { 'stats.views': 1 } }).catch(() => {});
 
-  sendSuccess(res, { message: 'Gig retrieved', data: { gig } });
+  const responseData = gig.toObject();
+  
+  if (responseData.freelancerId) {
+    const FreelancerProfile = require('../models/FreelancerProfile');
+    const profile = await FreelancerProfile.findOne({ userId: responseData.freelancerId._id }).select('rating').lean();
+    responseData.freelancerId.rating = profile ? (profile.rating || 0) : 0;
+  }
+
+  sendSuccess(res, { message: 'Gig retrieved', data: { gig: responseData } });
 });
 
 /**

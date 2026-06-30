@@ -13,7 +13,7 @@ import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import { FolderOpen } from 'lucide-react';
 import './ClientDashboard.css';
 
-const STATUS_FILTERS = ['all', 'open', 'in-progress', 'delivered', 'completed', 'expired', 'closed'];
+const STATUS_FILTERS = ['all', 'draft', 'open', 'in-progress', 'delivered', 'completed', 'expired', 'closed'];
 const EXPERIENCE_OPTIONS = ['Entry', 'Intermediate', 'Expert'];
 
 // `<input type="date">` needs YYYY-MM-DD; the API stores an ISO timestamp.
@@ -64,6 +64,16 @@ const ClientProjects = () => {
       const payload = data?.data || {};
       if (payload.paymentRequired) {
         const { data: pay } = await paymentsAPI.startFinal(reviewing.id);
+        if (pay?.data?.walletPaid) {
+          showToast('Remaining 50% paid directly from your wallet balance! 🎉');
+          setShowReviewModal({ 
+            jobId: reviewing.id, 
+            targetName: reviewing.freelancerName || 'Freelancer' 
+          });
+          setReviewing(null);
+          await fetchProfile();
+          return;
+        }
         const url = pay?.data?.checkoutUrl;
         if (url) { window.location.assign(url); return; }
         showToast('Could not start the final payment. Please try again.', 'error');
@@ -86,6 +96,11 @@ const ClientProjects = () => {
   const fundDeposit = async (projId) => {
     try {
       const { data } = await paymentsAPI.startDeposit(projId);
+      if (data?.data?.walletPaid) {
+        showToast('50% deposit funded successfully from your wallet balance! Work can begin. 🚀', 'success');
+        await fetchProfile();
+        return;
+      }
       const url = data?.data?.checkoutUrl;
       if (url) { window.location.assign(url); return; }
       showToast('Could not start the deposit checkout.', 'error');
@@ -214,7 +229,7 @@ const ClientProjects = () => {
               className={`cl-btn cl-btn--sm${filter === f ? ' cl-btn--primary' : ' cl-btn--ghost'}`}
               onClick={() => setFilter(f)}
             >
-              {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : f.charAt(0).toUpperCase() + f.slice(1)} ({count})
+              {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : f === 'draft' ? 'Drafts' : f.charAt(0).toUpperCase() + f.slice(1)} ({count})
             </button>
           );
         })}
@@ -244,6 +259,7 @@ const ClientProjects = () => {
                 </div>
                 <span className={`cl-badge cl-badge--${proj.status}`}>
                   {proj.status === 'open' ? '🟢 Open' :
+                   proj.status === 'draft' ? '📂 Draft' :
                    proj.status === 'in-progress' ? '🔵 In Progress' :
                    proj.status === 'delivered' ? '📦 Delivered — review needed' :
                    proj.status === 'completed' ? '✅ Completed' :
@@ -279,6 +295,17 @@ const ClientProjects = () => {
                       lifecycle (accept proposal → pay deposit → deliver →
                       review → pay final → completed), never manual override. */}
                   <div className="cl-proj-card__btns">
+                    {proj.status === 'draft' && (
+                      <button 
+                        className="cl-btn cl-btn--primary cl-btn--sm" 
+                        onClick={async () => {
+                          const ok = await updateProject(proj.id, { status: 'open' });
+                          if (ok) showToast('Project published successfully! 🚀');
+                        }}
+                      >
+                        🚀 Publish Draft
+                      </button>
+                    )}
                     {proj.status === 'in-progress' && (
                       <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
                         💳 Fund Deposit
@@ -297,9 +324,11 @@ const ClientProjects = () => {
                         📦 Review Delivery
                       </button>
                     )}
-                    <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
-                      👥 View Proposals ({proj.proposals?.length || 0})
-                    </Link>
+                    {proj.status !== 'draft' && (
+                      <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
+                        👥 View Proposals ({proj.proposals?.length || 0})
+                      </Link>
+                    )}
                     <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}>✏ Edit</button>
                     <button
                       className="cl-btn cl-btn--danger cl-btn--sm"
@@ -328,160 +357,173 @@ const ClientProjects = () => {
             <p style={{ color: 'var(--color-text-light)', marginTop: '1rem' }}>Loading project details…</p>
           </div>
         ) : (
-          <form className="cl-form-grid" onSubmit={handleEditSubmit}>
-            <div className="cl-form-group full">
-              <label className="cl-label">Project Title *</label>
-              <input
-                className={`cl-input${editErrors.title ? ' cl-input--error' : ''}`}
-                value={editingProject.title}
-                onChange={e => { setField({ title: e.target.value }); clearEditError('title'); }}
-              />
-              {editErrors.title && <span className="cl-error">⚠ {editErrors.title}</span>}
-            </div>
+          <form className="cl-edit-form" onSubmit={handleEditSubmit}>
+            <div className="cl-edit-form__scroll" style={{ paddingRight: '0.75rem', marginRight: '-0.75rem' }}>
+              <div className="cl-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+                <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
+                  <label className="cl-label">Project Title *</label>
+                  <input
+                    className={`cl-input${editErrors.title ? ' cl-input--error' : ''}`}
+                    value={editingProject.title}
+                    onChange={e => { setField({ title: e.target.value }); clearEditError('title'); }}
+                    style={{ background: '#f8fafc' }}
+                  />
+                  {editErrors.title && <span className="cl-error">⚠ {editErrors.title}</span>}
+                </div>
 
-            {/* AI suggest & fill — category, skills & experience level from the brief */}
-            <div className="cl-form-group full">
-              <AiSuggestFill
-                label="Suggest category, skills & level (AI)"
-                getContext={() => ({
-                  title: editingProject.title,
-                  description: editingProject.description,
-                  skills: editingProject.skills,
-                })}
-                allowedCategories={JOB_CATEGORIES}
-                existingSkills={editingProject.skills}
-                onCategory={(cat) => { setField({ category: cat }); clearEditError('category'); }}
-                onSkills={(newSkills) => {
-                  setField({ skills: Array.from(new Set([...(editingProject.skills || []), ...newSkills])) });
-                  clearEditError('skills');
-                }}
-                onExperience={(level) => setField({ experienceLevel: level })}
-              />
-            </div>
+                {/* AI suggest & fill — category, skills & experience level from the brief */}
+                <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
+                  <AiSuggestFill
+                    label="Suggest category, skills & level (AI)"
+                    getContext={() => ({
+                      title: editingProject.title,
+                      description: editingProject.description,
+                      skills: editingProject.skills,
+                    })}
+                    allowedCategories={JOB_CATEGORIES}
+                    existingSkills={editingProject.skills}
+                    onCategory={(cat) => { setField({ category: cat }); clearEditError('category'); }}
+                    onSkills={(newSkills) => {
+                      setField({ skills: Array.from(new Set([...(editingProject.skills || []), ...newSkills])) });
+                      clearEditError('skills');
+                    }}
+                    onExperience={(level) => setField({ experienceLevel: level })}
+                  />
+                </div>
 
-            <div className="cl-form-group">
-              <label className="cl-label">Category *</label>
-              <TagInput
-                tags={editingProject.category ? [editingProject.category] : []}
-                onChange={tags => { setField({ category: tags[0] || '' }); clearEditError('category'); }}
-                options={JOB_CATEGORIES}
-                maxTags={1}
-                placeholder="Type to search categories…"
-                showHint={false}
-              />
-              {editErrors.category && <span className="cl-error">⚠ {editErrors.category}</span>}
-            </div>
+                <div className="cl-form-group">
+                  <label className="cl-label">Category *</label>
+                  <TagInput
+                    tags={editingProject.category ? [editingProject.category] : []}
+                    onChange={tags => { setField({ category: tags[0] || '' }); clearEditError('category'); }}
+                    options={JOB_CATEGORIES}
+                    maxTags={1}
+                    placeholder="Type to search categories…"
+                    showHint={false}
+                  />
+                  {editErrors.category && <span className="cl-error">⚠ {editErrors.category}</span>}
+                </div>
 
-            <div className="cl-form-group">
-              <label className="cl-label">Subcategory</label>
-              <input
-                className="cl-input"
-                placeholder="e.g. Frontend Development"
-                value={editingProject.subcategory}
-                onChange={e => setField({ subcategory: e.target.value })}
-              />
-            </div>
+                <div className="cl-form-group">
+                  <label className="cl-label">Subcategory</label>
+                  <input
+                    className="cl-input"
+                    placeholder="e.g. Frontend Development"
+                    value={editingProject.subcategory}
+                    onChange={e => setField({ subcategory: e.target.value })}
+                    style={{ background: '#f8fafc' }}
+                  />
+                </div>
 
-            <div className="cl-form-group full">
-              <label className="cl-label">Required Skills (press Enter) *</label>
-              <TagInput
-                tags={editingProject.skills}
-                onChange={tags => { setField({ skills: tags }); clearEditError('skills'); }}
-                placeholder="e.g. React, CSS, Figma"
-              />
-              {editErrors.skills && <span className="cl-error">⚠ {editErrors.skills}</span>}
-            </div>
+                <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
+                  <label className="cl-label">Required Skills (press Enter) *</label>
+                  <TagInput
+                    tags={editingProject.skills}
+                    onChange={tags => { setField({ skills: tags }); clearEditError('skills'); }}
+                    placeholder="e.g. React, CSS, Figma"
+                  />
+                  {editErrors.skills && <span className="cl-error">⚠ {editErrors.skills}</span>}
+                </div>
 
-            <div className="cl-form-group">
-              <label className="cl-label">Experience Level</label>
-              <ComboSelect
-                options={EXPERIENCE_OPTIONS}
-                value={editingProject.experienceLevel}
-                onChange={val => setField({ experienceLevel: val })}
-                placeholder="Type to search…"
-              />
-            </div>
+                <div className="cl-form-group">
+                  <label className="cl-label">Experience Level</label>
+                  <ComboSelect
+                    options={EXPERIENCE_OPTIONS}
+                    value={editingProject.experienceLevel}
+                    onChange={val => setField({ experienceLevel: val })}
+                    placeholder="Type to search…"
+                  />
+                </div>
 
-            <div className="cl-form-group">
-              <label className="cl-label">Project Type</label>
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <button
-                  type="button"
-                  className={`cl-btn cl-btn--sm ${editingProject.projectType === 'fixed' ? 'cl-btn--primary' : 'cl-btn--ghost'}`}
-                  onClick={() => setField({ projectType: 'fixed' })}
-                >Fixed Price</button>
-                <button
-                  type="button"
-                  className={`cl-btn cl-btn--sm ${editingProject.projectType === 'hourly' ? 'cl-btn--primary' : 'cl-btn--ghost'}`}
-                  onClick={() => setField({ projectType: 'hourly' })}
-                >Hourly Rate</button>
+                <div className="cl-form-group">
+                  <label className="cl-label">Project Type</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <button
+                      type="button"
+                      className={`cl-btn cl-btn--sm ${editingProject.projectType === 'fixed' ? 'cl-btn--primary' : 'cl-btn--ghost'}`}
+                      onClick={() => setField({ projectType: 'fixed' })}
+                      style={{ flex: 1 }}
+                    >Fixed Price</button>
+                    <button
+                      type="button"
+                      className={`cl-btn cl-btn--sm ${editingProject.projectType === 'hourly' ? 'cl-btn--primary' : 'cl-btn--ghost'}`}
+                      onClick={() => setField({ projectType: 'hourly' })}
+                      style={{ flex: 1 }}
+                    >Hourly Rate</button>
+                  </div>
+                </div>
+
+                <div className="cl-form-group">
+                  <label className="cl-label">Min Budget ($) *</label>
+                  <input
+                    type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
+                    value={editingProject.budget.min}
+                    onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
+                    style={{ background: '#f8fafc' }}
+                  />
+                  {editErrors.budgetMin && <span className="cl-error">⚠ {editErrors.budgetMin}</span>}
+                </div>
+
+                <div className="cl-form-group">
+                  <label className="cl-label">Max Budget ($) *</label>
+                  <input
+                    type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
+                    value={editingProject.budget.max}
+                    onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
+                    style={{ background: '#f8fafc' }}
+                  />
+                  {editErrors.budgetMax && <span className="cl-error">⚠ {editErrors.budgetMax}</span>}
+                </div>
+
+                <div className="cl-form-group">
+                  <label className="cl-label">Duration</label>
+                  <input
+                    className="cl-input"
+                    placeholder="e.g. 1-3 months"
+                    value={editingProject.duration}
+                    onChange={e => setField({ duration: e.target.value })}
+                    style={{ background: '#f8fafc' }}
+                  />
+                </div>
+
+                <div className="cl-form-group">
+                  <label className="cl-label">Deadline</label>
+                  <input
+                    type="date" className={`cl-input${editErrors.deadline ? ' cl-input--error' : ''}`}
+                    value={editingProject.deadline}
+                    onChange={e => { setField({ deadline: e.target.value }); clearEditError('deadline'); }}
+                    style={{ background: '#f8fafc' }}
+                  />
+                  {editErrors.deadline && <span className="cl-error">⚠ {editErrors.deadline}</span>}
+                </div>
+
+                {/* Status is intentionally NOT editable here — it's driven by the gated lifecycle */}
+                <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
+                  <label className="cl-label">Status</label>
+                  <div className="cl-input" style={{ background: '#f8fafc', textTransform: 'capitalize', color: 'var(--color-text-mid)' }}>
+                    {editingProject.status} <span style={{ fontSize: '0.8rem', marginLeft: '0.5rem', opacity: 0.7 }}>(Managed by project lifecycle)</span>
+                  </div>
+                </div>
+
+                <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
+                  <label className="cl-label">Full Description *</label>
+                  <textarea
+                    className={`cl-textarea${editErrors.description ? ' cl-input--error' : ''}`}
+                    value={editingProject.description}
+                    onChange={e => { setField({ description: e.target.value }); clearEditError('description'); }}
+                    style={{ minHeight: '160px', background: '#f8fafc', resize: 'vertical' }}
+                    placeholder="Describe the project scope, responsibilities, and deliverables (min 50 characters)…"
+                  />
+                  {editErrors.description && <span className="cl-error">⚠ {editErrors.description}</span>}
+                </div>
               </div>
             </div>
 
-            <div className="cl-form-group">
-              <label className="cl-label">Min Budget ($) *</label>
-              <input
-                type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
-                value={editingProject.budget.min}
-                onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
-              />
-              {editErrors.budgetMin && <span className="cl-error">⚠ {editErrors.budgetMin}</span>}
-            </div>
-
-            <div className="cl-form-group">
-              <label className="cl-label">Max Budget ($) *</label>
-              <input
-                type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
-                value={editingProject.budget.max}
-                onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
-              />
-              {editErrors.budgetMax && <span className="cl-error">⚠ {editErrors.budgetMax}</span>}
-            </div>
-
-            <div className="cl-form-group">
-              <label className="cl-label">Duration</label>
-              <input
-                className="cl-input"
-                placeholder="e.g. 1-3 months"
-                value={editingProject.duration}
-                onChange={e => setField({ duration: e.target.value })}
-              />
-            </div>
-
-            <div className="cl-form-group">
-              <label className="cl-label">Deadline</label>
-              <input
-                type="date" className={`cl-input${editErrors.deadline ? ' cl-input--error' : ''}`}
-                value={editingProject.deadline}
-                onChange={e => { setField({ deadline: e.target.value }); clearEditError('deadline'); }}
-              />
-              {editErrors.deadline && <span className="cl-error">⚠ {editErrors.deadline}</span>}
-            </div>
-
-            {/* Status is intentionally NOT editable here — it's driven by the
-                gated lifecycle, not manual override. */}
-            <div className="cl-form-group">
-              <label className="cl-label">Status</label>
-              <div className="cl-input" style={{ background: '#f8fafc', textTransform: 'capitalize' }}>{editingProject.status}</div>
-            </div>
-
-            <div className="cl-form-group full">
-              <label className="cl-label">Full Description *</label>
-              <textarea
-                className={`cl-textarea${editErrors.description ? ' cl-input--error' : ''}`}
-                value={editingProject.description}
-                onChange={e => { setField({ description: e.target.value }); clearEditError('description'); }}
-                style={{ minHeight: '140px' }}
-                placeholder="Describe the project scope, responsibilities, and deliverables (min 50 characters)…"
-              />
-              {editErrors.description && <span className="cl-error">⚠ {editErrors.description}</span>}
-            </div>
-
-            <div className="cl-actions full" style={{ marginTop: '1rem' }}>
+            <div className="cl-actions full" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-secondary)' }}>
+              <button type="button" className="cl-btn cl-btn--ghost" onClick={() => setEditingProject(null)} disabled={savingEdit}>Cancel</button>
               <button type="submit" className={`cl-btn cl-btn--primary${savingEdit ? ' cl-btn--loading' : ''}`} disabled={savingEdit}>
                 {savingEdit ? 'Saving…' : 'Save Changes'}
               </button>
-              <button type="button" className="cl-btn cl-btn--ghost" onClick={() => setEditingProject(null)} disabled={savingEdit}>Cancel</button>
             </div>
           </form>
         )}

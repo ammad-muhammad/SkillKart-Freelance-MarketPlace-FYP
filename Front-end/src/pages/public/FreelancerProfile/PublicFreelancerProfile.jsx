@@ -12,6 +12,7 @@ import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { freelancersAPI } from '../../../api/freelancers';
 import { messagesAPI } from '../../../api/messages';
+import { gigsAPI } from '../../../api/gigs';
 import { useAuth } from '../../../hooks/useAuth';
 import { useClient } from '../../../context/ClientContext';
 import './PublicFreelancerProfile.css';
@@ -51,6 +52,7 @@ export default function PublicFreelancerProfile() {
 
   const [profile, setProfile] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -60,14 +62,19 @@ export default function PublicFreelancerProfile() {
     setError(null);
     document.title = 'Freelancer Profile — SkillKart';
 
-    freelancersAPI.getById(id)
-      .then((res) => {
+    Promise.all([
+      freelancersAPI.getById(id),
+      gigsAPI.listGigs({ freelancerId: id, status: 'active' }).catch(() => ({ data: { data: [] } }))
+    ])
+      .then(([resProfile, resGigs]) => {
         if (!active) return;
-        const p = res.data?.data?.profile;
-        const r = res.data?.data?.reviews || [];
+        const p = resProfile.data?.data?.profile;
+        const r = resProfile.data?.data?.reviews || [];
+        const g = resGigs.data?.data || [];
         if (!p) { setError('notfound'); return; }
         setProfile(p);
         setReviews(r);
+        setGigs(g);
         const u = p.userId || {};
         const name = `${u.firstName || ''} ${u.lastName || ''}`.trim();
         if (name) document.title = `${name} — SkillKart`;
@@ -183,12 +190,15 @@ export default function PublicFreelancerProfile() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <div className="pfp-hero-banner">
+            <div 
+              className="pfp-hero-banner"
+              style={{ backgroundImage: profile.coverPhoto ? `url(${profile.coverPhoto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}
+            >
               <div className="pfp-hero-overlay"></div>
               {isOwner && (
                 <button 
                   className="pfp-edit-cover-btn"
-                  onClick={() => navigate('/freelancer/settings')}
+                  onClick={() => navigate('/freelancer/profile')}
                 >
                   <Camera size={16} />
                   <span>Update Cover</span>
@@ -203,15 +213,6 @@ export default function PublicFreelancerProfile() {
                     ? <img src={u.profilePicture} alt={fullName} />
                     : <span>{(u.firstName?.[0] || 'F').toUpperCase()}</span>}
                 </div>
-                {isOwner && (
-                  <button 
-                    className="pfp-edit-avatar-btn"
-                    onClick={() => navigate('/freelancer/settings')}
-                    title="Update Profile Picture"
-                  >
-                    <Camera size={16} />
-                  </button>
-                )}
                 {profile.verificationStatus === 'verified' && !isOwner && (
                   <div className="pfp-verified-badge" title="Verified Freelancer">
                     <CheckCircle size={18} />
@@ -259,7 +260,7 @@ export default function PublicFreelancerProfile() {
                       <MessageSquare size={18} /> Contact Me
                     </button>
                   ) : (
-                    <button className="pfp-btn pfp-btn-secondary pfp-btn-contact" onClick={() => navigate('/freelancer/settings')}>
+                    <button className="pfp-btn pfp-btn-secondary pfp-btn-contact" onClick={() => navigate('/freelancer/profile')}>
                       <FileEdit size={18} /> Edit Profile
                     </button>
                   )}
@@ -288,6 +289,35 @@ export default function PublicFreelancerProfile() {
                   </div>
                   <div className="pfp-card-body">
                     <p className="pfp-bio">{profile.bio}</p>
+                  </div>
+                </motion.section>
+              )}
+
+              {gigs && gigs.length > 0 && (
+                <motion.section variants={itemVariants} className="pfp-card">
+                  <div className="pfp-card-header">
+                    <h2 className="pfp-section-title">Services Offered</h2>
+                  </div>
+                  <div className="pfp-card-body">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                      {gigs.map((gig) => (
+                        <Link to={`/gigs/${gig._id}`} key={gig._id} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <div style={{ border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', transition: 'all 0.2s', background: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseOver={e => {e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.06)'}} onMouseOut={e => {e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'}}>
+                            <div style={{ height: '160px', background: 'var(--color-bg-alt)' }}>
+                              {gig.banner ? <img src={gig.banner} alt={gig.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gradient-primary)', color: 'white' }}><Briefcase size={32} /></div>}
+                            </div>
+                            <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 'var(--fw-bold)', lineHeight: 1.4, color: 'var(--color-text-dark)' }}>{gig.title}</h3>
+                              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', marginBottom: '1rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{gig.shortDescription}</p>
+                              <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)' }}>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--color-text-light)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Star size={16} fill="#f59e0b" color="#f59e0b" /> <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-text-dark)' }}>{gig.stats?.rating > 0 ? gig.stats.rating.toFixed(1) : 'New'}</span> {gig.stats?.reviewsCount > 0 && `(${gig.stats.reviewsCount})`}</span>
+                                <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-primary)', fontSize: '1.1rem' }}>From ${gig.pricing?.basic?.price || 0}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 </motion.section>
               )}

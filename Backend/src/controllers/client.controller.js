@@ -479,15 +479,24 @@ const getSavedFreelancers = asyncHandler(async (req, res) => {
   const profile = await ClientProfile.findOne({ userId })
     .populate({
       path: 'savedFreelancers',
-      select: 'firstName lastName email profilePicture rating',
-      populate: { path: 'freelancerProfile' }
+      select: 'firstName lastName email profilePicture rating'
     });
     
   if (!profile) throw new NotFoundError('Profile not found');
   
+  const FreelancerProfile = require('../models/FreelancerProfile');
+  const userIds = profile.savedFreelancers.map(u => u._id);
+  const profiles = await FreelancerProfile.find({ userId: { $in: userIds } }).lean();
+  
+  const saved = profile.savedFreelancers.map(u => {
+    const userObj = typeof u.toObject === 'function' ? u.toObject() : u;
+    userObj.freelancerProfile = profiles.find(fp => fp.userId.toString() === u._id.toString()) || null;
+    return userObj;
+  });
+  
   sendSuccess(res, {
     message: 'Saved freelancers retrieved successfully',
-    data: { savedFreelancers: profile.savedFreelancers }
+    data: { savedFreelancers: saved }
   });
 });
 

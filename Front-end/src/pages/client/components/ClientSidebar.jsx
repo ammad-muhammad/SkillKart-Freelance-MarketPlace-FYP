@@ -59,9 +59,9 @@ const ClientSidebar = () => {
             />
             <span className="cl-sidebar__online-dot" />
           </div>
-          <div className="cl-sidebar__user-info">
-            <p className="cl-sidebar__name">{fullName}</p>
-            <p className="cl-sidebar__role">{companyName}</p>
+          <div className="cl-sidebar__user-info" style={{ minWidth: 0 }}>
+            <p className="cl-sidebar__name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fullName}</p>
+            <p className="cl-sidebar__role" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{companyName}</p>
           </div>
         </div>
 

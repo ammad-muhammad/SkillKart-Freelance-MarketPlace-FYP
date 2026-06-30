@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock } from 'lucide-react';
+import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { jobsAPI } from '../../api/jobs';
 import './FreelancerDashboard.css';
@@ -68,26 +68,29 @@ export default function FreelancerWork() {
 
   return (
     <div className="fl-work">
-      <div className="fl-page-header">
-        <h1 className="fl-page-title">My Work</h1>
-        <p className="fl-page-sub">Your active contracts, deliveries, and earnings.</p>
+      <div className="fl-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 className="fl-page-title">My Work</h1>
+          <p className="fl-page-sub">Your active contracts, deliveries, and earnings.</p>
+        </div>
+        <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          🔍 Find Work
+        </Link>
       </div>
 
       {/* Earnings summary */}
-      <div className="fl-work-stats">
-        <div className="fl-work-stat">
-          <Wallet size={20} />
-          <div>
-            <strong>${totalEarned.toLocaleString()}</strong>
-            <span>Total earned</span>
-          </div>
+      <div className="fl-stat-grid" style={{ marginBottom: '2rem' }}>
+        <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
+          <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}><Wallet size={100} /></div>
+          <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}><Wallet size={24} /></div>
+          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>${totalEarned.toLocaleString()}</div>
+          <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total earned from completed contracts</div>
         </div>
-        <div className="fl-work-stat">
-          <Briefcase size={20} />
-          <div>
-            <strong>{activeCount}</strong>
-            <span>Active contracts</span>
-          </div>
+        <div className="fl-stat-card">
+          <div className="fl-stat-card__bg"><Briefcase size={100} /></div>
+          <div className="fl-stat-card__icon" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}><Briefcase size={24} /></div>
+          <div className="fl-stat-card__value">{activeCount}</div>
+          <div className="fl-stat-card__label">Active contracts in progress</div>
         </div>
       </div>
 
@@ -132,6 +135,11 @@ export default function FreelancerWork() {
 
                 <div className="fl-contract__footer">
                   <Link to={`/jobs/${c._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
+                  {c.clientId && (
+                    <Link to="/freelancer/messages" className="fl-btn fl-btn--outline fl-btn--sm">
+                      <MessageSquare size={14} /> Contact Client
+                    </Link>
+                  )}
                   {waitingDeposit && (
                     <span className="fl-contract__hint"><Clock size={14} /> Waiting for client to fund the deposit</span>
                   )}
@@ -174,28 +182,26 @@ export default function FreelancerWork() {
       )}
 
       <style>{`
-        .fl-work-stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-        .fl-work-stat { display: flex; align-items: center; gap: 0.85rem; background: #fff; border: 1px solid #eef2f7; border-radius: 14px; padding: 1rem 1.25rem; min-width: 200px; color: var(--color-primary); }
-        .fl-work-stat strong { display: block; font-size: 1.4rem; font-weight: 800; color: #0f172a; }
-        .fl-work-stat span { font-size: 0.8rem; color: #64748b; }
-        .fl-contract { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+        .fl-contract { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 1rem; padding: var(--space-5); }
         .fl-contract__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
-        .fl-contract__title { font-size: 1rem; font-weight: 700; color: var(--color-primary); }
-        .fl-contract__meta { font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.2rem; }
-        .fl-contract__stage { font-weight: 700; font-size: 0.85rem; }
-        .fl-contract__money { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--color-text-mid); align-items: center; }
-        .fl-contract__money span { display: inline-flex; align-items: center; gap: 0.3rem; }
-        .fl-contract__escrow { font-weight: 700; }
-        .fl-contract__revision { font-size: 0.82rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.5rem 0.7rem; }
-        .fl-contract__footer { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; border-top: 1px solid #f1f5f9; padding-top: 0.75rem; }
-        .fl-contract__hint { font-size: 0.8rem; color: #b45309; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .fl-contract__title { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
+        .fl-contract__meta { font-size: var(--fs-sm); color: var(--color-text-mid); margin-top: var(--space-1); }
+        .fl-contract__stage { font-weight: var(--fw-bold); font-size: var(--fs-sm); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); background: rgba(0,0,0,0.03); }
+        .fl-contract__money { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--color-text-mid); align-items: center; background: var(--color-secondary); padding: 0.8rem 1rem; border-radius: var(--radius-md); }
+        .fl-contract__money span { display: inline-flex; align-items: center; gap: 0.4rem; }
+        .fl-contract__escrow { font-weight: var(--fw-bold); }
+        .fl-contract__revision { font-size: var(--fs-sm); color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 0.75rem 1rem; }
+        .fl-contract__footer { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--color-secondary); padding-top: 1rem; }
+        .fl-contract__hint { font-size: var(--fs-sm); color: #b45309; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: var(--fw-medium); }
+        
         .fl-deliver-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 4000; padding: 1rem; }
-        .fl-deliver-modal { background: #fff; width: 100%; max-width: 520px; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(4,46,76,0.3); }
-        .fl-deliver-modal__head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #eef2f7; }
-        .fl-deliver-modal__head h3 { font-size: 1rem; font-weight: 700; color: var(--color-primary); }
-        .fl-deliver-modal__head button { background: none; border: none; cursor: pointer; color: #64748b; }
-        .fl-deliver-modal__body { padding: 1.25rem; }
-        .fl-deliver-modal__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid #eef2f7; }
+        .fl-deliver-modal { background: var(--color-bg); width: 100%; max-width: 600px; border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 24px 60px rgba(4,46,76,0.3); }
+        .fl-deliver-modal__head { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--color-secondary); }
+        .fl-deliver-modal__head h3 { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
+        .fl-deliver-modal__head button { background: none; border: none; cursor: pointer; color: var(--color-text-light); transition: color 0.2s; }
+        .fl-deliver-modal__head button:hover { color: var(--color-primary); }
+        .fl-deliver-modal__body { padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .fl-deliver-modal__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid var(--color-secondary); background: #f8fafc; }
       `}</style>
     </div>
   );

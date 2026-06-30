@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
+import Modal from '../freelancer/components/Modal';
 import './ReviewProposals.css';
 
 export default function ReviewProposals() {
@@ -23,6 +24,8 @@ export default function ReviewProposals() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [messagingId, setMessagingId] = useState(null);
+  const [welcomeModal, setWelcomeModal] = useState(null);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
 
   const handleMessage = async (prop) => {
     const freelancerId = prop.freelancerId?._id;
@@ -64,10 +67,17 @@ export default function ReviewProposals() {
     fetchData();
   }, [fetchData]);
 
-  const handleAccept = async (id) => {
-    const message = prompt('Send a welcome message to the freelancer:');
-    if (message === null) return;
+  const handleAcceptClick = (id) => {
+    setWelcomeModal(id);
+    setWelcomeMessage("Hi! I'm thrilled to accept your proposal and look forward to working with you on this project. Let's get started!");
+  };
 
+  const confirmAccept = async () => {
+    if (!welcomeModal) return;
+    const id = welcomeModal;
+    const message = welcomeMessage.trim();
+    
+    setWelcomeModal(null);
     setProcessingId(id);
     setJob(prev => prev ? { ...prev, status: 'in_progress' } : prev);
     
@@ -80,6 +90,12 @@ export default function ReviewProposals() {
       // be delivered until the deposit is funded.
       try {
         const { data } = await paymentsAPI.startDeposit(jobId);
+        if (data?.data?.walletPaid) {
+          toast.success('50% deposit funded successfully from your wallet balance! Work can begin. 🚀');
+          await fetchProfile(); // Sync global state
+          navigate('/client/projects');
+          return;
+        }
         const url = data?.data?.checkoutUrl;
         if (url) {
           window.location.assign(url);
@@ -216,7 +232,7 @@ export default function ReviewProposals() {
                     <>
                       <button 
                         className="rp-btn rp-btn--accept"
-                        onClick={() => handleAccept(prop._id)}
+                        onClick={() => handleAcceptClick(prop._id)}
                         disabled={!!processingId || job?.status !== 'open'}
                       >
                         <CheckCircle2 size={18} /> Accept
@@ -249,6 +265,57 @@ export default function ReviewProposals() {
             </div>
           ))}
         </div>
+      )}
+
+      {welcomeModal && (
+        <Modal
+          open={!!welcomeModal}
+          onClose={() => setWelcomeModal(null)}
+          title="Accept Proposal"
+        >
+          <div className="cl-modal__body" style={{ padding: '0.5rem 0 0 0' }}>
+            <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--color-text-mid)' }}>
+              Send a welcome message to the freelancer to start the project contract:
+            </p>
+            <textarea
+              className="cl-textarea"
+              style={{ 
+                width: '100%', 
+                minHeight: '120px', 
+                marginBottom: '1.5rem', 
+                padding: '0.75rem', 
+                borderRadius: '8px', 
+                border: '1.5px solid #d1d9e6',
+                fontFamily: 'inherit',
+                fontSize: '0.9rem',
+                outline: 'none',
+                resize: 'vertical'
+              }}
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              placeholder="Hi! I'd like to accept your proposal..."
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+              <button 
+                type="button" 
+                className="cl-btn cl-btn--ghost" 
+                onClick={() => setWelcomeModal(null)}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="cl-btn cl-btn--primary" 
+                onClick={confirmAccept}
+                disabled={processingId}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                {processingId ? 'Accepting...' : 'Confirm & Accept'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
