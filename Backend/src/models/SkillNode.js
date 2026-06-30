@@ -61,12 +61,21 @@ const skillNodeSchema = new mongoose.Schema(
     },
     /** If status === 'merged', all lookups redirect to this node. */
     mergedInto: { type: mongoose.Schema.Types.ObjectId, ref: 'SkillNode', default: null },
+
+    /* ── Hierarchical Display Metadata ── */
+    canonicalParent: { type: mongoose.Schema.Types.ObjectId, ref: 'SkillNode', default: null },
+    displayPriority: { type: Number, default: 0 },
+    navigationWeight: { type: Number, default: 1.0 },
+    menuOrder: { type: Number, default: 0 },
+    featured: { type: Boolean, default: false },
+    hiddenInMenu: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 /* ── Indexes ──────────────────────────────────────────────────────────── */
 skillNodeSchema.index({ type: 1 });
+skillNodeSchema.index({ canonicalParent: 1 });
 skillNodeSchema.index({ status: 1 });
 skillNodeSchema.index({ aliases: 1 });
 skillNodeSchema.index({ synonyms: 1 });

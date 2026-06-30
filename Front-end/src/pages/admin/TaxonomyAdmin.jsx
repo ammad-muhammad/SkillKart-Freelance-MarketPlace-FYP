@@ -118,7 +118,13 @@ const TaxonomyAdmin = () => {
       weight: p.weight ?? 1.0,
       icon: p.icon || '',
       color: p.color || '',
-      relationships: p.relationships || []
+      relationships: p.relationships || [],
+      canonicalParent: p.canonicalParent || '',
+      displayPriority: p.displayPriority ?? 0,
+      navigationWeight: p.navigationWeight ?? 1.0,
+      menuOrder: p.menuOrder ?? 0,
+      featured: !!p.featured,
+      hiddenInMenu: !!p.hiddenInMenu
     });
   };
 
@@ -454,7 +460,57 @@ const TaxonomyAdmin = () => {
                       onChange={e => setEditNode({ ...editNode, synonyms: e.target.value })}
                     />
                   </div>
-                  <button type="submit" className="tax-btn-primary" disabled={actionLoading}>
+                  <div className="tax-form-group" style={{ marginTop: '0.75rem' }}>
+                    <label>Canonical Parent Node (Hierarchical Menu Placement)</label>
+                    <select
+                      value={editNode.canonicalParent || ''}
+                      onChange={e => setEditNode({ ...editNode, canonicalParent: e.target.value || null })}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: '#1f2937', color: '#fff', border: '1px solid #374151' }}
+                    >
+                      <option value="">No Canonical Parent (Industry / Root Category)</option>
+                      {allNodesList
+                        .filter(n => n._id !== editNode._id)
+                        .map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)
+                      }
+                    </select>
+                  </div>
+                  <div className="tax-form-group-row">
+                    <div className="tax-form-group">
+                      <label>Menu Order (Lower = First)</label>
+                      <input 
+                        type="number" 
+                        value={editNode.menuOrder ?? 0} 
+                        onChange={e => setEditNode({ ...editNode, menuOrder: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="tax-form-group">
+                      <label>Display Priority</label>
+                      <input 
+                        type="number" 
+                        value={editNode.displayPriority ?? 0} 
+                        onChange={e => setEditNode({ ...editNode, displayPriority: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <div className="tax-form-group-row" style={{ alignItems: 'center', gap: '2rem', padding: '0.5rem 0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!editNode.featured} 
+                        onChange={e => setEditNode({ ...editNode, featured: e.target.checked })}
+                      />
+                      <span>Featured (Highlight in UI)</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!editNode.hiddenInMenu} 
+                        onChange={e => setEditNode({ ...editNode, hiddenInMenu: e.target.checked })}
+                      />
+                      <span>Hidden in Menu</span>
+                    </label>
+                  </div>
+                  <button type="submit" className="tax-btn-primary" disabled={actionLoading} style={{ marginTop: '1rem' }}>
                     {actionLoading ? 'Saving...' : 'Save Node Info'}
                   </button>
                 </form>
@@ -705,6 +761,53 @@ const TaxonomyAdmin = () => {
                       onChange={e => setReviewForm({ ...reviewForm, synonyms: e.target.value })}
                     />
                   </div>
+                  <div className="tax-form-group" style={{ marginTop: '0.75rem' }}>
+                    <label>Canonical Parent Node (Hierarchical Menu Placement)</label>
+                    <select
+                      value={reviewForm.canonicalParent || ''}
+                      onChange={e => setReviewForm({ ...reviewForm, canonicalParent: e.target.value || null })}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: '#1f2937', color: '#fff', border: '1px solid #374151' }}
+                    >
+                      <option value="">No Canonical Parent (Industry / Root Category)</option>
+                      {allNodesList.map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)}
+                    </select>
+                  </div>
+                  <div className="tax-form-group-row">
+                    <div className="tax-form-group">
+                      <label>Menu Order (Lower = First)</label>
+                      <input 
+                        type="number" 
+                        value={reviewForm.menuOrder ?? 0} 
+                        onChange={e => setReviewForm({ ...reviewForm, menuOrder: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="tax-form-group">
+                      <label>Display Priority</label>
+                      <input 
+                        type="number" 
+                        value={reviewForm.displayPriority ?? 0} 
+                        onChange={e => setReviewForm({ ...reviewForm, displayPriority: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <div className="tax-form-group-row" style={{ alignItems: 'center', gap: '2rem', padding: '0.5rem 0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!reviewForm.featured} 
+                        onChange={e => setReviewForm({ ...reviewForm, featured: e.target.checked })}
+                      />
+                      <span>Featured (Highlight in UI)</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!reviewForm.hiddenInMenu} 
+                        onChange={e => setReviewForm({ ...reviewForm, hiddenInMenu: e.target.checked })}
+                      />
+                      <span>Hidden in Menu</span>
+                    </label>
+                  </div>
 
                   <div className="tax-form-group">
                     <label>Relationships suggested by AI</label>
@@ -871,7 +974,54 @@ const TaxonomyAdmin = () => {
                   onChange={e => setNewNode({ ...newNode, synonyms: e.target.value })}
                 />
               </div>
-              <button type="submit" className="tax-btn-primary" disabled={actionLoading}>
+              <div className="tax-form-group" style={{ marginTop: '0.75rem' }}>
+                <label>Canonical Parent Node (Hierarchical Menu Placement)</label>
+                <select
+                  value={newNode.canonicalParent || ''}
+                  onChange={e => setNewNode({ ...newNode, canonicalParent: e.target.value || null })}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: '#1f2937', color: '#fff', border: '1px solid #374151' }}
+                >
+                  <option value="">No Canonical Parent (Industry / Root Category)</option>
+                  {allNodesList.map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)}
+                </select>
+              </div>
+              <div className="tax-form-group-row">
+                <div className="tax-form-group">
+                  <label>Menu Order (Lower = First)</label>
+                  <input 
+                    type="number" 
+                    value={newNode.menuOrder ?? 0} 
+                    onChange={e => setNewNode({ ...newNode, menuOrder: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="tax-form-group">
+                  <label>Display Priority</label>
+                  <input 
+                    type="number" 
+                    value={newNode.displayPriority ?? 0} 
+                    onChange={e => setNewNode({ ...newNode, displayPriority: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="tax-form-group-row" style={{ alignItems: 'center', gap: '2rem', padding: '0.5rem 0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={!!newNode.featured} 
+                    onChange={e => setNewNode({ ...newNode, featured: e.target.checked })}
+                  />
+                  <span>Featured (Highlight in UI)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={!!newNode.hiddenInMenu} 
+                    onChange={e => setNewNode({ ...newNode, hiddenInMenu: e.target.checked })}
+                  />
+                  <span>Hidden in Menu</span>
+                </label>
+              </div>
+              <button type="submit" className="tax-btn-primary" disabled={actionLoading} style={{ marginTop: '1rem' }}>
                 {actionLoading ? 'Creating...' : 'Create Node'}
               </button>
             </form>

@@ -510,7 +510,7 @@ async function getFullGraph() {
   return { nodes, relationships };
 }
 
-/** Return the full hierarchical tree: Industry -> Categories -> Skills */
+/** Return the full hierarchical tree: Industry -> Categories -> Subcategories -> Skills (strictly de-duplicated) */
 async function getTaxonomyTree() {
   const cacheKey = 'taxonomy:tree';
   const cached = cacheGet(cacheKey);
@@ -568,63 +568,114 @@ async function getTaxonomyTree() {
   const totalActive = activeCategories.size + activeSkills.size;
   const filterActiveOnly = totalActive > 0;
 
+  // Build parent mapping dynamically
+  const parentMap = new Map(); // parentIdString -> array of child nodes
+  const rootIndustries = [];
+
   const nodesMap = new Map(nodes.map(n => [String(n._id), n]));
-  const industries = nodes.filter(n => n.type === 'industry');
 
-  // Map of category ID -> skills list
-  const categorySkills = new Map();
-  // Map of industry ID -> categories list
-  const industryCategories = new Map();
+  // For each node, figure out its unique parent
+  for (const node of nodes) {
+    const nodeIdStr = String(node._id);
 
-  for (const rel of relationships) {
-    if (rel.type === 'BELONGS_TO') {
-      const fromNode = nodesMap.get(String(rel.from));
-      const toNode = nodesMap.get(String(rel.to));
-      if (!fromNode || !toNode) continue;
+    if (node.type === 'industry') {
+      rootIndustries.push(node);
+      continue;
+    }
 
-      if (toNode.type === 'category') {
-        const catId = String(toNode._id);
-        const skillNameLc = normKey(fromNode.name);
-        
-        // Hide skills with no gigs, jobs or freelancers
-        if (filterActiveOnly && !activeSkills.has(skillNameLc)) continue;
-
-        if (!categorySkills.has(catId)) categorySkills.set(catId, []);
-        categorySkills.get(catId).push({
-          name: fromNode.name,
-          slug: fromNode.slug,
-          type: fromNode.type
-        });
-      } else if (toNode.type === 'industry') {
-        const indId = String(toNode._id);
-        if (!industryCategories.has(indId)) industryCategories.set(indId, []);
-        const list = industryCategories.get(indId);
-        if (!list.some(c => String(c._id) === String(fromNode._id))) {
-          list.push(fromNode);
-        }
+    let parentIdStr = null;
+    if (node.canonicalParent) {
+      parentIdStr = String(node.canonicalParent);
+    } else {
+      // Find the first BELONGS_TO relationship
+      const rel = relationships.find(r => String(r.from) === nodeIdStr);
+      if (rel) {
+        parentIdStr = String(rel.to);
       }
+    }
+
+    if (parentIdStr && nodesMap.has(parentIdStr)) {
+      if (!parentMap.has(parentIdStr)) {
+        parentMap.set(parentIdStr, []);
+      }
+      parentMap.get(parentIdStr).push(node);
     }
   }
 
-  const tree = industries.map(ind => {
-    const cats = industryCategories.get(String(ind._id)) || [];
+  const seenNodeIds = new Set();
+
+  function buildTreeRecursively(parentNodeId) {
+    const parentIdStr = String(parentNodeId);
+    const children = parentMap.get(parentIdStr) || [];
+
+    // Sort children
+    children.sort((a, b) => {
+      if (a.menuOrder !== b.menuOrder) return a.menuOrder - b.menuOrder;
+      if (a.displayPriority !== b.displayPriority) return b.displayPriority - a.displayPriority;
+      return a.name.localeCompare(b.name);
+    });
+
+    const result = [];
+    for (const child of children) {
+      const childIdStr = String(child._id);
+      
+      // Strict de-duplication: skip if already added elsewhere in the tree!
+      if (seenNodeIds.has(childIdStr)) continue;
+      if (child.hiddenInMenu) continue;
+
+      const normName = normKey(child.name);
+      const isLeaf = ['skill', 'technology', 'tool', 'concept'].includes(child.type);
+
+      if (isLeaf) {
+        if (filterActiveOnly && !activeSkills.has(normName)) continue;
+        seenNodeIds.add(childIdStr);
+        result.push({
+          id: childIdStr,
+          name: child.name,
+          slug: child.slug,
+          type: child.type,
+          icon: child.icon,
+          color: child.color,
+          featured: child.featured
+        });
+      } else {
+        // It's a category/subcategory. Build its subtree.
+        const childrenTree = buildTreeRecursively(child._id);
+        const hasGigs = activeCategories.has(normName);
+        const keepCategory = !filterActiveOnly || hasGigs || childrenTree.length > 0;
+
+        if (keepCategory) {
+          seenNodeIds.add(childIdStr);
+          result.push({
+            id: childIdStr,
+            name: child.name,
+            slug: child.slug,
+            type: child.type,
+            icon: child.icon || '🔸',
+            gradient: child.color || 'linear-gradient(135deg, #374151, #111827)',
+            featured: child.featured,
+            children: childrenTree
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  // Sort root industries
+  rootIndustries.sort((a, b) => {
+    if (a.menuOrder !== b.menuOrder) return a.menuOrder - b.menuOrder;
+    if (a.displayPriority !== b.displayPriority) return b.displayPriority - a.displayPriority;
+    return a.name.localeCompare(b.name);
+  });
+
+  const tree = rootIndustries.map(ind => {
+    const categoriesTree = buildTreeRecursively(ind._id);
     return {
       industry: ind.name,
       slug: ind.slug,
-      categories: cats
-        .map(cat => ({
-          name: cat.name,
-          slug: cat.slug,
-          icon: cat.icon || '🔸',
-          gradient: cat.color || 'linear-gradient(135deg, #374151, #111827)',
-          skills: categorySkills.get(String(cat._id)) || []
-        }))
-        // Hide categories with no gigs, jobs or freelancers
-        .filter(cat => {
-          if (!filterActiveOnly) return true;
-          const catNameLc = normKey(cat.name);
-          return activeCategories.has(catNameLc) || cat.skills.length > 0;
-        })
+      categories: categoriesTree
     };
   }).filter(ind => ind.categories.length > 0 || !filterActiveOnly);
 

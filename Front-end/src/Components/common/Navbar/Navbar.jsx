@@ -54,16 +54,43 @@ export default function Navbar({ alwaysSticky = false }) {
         const tree = res.data?.data?.tree || [];
         const sections = [];
         
-        // Convert the Live Skill Graph taxonomy tree directly to mega menu columns
+        // Convert the Live Skill Graph recursive hierarchy to nested mega menu structure
         tree.forEach(ind => {
           (ind.categories || []).forEach(cat => {
+            const groups = [];
+
+            (cat.children || []).forEach(child => {
+              const isLeaf = !child.children; // if it has no nested children, it's a leaf skill
+              
+              if (isLeaf) {
+                let generalGroup = groups.find(g => g.subtitle === "");
+                if (!generalGroup) {
+                  generalGroup = { subtitle: "", slug: "", links: [] };
+                  groups.push(generalGroup);
+                }
+                generalGroup.links.push({
+                  label: child.name,
+                  slug: child.slug,
+                  parentSlug: cat.slug
+                });
+              } else {
+                const subGroup = {
+                  subtitle: child.name,
+                  slug: child.slug,
+                  links: (child.children || []).map(gChild => ({
+                    label: gChild.name,
+                    slug: gChild.slug,
+                    parentSlug: child.slug
+                  }))
+                };
+                groups.push(subGroup);
+              }
+            });
+
             sections.push({
               title: cat.name,
               categorySlug: cat.slug,
-              links: (cat.skills || []).slice(0, 5).map(s => ({
-                label: s.name,
-                slug: s.slug
-              }))
+              groups
             });
           });
         });
@@ -310,10 +337,47 @@ export default function Navbar({ alwaysSticky = false }) {
                           </Link>
                         )}
 
-                        <ul className="navbar__mega-links">
-                          {sec.links.map((link, lIdx) => (
-                            <li key={lIdx}>
-                              {sec.isSpecial ? (
+                        {sec.groups ? (
+                          <div className="navbar__mega-groups">
+                            {sec.groups.map((group, gIdx) => (
+                              <div key={gIdx} className="navbar__mega-group-wrapper" style={{ marginBottom: '1rem' }}>
+                                {group.subtitle && (
+                                  <Link
+                                    to={`/skills/${group.slug}`}
+                                    className="navbar__mega-subtitle"
+                                    style={{
+                                      display: 'block',
+                                      fontWeight: '600',
+                                      fontSize: '0.85rem',
+                                      color: 'rgba(255,255,255,0.7)',
+                                      marginBottom: '0.35rem',
+                                      textDecoration: 'none'
+                                    }}
+                                    onClick={() => setActiveDropdown(null)}
+                                  >
+                                    {group.subtitle}
+                                  </Link>
+                                )}
+                                <ul className="navbar__mega-links" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                  {group.links.map((link, lIdx) => (
+                                    <li key={lIdx} style={{ marginBottom: '0.2rem' }}>
+                                      <Link
+                                        to={`/skills/${link.parentSlug || sec.categorySlug}/${link.slug}`}
+                                        className="navbar__mega-link"
+                                        onClick={() => setActiveDropdown(null)}
+                                      >
+                                        {link.label}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <ul className="navbar__mega-links">
+                            {sec.links && sec.links.map((link, lIdx) => (
+                              <li key={lIdx}>
                                 <Link
                                   to={link.href}
                                   className="navbar__mega-link navbar__mega-link--special"
@@ -324,19 +388,10 @@ export default function Navbar({ alwaysSticky = false }) {
                                     <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                                   </svg>
                                 </Link>
-                              ) : (
-                                /* Skill link → skill page */
-                                <Link
-                                  to={`/skills/${sec.categorySlug}/${link.slug}`}
-                                  className="navbar__mega-link"
-                                  onClick={() => setActiveDropdown(null)}
-                                >
-                                  {link.label}
-                                </Link>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -392,7 +447,7 @@ export default function Navbar({ alwaysSticky = false }) {
               {mobileExpanded === idx && item.isMega && (
                 <div className="navbar__mobile-sub">
                   {item.sections.map((sec, sIdx) => (
-                    <div key={sIdx}>
+                    <div key={sIdx} style={{ marginBottom: '0.75rem' }}>
                       {/* Category header link */}
                       {sec.title && (
                         <Link
@@ -404,28 +459,45 @@ export default function Navbar({ alwaysSticky = false }) {
                           {sec.title}
                         </Link>
                       )}
-                      {/* Skill links indented */}
-                      {sec.links.map((link, lIdx) =>
-                        sec.isSpecial ? (
+
+                      {sec.groups ? (
+                        sec.groups.map((group, gIdx) => (
+                          <div key={gIdx} style={{ paddingLeft: 12, marginBottom: '0.5rem' }}>
+                            {group.subtitle && (
+                              <Link
+                                to={`/skills/${group.slug}`}
+                                className="navbar__mobile-child"
+                                style={{ fontWeight: 600, color: '#4b5563', fontSize: 13, paddingTop: 4 }}
+                                onClick={closeMobile}
+                              >
+                                {group.subtitle}
+                              </Link>
+                            )}
+                            {group.links.map((link, lIdx) => (
+                              <Link
+                                key={lIdx}
+                                to={`/skills/${link.parentSlug || sec.categorySlug}/${link.slug}`}
+                                className="navbar__mobile-child"
+                                style={{ paddingLeft: group.subtitle ? 24 : 12, fontSize: 12, opacity: 0.9 }}
+                                onClick={closeMobile}
+                              >
+                                {link.label}
+                              </Link>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        sec.links && sec.links.map((link, lIdx) => (
                           <Link
                             key={lIdx}
                             to={link.href}
                             className="navbar__mobile-child"
+                            style={{ paddingLeft: 12 }}
                             onClick={closeMobile}
                           >
                             {link.label}
                           </Link>
-                        ) : (
-                          <Link
-                            key={lIdx}
-                            to={`/skills/${sec.categorySlug}/${link.slug}`}
-                            className="navbar__mobile-child"
-                            style={{ paddingLeft: 28, fontSize: 13 }}
-                            onClick={closeMobile}
-                          >
-                            {link.label}
-                          </Link>
-                        )
+                        ))
                       )}
                     </div>
                   ))}
