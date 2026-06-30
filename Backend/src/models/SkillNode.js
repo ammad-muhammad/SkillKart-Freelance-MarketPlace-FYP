@@ -69,6 +69,10 @@ const skillNodeSchema = new mongoose.Schema(
     menuOrder: { type: Number, default: 0 },
     featured: { type: Boolean, default: false },
     hiddenInMenu: { type: Boolean, default: false },
+
+    /* ── Popularity Metrics ── */
+    searchVolume: { type: Number, default: 0 },
+    views: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

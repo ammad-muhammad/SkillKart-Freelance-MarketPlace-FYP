@@ -245,7 +245,6 @@
   align-items: center;
   gap: var(--space-2);
   color: #042E4C;
-  /* Match the 'Explore' color in image */
   font-weight: var(--fw-bold);
   margin-top: var(--space-2);
 }

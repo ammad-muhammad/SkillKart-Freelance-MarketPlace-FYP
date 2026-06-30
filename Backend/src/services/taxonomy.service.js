@@ -520,14 +520,16 @@ async function getTaxonomyTree() {
   const Gig = require('../models/Gig');
   const Job = require('../models/Job');
   const FreelancerProfile = require('../models/FreelancerProfile');
+  const PlatformSettings = require('../models/PlatformSettings');
 
-  const [nodes, relationships, activeUsers, gigsRaw, jobsRaw, freelancersRaw] = await Promise.all([
+  const [nodes, relationships, activeUsers, gigsRaw, jobsRaw, freelancersRaw, settings] = await Promise.all([
     SkillNode.find({ status: 'active' }).lean(),
     SkillRelationship.find({ type: { $in: ['BELONGS_TO', 'CHILD'] } }).lean(),
     User.find({ isActive: true }).select('_id role').lean(),
     Gig.find({ status: 'active' }).select('category skills freelancerId').lean(),
     Job.find({ status: 'open' }).select('category skills clientId').lean(),
-    FreelancerProfile.find().select('skills userId').lean()
+    FreelancerProfile.find().select('skills userId').lean(),
+    PlatformSettings.findOne({ key: 'category_popularity_weights' }).lean()
   ]);
 
   const activeFreelancerIds = new Set(activeUsers.filter(u => u.role === 'freelancer').map(u => String(u._id)));
@@ -564,20 +566,21 @@ async function getTaxonomyTree() {
     }
   }
 
-  // Cold start protection: show all if platform is empty
-  const totalActive = activeCategories.size + activeSkills.size;
-  const filterActiveOnly = totalActive > 0;
+  const weights = settings?.weights || {
+    gigs: 0.40,
+    jobs: 0.25,
+    freelancers: 0.20,
+    searchVolume: 0.10,
+    views: 0.05
+  };
 
-  // Build parent mapping dynamically
-  const parentMap = new Map(); // parentIdString -> array of child nodes
+  const parentMap = new Map();
   const rootIndustries = [];
-
   const nodesMap = new Map(nodes.map(n => [String(n._id), n]));
 
-  // For each node, figure out its unique parent
   for (const node of nodes) {
     const nodeIdStr = String(node._id);
-
+    
     if (node.type === 'industry') {
       rootIndustries.push(node);
       continue;
@@ -587,7 +590,6 @@ async function getTaxonomyTree() {
     if (node.canonicalParent) {
       parentIdStr = String(node.canonicalParent);
     } else {
-      // Find the first BELONGS_TO relationship
       const rel = relationships.find(r => String(r.from) === nodeIdStr);
       if (rel) {
         parentIdStr = String(rel.to);
@@ -601,6 +603,78 @@ async function getTaxonomyTree() {
       parentMap.get(parentIdStr).push(node);
     }
   }
+
+  const getChildSkillNames = (catNodeId) => {
+    const list = [];
+    const queue = [String(catNodeId)];
+    const visited = new Set(queue);
+
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      const children = parentMap.get(currentId) || [];
+      for (const child of children) {
+        const childIdStr = String(child._id);
+        if (!visited.has(childIdStr)) {
+          visited.add(childIdStr);
+          if (['skill', 'technology', 'tool'].includes(child.type)) {
+            list.push(normKey(child.name));
+          } else {
+            queue.push(childIdStr);
+          }
+        }
+      }
+    }
+    return list;
+  };
+
+  // Find and rank active categories
+  const categoriesList = nodes.filter(n => n.type === 'category');
+  const rankedCategories = [];
+
+  for (const cat of categoriesList) {
+    const catNameLc = normKey(cat.name);
+    
+    // Gigs count
+    const gigCount = gigs.filter(g => normKey(g.category) === catNameLc).length;
+    // Jobs count
+    const jobCount = jobs.filter(j => normKey(j.category) === catNameLc).length;
+    
+    // Freelancers count possessing skills in child hierarchy
+    const descSkillNames = new Set(getChildSkillNames(cat._id));
+    descSkillNames.add(catNameLc);
+    
+    const freelancerCount = freelancers.filter(f => {
+      return (f.skills || []).some(s => {
+        const name = typeof s === 'string' ? s : s.name;
+        return descSkillNames.has(normKey(name));
+      });
+    }).length;
+
+    // Check if category has any active data
+    const hasActiveChildSkill = Array.from(descSkillNames).some(name => activeSkills.has(name));
+    const hasActiveData = gigCount > 0 || jobCount > 0 || freelancerCount > 0 || hasActiveChildSkill || activeCategories.has(catNameLc);
+
+    if (!hasActiveData) {
+      continue;
+    }
+
+    const popularityScore = (gigCount * weights.gigs) +
+                            (jobCount * weights.jobs) +
+                            (freelancerCount * weights.freelancers) +
+                            ((cat.searchVolume || 0) * weights.searchVolume) +
+                            ((cat.views || 0) * weights.views);
+
+    rankedCategories.push({
+      node: cat,
+      popularityScore
+    });
+  }
+
+  // Sort descending
+  rankedCategories.sort((a, b) => b.popularityScore - a.popularityScore);
+
+  // Take top 7 active categories
+  const top7Categories = rankedCategories.slice(0, 7).map(rc => rc.node);
 
   const seenNodeIds = new Set();
 
@@ -619,7 +693,6 @@ async function getTaxonomyTree() {
     for (const child of children) {
       const childIdStr = String(child._id);
       
-      // Strict de-duplication: skip if already added elsewhere in the tree!
       if (seenNodeIds.has(childIdStr)) continue;
       if (child.hiddenInMenu) continue;
 
@@ -627,7 +700,7 @@ async function getTaxonomyTree() {
       const isLeaf = ['skill', 'technology', 'tool', 'concept'].includes(child.type);
 
       if (isLeaf) {
-        if (filterActiveOnly && !activeSkills.has(normName)) continue;
+        if (!activeSkills.has(normName)) continue;
         seenNodeIds.add(childIdStr);
         result.push({
           id: childIdStr,
@@ -639,10 +712,9 @@ async function getTaxonomyTree() {
           featured: child.featured
         });
       } else {
-        // It's a category/subcategory. Build its subtree.
         const childrenTree = buildTreeRecursively(child._id);
         const hasGigs = activeCategories.has(normName);
-        const keepCategory = !filterActiveOnly || hasGigs || childrenTree.length > 0;
+        const keepCategory = hasGigs || childrenTree.length > 0;
 
         if (keepCategory) {
           seenNodeIds.add(childIdStr);
@@ -671,13 +743,40 @@ async function getTaxonomyTree() {
   });
 
   const tree = rootIndustries.map(ind => {
-    const categoriesTree = buildTreeRecursively(ind._id);
+    const indIdStr = String(ind._id);
+    
+    // Find top-7 categories belonging to this industry
+    const catsUnderInd = top7Categories.filter(cat => {
+      let parentIdStr = null;
+      if (cat.canonicalParent) {
+        parentIdStr = String(cat.canonicalParent);
+      } else {
+        const rel = relationships.find(r => String(r.from) === String(cat._id));
+        if (rel) parentIdStr = String(rel.to);
+      }
+      return parentIdStr === indIdStr;
+    });
+
+    const categoriesTree = catsUnderInd.map(cat => {
+      const childrenTree = buildTreeRecursively(cat._id);
+      return {
+        id: String(cat._id),
+        name: cat.name,
+        slug: cat.slug,
+        type: cat.type,
+        icon: cat.icon || '🔸',
+        gradient: cat.color || 'linear-gradient(135deg, #374151, #111827)',
+        featured: cat.featured,
+        children: childrenTree
+      };
+    });
+
     return {
       industry: ind.name,
       slug: ind.slug,
-      categories: categoriesTree
+      categories: categoriesTree.filter(c => c.children.length > 0 || activeCategories.has(normKey(c.name)))
     };
-  }).filter(ind => ind.categories.length > 0 || !filterActiveOnly);
+  }).filter(ind => ind.categories.length > 0);
 
   cacheSet(cacheKey, tree);
   return tree;

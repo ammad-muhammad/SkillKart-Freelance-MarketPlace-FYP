@@ -60,7 +60,7 @@ export default function Navbar({ alwaysSticky = false }) {
             const groups = [];
 
             (cat.children || []).forEach(child => {
-              const isLeaf = !child.children; // if it has no nested children, it's a leaf skill
+              const isLeaf = !child.children || child.children.length === 0; // if it has no nested children, it's a leaf skill
               
               if (isLeaf) {
                 let generalGroup = groups.find(g => g.subtitle === "");
@@ -328,7 +328,7 @@ export default function Navbar({ alwaysSticky = false }) {
                         {/* Category heading → category page */}
                         {sec.title && (
                           <Link
-                            to={`/skills/${sec.categorySlug}`}
+                            to={sec.isSpecial ? '/categories' : `/skills/${sec.categorySlug}`}
                             className="navbar__mega-title"
                             style={{ textDecoration: 'none', cursor: 'pointer' }}
                             onClick={() => setActiveDropdown(null)}
@@ -451,7 +451,7 @@ export default function Navbar({ alwaysSticky = false }) {
                       {/* Category header link */}
                       {sec.title && (
                         <Link
-                          to={`/skills/${sec.categorySlug}`}
+                          to={sec.isSpecial ? '/categories' : `/skills/${sec.categorySlug}`}
                           className="navbar__mobile-child"
                           style={{ fontWeight: 700, color: '#0d9488', paddingTop: sIdx === 0 ? 4 : 14 }}
                           onClick={closeMobile}
