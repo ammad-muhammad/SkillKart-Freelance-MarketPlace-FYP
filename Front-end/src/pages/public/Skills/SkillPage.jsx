@@ -21,6 +21,7 @@ export default function SkillPage() {
   const [skill, setSkill] = useState(null);
   const [category, setCategory] = useState(null);
   const [loadingSkill, setLoadingSkill] = useState(true);
+  const [hideLoader, setHideLoader] = useState(false);
 
   const [activeSub,      setActiveSub]      = useState("all");
   const [priceFilter,    setPriceFilter]    = useState("any");
@@ -103,35 +104,6 @@ export default function SkillPage() {
   const flRef        = useRef(null);
   const trendRef     = useRef(null);
 
-  /* ── GSAP animations ── */
-  useEffect(() => {
-    if (!skill || !category) return;
-
-    /* Hero entrance */
-    const tl = gsap.timeline({ delay: 0.15 });
-    tl.fromTo(".skl-hero__breadcrumb", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" })
-      .fromTo(".skl-hero__title",      { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65, ease: "power4.out" }, "-=0.2")
-      .fromTo(".skl-hero__desc",       { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.48, ease: "power3.out" }, "-=0.3")
-      .fromTo(".skl-hero__stat",       { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.4, ease: "power3.out" }, "-=0.2");
-
-    /* Scroll animations */
-    const animateSection = (ref, selector) => {
-      const targets = ref.current?.querySelectorAll(selector);
-      if (!targets?.length) return;
-      gsap.fromTo(targets,
-        { y: 36, opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.07, duration: 0.6, ease: "power3.out",
-          scrollTrigger: { trigger: ref.current, start: "top 82%" } }
-      );
-    };
-
-    animateSection(gigsRef,  ".mp-gig-card");
-    animateSection(flRef,    ".mp-freelancer-card");
-    animateSection(trendRef, ".mp-trending-pill");
-
-    return () => ScrollTrigger.getAll().forEach(t => t.kill());
-  }, [skill, category, allGigs, freelancers]);
-
   /* ── Filtering ── */
   const filteredGigs = useMemo(() => {
     return allGigs.filter((gig) => {
@@ -196,20 +168,93 @@ export default function SkillPage() {
   const heroRating      = stats?.avgRating ? Number(stats.avgRating).toFixed(1) : null;
   const heroPrice       = Number(stats?.startingPrice) || 0;
 
-  /* ── Not found ── */
-  if (loadingSkill) {
-    return (
-      <>
-        <Navbar />
-        <div className="mp-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '65vh' }}>
-          <div style={{ color: '#6366f1', fontSize: '1.25rem', fontWeight: '700' }}>Loading Skill Domain...</div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
+  /* ── GSAP animations ── */
+  useEffect(() => {
+    if (loadingSkill || !skill || !category) return;
+    
+    // Hero entrance - runs exactly once
+    const tl = gsap.timeline({ delay: 0.15 });
+    tl.fromTo(".skl-hero__breadcrumb", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" })
+      .fromTo(".skl-hero__title",      { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65, ease: "power4.out" }, "-=0.2")
+      .fromTo(".skl-hero__desc",       { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.48, ease: "power3.out" }, "-=0.3")
+      .fromTo(".skl-hero__stat",       { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.4, ease: "power3.out" }, "-=0.2");
+  }, [loadingSkill, skill, category]);
 
-  if (!skill || !category) {
+  useEffect(() => {
+    if (gigsLoading || allGigs.length === 0) return;
+    const targets = gigsRef.current?.querySelectorAll(".mp-gig-card");
+    if (!targets?.length) return;
+
+    const trigger = ScrollTrigger.create({
+      trigger: gigsRef.current,
+      start: "top 82%",
+      onEnter: () => {
+        gsap.fromTo(targets,
+          { y: 36, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.07, duration: 0.6, ease: "power3.out" }
+        );
+      },
+      once: true
+    });
+
+    return () => trigger.kill();
+  }, [gigsLoading, allGigs]);
+
+  useEffect(() => {
+    if (flLoading || freelancers.length === 0) return;
+    const targets = flRef.current?.querySelectorAll(".mp-freelancer-card");
+    if (!targets?.length) return;
+
+    const trigger = ScrollTrigger.create({
+      trigger: flRef.current,
+      start: "top 82%",
+      onEnter: () => {
+        gsap.fromTo(targets,
+          { y: 36, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.07, duration: 0.6, ease: "power3.out" }
+        );
+      },
+      once: true
+    });
+
+    return () => trigger.kill();
+  }, [flLoading, freelancers]);
+
+  useEffect(() => {
+    if (loadingSkill || trendingTags.length === 0) return;
+    const targets = trendRef.current?.querySelectorAll(".mp-trending-pill");
+    if (!targets?.length) return;
+
+    const trigger = ScrollTrigger.create({
+      trigger: trendRef.current,
+      start: "top 82%",
+      onEnter: () => {
+        gsap.fromTo(targets,
+          { y: 36, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.07, duration: 0.6, ease: "power3.out" }
+        );
+      },
+      once: true
+    });
+
+    return () => trigger.kill();
+  }, [loadingSkill, trendingTags]);
+
+  /* ── Fade out loader overlay ── */
+  useEffect(() => {
+    if (!loadingSkill) {
+      gsap.to(".skl-page-loader", {
+        opacity: 0,
+        y: -30,
+        duration: 0.6,
+        ease: "power2.inOut",
+        onComplete: () => setHideLoader(true)
+      });
+    }
+  }, [loadingSkill]);
+
+  /* ── Not found ── */
+  if (!skill && !loadingSkill) {
     return (
       <>
         <Navbar />
@@ -230,6 +275,8 @@ export default function SkillPage() {
     <>
       <Navbar />
       <div className="mp-page">
+        {skill && category ? (
+          <>
 
         {/* ═══════════════════ HERO ═══════════════════ */}
         <section ref={heroRef} className="cat-hero">
@@ -471,8 +518,78 @@ export default function SkillPage() {
           </div>
         )}
 
+          </>
+        ) : (
+          <div style={{ minHeight: '80vh' }} />
+        )}
       </div>
       <Footer />
+
+      {/* Stunning Glowing Page Loader Overlay */}
+      {/* Stunning Glowing Page Loader Overlay (Matches Brand Light Theme) */}
+      {!hideLoader && (
+        <div className="skl-page-loader" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: '#f8fafc', // Premium clean soft off-white background
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1.5rem',
+          color: 'var(--color-primary, #042E4C)',
+          fontFamily: "'Inter', sans-serif"
+        }}>
+          {/* Glowing Animated Circular Gradient Ring */}
+          <div className="skl-loader-container" style={{ position: 'relative', width: '80px', height: '80px' }}>
+            <div className="skl-loader-glow" style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(4, 46, 76, 0.15) 0%, rgba(4, 46, 76, 0) 70%)',
+              filter: 'blur(10px)',
+              animation: 'pulseGlow 2s ease-in-out infinite'
+            }} />
+            <div className="skl-loader-spinner" style={{
+              width: '80px',
+              height: '80px',
+              border: '3px solid rgba(4, 46, 76, 0.05)',
+              borderTop: '3px solid var(--color-primary, #042E4C)',
+              borderRight: '3px solid var(--color-accent-dark, #8aaece)',
+              borderRadius: '50%',
+              animation: 'spin 1s cubic-bezier(0.5, 0.1, 0.1, 0.9) infinite'
+            }} />
+          </div>
+          <div style={{
+            fontSize: '1.1rem',
+            fontWeight: '600',
+            color: 'var(--color-primary, #042E4C)',
+            letterSpacing: '0.03em',
+            animation: 'pulseText 1.8s ease-in-out infinite',
+            textAlign: 'center'
+          }}>
+            Loading premium workspace...
+          </div>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            @keyframes pulseGlow {
+              0%, 100% { transform: scale(0.9); opacity: 0.5; }
+              50% { transform: scale(1.2); opacity: 0.9; }
+            }
+            @keyframes pulseText {
+              0%, 100% { opacity: 0.5; }
+              50% { opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
     </>
   );
 }
