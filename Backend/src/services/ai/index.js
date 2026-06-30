@@ -161,6 +161,19 @@ class RouterAIProvider extends AIProvider {
     }
     throw new Error('All AI providers are currently unavailable. Please try again later.');
   }
+
+  async suggestTaxonomyNode(unrecognizedName, contextCategory) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.suggestTaxonomyNode !== 'function') continue;
+        const result = await provider.instance.suggestTaxonomyNode(unrecognizedName, contextCategory);
+        if (result && result.name && result.type) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for suggestTaxonomyNode:`, e.message);
+      }
+    }
+    throw new Error('All AI providers are currently unavailable. Please try again later.');
+  }
 }
 
 let activeProviderInstance = null;

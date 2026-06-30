@@ -4,9 +4,10 @@ import './Navbar.css';
 import { Link } from 'react-router-dom';
 import { MessageSquareCode, Calculator, HelpCircle, Search, FileEdit, Zap } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
+import { skillsAPI } from '../../../api/skills';
 
-/* ── Nav data ── */
-const NAV_ITEMS = [
+// Base layout of static items
+const BASE_NAV_ITEMS = [
   {
     label: 'Find Talent',
     children: [
@@ -18,93 +19,7 @@ const NAV_ITEMS = [
   {
     label: 'Find Work',
     isMega: true,
-    sections: [
-      {
-        title: 'Admin & Support',
-        categorySlug: 'admin-support',
-        links: [
-          { label: 'Virtual Assistant',  slug: 'virtual-assistant'  },
-          { label: 'Data Entry',         slug: 'data-entry'         },
-          { label: 'Project Management', slug: 'project-management' },
-          { label: 'Customer Support',   slug: 'customer-support'   },
-          { label: 'Transcription',      slug: 'transcription'      },
-        ],
-      },
-      {
-        title: 'Design & Creative',
-        categorySlug: 'design-creative',
-        links: [
-          { label: 'Logo Design',     slug: 'logo-design'     },
-          { label: 'Brand Identity',  slug: 'brand-identity'  },
-          { label: 'UI / UX Design',  slug: 'ui-ux-design'    },
-          { label: 'Illustration',    slug: 'illustration'    },
-          { label: 'Motion Graphics', slug: 'motion-graphics' },
-        ],
-      },
-      {
-        title: 'Marketing',
-        categorySlug: 'marketing',
-        links: [
-          { label: 'SEO Optimization',       slug: 'seo-optimization'       },
-          { label: 'Social Media Marketing', slug: 'social-media-marketing' },
-          { label: 'Email Marketing',        slug: 'email-marketing'        },
-          { label: 'PPC Advertising',        slug: 'ppc-advertising'        },
-          { label: 'Content Marketing',      slug: 'content-marketing'      },
-        ],
-      },
-      {
-        title: 'Writing & Content',
-        categorySlug: 'writing-content',
-        links: [
-          { label: 'Blog Writing',      slug: 'blog-writing'      },
-          { label: 'Copywriting',       slug: 'copywriting'       },
-          { label: 'Technical Writing', slug: 'technical-writing' },
-          { label: 'Ghostwriting',      slug: 'ghostwriting'      },
-          { label: 'Proofreading',      slug: 'proofreading'      },
-        ],
-      },
-      {
-        title: 'AI & Emerging Tech',
-        categorySlug: 'ai-emerging-tech',
-        links: [
-          { label: 'AI Development',      slug: 'ai-development'      },
-          { label: 'Prompt Engineering',  slug: 'prompt-engineering'  },
-          { label: 'Chatbot Development', slug: 'chatbot-development' },
-          { label: 'Blockchain & Web3',   slug: 'blockchain'          },
-          { label: 'Machine Learning',    slug: 'machine-learning'    },
-        ],
-      },
-      {
-        title: 'Development & Tech',
-        categorySlug: 'development-tech',
-        links: [
-          { label: 'Web Development',   slug: 'web-development'        },
-          { label: 'Mobile App Dev',    slug: 'mobile-app-development' },
-          { label: 'WordPress',         slug: 'wordpress'              },
-          { label: 'API Development',   slug: 'api-development'        },
-          { label: 'DevOps & Cloud',    slug: 'devops'                 },
-        ],
-      },
-      {
-        title: 'Video, Audio & Animation',
-        categorySlug: 'video-audio-animation',
-        links: [
-          { label: 'Video Editing',      slug: 'video-editing'      },
-          { label: 'Animation',          slug: 'animation'          },
-          { label: 'Voiceover',          slug: 'voiceover'          },
-          { label: 'Podcast Production', slug: 'podcast-production' },
-          { label: 'Music Composition',  slug: 'music-composition'  },
-        ],
-      },
-      {
-        isSpecial: true,
-        links: [
-          { label: 'Browse all projects',  href: '/browse-projects'         },
-          { label: 'AI Matchmaking',       href: '/ai-matchmaking'          },
-          { label: 'Explore skills',       href: '/categories'              },
-        ],
-      },
-    ],
+    sections: [], // Dynamic
   },
   {
     label: 'AI Tools',
@@ -122,6 +37,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Navbar({ alwaysSticky = false }) {
+  const [navItems, setNavItems] = useState(BASE_NAV_ITEMS);
   const [visible, setVisible] = useState(true);
   const [isSticky, setIsSticky] = useState(alwaysSticky);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -131,6 +47,48 @@ export default function Navbar({ alwaysSticky = false }) {
   const lastScrollY = useRef(0);
 
   const dashboardLink = user?.role === 'client' ? '/client/dashboard' : '/freelancer/dashboard';
+
+  useEffect(() => {
+    skillsAPI.getTaxonomyTree()
+      .then(res => {
+        const tree = res.data?.data?.tree || [];
+        const sections = [];
+        
+        // Convert the Live Skill Graph taxonomy tree directly to mega menu columns
+        tree.forEach(ind => {
+          (ind.categories || []).forEach(cat => {
+            sections.push({
+              title: cat.name,
+              categorySlug: cat.slug,
+              links: (cat.skills || []).slice(0, 5).map(s => ({
+                label: s.name,
+                slug: s.slug
+              }))
+            });
+          });
+        });
+
+        // Push special search links at the end
+        sections.push({
+          isSpecial: true,
+          links: [
+            { label: 'Browse all projects',  href: '/browse-projects'         },
+            { label: 'AI Matchmaking',       href: '/ai-matchmaking'          },
+            { label: 'Explore skills',       href: '/categories'              },
+          ],
+        });
+
+        setNavItems(prev => prev.map(item => {
+          if (item.label === 'Find Work') {
+            return { ...item, sections };
+          }
+          return item;
+        }));
+      })
+      .catch(err => {
+        console.warn('Failed to load dynamic Navbar taxonomy:', err);
+      });
+  }, []);
 
   const navRef = useRef(null);
   const logoRef = useRef(null);
@@ -262,7 +220,7 @@ export default function Navbar({ alwaysSticky = false }) {
 
           {/* Desktop nav */}
           <ul ref={linksRef} className="navbar__links">
-            {NAV_ITEMS.map((item, idx) => (
+            {navItems.map((item, idx) => (
               <li
                 key={item.label}
                 className={`navbar__item${item.isMega ? ' navbar__item--mega' : ''}`}
@@ -326,7 +284,7 @@ export default function Navbar({ alwaysSticky = false }) {
         </div>
 
         {/* ── Mega Menus ── */}
-        {NAV_ITEMS.map((item, idx) =>
+        {navItems.map((item, idx) =>
           item.isMega ? (
             <div
               key={item.label}
@@ -404,7 +362,7 @@ export default function Navbar({ alwaysSticky = false }) {
         </div>
 
         <div className="navbar__mobile-inner">
-          {NAV_ITEMS.map((item, idx) => (
+          {navItems.map((item, idx) => (
             <div key={item.label} className="navbar__mobile-group">
               <button className="navbar__mobile-parent" onClick={() => toggleMobile(idx)}>
                 {item.label}

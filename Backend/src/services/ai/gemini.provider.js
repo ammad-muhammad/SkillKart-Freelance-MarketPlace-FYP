@@ -517,6 +517,48 @@ Output ONLY valid JSON:
       breakdown: Array.isArray(parsed?.breakdown) ? parsed.breakdown : [],
     };
   }
+
+  async suggestTaxonomyNode(unrecognizedName, contextCategory) {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
+
+    const prompt = `
+You are a taxonomy administrator AI for an online freelance platform. 
+A user has typed an unrecognized concept, term, tool, or skill: "${unrecognizedName}". 
+The context category given is: "${contextCategory || 'General Work'}".
+
+Analyze this term and suggest how it should fit into the platform's relationship-based skill graph.
+Suggest a type for this node (must be one of: 'industry', 'category', 'profession', 'skill', 'technology', 'tool', 'concept').
+Suggest related parent category/industry nodes it should connect to via 'BELONGS_TO' relationship.
+Suggest 1-3 aliases (e.g. JS for JavaScript), synonyms, a short description, search weight (0.0 to 1.0), and relationship links.
+
+Output ONLY valid JSON matching this exact structure:
+{
+  "name": "Canonical capitalized name (e.g. Adobe Premiere Pro)",
+  "type": "tool",
+  "description": "Short explanation of what it is",
+  "aliases": ["Premiere", "Premiere Pro"],
+  "synonyms": ["Video Editor"],
+  "weight": 0.9,
+  "icon": "🎬",
+  "color": "#ec4899",
+  "relationships": [
+    {
+      "targetName": "Web Development",
+      "type": "BELONGS_TO",
+      "weight": 1.0
+    }
+  ],
+  "aiReasoning": "Brief explanation of this placement"
+}
+`;
+
+    const response = await this.ai.models.generateContent({
+      model: this.model,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    return JSON.parse(response.text);
+  }
 }
 
 module.exports = GeminiProvider;

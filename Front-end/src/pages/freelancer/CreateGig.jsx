@@ -473,7 +473,7 @@ const CreateGig = () => {
         showToast('Valid category added!', 'success');
       } else {
         const msg = res.data?.data?.message || 'Invalid category';
-        showToast(`The category should be related to digital work. AI says: ${msg}`, 'error');
+        showToast(`That doesn't seem to be a valid freelance service category. AI says: ${msg}`, 'error');
       }
     } catch (err) {
       showToast('Validation failed. Please select from the dropdown.', 'error');

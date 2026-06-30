@@ -68,23 +68,23 @@ const TagInput = ({
       setSuggestions(filtered.slice(0, 10));
       setShowSuggestions(filtered.length > 0);
     } else {
-      // AI debounced fetching
+      // Graph-aware debounced fetching
       if (input.trim().length < 2) return;
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
       debounceTimer.current = setTimeout(async () => {
         try {
-          const res = await validateSkill(input);
-          if (res.data.data.suggestions) {
-            const currentTagNames = tags.map(t => (typeof t === 'string' ? t : t.name).toLowerCase());
-            const newSuggestions = res.data.data.suggestions.filter(s => !currentTagNames.includes(s.toLowerCase()));
+          const res = await skillsAPI.expand(input);
+          if (res.data?.data?.terms) {
+            const currentTagNames = tags.map(t => (typeof t === 'string' ? t : (t?.name || '')).toLowerCase());
+            const newSuggestions = res.data.data.terms.filter(s => !currentTagNames.includes(s.toLowerCase()));
             setSuggestions(newSuggestions);
             if (newSuggestions.length > 0) setShowSuggestions(true);
           }
         } catch (err) {
-          console.error("Failed to fetch suggestions:", err);
+          console.error("Failed to fetch graph suggestions:", err);
         }
-      }, 800);
+      }, 300); // Fast 300ms debounce since it's cached in Mongo
     }
 
     return () => {

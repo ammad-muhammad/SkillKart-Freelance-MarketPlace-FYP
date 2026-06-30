@@ -8,6 +8,7 @@ const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const Payment = require('../models/Payment');
 const Proposal = require('../models/Proposal');
 const ClientProfile = require('../models/ClientProfile');
+const { buildGraphSearchQuery } = require('../services/search.service');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const Review = require('../models/Review');
 const notifications = require('../services/notification.service');
@@ -47,6 +48,11 @@ const createJob = asyncHandler(async (req, res) => {
   });
 
   await job.save();
+
+  // Trigger background suggestion flow for unrecognized skills
+  const taxonomy = require('../services/taxonomy.service');
+  taxonomy.proposeUnrecognizedSkills(jobData.skills, jobData.category, 'job_posting', job._id);
+  taxonomy.invalidateCache();
 
   sendCreated(res, 'Job created successfully', { job });
 });
@@ -88,6 +94,11 @@ const updateJob = asyncHandler(async (req, res) => {
     }
   }
   await job.save();
+
+  // Trigger background suggestion flow for unrecognized skills
+  const taxonomy = require('../services/taxonomy.service');
+  taxonomy.proposeUnrecognizedSkills(job.skills, job.category, 'job_posting', job._id);
+  taxonomy.invalidateCache();
 
   sendSuccess(res, {
     message: 'Job updated successfully',
@@ -149,12 +160,23 @@ const listJobs = asyncHandler(async (req, res) => {
   await syncJobStatuses(clientId ? { clientId } : {});
   
   const query = { status: 'open' }; // Strictly only open jobs for public
-  if (category) query.category = category;
   if (experienceLevel) query.experienceLevel = experienceLevel;
   if (budgetType) query['budget.type'] = budgetType;
+
+  // Graph-aware category filter: expand to related categories
+  if (category) {
+    const { buildGraphSearchQuery: bgs } = require('../services/search.service');
+    const catExpanded = await require('../services/taxonomy.service').expandSearchTerms(category);
+    query.category = catExpanded.length ? { $in: catExpanded } : category;
+  }
+
+  // Graph-aware skills filter: expand to related skills
   if (skills) {
     const skillsArray = skills.split(',').map(s => s.trim());
-    query.skills = { $in: skillsArray };
+    const taxonomy = require('../services/taxonomy.service');
+    const expandedAll = (await Promise.all(skillsArray.map(s => taxonomy.expandSearchTerms(s)))).flat();
+    const uniqueExpanded = [...new Set(expandedAll)];
+    query.skills = { $in: uniqueExpanded.length ? uniqueExpanded : skillsArray };
   }
   
   const total = await Job.countDocuments(query);
@@ -223,19 +245,15 @@ const searchJobs = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
   
   if (!q || !String(q).trim()) {
-    // If no search query, return empty or fallback (we return empty to save DB load)
     return sendPaginated(res, { data: [], page, limit, total: 0 });
   }
 
-  const safeQ = escapeRegex(q);
-  
+  // Graph-expanded search: "Web Developer" finds React, Node.js, Vue jobs automatically
+  const graphClause = await buildGraphSearchQuery(q, ['skills', 'category']);
+
   const query = {
     status: 'open',
-    $or: [
-      { title: { $regex: safeQ, $options: 'i' } },
-      { description: { $regex: safeQ, $options: 'i' } },
-      { skills: { $in: [new RegExp(`^${safeQ}$`, 'i')] } }
-    ]
+    ...graphClause,
   };
   
   const total = await Job.countDocuments(query);

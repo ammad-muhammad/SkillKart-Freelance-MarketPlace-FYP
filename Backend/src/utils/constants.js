@@ -64,19 +64,134 @@ const ONBOARDING_STEPS = {
   ]
 };
 
-// Job / project categories (platform-wide — AI must pick from this list only)
+// Universal Skill Taxonomy — platform-wide, all industries.
+// AI must pick from this list only when validating categories/skills.
+// To add a new category: add it here and (optionally) add icon/gradient
+// in CATEGORY_META inside publicStats.controller.js — zero other changes needed.
 const JOB_CATEGORIES = [
+  // ── Software & Technology ──────────────────────────────────────────────
   'Web Development',
   'Mobile Development',
-  'UI/UX Design',
-  'Data Science & AI',
-  'Content & Writing',
-  'Video & Animation',
-  'Digital Marketing',
-  'Cybersecurity',
+  'Frontend Development',
+  'Backend Development',
+  'Full Stack Development',
   'DevOps & Cloud',
-  'Other'
+  'Cybersecurity',
+  'AI & Machine Learning',
+  'Data Science',
+  'Blockchain',
+  'Game Development',
+  'QA & Testing',
+  // ── Design ────────────────────────────────────────────────────────────
+  'UI Design',
+  'UX Design',
+  'Graphic Design',
+  'Logo Design',
+  'Brand Identity',
+  'Product Design',
+  'Illustration',
+  'Motion Graphics',
+  // ── Video & Photography ───────────────────────────────────────────────
+  'Video Editing',
+  'Videography',
+  'Photography',
+  'Drone Photography',
+  'Cinematography',
+  'Color Grading',
+  'Visual Effects (VFX)',
+  'Animation',
+  '3D Animation',
+  // ── Writing & Content ─────────────────────────────────────────────────
+  'Copywriting',
+  'Technical Writing',
+  'Content Writing',
+  'Ghostwriting',
+  'Script Writing',
+  'Translation',
+  'Proofreading',
+  // ── Marketing ─────────────────────────────────────────────────────────
+  'SEO',
+  'SEM',
+  'Social Media Marketing',
+  'Email Marketing',
+  'Affiliate Marketing',
+  'PPC Advertising',
+  'Influencer Marketing',
+  'Branding',
+  // ── Business ──────────────────────────────────────────────────────────
+  'Project Management',
+  'Virtual Assistance',
+  'Business Consulting',
+  'Market Research',
+  'Customer Support',
+  'Recruitment',
+  'Data Entry',
+  // ── Audio & Music ─────────────────────────────────────────────────────
+  'Voice Over',
+  'Audio Editing',
+  'Music Production',
+  'Mixing & Mastering',
+  'Podcast Production',
+  'Sound Design',
+  // ── Architecture & Engineering ────────────────────────────────────────
+  'CAD Design',
+  'Interior Design',
+  'Exterior Design',
+  'Structural Design',
+  'Mechanical Design',
+  // ── Finance & Legal ───────────────────────────────────────────────────
+  'Accounting',
+  'Bookkeeping',
+  'Financial Analysis',
+  'Tax Preparation',
+  'Legal Consulting',
+  // ── Catch-all ─────────────────────────────────────────────────────────
+  'Other',
 ];
+
+// Groups are for display/UI only — not stored in DB.
+const CATEGORY_GROUPS = {
+  'Software & Technology': [
+    'Web Development', 'Mobile Development', 'Frontend Development',
+    'Backend Development', 'Full Stack Development', 'DevOps & Cloud',
+    'Cybersecurity', 'AI & Machine Learning', 'Data Science',
+    'Blockchain', 'Game Development', 'QA & Testing',
+  ],
+  'Design': [
+    'UI Design', 'UX Design', 'Graphic Design', 'Logo Design',
+    'Brand Identity', 'Product Design', 'Illustration', 'Motion Graphics',
+  ],
+  'Video & Photography': [
+    'Video Editing', 'Videography', 'Photography', 'Drone Photography',
+    'Cinematography', 'Color Grading', 'Visual Effects (VFX)', 'Animation', '3D Animation',
+  ],
+  'Writing & Content': [
+    'Copywriting', 'Technical Writing', 'Content Writing',
+    'Ghostwriting', 'Script Writing', 'Translation', 'Proofreading',
+  ],
+  'Marketing': [
+    'SEO', 'SEM', 'Social Media Marketing', 'Email Marketing',
+    'Affiliate Marketing', 'PPC Advertising', 'Influencer Marketing', 'Branding',
+  ],
+  'Business': [
+    'Project Management', 'Virtual Assistance', 'Business Consulting',
+    'Market Research', 'Customer Support', 'Recruitment', 'Data Entry',
+  ],
+  'Audio & Music': [
+    'Voice Over', 'Audio Editing', 'Music Production',
+    'Mixing & Mastering', 'Podcast Production', 'Sound Design',
+  ],
+  'Architecture & Engineering': [
+    'CAD Design', 'Interior Design', 'Exterior Design',
+    'Structural Design', 'Mechanical Design',
+  ],
+  'Finance & Legal': [
+    'Accounting', 'Bookkeeping', 'Financial Analysis',
+    'Tax Preparation', 'Legal Consulting',
+  ],
+  'Other': ['Other'],
+};
+
 
 // Job Status
 const JOB_STATUS = {
@@ -315,6 +430,7 @@ module.exports = {
   ONBOARDING_STEPS,
   JOB_STATUS,
   JOB_CATEGORIES,
+  CATEGORY_GROUPS,
   PROPOSAL_STATUS,
   CMS_STATUS,
   CMS_PAGE_TYPES,

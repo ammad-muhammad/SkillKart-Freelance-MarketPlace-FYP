@@ -32,30 +32,34 @@ const initials = (first, last, email) => {
 };
 
 /**
- * Compute a 0–100 match score + reasoning for one freelancer profile.
+ * Compute a 0–100 match score + reasoning for one freelancer profile using Skill Graph.
  * @param {object} profile - populated FreelancerProfile (userId populated)
  * @param {object} brief - { skills:[], budget:Number, timeline, title, description, category }
  */
-const scoreFreelancer = (profile, brief) => {
+const scoreFreelancer = async (profile, brief) => {
   const reasons = [];
   const fpSkills = (profile.skills || []).map((s) => (typeof s === 'object' ? s.name : s)).filter(Boolean);
-  const fpSkillSet = new Set(fpSkills.map(norm));
   const wantSkills = (brief.skills || []).filter(Boolean);
 
-  // --- Skill match (up to 50 pts) ---
+  // --- Skill match (up to 50 pts) using the central TaxonomyService graph matching ---
   let skillScore = 0;
   if (wantSkills.length) {
-    const matched = wantSkills.filter((w) => {
-      const wl = norm(w);
-      // exact or substring match against the freelancer's skills
-      return fpSkillSet.has(wl) || [...fpSkillSet].some((fs) => fs.includes(wl) || wl.includes(fs));
-    });
-    const ratio = matched.length / wantSkills.length;
-    skillScore = Math.round(ratio * 50);
-    if (matched.length) {
-      reasons.push(`Matches ${matched.length}/${wantSkills.length} required skills: ${matched.slice(0, 4).join(', ')}${matched.length > 4 ? '…' : ''}`);
-    } else {
-      reasons.push('No direct overlap with your listed skills, but ranked on overall strength');
+    const taxonomy = require('./taxonomy.service');
+    const graphMatch = await taxonomy.calcMatchScore(wantSkills, fpSkills);
+    
+    // Convert match ratio to score (0 to 50 scale)
+    skillScore = Math.round(graphMatch.ratio * 50);
+
+    if (graphMatch.matched.length > 0) {
+      const matchNames = graphMatch.matched.map(m => m.required);
+      reasons.push(`Direct matches for skills: ${matchNames.slice(0, 3).join(', ')}${matchNames.length > 3 ? '…' : ''}`);
+    }
+    if (graphMatch.partial.length > 0) {
+      const partialDetails = graphMatch.partial.map(p => `${p.required} (via ${p.matched})`);
+      reasons.push(`Graph-expanded matches: ${partialDetails.slice(0, 3).join(', ')}${partialDetails.length > 3 ? '…' : ''}`);
+    }
+    if (graphMatch.matched.length === 0 && graphMatch.partial.length === 0) {
+      reasons.push('No matching skills found in graph taxonomy for your requirements, ranked on general profile strength');
     }
   } else {
     // No skills specified → give partial credit based on breadth of skills
@@ -121,7 +125,7 @@ const availabilityLabel = (availability) => {
 };
 
 /**
- * Find and rank freelancers for a project brief.
+ * Find and rank freelancers for a project brief using graph matching.
  * @returns {Promise<{matches: Array, analysed: number}>}
  */
 const matchFreelancers = async (brief, { limit = 8 } = {}) => {
@@ -132,37 +136,39 @@ const matchFreelancers = async (brief, { limit = 8 } = {}) => {
     .sort({ verificationStatus: -1, rating: -1 })
     .limit(100);
 
-  const scored = candidates
-    .filter((p) => p.userId) // skip orphaned profiles
-    .map((p, i) => {
-      const { score, reasons, rating, rate, completed, skills, verifiedCount } = scoreFreelancer(p, brief);
-      const u = p.userId;
-      const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || (u.email ? u.email.split('@')[0] : 'Freelancer');
-      const estLow = rate ? rate * 8 : null; // rough estimate band (≈1 day)
-      const estHigh = rate ? rate * 40 : null; // ≈1 week
-      return {
-        freelancer: {
-          id: String(u._id || p._id),
-          name: fullName,
-          role: p.title || 'Freelancer',
-          avatar: u.profilePicture ? null : initials(u.firstName, u.lastName, u.email),
-          avatarUrl: u.profilePicture || null,
-          avatarBg: AVATAR_BGS[i % AVATAR_BGS.length],
-          isOnline: false,
-          isVerified: p.verificationStatus === 'verified',
-          rating: Number(rating) || 0,
-          reviewCount: completed,
-          hourlyRate: rate,
-          projectsCompleted: completed,
-          skills: skills,
-          verifiedSkillCount: verifiedCount,
-        },
-        matchScore: score,
-        matchReasons: reasons,
-        estimatedCost: estLow && estHigh ? `$${estLow}–$${estHigh}` : 'Rate on request',
-        availability: availabilityLabel(p.availability),
-      };
-    });
+  const validCandidates = candidates.filter((p) => p.userId); // skip orphaned profiles
+
+  const scoredPromises = validCandidates.map(async (p, i) => {
+    const { score, reasons, rating, rate, completed, skills, verifiedCount } = await scoreFreelancer(p, brief);
+    const u = p.userId;
+    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || (u.email ? u.email.split('@')[0] : 'Freelancer');
+    const estLow = rate ? rate * 8 : null; // rough estimate band (≈1 day)
+    const estHigh = rate ? rate * 40 : null; // ≈1 week
+    return {
+      freelancer: {
+        id: String(u._id || p._id),
+        name: fullName,
+        role: p.title || 'Freelancer',
+        avatar: u.profilePicture ? null : initials(u.firstName, u.lastName, u.email),
+        avatarUrl: u.profilePicture || null,
+        avatarBg: AVATAR_BGS[i % AVATAR_BGS.length],
+        isOnline: false,
+        isVerified: p.verificationStatus === 'verified',
+        rating: Number(rating) || 0,
+        reviewCount: completed,
+        hourlyRate: rate,
+        projectsCompleted: completed,
+        skills: skills,
+        verifiedSkillCount: verifiedCount,
+      },
+      matchScore: score,
+      matchReasons: reasons,
+      estimatedCost: estLow && estHigh ? `$${estLow}–$${estHigh}` : 'Rate on request',
+      availability: availabilityLabel(p.availability),
+    };
+  });
+
+  const scored = await Promise.all(scoredPromises);
 
   scored.sort((a, b) => b.matchScore - a.matchScore);
 

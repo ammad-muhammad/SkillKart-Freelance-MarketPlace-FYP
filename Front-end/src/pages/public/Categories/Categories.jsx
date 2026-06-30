@@ -17,9 +17,7 @@ export default function Categories() {
   const navigate = useNavigate();
   // Static taxonomy provides the descriptions/icons (no DB source) but NOT the
   // counts — those start at 0 and are filled with REAL gig counts from the API.
-  const [categories, setCategories] = useState(
-    staticCategories.map((c) => ({ ...c, totalServices: 0, isLiveCount: true }))
-  );
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -28,27 +26,19 @@ export default function Categories() {
       .then((res) => {
         if (!active) return;
         const live = res.data?.data?.categories || [];
-        // Backend categories are JOB_CATEGORIES (e.g. "Web Development"); the
-        // static marketing categories use broader groupings. Map each static
-        // category → the backend categories it covers, then sum real counts.
-        const byName = new Map(live.map((c) => [c.name, c.totalServices || 0]));
-        const STATIC_TO_BACKEND = {
-          'admin-support': ['Other'],
-          'design-creative': ['UI/UX Design'],
-          'marketing': ['Digital Marketing'],
-          'writing-content': ['Content & Writing'],
-          'ai-emerging-tech': ['Data Science & AI', 'Cybersecurity'],
-          'development-tech': ['Web Development', 'Mobile Development', 'DevOps & Cloud'],
-          'video-audio-animation': ['Video & Animation'],
-        };
-        setCategories(staticCategories.map((c) => {
-          const mapped = STATIC_TO_BACKEND[c.slug] || [];
-          const real = mapped.reduce((sum, name) => sum + (byName.get(name) || 0), 0);
-          // Real count only (even 0 = honest "no gigs yet"); never the fake static number.
-          return { ...c, totalServices: real, isLiveCount: true };
-        }));
+        setCategories(live.map((c, index) => ({
+          id: index + 1,
+          name: c.name,
+          slug: c.slug,
+          description: `Explore professional student portfolios and gigs matching ${c.name}.`,
+          icon: c.icon || '💼',
+          gradient: c.gradient || 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+          lightBg: 'rgba(255, 255, 255, 0.03)',
+          totalServices: c.totalServices || 0,
+          isLiveCount: true
+        })));
       })
-      .catch(() => { /* keep static counts on failure */ });
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 

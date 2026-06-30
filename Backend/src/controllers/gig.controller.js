@@ -38,6 +38,12 @@ const createGig = asyncHandler(async (req, res) => {
   });
 
   await gig.save();
+
+  // Trigger background suggestion flow for unrecognized skills
+  const taxonomy = require('../services/taxonomy.service');
+  taxonomy.proposeUnrecognizedSkills(gigData.skills, gigData.category, 'gig_creation', gig._id);
+  taxonomy.invalidateCache();
+
   sendCreated(res, 'Gig created successfully', { gig });
 });
 
@@ -68,6 +74,11 @@ const updateGig = asyncHandler(async (req, res) => {
 
   Object.assign(gig, updates);
   await gig.save();
+
+  // Trigger background suggestion flow for unrecognized skills
+  const taxonomy = require('../services/taxonomy.service');
+  taxonomy.proposeUnrecognizedSkills(gig.skills, gig.category, 'gig_creation', gig._id);
+  taxonomy.invalidateCache();
   
   sendSuccess(res, {
     message: 'Gig updated successfully',
@@ -92,12 +103,37 @@ const listGigs = asyncHandler(async (req, res) => {
     // Public listing only shows active gigs.
     query.status = status || 'active';
   }
-  if (category) query.category = category;
-  if (subcategory) query.subcategory = subcategory;
-  if (skill) query.skills = { $in: [new RegExp(`^${escapeRegex(skill)}$`, 'i')] };
+  // Graph-aware category expansion
+  if (category) {
+    const catExpanded = await require('../services/taxonomy.service').expandSearchTerms(category);
+    query.category = catExpanded.length ? { $in: catExpanded } : category;
+  }
+  if (subcategory) {
+    const subcatExpanded = await require('../services/taxonomy.service').expandSearchTerms(subcategory);
+    query.subcategory = subcatExpanded.length ? { $in: subcatExpanded } : subcategory;
+  }
+  if (skill) {
+    const skillExpanded = await require('../services/taxonomy.service').expandSearchTerms(skill);
+    query.skills = { $in: skillExpanded.length ? skillExpanded : [skill] };
+  }
   if (q) {
-    const rx = new RegExp(escapeRegex(q), 'i');
-    query.$or = [{ title: rx }, { shortDescription: rx }, { skills: rx }];
+    const { buildGraphSearchQuery } = require('../services/search.service');
+    const graphSearch = await buildGraphSearchQuery(q, ['skills', 'category', 'subcategory']);
+    if (graphSearch.$or) {
+      // Merge with potential existing query parameters using $and
+      const textRx = new RegExp(escapeRegex(q), 'i');
+      const standardClause = {
+        $or: [
+          { title: textRx },
+          { shortDescription: textRx },
+          ...graphSearch.$or
+        ]
+      };
+      query.$and = query.$and ? [...query.$and, standardClause] : [standardClause];
+    } else {
+      const rx = new RegExp(escapeRegex(q), 'i');
+      query.$or = [{ title: rx }, { shortDescription: rx }, { skills: rx }];
+    }
   }
   if (minPrice || maxPrice) {
     query['pricing.basic.price'] = {};

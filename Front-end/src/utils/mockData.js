@@ -149,24 +149,10 @@ export const MOCK_MATCH_RESULTS = MOCK_FREELANCERS.map((f) => ({
 })).sort((a, b) => b.matchScore - a.matchScore);
 
 /* ─── Skill options for filter/form selects ─── */
-export const ALL_SKILLS = [
-    'React', 'Node.js', 'MongoDB', 'TypeScript', 'REST APIs',
-    'Figma', 'Adobe XD', 'Prototyping', 'Wireframing', 'Design Systems',
-    'Copywriting', 'SEO', 'Blog Writing', 'Email Marketing', 'Social Media',
-    'React Native', 'Flutter', 'Firebase', 'iOS', 'Android',
-    'Python', 'Machine Learning', 'TensorFlow', 'Pandas', 'Power BI',
-    'Premiere Pro', 'After Effects', 'Motion Graphics', 'Color Grading',
-    'WordPress', 'PHP', 'Laravel', 'Vue.js', 'Next.js', 'GraphQL',
-    'AWS', 'Docker', 'DevOps', 'Cybersecurity', 'Blockchain',
-];
+// Import from the canonical taxonomy to keep them in sync.
+export { JOB_CATEGORIES as CATEGORIES, PREDEFINED_SKILLS as ALL_SKILLS } from '../constants/jobCategories';
 
 export const LOCATIONS = [
     'Karachi, PK', 'Lahore, PK', 'Islamabad, PK',
     'Rawalpindi, PK', 'Faisalabad, PK', 'Remote',
-];
-
-export const CATEGORIES = [
-    'Web Development', 'Mobile Development', 'UI/UX Design',
-    'Data Science & AI', 'Content & Writing', 'Video & Animation',
-    'Digital Marketing', 'Cybersecurity', 'DevOps & Cloud', 'Other',
 ];

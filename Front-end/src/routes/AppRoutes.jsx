@@ -12,6 +12,9 @@ import AppLayout from "../layouts/AppLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import FreelancerLayout from "../layouts/FreelancerLayout";
 
+// Admin Pages
+import TaxonomyAdmin from "../pages/admin/TaxonomyAdmin";
+
 // Freelancer Pages
 import DashboardOverview from "../pages/freelancer/DashboardOverview";
 import FreelancerProfile from "../pages/freelancer/FreelancerProfile";
@@ -202,6 +205,19 @@ const AppRoutes = () => {
             <Route path="messages" element={<ClientMessages />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="projects/:jobId/proposals" element={<ReviewProposals />} />
+          </Route>
+
+          {/* ================= ADMIN ROUTES ================= */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/taxonomy" replace />} />
+            <Route path="taxonomy" element={<TaxonomyAdmin />} />
           </Route>
 
           <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />

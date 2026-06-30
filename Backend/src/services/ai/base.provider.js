@@ -71,6 +71,16 @@ class AIProvider {
   async evaluateSkillTest(questionsAndAnswers) {
     throw new Error('Method evaluateSkillTest() must be implemented by the provider.');
   }
+
+  /**
+   * Suggests taxonomy node attributes and relationships for unrecognized terms.
+   * @param {string} unrecognizedName
+   * @param {string} contextCategory
+   * @returns {Promise<Object>} Proposed node and relationship schema
+   */
+  async suggestTaxonomyNode(unrecognizedName, contextCategory) {
+    throw new Error('Method suggestTaxonomyNode() must be implemented by the provider.');
+  }
 }
 
 module.exports = AIProvider;

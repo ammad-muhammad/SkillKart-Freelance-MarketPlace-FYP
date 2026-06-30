@@ -18,8 +18,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function SkillPage() {
   const { categorySlug, skillSlug } = useParams();
-  const skill    = getSkillBySlug(skillSlug);
-  const category = getCategoryBySlug(categorySlug);
+  const [skill, setSkill] = useState(null);
+  const [category, setCategory] = useState(null);
+  const [loadingSkill, setLoadingSkill] = useState(true);
 
   const [activeSub,      setActiveSub]      = useState("all");
   const [priceFilter,    setPriceFilter]    = useState("any");
@@ -34,42 +35,67 @@ export default function SkillPage() {
   const [stats,        setStats]        = useState(null);
 
   useEffect(() => {
-    if (!skill) return;
     let active = true;
-
+    setLoadingSkill(true);
     setGigsLoading(true);
     setFlLoading(true);
 
-    /* Real gigs for this skill (Gig.skills stores display names). */
-    gigsAPI
-      .listGigs({ skill: skill.name, limit: 48 })
-      .then((res) => {
+    const loadSkillData = async () => {
+      try {
+        const { skillsAPI } = await import("../../../api/skills");
+        const resolveRes = await skillsAPI.resolve(skillSlug);
+        const node = resolveRes.data?.data?.node;
+
+        if (!node) {
+          if (active) setLoadingSkill(false);
+          return;
+        }
+
+        const ancestorsRes = await skillsAPI.resolve(categorySlug);
+        const catNode = ancestorsRes.data?.data?.node;
+
         if (!active) return;
-        const list = res.data?.data || [];
-        setAllGigs(list.map(mapGig));
-      })
-      .catch(() => { if (active) setAllGigs([]); })
-      .finally(() => { if (active) setGigsLoading(false); });
+        setSkill(node);
+        setCategory(catNode || { name: categorySlug, slug: categorySlug });
+        setLoadingSkill(false);
 
-    /* Real top-rated freelancers working in this skill. */
-    publicAPI
-      .searchFreelancers({ skills: skill.name, sortBy: "rating", limit: 6 })
-      .then((res) => {
-        if (!active) return;
-        const list = res.data?.data || [];
-        setFreelancers(list.map(mapFreelancer));
-      })
-      .catch(() => { if (active) setFreelancers([]); })
-      .finally(() => { if (active) setFlLoading(false); });
+        /* Real gigs for this skill (Gig.skills stores display names). */
+        gigsAPI
+          .listGigs({ skill: node.name, limit: 48 })
+          .then((res) => {
+            if (!active) return;
+            const list = res.data?.data || [];
+            setAllGigs(list.map(mapGig));
+          })
+          .catch(() => { if (active) setAllGigs([]); })
+          .finally(() => { if (active) setGigsLoading(false); });
 
-    /* Real aggregate stats for the hero. */
-    publicAPI
-      .getSkillStats(skill.name)
-      .then((res) => { if (active) setStats(res.data?.data || null); })
-      .catch(() => { if (active) setStats(null); });
+        /* Real top-rated freelancers working in this skill. */
+        publicAPI
+          .searchFreelancers({ skills: node.name, sortBy: "rating", limit: 6 })
+          .then((res) => {
+            if (!active) return;
+            const list = res.data?.data || [];
+            setFreelancers(list.map(mapFreelancer));
+          })
+          .catch(() => { if (active) setFreelancers([]); })
+          .finally(() => { if (active) setFlLoading(false); });
 
+        /* Real aggregate stats for the hero. */
+        publicAPI
+          .getSkillStats(node.name)
+          .then((res) => { if (active) setStats(res.data?.data || null); })
+          .catch(() => { if (active) setStats(null); });
+
+      } catch (err) {
+        console.error("Failed loading Skill Details:", err);
+        if (active) setLoadingSkill(false);
+      }
+    };
+
+    loadSkillData();
     return () => { active = false; };
-  }, [skillSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [skillSlug, categorySlug]);
 
   /* ── Refs ── */
   const heroRef      = useRef(null);
@@ -171,6 +197,18 @@ export default function SkillPage() {
   const heroPrice       = Number(stats?.startingPrice) || 0;
 
   /* ── Not found ── */
+  if (loadingSkill) {
+    return (
+      <>
+        <Navbar />
+        <div className="mp-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '65vh' }}>
+          <div style={{ color: '#6366f1', fontSize: '1.25rem', fontWeight: '700' }}>Loading Skill Domain...</div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   if (!skill || !category) {
     return (
       <>

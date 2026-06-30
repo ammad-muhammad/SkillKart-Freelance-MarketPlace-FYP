@@ -19,9 +19,9 @@ gsap.registerPlugin(ScrollTrigger);
 export default function CategoryPage() {
   const { categorySlug } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
-
-  const category = getCategoryBySlug(categorySlug);
-  const skills   = getSkillsByCategorySlug(categorySlug);
+  const [category, setCategory] = useState(null);
+  const [skills, setSkills] = useState([]);
+  const [loadingCategory, setLoadingCategory] = useState(true);
 
   /* ── Real backend data ── */
   const [allGigs, setAllGigs]             = useState([]);
@@ -32,49 +32,67 @@ export default function CategoryPage() {
   const [stats, setStats]                 = useState(null);
 
   useEffect(() => {
-    if (!category) return;
     let active = true;
-
+    setLoadingCategory(true);
     setGigsLoading(true);
     setFlLoading(true);
 
-    /* Skill names from the category's static skill taxonomy — used to scope
-       the freelancer search to people who actually work in this category. */
-    const skillNames = skills.map((s) => s.name).filter(Boolean).join(",");
+    const loadCategoryDetails = async () => {
+      try {
+        const { skillsAPI } = await import("../../../api/skills");
+        const resolveRes = await skillsAPI.resolve(categorySlug);
+        const node = resolveRes.data?.data?.node;
+        
+        if (!node) {
+          if (active) setLoadingCategory(false);
+          return;
+        }
 
-    /* Real gigs in this category (Gig.category stores the display name).
-       Fetch a larger pool so per-skill counts + trending are accurate; show
-       the top 9 by rating as "featured". */
-    gigsAPI
-      .listGigs({ category: category.name, sort: "rating", limit: 100 })
-      .then((res) => {
+        const descendantsRes = await skillsAPI.getDescendants(categorySlug);
+        const childNodes = descendantsRes.data?.data?.descendants || [];
+
         if (!active) return;
-        const list = (res.data?.data || []).map(mapGig);
-        setAllGigs(list);
-        setFeaturedGigs(list.slice(0, 9));
-      })
-      .catch(() => { if (active) { setAllGigs([]); setFeaturedGigs([]); } })
-      .finally(() => { if (active) setGigsLoading(false); });
+        setCategory(node);
+        setSkills(childNodes);
+        setLoadingCategory(false);
 
-    /* Real top-rated freelancers scoped to this category's skills. */
-    publicAPI
-      .searchFreelancers({ skills: skillNames, sortBy: "rating", limit: 7 })
-      .then((res) => {
-        if (!active) return;
-        const list = res.data?.data || [];
-        setFreelancers(list.map(mapFreelancer));
-      })
-      .catch(() => { if (active) setFreelancers([]); })
-      .finally(() => { if (active) setFlLoading(false); });
+        const skillNames = childNodes.map((s) => s.name).filter(Boolean).join(",");
 
-    /* Real aggregate stats for the hero. */
-    publicAPI
-      .getCategoryStats(categorySlug)
-      .then((res) => { if (active) setStats(res.data?.data || null); })
-      .catch(() => { if (active) setStats(null); });
+        gigsAPI
+          .listGigs({ category: node.name, sort: "rating", limit: 100 })
+          .then((res) => {
+            if (!active) return;
+            const list = (res.data?.data || []).map(mapGig);
+            setAllGigs(list);
+            setFeaturedGigs(list.slice(0, 9));
+          })
+          .catch(() => { if (active) { setAllGigs([]); setFeaturedGigs([]); } })
+          .finally(() => { if (active) setGigsLoading(false); });
 
+        publicAPI
+          .searchFreelancers({ skills: skillNames, sortBy: "rating", limit: 7 })
+          .then((res) => {
+            if (!active) return;
+            const list = res.data?.data || [];
+            setFreelancers(list.map(mapFreelancer));
+          })
+          .catch(() => { if (active) setFreelancers([]); })
+          .finally(() => { if (active) setFlLoading(false); });
+
+        publicAPI
+          .getCategoryStats(categorySlug)
+          .then((res) => { if (active) setStats(res.data?.data || null); })
+          .catch(() => { if (active) setStats(null); });
+
+      } catch (err) {
+        console.error("Failed loading Category Details:", err);
+        if (active) setLoadingCategory(false);
+      }
+    };
+
+    loadCategoryDetails();
     return () => { active = false; };
-  }, [categorySlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [categorySlug]);
 
   /* ── Refs for GSAP ── */
   const heroRef       = useRef(null);
@@ -117,6 +135,18 @@ export default function CategoryPage() {
 
     return () => ScrollTrigger.getAll().forEach(t => t.kill());
   }, [category, freelancers, featuredGigs]);
+
+  if (loadingCategory) {
+    return (
+      <>
+        <Navbar />
+        <div className="mp-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '65vh' }}>
+          <div style={{ color: '#6366f1', fontSize: '1.25rem', fontWeight: '700' }}>Loading Category Ontology...</div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   if (!category) {
     return (

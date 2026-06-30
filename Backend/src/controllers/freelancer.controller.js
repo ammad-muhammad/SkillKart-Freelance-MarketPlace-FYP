@@ -33,6 +33,50 @@ const calculateCompletion = (profile, user = {}) => {
   return Math.round((score / total) * 100);
 };
 
+const enrichFreelancerProfile = async (profileObj) => {
+  if (!profileObj) return null;
+  const taxonomy = require('../services/taxonomy.service');
+  const skillNames = (profileObj.skills || []).map(s => typeof s === 'object' ? s.name : s).filter(Boolean);
+  
+  // 1. Infer categories and professions dynamically
+  const inferredCategories = await taxonomy.inferCategories(skillNames);
+  
+  // Get all ancestors of type 'profession'
+  const professionsSet = new Set();
+  for (const name of skillNames) {
+    const node = await taxonomy.resolveCanonical(name);
+    if (node) {
+      const ancestors = await taxonomy.getAncestors(node._id, 4);
+      ancestors.filter(a => a.type === 'profession').forEach(a => professionsSet.add(a.name));
+    }
+  }
+  const inferredProfessions = [...professionsSet];
+  
+  // 2. Propagate verification status/scores to parent categories and professions
+  const verifiedSkillNames = (profileObj.skills || [])
+    .filter(s => typeof s === 'object' && s.isVerified)
+    .map(s => s.name);
+    
+  const verifiedCategoriesSet = new Set();
+  const verifiedProfessionsSet = new Set();
+  for (const name of verifiedSkillNames) {
+    const impact = await taxonomy.getCertificationImpact(name);
+    impact.categories.forEach(c => verifiedCategoriesSet.add(c));
+    const node = await taxonomy.resolveCanonical(name);
+    if (node) {
+      const ancestors = await taxonomy.getAncestors(node._id, 4);
+      ancestors.filter(a => a.type === 'profession').forEach(a => verifiedProfessionsSet.add(a.name));
+    }
+  }
+  
+  profileObj.inferredCategories = inferredCategories;
+  profileObj.inferredProfessions = inferredProfessions;
+  profileObj.verifiedCategories = [...verifiedCategoriesSet];
+  profileObj.verifiedProfessions = [...verifiedProfessionsSet];
+  
+  return profileObj;
+};
+
 /**
  * Get freelancer profile
  */
@@ -50,9 +94,14 @@ const getProfile = asyncHandler(async (req, res) => {
   await syncFreelancerVerification(userId);
   const updatedProfile = await FreelancerProfile.findOne({ userId });
   
+  const updatedProfileObj = updatedProfile ? updatedProfile.toObject() : null;
+  if (updatedProfileObj) {
+    await enrichFreelancerProfile(updatedProfileObj);
+  }
+  
   sendSuccess(res, {
     message: 'Profile retrieved successfully',
-    data: { profile: updatedProfile }
+    data: { profile: updatedProfileObj }
   });
 });
 
@@ -102,6 +151,12 @@ const updateProfile = asyncHandler(async (req, res) => {
   profile.profileCompletion = calculateCompletion(profile, user);
   
   await profile.save();
+
+  // Trigger background suggestion flow for unrecognized skills
+  const taxonomy = require('../services/taxonomy.service');
+  const skillNames = (profile.skills || []).map(s => s.name).filter(Boolean);
+  taxonomy.proposeUnrecognizedSkills(skillNames, profile.title || 'Freelancer', 'profile_update', profile._id);
+  taxonomy.invalidateCache();
   
   sendSuccess(res, {
     message: 'Profile updated successfully',
@@ -158,6 +213,12 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
 
   profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));
   await profile.save();
+
+  // Trigger background suggestion flow for unrecognized skills
+  const taxonomy = require('../services/taxonomy.service');
+  const onboardingSkills = (profile.skills || []).map(s => s.name).filter(Boolean);
+  taxonomy.proposeUnrecognizedSkills(onboardingSkills, profile.title || 'FreelancerOnboarding', 'profile_update', profile._id);
+  taxonomy.invalidateCache();
   
   // Update User model flag and personal info
   const userUpdates = { isOnBoardingCompleted: true };
@@ -168,7 +229,7 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
 
   // Modular Verification Sync
   const verification = await syncFreelancerVerification(userId);
-  
+
   sendSuccess(res, {
     message: verification.isVerified ? 'Profile verified successfully!' : 'Profile saved. Complete required steps (Skill tests, Email) to get verified.',
     data: { 
@@ -192,6 +253,9 @@ const getFreelancerById = asyncHandler(async (req, res) => {
     throw new NotFoundError('Freelancer not found');
   }
 
+  const profileObj = profile.toObject();
+  await enrichFreelancerProfile(profileObj);
+
   // Fetch reviews targeting this freelancer
   const reviews = await Review.find({ revieweeId: id, type: 'client_to_freelancer' })
     .populate('reviewerId', 'firstName lastName profilePicture')
@@ -200,7 +264,7 @@ const getFreelancerById = asyncHandler(async (req, res) => {
   
   sendSuccess(res, {
     message: 'Freelancer retrieved successfully',
-    data: { profile, reviews }
+    data: { profile: profileObj, reviews }
   });
 });
 
@@ -215,7 +279,6 @@ const searchFreelancers = asyncHandler(async (req, res) => {
   
   if (q) {
     const regex = new RegExp(q, 'i');
-    // Find matching users by name or username
     const User = require('../models/User');
     const matchedUsers = await User.find({
       $or: [
@@ -226,10 +289,13 @@ const searchFreelancers = asyncHandler(async (req, res) => {
     }).select('_id');
     const userIds = matchedUsers.map(u => u._id);
 
+    // Expand search query terms via skill graph
+    const expandedTerms = await require('../services/taxonomy.service').expandSearchTerms(q);
+
     query.$or = [
       { title: regex },
       { bio: regex },
-      { 'skills.name': regex },
+      { 'skills.name': { $in: expandedTerms.map(t => new RegExp(`^${t}$`, 'i')) } },
       ...(userIds.length > 0 ? [{ userId: { $in: userIds } }] : [])
     ];
   }
@@ -237,34 +303,12 @@ const searchFreelancers = asyncHandler(async (req, res) => {
   if (skills) {
     const skillsArray = Array.isArray(skills) ? skills : skills.split(',');
     
-    // Semantic Expansion
-    let expandedSkills = [...skillsArray];
-    try {
-      const aiProvider = getAIProvider();
-      const expansionPromises = skillsArray.map(async (s) => {
-        const lowerS = s.toLowerCase().trim();
-        if (skillExpansionCache.has(lowerS)) {
-           return skillExpansionCache.get(lowerS);
-        }
-        const expanded = await aiProvider.expandSearchSkills(s);
-        if (expanded && expanded.length > 0) {
-           skillExpansionCache.set(lowerS, expanded);
-           return expanded;
-        }
-        return [];
-      });
-      const results = await Promise.all(expansionPromises);
-      results.forEach(res => {
-         if (Array.isArray(res)) expandedSkills.push(...res);
-      });
-    } catch (err) {
-      console.error("AI Expansion failed during search:", err);
-    }
-    
-    // Deduplicate
-    expandedSkills = [...new Set(expandedSkills)];
+    // Graph-expanded skills search
+    const taxonomy = require('../services/taxonomy.service');
+    const expandedAll = (await Promise.all(skillsArray.map(s => taxonomy.expandSearchTerms(s)))).flat();
+    const uniqueExpanded = [...new Set([...skillsArray, ...expandedAll])];
 
-    query['skills.name'] = { $in: expandedSkills.map(s => new RegExp(`^${s}$`, 'i')) };
+    query['skills.name'] = { $in: uniqueExpanded.map(s => new RegExp(`^${require('../utils/helpers').escapeRegex ? require('../utils/helpers').escapeRegex(s) : s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')) };
   }
   
   if (minRating && !isNaN(minRating)) {
@@ -299,12 +343,15 @@ const searchFreelancers = asyncHandler(async (req, res) => {
       .populate('userId', 'firstName lastName profilePicture')
       .sort(sort)
       .limit(limit)
-      .skip(skip),
+      .skip(skip)
+      .lean(),
     FreelancerProfile.countDocuments(query)
   ]);
   
+  const enrichedProfiles = await Promise.all(profiles.map(p => enrichFreelancerProfile(p)));
+  
   sendPaginated(res, {
-    data: profiles,
+    data: enrichedProfiles,
     page,
     limit,
     total,

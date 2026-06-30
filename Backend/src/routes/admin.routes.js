@@ -56,4 +56,18 @@ router.get('/stats/system',
   adminController.getSystemStats
 );
 
+/* ── Taxonomy Graph Admin Operations ─────────────────────────────────── */
+const taxCtrl = require('../controllers/taxonomy.controller');
+
+router.get('/taxonomy/nodes',          taxCtrl.listNodes);
+router.post('/taxonomy/nodes',         taxCtrl.createNode);
+router.patch('/taxonomy/nodes/:id',    taxCtrl.updateNode);
+router.post('/taxonomy/relationships', taxCtrl.createRelationship);
+router.delete('/taxonomy/relationships', taxCtrl.deleteRelationship);
+router.post('/taxonomy/merge',         taxCtrl.mergeNodes);
+
+// Review Queue routes
+router.get('/taxonomy/proposals',       taxCtrl.listProposals);
+router.post('/taxonomy/proposals/:id/review', taxCtrl.reviewProposal);
+
 module.exports = router;
