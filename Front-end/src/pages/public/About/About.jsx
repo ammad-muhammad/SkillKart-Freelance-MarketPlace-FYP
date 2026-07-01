@@ -125,8 +125,8 @@ const TESTIMONIALS = [
         university: 'FAST NUCES, Karachi',
         avatar: 'AK',
         avatarBg: '#0a4a73',
-        text: 'SkillKart\'s AI verification gave me instant credibility. Within a week of completing my profile I landed my first $500 project. The Buddy AI literally walked me through writing my proposal!',
-        earned: '$3,200',
+        text: 'SkillKart\'s AI verification gave me instant credibility. Within a week of completing my profile I landed my first Rs. 500 project. The Buddy AI literally walked me through writing my proposal!',
+        earned: 'Rs. 3,200',
         projects: 8,
     },
     {
@@ -136,7 +136,7 @@ const TESTIMONIALS = [
         avatar: 'OF',
         avatarBg: '#276749',
         text: 'As a final-year student I was worried about competing with experienced freelancers. Smart Matchmaking only showed me projects suited to my level. Game changer!',
-        earned: '$1,800',
+        earned: 'Rs. 1,800',
         projects: 5,
     },
     {
@@ -146,7 +146,7 @@ const TESTIMONIALS = [
         avatar: 'SM',
         avatarBg: '#553c9a',
         text: 'The AI Profile Analyzer told me exactly what to add. I went from 2 profile views a week to 40+ after following its suggestions. My conversion rate tripled!',
-        earned: '$2,400',
+        earned: 'Rs. 2,400',
         projects: 12,
     },
 ];
@@ -213,12 +213,12 @@ const FAQS = [
     },
 ];
 
-// Each stat: numeric end value, prefix (e.g. '$'), suffix (e.g. 'K+', '%', 'M')
+// Each stat: numeric end value, prefix (e.g. 'Rs. '), suffix (e.g. 'K+', '%', 'M')
 const STATS = [
     { end: 50, prefix: '', suffix: 'K+', label: 'Verified Freelancers' },
     { end: 12, prefix: '', suffix: 'K+', label: 'Projects Completed' },
     { end: 98, prefix: '', suffix: '%', label: 'Client Satisfaction' },
-    { end: 2.1, prefix: '$', suffix: 'M', label: 'Student Earnings' },
+    { end: 2.1, prefix: 'Rs. ', suffix: 'M', label: 'Student Earnings' },
 ];
 
 /* ─────────────────────── COMPONENT ─────────────────────── */
@@ -553,7 +553,7 @@ export default function About() {
                     <div className="about-testimonials__header">
                         <div className="section-tag"><span>💬</span> Success Stories</div>
                         <h2 className="section-title">Real Students. Real Results.</h2>
-                        <p className="section-subtitle">Over $2.1 million earned by students across Pakistan since our beta launch.</p>
+                        <p className="section-subtitle">Over Rs. 2.1 million earned by students across Pakistan since our beta launch.</p>
                     </div>
                     <div ref={testimonialsRef} className="about-testimonials__grid">
                         {TESTIMONIALS.map((t) => (

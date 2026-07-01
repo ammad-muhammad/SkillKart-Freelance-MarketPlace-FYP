@@ -152,9 +152,9 @@ const ClientProfile = () => {
   };
 
   const budgetOptions = [
-    { value: '<$5k', label: 'Startup (Up to $5,000)', min: 0, max: 5000 },
-    { value: '$5k-$20k', label: 'Growth ($5,000 - $20,000)', min: 5000, max: 20000 },
-    { value: '$20k+', label: 'Enterprise ($20,000+)', min: 20000, max: 0 }
+    { value: '<Rs. 5k', label: 'Startup (Up to Rs. 5,000)', min: 0, max: 5000 },
+    { value: 'Rs. 5k-Rs. 20k', label: 'Growth (Rs. 5,000 - Rs. 20,000)', min: 5000, max: 20000 },
+    { value: 'Rs. 20k+', label: 'Enterprise (Rs. 20,000+)', min: 20000, max: 0 }
   ];
 
   const currentBudgetOption = budgetOptions.find(
@@ -316,10 +316,10 @@ const ClientProfile = () => {
 
   const getBudgetLabel = (br) => {
     if (!br) return 'N/A';
-    if (br.min === 0 && br.max === 5000) return 'Startup (Up to $5,000)';
-    if (br.min === 5000 && br.max === 20000) return 'Growth ($5,000 - $20,000)';
-    if (br.min === 20000 && br.max === 0) return 'Enterprise ($20,000+)';
-    if (br.min || br.max) return `$${br.min || 0} - $${br.max || 'unlimited'}`;
+    if (br.min === 0 && br.max === 5000) return 'Startup (Up to Rs. 5,000)';
+    if (br.min === 5000 && br.max === 20000) return 'Growth (Rs. 5,000 - Rs. 20,000)';
+    if (br.min === 20000 && br.max === 0) return 'Enterprise (Rs. 20,000+)';
+    if (br.min || br.max) return `Rs. ${br.min || 0} - Rs. ${br.max || 'unlimited'}`;
     return 'N/A';
   };
 

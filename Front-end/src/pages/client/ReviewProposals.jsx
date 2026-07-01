@@ -212,7 +212,7 @@ export default function ReviewProposals() {
                 <div className="rp-details">
                   <div className="rp-detail">
                     <DollarSign size={16} />
-                    <span>Bid: <strong>${prop.proposedRate}</strong></span>
+                    <span>Bid: <strong>Rs. {prop.proposedRate}</strong></span>
                   </div>
                   <div className="rp-detail">
                     <Clock size={16} />

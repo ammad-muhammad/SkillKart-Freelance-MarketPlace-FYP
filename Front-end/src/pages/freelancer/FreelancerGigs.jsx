@@ -52,15 +52,15 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
       <div className="fl-gig-card__pricing-tiers">
         <div className="fl-tier-preview">
           <span>Basic</span>
-          <strong>${gig.pricing?.basic?.price || '—'}</strong>
+          <strong>Rs. {gig.pricing?.basic?.price || '—'}</strong>
         </div>
         <div className="fl-tier-preview">
           <span>Standard</span>
-          <strong>${gig.pricing?.standard?.price || '—'}</strong>
+          <strong>Rs. {gig.pricing?.standard?.price || '—'}</strong>
         </div>
         <div className="fl-tier-preview">
           <span>Premium</span>
-          <strong>${gig.pricing?.premium?.price || '—'}</strong>
+          <strong>Rs. {gig.pricing?.premium?.price || '—'}</strong>
         </div>
       </div>
 

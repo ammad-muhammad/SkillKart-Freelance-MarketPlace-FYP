@@ -380,9 +380,9 @@ export default function CategoryPage() {
               </div>
               <div ref={trendingRef} className="mp-trending-scroll">
                 {allTrending.map((tag, i) => (
-                  <span key={i} className="mp-trending-pill">
+                  <Link key={i} to={`/skills/${categorySlug}/${tag.toLowerCase().replace(/ /g, '-')}`} className="mp-trending-pill" style={{ textDecoration: 'none' }}>
                     <TrendingUp size={12} /> {tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -390,6 +390,7 @@ export default function CategoryPage() {
         )}
 
         {/* ═══════════════════ FREELANCERS ═══════════════════ */}
+        {(flLoading || freelancers.length > 0) && (
         <div className="mp-section" style={{ paddingTop: 0 }}>
           <div className="mp-container">
             <div className="mp-section-head">
@@ -424,9 +425,11 @@ export default function CategoryPage() {
                     </div>
                     <div className="mp-freelancer-card__name">{f.name}</div>
                     <div className="mp-freelancer-card__title">{f.title}</div>
-                    <div className="mp-freelancer-card__rating">
-                      <Star size={13} fill="currentColor" /> {f.rating}
-                      <span className="mp-freelancer-card__reviews">({f.reviews})</span>
+                    <div className="mp-freelancer-card__rating" style={{ gap: '2px' }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={13} fill={s <= Math.round(f.rating) ? "currentColor" : "none"} style={{ opacity: s <= Math.round(f.rating) ? 1 : 0.3, color: '#f59e0b' }} />
+                      ))}
+                      <span className="mp-freelancer-card__reviews" style={{ marginLeft: '4px' }}>({f.reviews})</span>
                     </div>
                     <div className="mp-freelancer-card__price">From ${f.price}/hr</div>
                   </Link>
@@ -435,8 +438,10 @@ export default function CategoryPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* ═══════════════════ FEATURED GIGS ═══════════════════ */}
+        {(gigsLoading || featuredGigs.length > 0) && (
         <div className="mp-section mp-section--alt" style={{ paddingBottom: 80 }}>
           <div className="mp-container">
             <div className="mp-section-head">
@@ -463,6 +468,7 @@ export default function CategoryPage() {
             )}
           </div>
         </div>
+        )}
 
           </>
         ) : (

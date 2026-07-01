@@ -29,7 +29,7 @@ const mapProfileToCard = (p) => {
         rating: p.rating || u.rating || 0,
         reviewCount: p.completedProjects || 0,
         hourlyRate: p.hourlyRate || 0,
-        currency: 'USD',
+        currency: 'PKR',
         isVerified: p.verificationStatus === 'verified',
         isOnline: false,
         location: p.timezone || 'Global',
@@ -127,7 +127,7 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
             <div className="bf-card__footer">
                 <div>
                     <div className="bf-card__rate">
-                        {currency === 'USD' ? '$' : ''}{hourlyRate}<span>/hr</span>
+                        {currency === 'PKR' ? 'Rs. ' : ''}{hourlyRate}<span>/hr</span>
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginTop: 2 }}>
                         📍 {location}
@@ -323,8 +323,8 @@ export default function BrowseFreelancers() {
                                 onChange={e => { setMaxRate(+e.target.value); setPage(1); }}
                             />
                             <div className="bf-range-vals">
-                                <span>$5/hr</span>
-                                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>${maxRate}/hr</span>
+                                <span>Rs. 5/hr</span>
+                                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Rs. {maxRate}/hr</span>
                             </div>
                         </div>
 

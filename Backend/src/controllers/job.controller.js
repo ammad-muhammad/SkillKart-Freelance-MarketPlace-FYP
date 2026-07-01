@@ -506,6 +506,20 @@ const reviewJob = asyncHandler(async (req, res) => {
     );
   }
 
+  // Update Gig stats if applicable
+  if (isClient && job.source === 'gig' && job.gigId) {
+    const Gig = require('../models/Gig');
+    const gigJobs = await Job.find({ gigId: job.gigId }).select('_id').lean();
+    const gigJobIds = gigJobs.map(j => j._id);
+    const gigReviews = await Review.find({ jobId: { $in: gigJobIds }, type: 'client_to_freelancer' });
+    const gigAvgRating = gigReviews.length > 0 ? gigReviews.reduce((acc, r) => acc + r.rating, 0) / gigReviews.length : 0;
+    
+    await Gig.findByIdAndUpdate(job.gigId, {
+      'stats.rating': gigAvgRating,
+      'stats.reviewsCount': gigReviews.length
+    });
+  }
+
   sendSuccess(res, { message: 'Review submitted successfully', data: { review } });
 });
 

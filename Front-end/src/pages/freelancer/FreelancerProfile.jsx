@@ -256,7 +256,7 @@ const FreelancerProfile = () => {
             { key: 'email', label: 'Email', type: 'email' },
             { key: 'phone', label: 'Phone' },
             { key: 'title', label: 'Professional Title' },
-            { key: 'hourlyRate', label: 'Hourly Rate (USD)', type: 'number' },
+            { key: 'hourlyRate', label: 'Hourly Rate (PKR)', type: 'number' },
             { 
               key: 'location', 
               label: 'Location (Timezone)', 

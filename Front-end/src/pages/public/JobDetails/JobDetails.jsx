@@ -202,8 +202,8 @@ export default function JobDetails() {
                     <DollarSign size={18} />
                     <span>
                       {job.budget?.type === 'fixed' 
-                        ? `$${job.budget?.min} - $${job.budget?.max} Fixed` 
-                        : `$${job.budget?.min}/hr Hourly`}
+                        ? `Rs. ${job.budget?.min} - Rs. ${job.budget?.max} Fixed` 
+                        : `Rs. ${job.budget?.min}/hr Hourly`}
                     </span>
                   </div>
                   <div className="jd-meta__item">

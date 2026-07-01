@@ -256,7 +256,7 @@ export default function GigDetail() {
                     <div key={tier.key} className="gd-tier">
                       <div className="gd-tier__head">
                         <span className="gd-tier__name">{TIER_LABELS[tier.key]}</span>
-                        <span className="gd-tier__price">${tier.price}</span>
+                        <span className="gd-tier__price">Rs. {tier.price}</span>
                       </div>
                       <div className="gd-tier__meta">
                         {tier.deliveryTime != null && (
@@ -279,7 +279,7 @@ export default function GigDetail() {
                           onClick={() => handleOrder(tier.key)}
                           disabled={!!ordering}
                         >
-                          {ordering === tier.key ? 'Starting…' : `Order · $${tier.price}`}
+                          {ordering === tier.key ? 'Starting…' : `Order · Rs. ${tier.price}`}
                         </button>
                       )}
                     </div>

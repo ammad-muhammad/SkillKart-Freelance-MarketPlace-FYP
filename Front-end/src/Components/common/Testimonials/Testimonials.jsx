@@ -21,7 +21,7 @@ const mapTestimonial = (t, i) => {
     avatarBg: AVATAR_BGS[i % AVATAR_BGS.length],
     stars: Math.max(1, Math.min(5, Math.round(t.rating || 5))),
     text: t.text,
-    earned: t.totalEarnings ? `$${Number(t.totalEarnings).toLocaleString()}` : null,
+    earned: t.totalEarnings ? `Rs. ${Number(t.totalEarnings).toLocaleString()}` : null,
     projects: t.completedProjects || 0,
   };
 };

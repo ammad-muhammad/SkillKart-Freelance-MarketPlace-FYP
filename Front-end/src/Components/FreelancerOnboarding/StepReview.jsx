@@ -89,7 +89,7 @@ const StepReview = ({ formData, onEditStep }) => {
               <DollarSign size={12} /> Hourly Rate
             </span>
             <span className="fob-review-field-value">
-              {formData.hourlyRate ? `$${formData.hourlyRate}/hr` : <em className="fob-review-empty">Not set</em>}
+              {formData.hourlyRate ? `Rs. ${formData.hourlyRate}/hr` : <em className="fob-review-empty">Not set</em>}
             </span>
           </div>
           <div className="fob-review-field">

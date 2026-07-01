@@ -212,10 +212,10 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
         <div className="fob-form-group">
           <label className="fob-label">
             <DollarSign size={15} className="fob-label-icon" />
-            Hourly Rate (USD)*
+            Hourly Rate (PKR)*
           </label>
           <div className="fob-input-prefix-wrapper">
-            <span className="fob-input-prefix">$</span>
+            <span className="fob-input-prefix">Rs. </span>
             <input
               type="number"
               name="hourlyRate"

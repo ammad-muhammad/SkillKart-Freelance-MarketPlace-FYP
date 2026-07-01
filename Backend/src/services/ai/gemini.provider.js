@@ -447,7 +447,7 @@ Output ONLY valid JSON: { "reply": "..." }
     const prompt = `
 A user is describing a freelance project. Infer a structured brief.
 Pick the single best category ONLY from the allowed list. Suggest 4-8 concrete,
-in-demand skills. Suggest a fair budget (USD, competitive student-marketplace
+in-demand skills. Suggest a fair budget (PKR, competitive student-marketplace
 rates). Infer the required experience level as one of exactly: "Entry",
 "Intermediate", or "Expert" (based on the scope/complexity). If a good title
 isn't given, write a short one.
@@ -485,7 +485,7 @@ Output ONLY valid JSON:
     if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
 
     const prompt = `
-You estimate a fair freelance project budget in USD for SkillKart (a student
+You estimate a fair freelance project budget in PKR for SkillKart (a student
 talent marketplace — rates are competitive, not enterprise). Base it on scope,
 skills, and timeline. Give a realistic min and max.
 
@@ -498,7 +498,7 @@ PROJECT:
 - Timeline: ${project.timeline || 'N/A'}
 
 Output ONLY valid JSON:
-{ "min": <number>, "max": <number>, "currency": "USD",
+{ "min": <number>, "max": <number>, "currency": "PKR",
   "rationale": "<1-2 sentence explanation>",
   "breakdown": [ { "label": "<phase>", "amount": <number> } ] }
 `;
@@ -512,7 +512,7 @@ Output ONLY valid JSON:
     return {
       min: Number(parsed?.min) || 0,
       max: Number(parsed?.max) || 0,
-      currency: parsed?.currency || 'USD',
+      currency: parsed?.currency || 'PKR',
       rationale: parsed?.rationale || '',
       breakdown: Array.isArray(parsed?.breakdown) ? parsed.breakdown : [],
     };

@@ -79,7 +79,7 @@ function MatchCard({ result, rank, onView }) {
                 <span>{f.rating.toFixed(1)}</span>
                 <span className="aim-rating__count">({f.reviewCount})</span>
                 <span className="aim-rating__sep">|</span>
-                <span className="aim-rating__rate">${f.hourlyRate}/hr</span>
+                <span className="aim-rating__rate">Rs. {f.hourlyRate}/hr</span>
                 <span className="aim-rating__sep">|</span>
                 <span className="aim-rating__online">
                     {f.isOnline ? '● Online' : '○ Offline'}
@@ -336,7 +336,7 @@ export default function AiMatchmaking() {
                                 <div className="aim-card__title">💰 Budget & Timeline</div>
 
                                 <div className="aim-field">
-                                    <label className="aim-label" htmlFor="aim-budget">Budget (USD)</label>
+                                    <label className="aim-label" htmlFor="aim-budget">Budget (PKR)</label>
                                     <input
                                         id="aim-budget"
                                         className="aim-input"

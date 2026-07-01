@@ -116,7 +116,7 @@ export default function ClientWallet() {
           <div className="cl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
             <DollarSign size={24} />
           </div>
-          <div className="cl-stat-card__value" style={{ color: 'var(--color-white)' }}>${walletBalance.toLocaleString()}</div>
+          <div className="cl-stat-card__value" style={{ color: 'var(--color-white)' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="cl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available Wallet Balance</div>
         </div>
 
@@ -127,7 +127,7 @@ export default function ClientWallet() {
           <div className="cl-stat-card__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
             <Wallet size={24} />
           </div>
-          <div className="cl-stat-card__value">${activeEscrow.toLocaleString()}</div>
+          <div className="cl-stat-card__value">Rs. {activeEscrow.toLocaleString()}</div>
           <div className="cl-stat-card__label">Funds in Active Escrow</div>
         </div>
       </div>
@@ -204,7 +204,7 @@ export default function ClientWallet() {
             </div>
             <div className="cl-modal__body">
               <div className="cl-form-group">
-                <label className="cl-label">Amount (USD)</label>
+                <label className="cl-label">Amount (PKR)</label>
                 <input
                   type="number"
                   className="cl-input"

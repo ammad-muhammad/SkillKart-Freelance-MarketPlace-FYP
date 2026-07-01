@@ -228,7 +228,7 @@ Output ONLY valid JSON: { "reply": "..." }
     const prompt = `
 A user is describing a freelance project. Infer a structured brief.
 Pick the single best category ONLY from the allowed list. Suggest 4-8 concrete,
-in-demand skills. Suggest a fair budget (USD, competitive student-marketplace rates).
+in-demand skills. Suggest a fair budget (PKR, competitive student-marketplace rates).
 Infer the required experience level as exactly "Entry", "Intermediate", or "Expert".
 If a good title isn't given, write a short one.
 
@@ -256,7 +256,7 @@ Output ONLY valid JSON:
     // range + a one-line rationale (the UI shows the breakdown only if present),
     // which keeps the estimate fast and responsive as a fallback.
     const prompt = `
-Estimate a fair freelance project budget in USD for SkillKart (a student talent
+Estimate a fair freelance project budget in PKR for SkillKart (a student talent
 marketplace — competitive student rates, not enterprise). Give a realistic min and max.
 
 PROJECT:
@@ -268,13 +268,13 @@ PROJECT:
 - Timeline: ${project.timeline || 'N/A'}
 
 Output ONLY valid JSON (one short sentence for rationale, no breakdown):
-{ "min": <number>, "max": <number>, "currency": "USD", "rationale": "<one short sentence>" }
+{ "min": <number>, "max": <number>, "currency": "PKR", "rationale": "<one short sentence>" }
 `;
     const parsed = this._parseJson(await this._generate(prompt, { maxTokens: 220 }));
     return {
       min: Number(parsed.min) || 0,
       max: Number(parsed.max) || 0,
-      currency: parsed.currency || 'USD',
+      currency: parsed.currency || 'PKR',
       rationale: parsed.rationale || '',
       breakdown: Array.isArray(parsed.breakdown) ? parsed.breakdown : [],
     };

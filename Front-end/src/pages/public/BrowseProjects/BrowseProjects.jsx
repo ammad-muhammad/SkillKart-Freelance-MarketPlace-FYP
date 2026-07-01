@@ -41,9 +41,9 @@ const timeAgo = (date) => {
 
 const formatBudget = (budget) => {
   if (!budget) return 'Not specified';
-  if (budget.type === 'hourly') return `$${budget.min ?? 0}/hr`;
-  if (budget.max && budget.max !== budget.min) return `$${budget.min ?? 0} – $${budget.max}`;
-  return `$${budget.min ?? 0}`;
+  if (budget.type === 'hourly') return `Rs. ${budget.min ?? 0}/hr`;
+  if (budget.max && budget.max !== budget.min) return `Rs. ${budget.min ?? 0} – Rs. ${budget.max}`;
+  return `Rs. ${budget.min ?? 0}`;
 };
 
 function JobCard({ job }) {

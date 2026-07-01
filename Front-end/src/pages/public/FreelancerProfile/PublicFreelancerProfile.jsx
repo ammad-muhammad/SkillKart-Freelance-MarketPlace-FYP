@@ -249,7 +249,7 @@ export default function PublicFreelancerProfile() {
               <div className="pfp-hero-actions">
                 {profile.hourlyRate && (
                   <div className="pfp-rate-box">
-                    <span className="pfp-rate-currency">$</span>
+                    <span className="pfp-rate-currency">Rs. </span>
                     <span className="pfp-rate-amount">{profile.hourlyRate}</span>
                     <span className="pfp-rate-period">/hr</span>
                   </div>

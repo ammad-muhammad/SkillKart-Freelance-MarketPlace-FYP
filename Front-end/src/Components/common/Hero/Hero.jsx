@@ -222,7 +222,7 @@ export default function Hero() {
               <div className="hero__db-stats">
                 {[
                   { label: 'Projects', value: '28' },
-                  { label: 'Earnings', value: '$4.2k' },
+                  { label: 'Earnings', value: 'Rs. 4.2k' },
                   { label: 'Reviews', value: '47' },
                 ].map(s => (
                   <div key={s.label} className="hero__db-stat">

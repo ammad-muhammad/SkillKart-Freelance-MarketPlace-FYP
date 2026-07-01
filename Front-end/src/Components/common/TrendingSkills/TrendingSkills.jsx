@@ -29,7 +29,7 @@ function mapRealSkill(s) {
     slug: s.slug,
     Icon: Briefcase,
     gigs: Number(s.gigs) || 0,
-    avg: price > 0 ? `From $${price}` : null,
+    avg: price > 0 ? `From Rs. ${price}` : null,
     rating: Number(s.avgRating) || 0,
     hot: (Number(s.gigs) || 0) > 0,
   };

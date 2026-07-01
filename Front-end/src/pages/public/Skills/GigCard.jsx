@@ -38,7 +38,7 @@ export default function GigCard({ gig }) {
             <span className="mp-gig-card__reviews">({gig.reviews})</span>
           </div>
           <div className="mp-gig-card__price">
-            <span>From </span>${gig.price}
+            <span>From </span>Rs. {gig.price}
           </div>
         </div>
       </div>

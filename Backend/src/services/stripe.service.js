@@ -28,7 +28,7 @@ const isLive = () => !!stripe && !STRIPE_DUMMY;
  * @param {object} opts
  * @param {string} opts.jobId
  * @param {string} opts.phase        'deposit' | 'final'
- * @param {number} opts.amount       amount in whole USD dollars
+ * @param {number} opts.amount       amount in whole PKR
  * @param {string} opts.description  line-item description
  * @returns {Promise<{ id: string, url: string, simulated: boolean }>}
  */
@@ -52,7 +52,7 @@ async function createCheckoutSession({ jobId, phase, amount, description, metada
     payment_method_types: ['card'],
     line_items: [{
       price_data: {
-        currency: 'usd',
+        currency: 'pkr',
         product_data: { name: description || `SkillKart ${phase} payment` },
         unit_amount: Math.round(amount * 100), // cents
       },

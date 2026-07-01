@@ -56,7 +56,7 @@ export default function FreelancerWallet() {
     setWithdrawing(true);
     try {
       await paymentsAPI.withdrawFunds(withdrawAmount, withdrawMethod);
-      toast.success(`Successfully initiated withdrawal of $${withdrawAmount} via ${withdrawMethod === 'bank' ? 'Bank Transfer' : 'PayPal'}.`);
+      toast.success(`Successfully initiated withdrawal of Rs. ${withdrawAmount} via ${withdrawMethod === 'bank' ? 'Bank Transfer' : 'PayPal'}.`);
       setWithdrawModal(false);
       // Refresh profile so the wallet balance syncs
       if (refreshProfile) refreshProfile();
@@ -97,7 +97,7 @@ export default function FreelancerWallet() {
           <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
             <DollarSign size={24} />
           </div>
-          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>${walletBalance.toLocaleString()}</div>
+          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available for Withdrawal</div>
         </div>
 
@@ -108,7 +108,7 @@ export default function FreelancerWallet() {
           <div className="fl-stat-card__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
             <Wallet size={24} />
           </div>
-          <div className="fl-stat-card__value">${activeEscrow.toLocaleString()}</div>
+          <div className="fl-stat-card__value">Rs. {activeEscrow.toLocaleString()}</div>
           <div className="fl-stat-card__label">Funds in Active Escrow</div>
         </div>
         <div className="fl-stat-card">
@@ -118,7 +118,7 @@ export default function FreelancerWallet() {
           <div className="fl-stat-card__icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
             <CheckCircle2 size={24} />
           </div>
-          <div className="fl-stat-card__value">${totalEarned.toLocaleString()}</div>
+          <div className="fl-stat-card__value">Rs. {totalEarned.toLocaleString()}</div>
           <div className="fl-stat-card__label">Total Lifetime Earnings</div>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function FreelancerWallet() {
             </div>
             <div className="fl-modal__body">
               <div className="fl-form-group">
-                <label className="fl-label">Amount (USD)</label>
+                <label className="fl-label">Amount (PKR)</label>
                 <input
                   type="number"
                   className="fl-input"

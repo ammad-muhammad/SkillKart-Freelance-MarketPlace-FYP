@@ -15,7 +15,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 // Format a numeric amount with its currency. Falls back gracefully when the
 // API returns a non-numeric / missing value.
-const formatMoney = (amount, currency = 'USD') => {
+const formatMoney = (amount, currency = 'PKR') => {
     if (amount === null || amount === undefined || isNaN(Number(amount))) {
         return '—';
     }
@@ -101,7 +101,7 @@ export default function CostEstimator() {
             setEstimate({
                 min: data.min,
                 max: data.max,
-                currency: data.currency || 'USD',
+                currency: data.currency || 'PKR',
                 rationale: data.rationale || '',
                 breakdown: Array.isArray(data.breakdown) ? data.breakdown : []
             });
@@ -366,7 +366,7 @@ export default function CostEstimator() {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '3rem' }}>
                         {[
-                            { title: 'The Value-Based Approach', tip: 'Instead of hours, charge for the outcomes you deliver. A $1,000 solution is more attractive than $50/hour.' },
+                            { title: 'The Value-Based Approach', tip: 'Instead of hours, charge for the outcomes you deliver. A Rs. 1,000 solution is more attractive than Rs. 50/hour.' },
                             { title: 'Bundle Your Services', tip: 'Combine design and development into one package to increase your average project size by 40%.' },
                             { title: 'Niche Specialization', tip: 'Specializing in specific tools like Webflow or Shopify can increase your market rate by 2.5×.' }
                         ].map((m, i) => (

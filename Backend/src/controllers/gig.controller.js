@@ -241,6 +241,9 @@ const createGigOrder = asyncHandler(async (req, res) => {
     gigTier: tier,
   });
 
+  // Increment gig orders
+  await Gig.findByIdAndUpdate(gig._id, { $inc: { 'stats.orders': 1 } });
+
   // Notify the freelancer (gig owner) of the new order.
   notifications.onGigOrdered(gig.freelancerId, { job: order, gigId: gig._id });
 

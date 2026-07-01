@@ -769,7 +769,7 @@ const PostProject = () => {
                 </div>
                 <div className="cl-review-item">
                   <span className="cl-review-label">Budget</span>
-                  <span className="cl-review-value">${form.budget.min} – ${form.budget.max}</span>
+                  <span className="cl-review-value">Rs. {form.budget.min} – ${form.budget.max}</span>
                 </div>
                 <div className="cl-review-item">
                   <span className="cl-review-label">Duration</span>

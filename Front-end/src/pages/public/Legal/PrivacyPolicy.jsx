@@ -321,7 +321,7 @@ export default function PrivacyPolicy() {
                                             {Object.entries(retentionPeriods).map(([key, val]) => (
                                                 <div key={key} className="retention-row">
                                                     <div className="retention-row__label">
-                                                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+                                                        {key.replace(/([A-Z])/g, ' Rs. 1').replace(/^./, s => s.toUpperCase())}
                                                     </div>
                                                     <div className="retention-row__period">{val}</div>
                                                 </div>

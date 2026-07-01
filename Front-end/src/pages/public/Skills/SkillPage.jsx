@@ -319,7 +319,7 @@ export default function SkillPage() {
               </div>
               <div className="cat-hero__stat-divider" />
               <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroPrice > 0 ? `From $${heroPrice}` : '—'}</span>
+                <span className="cat-hero__stat-num">{heroPrice > 0 ? `From Rs. ${heroPrice}` : '—'}</span>
                 <span className="cat-hero__stat-lbl">Starting Price</span>
               </div>
             </div>
@@ -333,6 +333,7 @@ export default function SkillPage() {
         </section>
 
         {/* ═══════════════════ CONTENT ═══════════════════ */}
+        {(gigsLoading || allGigs.length > 0) && (
         <div className="mp-section">
           <div className="mp-container">
 
@@ -380,10 +381,10 @@ export default function SkillPage() {
                 isActive={priceFilter !== "any"}
                 options={[
                   { value: "any",     label: "Any Price"    },
-                  { value: "under25", label: "Under $25"    },
-                  { value: "25-50",   label: "$25 – $50"    },
-                  { value: "50-100",  label: "$50 – $100"   },
-                  { value: "100plus", label: "$100+"        },
+                  { value: "under25", label: "Under Rs. 25"    },
+                  { value: "25-50",   label: "Rs. 25 – Rs. 50"    },
+                  { value: "50-100",  label: "Rs. 50 – Rs. 100"   },
+                  { value: "100plus", label: "Rs. 100+"        },
                 ]}
               />
 
@@ -453,8 +454,10 @@ export default function SkillPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* ═══════════════════ FREELANCERS ═══════════════════ */}
+        {(flLoading || freelancers.length > 0) && (
         <div className="mp-section mp-section--alt" style={{ paddingTop: 0 }}>
           <div className="mp-container">
             <div className="mp-section-head">
@@ -485,9 +488,11 @@ export default function SkillPage() {
                     </div>
                     <div className="mp-freelancer-card__name">{fl.name}</div>
                     <div className="mp-freelancer-card__title">{fl.title}</div>
-                    <div className="mp-freelancer-card__rating">
-                      <Star size={13} fill="currentColor" /> {fl.rating}
-                      <span className="mp-freelancer-card__reviews">({fl.reviews})</span>
+                    <div className="mp-freelancer-card__rating" style={{ gap: '2px' }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={13} fill={s <= Math.round(fl.rating) ? "currentColor" : "none"} style={{ opacity: s <= Math.round(fl.rating) ? 1 : 0.3, color: '#f59e0b' }} />
+                      ))}
+                      <span className="mp-freelancer-card__reviews" style={{ marginLeft: '4px' }}>({fl.reviews})</span>
                     </div>
                     <div className="mp-freelancer-card__price">From ${fl.price}/hr</div>
                   </Link>
@@ -496,6 +501,7 @@ export default function SkillPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* ═══════════════════ TRENDING ═══════════════════ */}
         {trendingTags.length > 0 && (
@@ -509,9 +515,9 @@ export default function SkillPage() {
               </div>
               <div ref={trendRef} className="mp-trending-scroll">
                 {trendingTags.map((tag, i) => (
-                  <span key={i} className="mp-trending-pill">
+                  <Link key={i} to={`/skills/${categorySlug}/${tag.toLowerCase().replace(/ /g, '-')}`} className="mp-trending-pill" style={{ textDecoration: 'none' }}>
                     <TrendingUp size={12} /> {tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>

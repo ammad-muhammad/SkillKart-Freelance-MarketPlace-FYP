@@ -49,8 +49,8 @@ export default function FreelancerSavedProjects() {
                                     <span className="fsp-card__meta-item">
                                         <span className="icon">💰</span> 
                                         {typeof project.budget === 'object' 
-                                            ? `$${project.budget.min} - $${project.budget.max}`
-                                            : project.budget || '$500+'}
+                                            ? `Rs. ${project.budget.min} - Rs. ${project.budget.max}`
+                                            : project.budget || 'Rs. 500+'}
                                     </span>
                                     <span className="fsp-card__meta-item">
                                         <span className="icon">⏱️</span> {project.duration || 'Flexible'}

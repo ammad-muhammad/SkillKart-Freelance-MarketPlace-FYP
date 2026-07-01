@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
  *                                       the freelancer — recorded payout)
  *                   → refunded        (cancelled)
  *
- * Amounts are stored in whole currency units (USD dollars), not cents.
+ * Amounts are stored in whole currency units (PKR), not cents.
  */
 const paymentSchema = new mongoose.Schema({
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', index: true },
@@ -25,7 +25,7 @@ const paymentSchema = new mongoose.Schema({
   feeRate: { type: Number, default: 0.005 },         // 0.5% platform fee
   platformFee: { type: Number, default: 0 },         // computed on release
   freelancerPayout: { type: Number, default: 0 },    // total - fee (recorded)
-  currency: { type: String, default: 'USD' },
+  currency: { type: String, default: 'PKR' },
 
   status: {
     type: String,

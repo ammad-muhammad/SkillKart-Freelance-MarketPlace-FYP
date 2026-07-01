@@ -83,7 +83,7 @@ export default function FreelancerWork() {
         <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
           <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}><Wallet size={100} /></div>
           <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}><Wallet size={24} /></div>
-          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>${totalEarned.toLocaleString()}</div>
+          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>Rs. {totalEarned.toLocaleString()}</div>
           <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total earned from completed contracts</div>
         </div>
         <div className="fl-stat-card">
@@ -122,10 +122,10 @@ export default function FreelancerWork() {
                 </div>
 
                 <div className="fl-contract__money">
-                  <span><DollarSign size={14} /> Agreed: <strong>${c.budget?.min ?? c.budget?.max ?? '—'}</strong></span>
+                  <span><DollarSign size={14} /> Agreed: <strong>Rs. {c.budget?.min ?? c.budget?.max ?? '—'}</strong></span>
                   {escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
                   {c.payment?.status === 'released' && (
-                    <span style={{ color: '#16a34a' }}>You received: <strong>${Number(c.payment.freelancerPayout).toLocaleString()}</strong></span>
+                    <span style={{ color: '#16a34a' }}>You received: <strong>Rs. {Number(c.payment.freelancerPayout).toLocaleString()}</strong></span>
                   )}
                 </div>
 

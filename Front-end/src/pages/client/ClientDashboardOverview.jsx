@@ -42,7 +42,7 @@ const ClientDashboardOverview = () => {
     { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects',    to: '/client/projects' },
     { icon: <Zap size={20} />,        value: openProjects,                             label: 'Open Jobs',         to: '/client/projects' },
     { icon: <Users2 size={20} />,     value: hiredCount,                               label: 'Freelancers Hired', to: '/client/saved' },
-    { icon: <DollarSign size={20} />, value: `$${totalSpent.toLocaleString()}`,        label: 'Total Spent',       to: '/client/projects' },
+    { icon: <DollarSign size={20} />, value: `Rs. ${totalSpent.toLocaleString()}`,        label: 'Total Spent',       to: '/client/projects' },
   ];
 
   const recentProjects = projects.slice(0, 3);

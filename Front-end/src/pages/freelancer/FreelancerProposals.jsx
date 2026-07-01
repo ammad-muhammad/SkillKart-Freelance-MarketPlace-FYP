@@ -122,7 +122,7 @@ export default function FreelancerProposals() {
                 <div className="fl-prop-card__details">
                   <div className="fl-prop-card__detail">
                     <DollarSign size={14} />
-                    <span>Your Bid: <strong>${prop.proposedRate}</strong></span>
+                    <span>Your Bid: <strong>Rs. {prop.proposedRate}</strong></span>
                   </div>
                   <div className="fl-prop-card__detail">
                     <Clock size={14} />

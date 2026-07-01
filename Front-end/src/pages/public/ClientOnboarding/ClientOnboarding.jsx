@@ -875,9 +875,9 @@ const ClientOnboarding = () => {
                 <label className="onboarding__label">Budget Allocation</label>
                 <div className="onboarding__choices">
                     {[
-                        { id: '<$5k', label: 'Startup', desc: 'Up to $5,000' },
-                        { id: '$5k-$20k', label: 'Growth', desc: '$5,000 - $20,000' },
-                        { id: '$20k+', label: 'Enterprise', desc: '$20,000+' }
+                        { id: '<Rs. 5k', label: 'Startup', desc: 'Up to Rs. 5,000' },
+                        { id: 'Rs. 5k-Rs. 20k', label: 'Growth', desc: 'Rs. 5,000 - Rs. 20,000' },
+                        { id: 'Rs. 20k+', label: 'Enterprise', desc: 'Rs. 20,000+' }
                     ].map(item => (
                         <div
                             key={item.id}

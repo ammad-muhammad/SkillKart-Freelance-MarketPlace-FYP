@@ -81,7 +81,7 @@ const ClientSavedFreelancers = () => {
               </div>
 
               <div className="cl-freelancer-card__footer">
-                <span className="cl-freelancer-card__rate"><strong>${f.hourlyRate || 0}</strong> / hr</span>
+                <span className="cl-freelancer-card__rate"><strong>Rs. {f.hourlyRate || 0}</strong> / hr</span>
                 <button
                   className="cl-btn cl-btn--primary cl-btn--sm"
                   onClick={() => navigate(`/freelancers/${f.id}`)}
