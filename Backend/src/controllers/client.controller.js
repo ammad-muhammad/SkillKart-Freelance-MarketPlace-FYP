@@ -97,7 +97,7 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   // Explicit mapping to prevent unsafe assignment
   const allowedFields = [
-    'companyName', 'companyType', 'companyLogo', 'companySize', 'industry', 'industryType', 
+    'companyName', 'companyType', 'companyLogo', 'coverPhoto', 'companySize', 'industry', 'industryType', 
     'role', 'phone', 'website', 'description', 'location', 
     'techStack', 'services', 'hiringFrequency', 'technicalUnderstanding', 
     'urgency', 'aiAssistance', 'notificationSettings', 
@@ -198,6 +198,41 @@ const getClientById = asyncHandler(async (req, res) => {
   
   sendSuccess(res, {
     message: 'Client retrieved successfully',
+    data: { profile }
+  });
+});
+
+/**
+ * Get public client profile by ID
+ */
+const getPublicClientById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  const profile = await ClientProfile.findOne({ userId: id })
+    .populate('userId', 'firstName lastName profilePicture')
+    .lean();
+  
+  if (!profile) {
+    throw new NotFoundError('Client not found');
+  }
+
+  // Calculate dynamic total projects posted
+  const Job = require('../models/Job');
+  profile.totalProjectsPosted = await Job.countDocuments({ 
+    clientId: id,
+    status: { $ne: 'draft' }
+  });
+
+  // Remove sensitive fields
+  delete profile.securitySettings;
+  delete profile.notificationSettings;
+  delete profile.verificationDocuments;
+  delete profile.walletBalance;
+  delete profile.savedFreelancers;
+  delete profile.processedSessions;
+  
+  sendSuccess(res, {
+    message: 'Public client profile retrieved successfully',
     data: { profile }
   });
 });
@@ -446,6 +481,31 @@ const uploadCompanyLogo = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Upload cover image
+ */
+const uploadCoverImage = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
+  const { uploadProfilePicture } = require('../services/upload.service');
+  const fileUpload = await uploadProfilePicture(userId, req.file);
+  
+  const profile = await ClientProfile.findOne({ userId });
+  if (profile) {
+    profile.coverPhoto = fileUpload.url;
+    await profile.save();
+  }
+
+  sendSuccess(res, {
+    message: 'Cover image uploaded successfully',
+    data: { url: fileUpload.url }
+  });
+});
+
+/**
  * Toggle saved freelancer
  */
 const toggleSavedFreelancer = asyncHandler(async (req, res) => {
@@ -540,7 +600,9 @@ module.exports = {
   submitOnboardingProfile,
   uploadAvatar,
   uploadCompanyLogo,
+  uploadCoverImage,
   toggleSavedFreelancer,
   getSavedFreelancers,
-  recommendIndustry
+  recommendIndustry,
+  getPublicClientById
 };

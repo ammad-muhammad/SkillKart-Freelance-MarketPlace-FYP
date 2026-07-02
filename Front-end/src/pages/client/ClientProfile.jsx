@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo } from '../../utils/uploadHelper';
+import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo, uploadClientCover as apiUploadCover } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
@@ -75,7 +75,6 @@ const ClientProfile = () => {
   const [prefSkills, setPrefSkills] = useState(Array.isArray(profile?.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
   const [budgetRange, setBudgetRange] = useState({ ...(profile?.preferences?.budgetRange || { min: 0, max: 0 }) });
   const [languages, setLanguages] = useState(Array.isArray(profile?.personalInfo?.languages) ? [...profile.personalInfo.languages] : []);
-  const [remoteOnly, setRemoteOnly] = useState(!!profile?.preferences?.remoteOnly);
   
   // Added fields for onboarding alignment
   const [hiringFrequency, setHiringFrequency] = useState(profile?.preferences?.hiringFrequency || '');
@@ -91,6 +90,7 @@ const ClientProfile = () => {
 
   const avatarRef = useRef(null);
   const logoRef = useRef(null);
+  const coverRef = useRef(null);
 
   const countryOptions = useMemo(() => countryList().getData(), []);
   const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
@@ -199,7 +199,6 @@ const ClientProfile = () => {
     setPrefSkills(Array.isArray(profile.preferences?.preferredSkills) ? [...profile.preferences.preferredSkills] : []);
     setBudgetRange({ ...(profile.preferences?.budgetRange || { min: 0, max: 0 }) });
     setLanguages(Array.isArray(profile.personalInfo?.languages) ? [...profile.personalInfo.languages] : []);
-    setRemoteOnly(!!profile.preferences?.remoteOnly);
     setHiringFrequency(profile.preferences?.hiringFrequency || '');
     setTechnicalUnderstanding(profile.preferences?.technicalUnderstanding || 5);
     setUrgency(profile.preferences?.urgency || '');
@@ -256,8 +255,7 @@ const ClientProfile = () => {
           budgetRange: { ...budgetRange },
           hiringFrequency,
           technicalUnderstanding,
-          urgency,
-          remoteOnly
+          urgency
         },
       };
 
@@ -272,7 +270,7 @@ const ClientProfile = () => {
             if (typeof err === 'object' && err.field) {
               newErrors[err.field] = err.message;
             } else if (typeof err === 'string') {
-              const pathMatch = err.match(/at path \"(.+)\"/);
+              const pathMatch = err.match(/at path "(.+)"/);
               if (pathMatch) {
                 newErrors[pathMatch[1]] = err;
               } else {
@@ -302,6 +300,9 @@ const ClientProfile = () => {
       let url;
       if (field === 'companyLogo') {
         url = await apiUploadCompanyLogo(file);
+      } else if (field === 'coverPhoto') {
+        console.log('Using apiUploadCover which should be uploadClientCover:', apiUploadCover.toString());
+        url = await apiUploadCover(file);
       } else {
         url = await apiUploadAvatar(file, 'client');
       }
@@ -374,6 +375,24 @@ const ClientProfile = () => {
                 )}
               </div>
             )}
+            
+            {/* Cover Photo */}
+            <div>
+              <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Cover Photo</p>
+              <div className="cl-logo-box" style={{ width: '160px', border: '1px dashed #cbd5e1' }}>
+                {(editing ? form.coverPhoto : profile?.personalInfo?.coverPhoto) ? (
+                  <img src={editing ? form.coverPhoto : profile?.personalInfo?.coverPhoto} alt="cover" style={{ objectFit: 'cover' }} />
+                ) : <span style={{ fontSize: '1.5rem', color: '#94a3b8' }}>🖼️</span>}
+              </div>
+              {editing && (
+                <>
+                  <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => coverRef.current?.click()}>
+                    📷 Upload
+                  </button>
+                  <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'coverPhoto')} />
+                </>
+              )}
+            </div>
           </div>
 
           <div className="cl-profile-hero__info">
@@ -846,9 +865,9 @@ const ClientProfile = () => {
                 min="1"
                 max="10"
                 value={technicalUnderstanding}
-                onChange={(e) => setTechnicalUnderstanding(Number(e.target.value))}
+                onChange={(e) => setTechnicalUnderstanding(parseInt(e.target.value))}
                 className="onboarding__slider"
-                style={{ width: '100%' }}
+                style={{ background: `linear-gradient(to right, var(--color-primary, #042E4C) ${((technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((technicalUnderstanding - 1) / 9) * 100}%)`, width: '100%' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
                 <span>Conceptual</span>
@@ -885,19 +904,6 @@ const ClientProfile = () => {
           ) : (
             <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{profile?.preferences?.urgency || 'N/A'}</div>
           )}
-        </div>
-
-        {/* Remote Only Switch */}
-        <div className="cl-toggle" style={{ maxWidth: '400px' }}>
-          <div className="cl-toggle__info">
-            <span className="cl-toggle__label">🌍 Remote Only</span>
-            <span className="cl-toggle__desc">Only accept remote freelancer applications</span>
-          </div>
-          <div
-            className={`cl-toggle__switch${remoteOnly ? ' cl-toggle__switch--on' : ''}`}
-            onClick={() => editing && setRemoteOnly((v) => !v)}
-            style={{ cursor: editing ? 'pointer' : 'default' }}
-          />
         </div>
 
         {editing && errors.global && (

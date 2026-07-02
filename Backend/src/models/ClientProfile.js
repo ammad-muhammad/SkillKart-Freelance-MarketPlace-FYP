@@ -5,6 +5,7 @@ const clientProfileSchema = new mongoose.Schema({
   companyName: String,
   companyType: { type: String, enum: ['Individual', 'Startup', 'SME', 'Enterprise'] },
   companyLogo: String,
+  coverPhoto: String,
   companySize: String,
   industry: [String],
   industryType: [String],

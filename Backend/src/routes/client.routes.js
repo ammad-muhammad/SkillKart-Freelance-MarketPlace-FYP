@@ -75,6 +75,13 @@ router.post('/upload/logo',
   clientController.uploadCompanyLogo
 );
 
+// Upload cover image
+router.post('/upload/cover',
+  requireRole('client'),
+  uploadSingle('image'),
+  clientController.uploadCoverImage
+);
+
 /**
  * Onboarding flow routes
  */

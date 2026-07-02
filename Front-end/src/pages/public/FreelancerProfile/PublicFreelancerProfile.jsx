@@ -195,6 +195,14 @@ export default function PublicFreelancerProfile() {
               style={{ backgroundImage: profile.coverPhoto ? `url(${profile.coverPhoto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
               <div className="pfp-hero-overlay"></div>
+              
+              {profile.verificationStatus === 'verified' && (
+                <div className="pfp-verified-badge" title="Verified Freelancer">
+                  <CheckCircle size={14} strokeWidth={2.5} />
+                  <span>Verified</span>
+                </div>
+              )}
+
               {isOwner && (
                 <button 
                   className="pfp-edit-cover-btn"
@@ -213,11 +221,6 @@ export default function PublicFreelancerProfile() {
                     ? <img src={u.profilePicture} alt={fullName} />
                     : <span>{(u.firstName?.[0] || 'F').toUpperCase()}</span>}
                 </div>
-                {profile.verificationStatus === 'verified' && !isOwner && (
-                  <div className="pfp-verified-badge" title="Verified Freelancer">
-                    <CheckCircle size={18} />
-                  </div>
-                )}
               </div>
               
               <div className="pfp-hero-main">

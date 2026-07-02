@@ -909,7 +909,7 @@ const ClientOnboarding = () => {
                     <label className="onboarding__label">Technical Complexity Awareness</label>
                     <span style={{ color: 'var(--onboard-accent-primary)', fontWeight: '700' }}>{formData.technicalUnderstanding}/10</span>
                 </div>
-                <input type="range" name="technicalUnderstanding" min="1" max="10" value={formData.technicalUnderstanding} onChange={handleChange} className="onboarding__slider" />
+                <input type="range" name="technicalUnderstanding" min="1" max="10" value={formData.technicalUnderstanding} onChange={handleChange} className="onboarding__slider" style={{ background: `linear-gradient(to right, var(--onboard-accent-primary, #0052cc) ${((formData.technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((formData.technicalUnderstanding - 1) / 9) * 100}%)` }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: 'var(--onboard-text-secondary)' }}>
                     <span>Conceptual</span>
                     <span>Deep Tech</span>

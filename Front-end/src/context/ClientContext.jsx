@@ -43,7 +43,6 @@ const emptyProfile = {
     hiringFrequency: '',
     technicalUnderstanding: 5,
     urgency: '',
-    remoteOnly: true,
   },
   securitySettings: {
     recoveryEmail: '',
@@ -149,6 +148,7 @@ export const ClientProvider = ({ children }) => {
           bio: dbProfile?.description || '',
           avatar: activeUser?.profilePicture || null,
           companyLogo: dbProfile?.companyLogo || null,
+          coverPhoto: dbProfile?.coverPhoto || null,
           memberSince: activeUser?.createdAt ? new Date(activeUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
           languages: dbProfile?.languages || [],
         },
@@ -159,7 +159,6 @@ export const ClientProvider = ({ children }) => {
           hiringFrequency: dbProfile?.hiringFrequency || '',
           technicalUnderstanding: dbProfile?.technicalUnderstanding || 5,
           urgency: dbProfile?.urgency || '',
-          remoteOnly: true,
         },
         securitySettings: {
           recoveryEmail: dbProfile?.securitySettings?.recoveryEmail || '',

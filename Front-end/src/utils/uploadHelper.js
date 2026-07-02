@@ -42,6 +42,22 @@ export const uploadPortfolioImage = async (file) => {
 };
 
 /**
+ * Upload a client cover image.
+ * @param {File} file - The image file to upload
+ * @returns {Promise<string>} The Cloudinary URL
+ */
+export const uploadClientCover = async (file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const { data } = await client.post('/clients/upload/cover', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
+  return data.data.url;
+};
+
+/**
  * Validate file before upload.
  * @param {File} file
  * @param {object} options

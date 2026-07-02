@@ -103,19 +103,23 @@ const listGigs = asyncHandler(async (req, res) => {
     // Public listing only shows active gigs.
     query.status = status || 'active';
   }
-  // Graph-aware category expansion
-  if (category) {
-    const catExpanded = await require('../services/taxonomy.service').expandSearchTerms(category);
-    query.category = catExpanded.length ? { $in: catExpanded } : category;
-  }
-  if (subcategory) {
-    const subcatExpanded = await require('../services/taxonomy.service').expandSearchTerms(subcategory);
-    query.subcategory = subcatExpanded.length ? { $in: subcatExpanded } : subcategory;
-  }
-  if (skill) {
-    const skillExpanded = await require('../services/taxonomy.service').expandSearchTerms(skill);
-    query.skills = { $in: skillExpanded.length ? skillExpanded : [skill] };
-  }
+  // Graph-aware taxonomy expansion (search across all taxonomy fields for safety)
+  const applyTaxonomyFilter = async (term) => {
+    const expanded = await require('../services/taxonomy.service').expandSearchTerms(term);
+    const terms = expanded.length ? expanded : [term];
+    if (!query.$and) query.$and = [];
+    query.$and.push({
+      $or: [
+        { category: { $in: terms } },
+        { subcategory: { $in: terms } },
+        { skills: { $in: terms } }
+      ]
+    });
+  };
+
+  if (category) await applyTaxonomyFilter(category);
+  if (subcategory) await applyTaxonomyFilter(subcategory);
+  if (skill) await applyTaxonomyFilter(skill);
   if (q) {
     const { buildGraphSearchQuery } = require('../services/search.service');
     const graphSearch = await buildGraphSearchQuery(q, ['skills', 'category', 'subcategory']);

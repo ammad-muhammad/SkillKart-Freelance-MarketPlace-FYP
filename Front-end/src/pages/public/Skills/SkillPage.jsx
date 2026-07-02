@@ -301,25 +301,25 @@ export default function SkillPage() {
             <h1 className="skl-hero__title cat-hero__title">{skill.name}</h1>
             <p className="skl-hero__desc cat-hero__desc">{skill.description}</p>
 
-            {/* Stats — real values only ("—" until there's data) */}
+            {/* Stats — real values only ("0" until there's data) */}
             <div className="cat-hero__stats">
               <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroFreelancers > 0 ? `${heroFreelancers.toLocaleString()}+` : '—'}</span>
+                <span className="cat-hero__stat-num">{heroFreelancers > 0 ? `${heroFreelancers.toLocaleString()}+` : '0'}</span>
                 <span className="cat-hero__stat-lbl">Freelancers</span>
               </div>
               <div className="cat-hero__stat-divider" />
               <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroGigs > 0 ? `${heroGigs.toLocaleString()}+` : '—'}</span>
+                <span className="cat-hero__stat-num">{heroGigs > 0 ? `${heroGigs.toLocaleString()}+` : '0'}</span>
                 <span className="cat-hero__stat-lbl">Gigs Available</span>
               </div>
               <div className="cat-hero__stat-divider" />
               <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroRating ? `${heroRating}★` : '—'}</span>
+                <span className="cat-hero__stat-num">{heroRating ? `${heroRating}★` : '0'}</span>
                 <span className="cat-hero__stat-lbl">Avg Rating</span>
               </div>
               <div className="cat-hero__stat-divider" />
               <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroPrice > 0 ? `From Rs. ${heroPrice}` : '—'}</span>
+                <span className="cat-hero__stat-num">{heroPrice > 0 ? `From Rs. ${heroPrice}` : '0'}</span>
                 <span className="cat-hero__stat-lbl">Starting Price</span>
               </div>
             </div>

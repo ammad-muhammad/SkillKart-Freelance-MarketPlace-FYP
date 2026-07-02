@@ -5,6 +5,7 @@ const freelancerController = require('../controllers/freelancer.controller');
 const jobController = require('../controllers/job.controller');
 const publicStatsController = require('../controllers/publicStats.controller');
 const testimonialController = require('../controllers/testimonial.controller');
+const clientController = require('../controllers/client.controller');
 
 /**
  * Public routes - No authentication required
@@ -45,6 +46,11 @@ router.get('/cms/:pageId', cmsController.getPublicPage);
  */
 router.get('/freelancers/search', freelancerController.searchFreelancers);
 router.get('/freelancers/:id', freelancerController.getFreelancerById);
+
+/**
+ * Clients
+ */
+router.get('/clients/:id', clientController.getPublicClientById);
 
 /**
  * Jobs

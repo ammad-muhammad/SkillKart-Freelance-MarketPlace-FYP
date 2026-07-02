@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, CheckCircle2 } from 'lucide-react';
 import './ClientDashboard.css';
@@ -18,6 +19,7 @@ const StatCard = ({ icon, value, label, to }) => {
 };
 
 const ClientDashboardOverview = () => {
+  const { user } = useAuth();
   const { profile, projects, loading } = useClient();
   const personalInfo = profile?.personalInfo || {};
   

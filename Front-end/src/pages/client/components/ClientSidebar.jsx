@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/client/dashboard', icon: '📊', label: 'Dashboard' },
   { to: '/browse-freelancers', icon: '🔍', label: 'Find Freelancers' },
   { to: '/client/profile', icon: '👤', label: 'My Profile' },
+  { to: '__public_profile__', icon: '👁️', label: 'View Public Profile' },
   { to: '/client/projects', icon: '📁', label: 'My Projects' },
   { to: '/client/projects/create', icon: '✚', label: 'Post New Project' },
   { to: '/client/wallet', icon: '💳', label: 'Billing & Payments' },
@@ -24,7 +25,7 @@ const ClientSidebar = () => {
   const [open, setOpen] = useState(false);
   const { unreadCount } = useNotification();
   const { profile } = useClient();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { fullName, companyName, avatar } = profile.personalInfo;
 
   return (
@@ -72,22 +73,26 @@ const ClientSidebar = () => {
 
         {/* Navigation */}
         <nav className="cl-sidebar__nav">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `cl-sidebar__link${isActive ? ' cl-sidebar__link--active' : ''}`
-              }
-              onClick={() => setOpen(false)}
-            >
-              <span className="cl-sidebar__icon">{item.icon}</span>
-              <span>{item.label}</span>
-              {item.to === '/client/notifications' && unreadCount > 0 && (
-                <span className="cl-sidebar__notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
-              )}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            if (item.to === '__public_profile__' && !user?._id) return null;
+            const to = item.to === '__public_profile__' ? `/clients/${user._id}` : item.to;
+            return (
+              <NavLink
+                key={item.to}
+                to={to}
+                className={({ isActive }) =>
+                  `cl-sidebar__link${isActive ? ' cl-sidebar__link--active' : ''}`
+                }
+                onClick={() => setOpen(false)}
+              >
+                <span className="cl-sidebar__icon">{item.icon}</span>
+                <span>{item.label}</span>
+                {item.to === '/client/notifications' && unreadCount > 0 && (
+                  <span className="cl-sidebar__notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Logout */}

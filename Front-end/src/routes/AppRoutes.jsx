@@ -70,6 +70,7 @@ import BrowseProjects from "../pages/public/BrowseProjects/BrowseProjects";
 import JobDetails from "../pages/public/JobDetails/JobDetails";
 import GigDetail from "../pages/public/GigDetail/GigDetail";
 import PublicFreelancerProfile from "../pages/public/FreelancerProfile/PublicFreelancerProfile";
+import PublicClientProfile from "../pages/public/ClientProfile/PublicClientProfile";
 
 import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
 import Onboarding from "../pages/public/Onboarding/Onboarding";
@@ -117,7 +118,6 @@ const AppRoutes = () => {
             <Route path="/browse-projects" element={<BrowseProjects />} />
             <Route path="/jobs/:id" element={<JobDetails />} />
             <Route path="/gigs/:id" element={<GigDetail />} />
-            <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
             {/* //Sumair - working */}
             {/* <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
@@ -145,6 +145,9 @@ const AppRoutes = () => {
             {/* Skills / Category / Gig Pages */}
             <Route path="/skills/:categorySlug" element={<CategoryPage />} />
             <Route path="/skills/:categorySlug/:skillSlug" element={<SkillPage />} />
+            
+            <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
+            <Route path="/clients/:id" element={<PublicClientProfile />} />
           </Route>
 
           {/* Payment confirmation landing (Stripe success redirect). Standalone,

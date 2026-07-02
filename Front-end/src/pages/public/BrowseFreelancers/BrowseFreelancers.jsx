@@ -321,6 +321,7 @@ export default function BrowseFreelancers() {
                                 min={5} max={100} step={1}
                                 value={maxRate}
                                 onChange={e => { setMaxRate(+e.target.value); setPage(1); }}
+                                style={{ background: `linear-gradient(to right, var(--color-primary, #042E4C) ${((maxRate - 5) / 95) * 100}%, #e2e8f0 ${((maxRate - 5) / 95) * 100}%)` }}
                             />
                             <div className="bf-range-vals">
                                 <span>Rs. 5/hr</span>

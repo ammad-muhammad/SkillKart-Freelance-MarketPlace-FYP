@@ -149,7 +149,7 @@ export default function CategoryPage() {
   const totalFreelancers = Number(stats?.totalFreelancers) || 0;
   const avgRating = stats?.avgRating
     ? `${Number(stats.avgRating).toFixed(1)}★`
-    : "—";
+    : "0";
 
   const filteredSkills = searchTerm.trim()
     ? skills.filter((s) =>

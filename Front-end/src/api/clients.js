@@ -39,5 +39,7 @@ export const clientsAPI = {
     client.get('/clients/saved-freelancers'),
 
   recommendIndustry: (data) => 
-    client.post('/clients/ai/recommend-industry', data)
+    client.post('/clients/ai/recommend-industry', data),
+
+  getPublicById: (id) => client.get(`/public/clients/${id}`)
 };

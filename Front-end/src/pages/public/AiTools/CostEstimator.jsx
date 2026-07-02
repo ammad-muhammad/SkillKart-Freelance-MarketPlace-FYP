@@ -208,7 +208,7 @@ export default function CostEstimator() {
                                 <div className="ai-form-group">
                                     <label>Complexity Level ({formData.complexity}%)</label>
                                     <input
-                                        type="range" className="ai-input" min="0" max="100" style={{ padding: 0 }}
+                                        type="range" className="ai-input" min="0" max="100" style={{ padding: 0, background: `linear-gradient(to right, var(--color-primary, #042E4C) ${formData.complexity}%, #e2e8f0 ${formData.complexity}%)` }}
                                         value={formData.complexity} onChange={e => setFormData({...formData, complexity: e.target.value})}
                                     />
                                 </div>

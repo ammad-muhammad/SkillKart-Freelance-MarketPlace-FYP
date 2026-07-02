@@ -160,6 +160,7 @@ const listJobs = asyncHandler(async (req, res) => {
   await syncJobStatuses(clientId ? { clientId } : {});
   
   const query = { status: 'open' }; // Strictly only open jobs for public
+  if (clientId) query.clientId = clientId;
   if (experienceLevel) query.experienceLevel = experienceLevel;
   if (budgetType) query['budget.type'] = budgetType;
 
