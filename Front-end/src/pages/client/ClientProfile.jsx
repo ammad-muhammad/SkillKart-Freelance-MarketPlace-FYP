@@ -396,18 +396,20 @@ const ClientProfile = () => {
 
           <div className="cl-profile-hero__info">
             <h2 className="cl-profile-hero__name">{data.fullName || 'New Client'}</h2>
-            <div className="cl-prof-header-meta">
-              {data.companyType === 'Individual' ? (
-                <span><User size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> Individual Client</span>
-              ) : (
-                <span><Building2 size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {data.companyName || 'No Company'} · {data.industry || 'No Industry Specified'}</span>
-              )}
-              <div className="cl-prof-header-stats">
-                <span><MapPin size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {data.location || 'Location Not Specified'}</span>
-                <span><Calendar size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> Member Since: {data.memberSince || 'N/A'}</span>
+            <div className="cl-prof-header-meta" style={{ marginTop: '0.4rem' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                {data.companyType === 'Individual' ? (
+                  <><User size={16} /> Individual Client</>
+                ) : (
+                  <><Building2 size={16} /> {data.companyName || 'No Company'} <span style={{ color: '#cbd5e1' }}>•</span> {data.industry || 'No Industry Specified'}</>
+                )}
+              </div>
+              <div className="cl-prof-header-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.85rem', color: 'var(--color-text-mid)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><MapPin size={15} /> {data.location || 'Location Not Specified'}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Calendar size={15} /> Member Since: {data.memberSince || 'N/A'}</span>
                 {data.website && (
-                  <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Globe size={14} /> Website
+                  <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                    <Globe size={15} /> Website
                   </a>
                 )}
               </div>

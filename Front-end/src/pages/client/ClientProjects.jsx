@@ -285,7 +285,7 @@ const ClientProjects = () => {
               <div className="cl-proj-card__footer">
                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
-                    💰 Budget: <strong>Rs. {proj.budget?.min}–${proj.budget?.max}</strong>
+                    💰 Budget: <strong>{proj.budget?.min === proj.budget?.max ? `Rs. ${proj.budget?.min || 0}` : `Rs. ${proj.budget?.min || 0}–${proj.budget?.max || 0}`}</strong>
                   </span>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
                     ⏱ {proj.duration}

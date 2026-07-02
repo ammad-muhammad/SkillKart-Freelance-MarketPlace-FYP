@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
-import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2 } from 'lucide-react';
+import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
 import './ClientDashboard.css';
 
 const StatCard = ({ icon, value, label, to }) => {
@@ -117,19 +117,41 @@ const ClientDashboardOverview = () => {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {recentProjects.map((p) => (
-              <Link key={p.id} to={`/client/projects/${p.id}/proposals`} className="cl-recent-proj cl-recent-proj--link">
-                <div className="cl-recent-proj__info">
-                  <p className="cl-recent-proj__title">{p.title}</p>
-                  <p className="cl-recent-proj__meta">
-                    {p.category} · Budget: ${p.budget.min}–${p.budget.max} · {p.proposals?.length || 0} proposal{(p.proposals?.length || 0) === 1 ? '' : 's'}
-                  </p>
+            {recentProjects.map((p) => {
+              const isGig = p.source === 'gig' || p.title.toLowerCase().includes('package');
+              
+              return (
+              <Link key={p.id} to={isGig ? '#' : `/client/projects/${p.id}/proposals`} className="cl-recent-proj" style={{ textDecoration: 'none', cursor: isGig ? 'default' : 'pointer' }}>
+                <div className="cl-recent-proj__left">
+                  <div className="cl-recent-proj__icon-wrapper">
+                    <FolderOpen size={20} />
+                  </div>
+                  <div className="cl-recent-proj__info">
+                    <p className="cl-recent-proj__title">{p.title}</p>
+                    <p className="cl-recent-proj__meta">
+                      {p.category} 
+                      <span className="cl-recent-proj__dot">•</span> Budget: {p.budget?.min === p.budget?.max ? `Rs. ${p.budget?.min || 0}` : `Rs. ${p.budget?.min || 0}–${p.budget?.max || 0}`}
+                      <span className="cl-recent-proj__dot">•</span>
+                      {isGig ? (
+                        <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>Gig Order</span>
+                      ) : (
+                        <span>{p.proposals?.length || 0} proposal{(p.proposals?.length || 0) === 1 ? '' : 's'}</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <span className={`cl-badge cl-badge--${p.status.replace(' ', '-')}`}>
-                  {p.status === 'open' ? <><CheckCircle2 size={12} style={{color:'#16a34a'}} /> Open</> : p.status === 'in-progress' ? 'In Progress' : <><CheckCircle2 size={12} /> Completed</>}
-                </span>
+                <div className="cl-recent-proj__right">
+                  <span className={`cl-badge cl-badge--${p.status.replace(' ', '-')}`}>
+                    {p.status === 'open' ? <><CheckCircle2 size={12} style={{color:'#16a34a', marginRight: 4}} /> Open</> : p.status === 'in-progress' ? 'In Progress' : <><CheckCircle2 size={12} style={{marginRight: 4}}/> Completed</>}
+                  </span>
+                  {!isGig && (
+                    <div className="cl-recent-proj__action">
+                      <ChevronRight size={18} />
+                    </div>
+                  )}
+                </div>
               </Link>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -154,14 +176,51 @@ const ClientDashboardOverview = () => {
           font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.3rem;
         }
         .cl-recent-proj {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0.85rem 1rem; background: #f8fafc;
-          border-radius: 10px; border: 1px solid #e5edf5; gap: 1rem;
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 1rem 1.25rem; border-radius: 16px; border: 1px solid rgba(4,46,76,0.06); background: #ffffff;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
         }
-        .cl-recent-proj__title { font-size: 0.875rem; font-weight: 600; color: var(--color-text-dark); margin-bottom: 0.2rem; }
-        .cl-recent-proj__meta { font-size: 0.78rem; color: var(--color-text-light); }
-        .cl-recent-proj--link { text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-        .cl-recent-proj--link:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(4,46,76,0.08); border-color: var(--color-primary); }
+        .cl-recent-proj:hover {
+          transform: translateY(-3px) scale(1.01);
+          box-shadow: 0 10px 25px -5px rgba(4,46,76,0.08);
+          border-color: rgba(26,111,168,0.2);
+        }
+        .cl-recent-proj__left {
+          display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;
+        }
+        .cl-recent-proj__icon-wrapper {
+          width: 44px; height: 44px; border-radius: 12px;
+          background: linear-gradient(135deg, rgba(26, 111, 168, 0.08), rgba(26, 111, 168, 0.02));
+          display: flex; align-items: center; justify-content: center;
+          color: var(--color-primary); flex-shrink: 0;
+          transition: all 0.3s ease;
+        }
+        .cl-recent-proj:hover .cl-recent-proj__icon-wrapper {
+          background: var(--gradient-primary); color: #fff;
+          transform: rotate(-5deg) scale(1.05);
+          box-shadow: 0 6px 15px rgba(26, 111, 168, 0.25);
+        }
+        .cl-recent-proj__info { flex: 1; min-width: 0; }
+        .cl-recent-proj__title {
+          font-weight: 800; font-size: 0.95rem; color: var(--color-text-dark);
+          margin: 0; margin-bottom: 0.25rem;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .cl-recent-proj__meta { 
+          font-size: 0.78rem; color: var(--color-text-light); font-weight: 600;
+          display: flex; align-items: center; gap: 0.4rem;
+          margin: 0;
+        }
+        .cl-recent-proj__dot { color: #cbd5e1; }
+        .cl-recent-proj__right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        .cl-recent-proj__action {
+          color: #94a3b8; transition: all 0.3s ease;
+          display: flex; align-items: center;
+        }
+        .cl-recent-proj:hover .cl-recent-proj__action {
+          color: var(--color-primary); transform: translateX(3px);
+        }
         .cl-stat-card--link { text-decoration: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
         .cl-stat-card--link:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(4,46,76,0.1); }
 

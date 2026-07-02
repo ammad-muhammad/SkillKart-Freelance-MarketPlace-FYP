@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
-import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle } from 'lucide-react';
+import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle, ChevronRight } from 'lucide-react';
 import ShareStory from './components/ShareStory';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import './FreelancerDashboard.css';
@@ -189,31 +189,38 @@ const DashboardOverview = () => {
         
         <div className="fl-skill-grid">
           {(profile.verifiedSkills || []).slice(0, showAllSkills ? undefined : 8).map((skill) => (
-            <div key={skill._id || skill.name} className="fl-skill-item">
-              <div className="fl-skill-item__header">
-                <span className="fl-skill-name">{skill.name}</span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div key={skill._id || skill.name} className={`fl-skill-card ${skill.isVerified ? 'fl-skill-card--verified' : ''}`}>
+              <div className="fl-skill-card__top">
+                <div className="fl-skill-card__info">
+                  <div className="fl-skill-card__title-row">
+                    <h4 className="fl-skill-card__name">{skill.name}</h4>
+                    {skill.isVerified && <span className="fl-skill-card__badge"><CheckCircle2 size={12} /> Verified</span>}
+                  </div>
                   <span className={`fl-skill-level fl-skill-level--${skill.level.toLowerCase()}`}>
                     {skill.level}
                   </span>
-                  <Link 
-                    to={`/freelancer/skill-test?skill=${encodeURIComponent(skill.name)}`} 
-                  >
-                    <button className="fl-btn fl-btn--sm fl-btn--outline">
-                      {skill.isVerified ? <><RotateCcw size={14} style={{ marginRight: 4 }} /> Retake</> : <><Play size={14} style={{ marginRight: 4 }} /> Take Test</>}
-                    </button>
-                  </Link>
+                </div>
+                <div className="fl-skill-card__score-col">
+                   <span className="fl-skill-card__score-val">{skill.verificationScore}%</span>
+                   <span className="fl-skill-card__score-lbl">Accuracy</span>
                 </div>
               </div>
-              <div className="fl-skill-progress-bg">
-                <div 
-                  className="fl-skill-progress-bar" 
-                  style={{ width: `${skill.verificationScore}%`, background: skill.isVerified ? '#3b82f6' : '#94a3b8' }} 
-                />
+
+              <div className="fl-skill-card__progress">
+                <div className="fl-skill-card__progress-track">
+                  <div 
+                    className="fl-skill-card__progress-fill" 
+                    style={{ width: `${skill.verificationScore}%` }} 
+                  />
+                </div>
               </div>
-              <div className="fl-skill-footer">
-                <span className="fl-skill-score">{skill.verificationScore}% Accuracy</span>
-                {skill.isVerified && <span className="fl-skill-verified">✓ Verified</span>}
+
+              <div className="fl-skill-card__footer">
+                <Link to={`/freelancer/skill-test?skill=${encodeURIComponent(skill.name)}`} style={{ textDecoration: 'none', width: '100%' }}>
+                  <button className={`fl-btn fl-btn--sm ${skill.isVerified ? 'fl-btn--outline' : 'fl-btn--primary'}`} style={{ width: '100%', justifyContent: 'center' }}>
+                    {skill.isVerified ? <><RotateCcw size={14} style={{ marginRight: '6px' }} /> Retake Test</> : <><Play size={14} style={{ marginRight: '6px' }} /> Verify Skill</>}
+                  </button>
+                </Link>
               </div>
             </div>
           ))}
@@ -251,15 +258,27 @@ const DashboardOverview = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {gigs.slice(0, 3).map((gig) => (
-              <div key={gig._id || gig.id} className="fl-recent-gig">
-                <div className="fl-recent-gig__info">
-                  <p className="fl-recent-gig__title">{gig.title}</p>
-                  <p className="fl-recent-gig__meta">{gig.category} · ${gig.pricing.basic.price} starting</p>
+              <Link key={gig._id || gig.id} to={`/gigs/${gig._id || gig.id}`} className="fl-recent-gig" style={{ textDecoration: 'none' }}>
+                <div className="fl-recent-gig__left">
+                  <div className="fl-recent-gig__icon-wrapper">
+                    <Package size={20} />
+                  </div>
+                  <div className="fl-recent-gig__info">
+                    <p className="fl-recent-gig__title">{gig.title}</p>
+                    <p className="fl-recent-gig__meta">
+                      {gig.category} <span className="fl-recent-gig__dot">•</span> <span className="fl-recent-gig__price">From ${gig.pricing.basic.price}</span>
+                    </p>
+                  </div>
                 </div>
-                <span className={`fl-status-badge fl-status-badge--${gig.status}`}>
-                  {gig.status === 'active' ? <><Circle size={10} style={{ marginRight: 4, fill: 'currentColor' }} /> Active</> : <><PauseCircle size={12} style={{ marginRight: 4 }} /> Paused</>}
-                </span>
-              </div>
+                <div className="fl-recent-gig__right">
+                  <span className={`fl-status-badge fl-status-badge--${gig.status}`}>
+                    {gig.status === 'active' ? <><Circle size={10} style={{ marginRight: 4, fill: 'currentColor' }} /> Active</> : <><PauseCircle size={12} style={{ marginRight: 4 }} /> Paused</>}
+                  </span>
+                  <div className="fl-recent-gig__action">
+                    <ChevronRight size={18} />
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         )}
@@ -292,85 +311,214 @@ const DashboardOverview = () => {
           display: flex; flex-wrap: wrap; gap: 1rem;
           font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.3rem;
         }
-        .fl-recent-gig {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0.85rem 1rem;
-          background: #f8fafc; border-radius: 10px;
-          border: 1px solid #e5edf5; gap: 1rem;
-        }
-        .fl-recent-gig__title {
-          font-size: 0.875rem; font-weight: 600; color: var(--color-text-dark);
-          margin-bottom: 0.2rem;
-        }
-        .fl-recent-gig__meta { font-size: 0.78rem; color: var(--color-text-light); }
         
+        .fl-status-badge {
+          display: inline-flex; align-items: center; justify-content: center;
+          padding: 0.25rem 0.65rem; border-radius: 999px;
+          font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+          letter-spacing: 0.05em; line-height: 1;
+        }
+        .fl-status-badge--active { background: #ecfdf5; color: #059669; border: 1px solid #d1fae5; }
+        .fl-status-badge--paused { background: #fefce8; color: #ca8a04; border: 1px solid #fef08a; }
+        .fl-recent-gig {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 1rem 1.25rem; border-radius: 16px; border: 1px solid rgba(4,46,76,0.06); background: #ffffff;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+        }
+        .fl-recent-gig:hover {
+          transform: translateY(-3px) scale(1.01);
+          box-shadow: 0 10px 25px -5px rgba(4,46,76,0.08);
+          border-color: rgba(26,111,168,0.2);
+        }
+        .fl-recent-gig__left {
+          display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;
+        }
+        .fl-recent-gig__icon-wrapper {
+          width: 44px; height: 44px; border-radius: 12px;
+          background: linear-gradient(135deg, rgba(26, 111, 168, 0.08), rgba(26, 111, 168, 0.02));
+          display: flex; align-items: center; justify-content: center;
+          color: var(--color-primary); flex-shrink: 0;
+          transition: all 0.3s ease;
+        }
+        .fl-recent-gig:hover .fl-recent-gig__icon-wrapper {
+          background: var(--gradient-primary); color: #fff;
+          transform: rotate(-5deg) scale(1.05);
+          box-shadow: 0 6px 15px rgba(26, 111, 168, 0.25);
+        }
+        .fl-recent-gig__info { flex: 1; min-width: 0; }
+        .fl-recent-gig__title {
+          font-weight: 800; font-size: 0.95rem; color: var(--color-text-dark);
+          margin: 0; margin-bottom: 0.25rem;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .fl-recent-gig__meta { 
+          font-size: 0.78rem; color: var(--color-text-light); font-weight: 600;
+          display: flex; align-items: center; gap: 0.4rem;
+          margin: 0;
+        }
+        .fl-recent-gig__dot { color: #cbd5e1; }
+        .fl-recent-gig__price { color: var(--color-primary); font-weight: 700; }
+        .fl-recent-gig__right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        .fl-recent-gig__action {
+          color: #94a3b8; transition: all 0.3s ease;
+          display: flex; align-items: center;
+        }
+        .fl-recent-gig:hover .fl-recent-gig__action {
+          color: var(--color-primary); transform: translateX(3px);
+        }
+           /* --- Skill Card Redesign --- */
         .fl-skill-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-          gap: 1rem;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 1.5rem;
         }
-        .fl-skill-item {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 1rem;
-        }
-        .fl-skill-item__header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.75rem;
-        }
-        .fl-skill-name {
-          font-weight: 700;
-          font-size: 0.9rem;
-          color: var(--color-text-dark);
-        }
-        .fl-skill-level {
-          font-size: 0.65rem;
-          font-weight: 800;
-          padding: 2px 8px;
-          border-radius: 10px;
-          text-transform: uppercase;
-        }
-        .fl-skill-level--expert { background: #dbeafe; color: #1e40af; }
-        .fl-skill-level--intermediate { background: #fef3c7; color: #92400e; }
-        .fl-skill-level--beginner { background: #f1f5f9; color: #475569; }
         
-        .fl-skill-progress-bg {
-          height: 6px;
-          background: #e2e8f0;
-          border-radius: 3px;
-          margin-bottom: 0.75rem;
+        .fl-skill-card {
+          background: linear-gradient(to bottom, #ffffff, #fcfcfd);
+          border: 1px solid rgba(183, 201, 226, 0.4);
+          border-radius: 16px;
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          box-shadow: 0 4px 15px rgba(4, 46, 76, 0.04);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
           overflow: hidden;
         }
-        .fl-skill-progress-bar {
-          height: 100%;
-          border-radius: 3px;
-          transition: width 1s ease-out;
+        
+        .fl-skill-card::after {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 4px;
+          background: #e2e8f0;
+          transition: background 0.3s ease;
         }
-        .fl-skill-footer {
+        
+        .fl-skill-card--verified::after {
+          background: var(--gradient-primary);
+        }
+
+        .fl-skill-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 30px rgba(4, 46, 76, 0.08);
+          border-color: rgba(4, 46, 76, 0.15);
+        }
+
+        .fl-skill-card__top {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          font-size: 0.75rem;
+          align-items: flex-start;
+          gap: 1rem;
         }
-        .fl-skill-action-btn {
+        
+        .fl-skill-card__info {
+          flex: 1;
+          min-width: 0;
+        }
+        
+        .fl-skill-card__title-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.4rem;
+          flex-wrap: wrap;
+        }
+        
+        .fl-skill-card__name {
+          margin: 0;
+          font-family: var(--font-heading);
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: var(--color-text-dark);
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .fl-skill-card__badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          background: #ecfdf5;
+          color: #10b981;
+          padding: 0.15rem 0.5rem;
+          border-radius: 999px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        
+        .fl-skill-card__score-col {
+          text-align: right;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          flex-shrink: 0;
+        }
+        
+        .fl-skill-card__score-val {
+          font-family: var(--font-heading);
+          font-size: 1.6rem;
+          font-weight: 800;
+          color: var(--color-primary);
+          line-height: 1;
+        }
+        
+        .fl-skill-card--verified .fl-skill-card__score-val {
+          background: var(--gradient-primary);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        
+        .fl-skill-card__score-lbl {
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          color: var(--color-text-light);
+          font-weight: 700;
+          margin-top: 0.2rem;
+          letter-spacing: 0.05em;
+        }
+
+        .fl-skill-level {
+          display: inline-block;
           font-size: 0.7rem;
           font-weight: 700;
-          color: var(--color-primary);
-          text-decoration: none;
-          padding: 2px 6px;
-          border-radius: 4px;
-          background: rgba(26, 111, 168, 0.05);
-          transition: all 0.2s;
+          padding: 0.25rem 0.6rem;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
         }
-        .fl-skill-action-btn:hover {
-          background: var(--color-primary);
-          color: #fff;
+        .fl-skill-level--expert { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .fl-skill-level--intermediate { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
+        .fl-skill-level--beginner { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+        
+        .fl-skill-card__progress-track {
+          height: 6px;
+          background: #f1f5f9;
+          border-radius: 999px;
+          overflow: hidden;
+          width: 100%;
         }
-        .fl-skill-score { color: var(--color-text-mid); font-weight: 600; }
-        .fl-skill-verified { color: #10b981; font-weight: 700; }
+        
+        .fl-skill-card__progress-fill {
+          height: 100%;
+          background: #94a3b8;
+          border-radius: 999px;
+          transition: width 1s ease-out;
+        }
+        
+        .fl-skill-card--verified .fl-skill-card__progress-fill {
+          background: var(--gradient-primary);
+        }
+        
+        .fl-skill-card__footer {
+          margin-top: auto;
+          display: flex;
+        }
         
         .fl-btn--sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
 

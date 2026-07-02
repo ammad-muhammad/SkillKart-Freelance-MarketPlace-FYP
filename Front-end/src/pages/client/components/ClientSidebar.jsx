@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Bell,
   Settings,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 import './ClientSidebar.css';
 
@@ -115,7 +116,7 @@ const ClientSidebar = () => {
             className="cl-sidebar__logout"
             onClick={() => { setOpen(false); logout(); }}
           >
-            <span>🚪</span>
+            <span className="cl-sidebar__icon"><LogOut size={20} /></span>
             <span>Logout</span>
           </button>
         </div>

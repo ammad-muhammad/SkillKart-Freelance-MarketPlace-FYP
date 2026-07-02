@@ -202,7 +202,7 @@ export default function JobDetails() {
                     <DollarSign size={18} />
                     <span>
                       {job.budget?.type === 'fixed' 
-                        ? `Rs. ${job.budget?.min} - Rs. ${job.budget?.max} Fixed` 
+                        ? (job.budget?.min === job.budget?.max ? `Rs. ${job.budget?.min} Fixed` : `Rs. ${job.budget?.min} - Rs. ${job.budget?.max} Fixed`)
                         : `Rs. ${job.budget?.min}/hr Hourly`}
                     </span>
                   </div>

@@ -20,7 +20,8 @@ import {
   Bell,
   Settings,
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  LogOut
 } from 'lucide-react';
 import './FreelancerSidebar.css';
 
@@ -125,7 +126,7 @@ const FreelancerSidebar = () => {
             className="fl-sidebar__logout"
             onClick={() => { setOpen(false); logout(); }}
           >
-            <span>🚪</span>
+            <span className="fl-sidebar__icon"><LogOut size={20} /></span>
             <span>Logout</span>
           </button>
         </div>

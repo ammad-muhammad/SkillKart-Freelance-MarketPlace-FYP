@@ -1,5 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
+import { LogOut } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
 import { validatePassword } from '../../utils/validation';
@@ -388,7 +389,7 @@ const ClientSecurity = () => {
         <h3 className="cl-section-title" style={{ color: '#dc2626' }}>⚠️ Danger Zone</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button className="cl-btn cl-btn--ghost" onClick={handleLogoutAll} disabled={loggingOutAll}>
-            🚪 {loggingOutAll ? 'Signing out…' : 'Logout from All Devices'}
+            <LogOut size={16} /> {loggingOutAll ? 'Signing out…' : 'Logout from All Devices'}
           </button>
           <button className="cl-btn cl-btn--danger" onClick={() => { setDeactivateStep(1); setDeactivateOtp(''); setDeactivateModal(true); }}>
             🗑 Deactivate Account
