@@ -29,4 +29,8 @@ router.post('/wallet/checkout', authenticate, requireRole('client'), paymentCont
 router.post('/wallet/deposit', authenticate, requireRole('client'), paymentController.depositFunds);
 router.post('/wallet/withdraw', authenticate, requireRole('freelancer'), paymentController.withdrawFunds);
 
+// Stripe Connect Endpoints for Freelancers
+router.post('/stripe/connect', authenticate, requireRole('freelancer'), paymentController.connectStripeAccount);
+router.post('/stripe/callback', authenticate, requireRole('freelancer'), paymentController.stripeConnectCallback);
+
 module.exports = router;

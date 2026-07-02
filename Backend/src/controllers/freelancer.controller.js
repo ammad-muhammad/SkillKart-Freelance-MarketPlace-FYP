@@ -8,6 +8,7 @@ const { NotFoundError } = require('../utils/apiError');
 const { applyUsernameUpdate } = require('../utils/username');
 const { syncFreelancerVerification } = require('../services/verification.service');
 const { getAIProvider } = require('../services/ai');
+const { getConnectedBalance } = require('../services/stripe.service');
 
 // Simple in-memory cache for semantic skill expansion
 const skillExpansionCache = new Map();
@@ -97,6 +98,17 @@ const getProfile = asyncHandler(async (req, res) => {
   const updatedProfileObj = updatedProfile ? updatedProfile.toObject() : null;
   if (updatedProfileObj) {
     await enrichFreelancerProfile(updatedProfileObj);
+    
+    // Fetch real-time Stripe wallet balance if onboarded
+    if (updatedProfileObj.stripeAccountId && updatedProfileObj.stripeOnboardingComplete) {
+      try {
+        const stripeBalance = await getConnectedBalance(updatedProfileObj.stripeAccountId);
+        // Expose stripe balances as additional info, keep walletBalance untouched as source of truth
+        updatedProfileObj.stripeBalance = stripeBalance;
+      } catch (e) {
+        console.error('Failed to fetch stripe balance for profile:', e.message);
+      }
+    }
   }
   
   sendSuccess(res, {

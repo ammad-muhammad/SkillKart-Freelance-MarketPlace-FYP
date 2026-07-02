@@ -126,20 +126,25 @@ const DashboardOverview = () => {
             { key: 'profileCompleted', label: 'Profile Completion (Bio, Title, Skills)', required: true },
             { key: 'onboardingCompleted', label: 'Onboarding Flow Completed', required: true },
             { key: 'allSkillTestsPassed', label: 'Skill Verification (Tests Passed)', required: true },
-            { key: 'identityVerified', label: 'Identity Verification', required: false },
             { key: 'paymentMethodAdded', label: 'Payment Method Linked', required: false },
           ].map((item) => {
-            const isCompleted = profile.verificationDetails?.[item.key];
+            // Also consider paymentMethodAdded completed if stripeOnboardingComplete is true
+            let isCompleted = profile.verificationDetails?.[item.key];
+            if (item.key === 'paymentMethodAdded' && profile.stripeOnboardingComplete) {
+              isCompleted = true;
+            }
+            
             return (
-              <div key={item.key} className={`fl-check-item ${isCompleted ? 'fl-check-item--done' : ''}`}>
-                <span className="fl-check-icon">
-                  {isCompleted ? <CheckCircle2 size={18} fill="#10b981" color="#fff" /> : <div className="fl-check-circle" />}
-                </span>
-                <span className="fl-check-label">
-                  {item.label}
-                  {item.required && !isCompleted && <span className="fl-check-tag">Required</span>}
-                  {!item.required && <span className="fl-check-tag fl-check-tag--optional">Upcoming</span>}
-                </span>
+              <div key={item.key} className={`fl-check-item ${isCompleted ? 'fl-check-item--done' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span className="fl-check-icon">
+                    {isCompleted ? <CheckCircle2 size={18} fill="#10b981" color="#fff" /> : <div className="fl-check-circle" />}
+                  </span>
+                  <span className="fl-check-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {item.label}
+                    {item.required && !isCompleted && <span className="fl-check-tag">Required</span>}
+                  </span>
+                </div>
               </div>
             );
           })}

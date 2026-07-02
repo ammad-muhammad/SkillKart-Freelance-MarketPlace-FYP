@@ -163,7 +163,9 @@ export const FreelancerProvider = ({ children }) => {
         walletBalance: dbProfile.walletBalance || 0,
         totalEarnings: dbProfile.totalEarnings || 0,
         verificationStatus: dbProfile.verificationStatus || 'unverified',
-        verificationDetails: dbProfile.verificationDetails || emptyProfile.verificationDetails
+        verificationDetails: dbProfile.verificationDetails || emptyProfile.verificationDetails,
+        stripeOnboardingComplete: dbProfile.stripeOnboardingComplete || false,
+        stripeAccountId: dbProfile.stripeAccountId || ''
       };
 
       console.log("[FreelancerContext] Gigs Response:", gigsRes.data);

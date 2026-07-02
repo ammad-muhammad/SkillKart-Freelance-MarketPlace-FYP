@@ -202,7 +202,10 @@ export const ClientProvider = ({ children }) => {
         createdAt: new Date(j.createdAt).toLocaleDateString(),
         deadline: j.deadline ? new Date(j.deadline).toLocaleDateString() : 'N/A',
         duration: j.duration,
-        proposals: j.proposals || []
+        proposals: j.proposals || [],
+        source: j.source || 'project',
+        hiredFreelancer: j.hiredFreelancer,
+        payment: j.payment
       }));
 
       setProjects(transformedJobs);

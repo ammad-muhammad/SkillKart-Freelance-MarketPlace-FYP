@@ -43,7 +43,11 @@ import ClientPostProject from "../pages/client/PostProject";
 import ClientSavedFreelancers from "../pages/client/ClientSavedFreelancers";
 import ClientMessages from "../pages/client/ClientMessages";
 import ClientWallet from "../pages/client/ClientWallet";
+
 import ReviewProposals from "../pages/client/ReviewProposals";
+
+// Freelancer
+import StripeCallback from '../pages/freelancer/StripeCallback';
 
 // Public Pages
 import Home from "../pages/public/Home/Home";
@@ -183,6 +187,7 @@ const AppRoutes = () => {
             <Route path="proposals" element={<FreelancerProposals />} />
             <Route path="work" element={<FreelancerWork />} />
             <Route path="wallet" element={<FreelancerWallet />} />
+            <Route path="wallet/stripe-callback" element={<StripeCallback />} />
             <Route path="skill-test" element={<SkillTest />} />
             <Route path="notifications" element={<NotificationsPage />} />
           </Route>

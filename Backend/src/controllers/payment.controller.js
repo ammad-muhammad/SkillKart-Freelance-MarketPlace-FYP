@@ -3,10 +3,11 @@ const Job = require('../models/Job');
 const Proposal = require('../models/Proposal');
 const ClientProfile = require('../models/ClientProfile');
 const FreelancerProfile = require('../models/FreelancerProfile');
+const Withdrawal = require('../models/Withdrawal');
 const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
-const { createCheckoutSession, verifyCheckoutSession } = require('../services/stripe.service');
+const { createCheckoutSession, verifyCheckoutSession, createConnectAccount, createAccountLink, checkAccountStatus, createTransfer, createPayout, getConnectedBalance, getChargeIdFromPaymentIntent } = require('../services/stripe.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
 
@@ -231,8 +232,28 @@ const confirmPayment = asyncHandler(async (req, res) => {
           freelancerEarning: payment.freelancerPayout,
           clientSpend: payment.totalAmount,
         });
+
+        // ==========================================
+        // STRIPE CONNECT: SOURCE-TRACKED TRANSFER
+        // Move funds to Freelancer's Stripe Wallet
+        // ==========================================
+        const profile = await FreelancerProfile.findOne({ userId: job.hiredFreelancer });
+        if (profile && profile.stripeAccountId && profile.stripeOnboardingComplete) {
+          // Send the deposit portion
+          if (payment.stripe?.depositPaymentIntent) {
+            const depositAmount = payment.freelancerPayout / 2;
+            const chargeId = await getChargeIdFromPaymentIntent(payment.stripe.depositPaymentIntent);
+            await createTransfer(depositAmount, profile.stripeAccountId, `Deposit release for Job ${job._id}`, chargeId);
+          }
+          // Send the final portion
+          if (payment.stripe?.finalPaymentIntent) {
+            const finalAmount = payment.freelancerPayout / 2;
+            const chargeId = await getChargeIdFromPaymentIntent(payment.stripe.finalPaymentIntent);
+            await createTransfer(finalAmount, profile.stripeAccountId, `Final release for Job ${job._id}`, chargeId);
+          }
+        }
       } catch (e) {
-        console.error('[confirmPayment] stats roll-up failed:', e.message);
+        console.error('[confirmPayment] stats roll-up or transfer failed:', e.message);
       }
       // Tell the freelancer they were paid.
       if (job.hiredFreelancer) {
@@ -277,7 +298,10 @@ const getMyPayments = asyncHandler(async (req, res) => {
   .populate('freelancerId', 'firstName lastName email profilePicture')
   .sort({ createdAt: -1 });
 
-  sendSuccess(res, { data: { payments } });
+  // Find all withdrawals for the user
+  const withdrawals = await Withdrawal.find({ userId: uid }).sort({ createdAt: -1 });
+
+  sendSuccess(res, { data: { payments, withdrawals } });
 });
 
 /**
@@ -356,7 +380,56 @@ const depositFunds = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Funds deposited successfully', data: { walletBalance: profile.walletBalance } });
 });
 
-const Withdrawal = require('../models/Withdrawal');
+
+
+/**
+ * Initiate Stripe Connect Onboarding
+ */
+const connectStripeAccount = asyncHandler(async (req, res) => {
+  const profile = await FreelancerProfile.findOne({ userId: req.user._id });
+  if (!profile) throw new NotFoundError('Profile not found');
+
+  let accountId = profile.stripeAccountId;
+  if (!accountId) {
+    const account = await createConnectAccount(req.user.email || 'freelancer@example.com');
+    accountId = account.id;
+    profile.stripeAccountId = accountId;
+    await profile.save();
+  }
+
+  // Determine return URL based on env
+  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';
+  const returnUrl = `${CLIENT_URL}/freelancer/wallet/stripe-callback`;
+  const refreshUrl = `${CLIENT_URL}/freelancer/wallet`;
+
+  const link = await createAccountLink(accountId, refreshUrl, returnUrl);
+  sendSuccess(res, { message: 'Stripe onboarding initiated', data: { url: link.url } });
+});
+
+/**
+ * Handle return from Stripe Onboarding
+ */
+const stripeConnectCallback = asyncHandler(async (req, res) => {
+  const profile = await FreelancerProfile.findOne({ userId: req.user._id });
+  if (!profile || !profile.stripeAccountId) {
+    throw new BadRequestError('No connected Stripe account found');
+  }
+
+  const status = await checkAccountStatus(profile.stripeAccountId);
+  
+  const isTestMode = (process.env.STRIPE_SECRET_KEY || '').includes('sk_test_');
+  if (status.payouts_enabled || status.details_submitted || isTestMode) {
+    profile.stripeOnboardingComplete = true;
+    if (!profile.verificationDetails) {
+      profile.verificationDetails = {};
+    }
+    profile.verificationDetails.paymentMethodAdded = true;
+    await profile.save();
+    return sendSuccess(res, { message: 'Stripe account connected successfully', data: { stripeOnboardingComplete: true } });
+  }
+
+  return sendSuccess(res, { message: 'Stripe onboarding incomplete', data: { stripeOnboardingComplete: false } });
+});
 
 /**
  * Withdraw funds from wallet (Freelancer)
@@ -378,8 +451,43 @@ const withdrawFunds = asyncHandler(async (req, res) => {
   if (profile.walletBalance < Number(amount)) {
     throw new BadRequestError('Insufficient funds available for withdrawal.');
   }
+
+  // Handle Stripe specifically (Manual Payouts)
+  if (method === 'stripe') {
+    if (!profile.stripeAccountId || !profile.stripeOnboardingComplete) {
+      return res.status(200).json({
+        success: true,
+        message: 'Stripe onboarding required',
+        data: { needs_onboarding: true }
+      });
+    }
+
+    // Note: We bypass manual stripeBalance checking because Stripe holds test
+    // mode balances in USD while our app amounts are in PKR. Comparing them
+    // directly (e.g. 100 USD vs 20000 PKR) fails incorrectly.
+    // Instead, we trust the local walletBalance (already checked above) 
+    // and rely on Stripe to throw an error if the actual converted balance is too low.
+
+    // Execute Real Stripe Payout
+    const payout = await createPayout(amount, profile.stripeAccountId, 'pkr');
+    
+    const withdrawal = await Withdrawal.create({
+      userId: req.user._id,
+      amount: Number(amount),
+      method,
+      status: payout.simulated ? 'completed' : 'processing',
+      transactionId: payout.id
+    });
+
+    profile.walletBalance -= Number(amount);
+    await profile.save();
+    
+    notifications.onWithdrawalRequested(req.user._id, { amount, method });
+    
+    return sendSuccess(res, { message: `Payout of PKR ${amount} to your bank account initiated!`, data: { withdrawal, walletBalance: profile.walletBalance } });
+  }
   
-  // Create Withdrawal Request first
+  // Create Withdrawal Request first (For Bank/PayPal)
   const withdrawal = await Withdrawal.create({
     userId: req.user._id,
     amount: Number(amount),
@@ -392,7 +500,7 @@ const withdrawFunds = asyncHandler(async (req, res) => {
   // Trigger notification
   notifications.onWithdrawalRequested(req.user._id, { amount, method });
 
-  sendSuccess(res, { message: `Withdrawal of $${amount} via ${method} initiated`, data: { withdrawal, walletBalance: profile.walletBalance } });
+  sendSuccess(res, { message: `Withdrawal of Rs. ${amount} via ${method} initiated`, data: { withdrawal, walletBalance: profile.walletBalance } });
 });
 
 module.exports = {
@@ -404,5 +512,7 @@ module.exports = {
   checkoutWalletDeposit,
   depositFunds,
   withdrawFunds,
+  connectStripeAccount,
+  stripeConnectCallback,
   FEE_RATE
 };

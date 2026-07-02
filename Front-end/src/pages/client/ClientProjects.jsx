@@ -42,13 +42,13 @@ const ClientProjects = () => {
   const openReview = async (proj) => {
     setRevisionNote('');
     const projectId = proj._id || proj.id;
-    setReviewing({ id: projectId, title: proj.title });
+    setReviewing({ id: projectId, title: proj.title, isCompleted: proj.status === 'completed' });
     // Fetch the full job to show the freelancer's delivery details.
     try {
       const { data } = await jobsAPI.getJobById(projectId);
       const job = data?.data?.job || data?.data || {};
       const freelancerName = job.hiredFreelancer ? `${job.hiredFreelancer.firstName} ${job.hiredFreelancer.lastName}` : 'Freelancer';
-      setReviewing({ id: projectId, title: proj.title, delivery: job.delivery || null, revisionCount: job.revisionCount || 0, freelancerName });
+      setReviewing({ id: projectId, title: proj.title, isCompleted: proj.status === 'completed', delivery: job.delivery || null, revisionCount: job.revisionCount || 0, freelancerName });
     } catch {
       /* keep the modal open with no delivery detail */
     }
@@ -257,14 +257,19 @@ const ClientProjects = () => {
                     {' '} · Posted {proj.createdAt}
                   </p>
                 </div>
-                <span className={`cl-badge cl-badge--${proj.status}`}>
-                  {proj.status === 'open' ? '🟢 Open' :
-                   proj.status === 'draft' ? '📂 Draft' :
-                   proj.status === 'in-progress' ? '🔵 In Progress' :
-                   proj.status === 'delivered' ? '📦 Delivered — review needed' :
-                   proj.status === 'completed' ? '✅ Completed' :
-                   proj.status === 'expired' ? '⏰ Expired' :
-                   '⚪ Closed'}
+                <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span className={`cl-badge`} style={{ background: proj.source === 'gig' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(59, 130, 246, 0.1)', color: proj.source === 'gig' ? '#a855f7' : '#3b82f6' }}>
+                    {proj.source === 'gig' ? '🛍️ Gig Order' : '📝 Custom Project'}
+                  </span>
+                  <span className={`cl-badge cl-badge--${proj.status}`}>
+                    {proj.status === 'open' ? '🟢 Open' :
+                     proj.status === 'draft' ? '📂 Draft' :
+                     proj.status === 'in-progress' ? '🔵 In Progress' :
+                     proj.status === 'delivered' ? '📦 Delivered — review needed' :
+                     proj.status === 'completed' ? '✅ Completed' :
+                     proj.status === 'expired' ? '⏰ Expired' :
+                     '⚪ Closed'}
+                  </span>
                 </span>
               </div>
 
@@ -306,27 +311,43 @@ const ClientProjects = () => {
                         🚀 Publish Draft
                       </button>
                     )}
-                    {proj.status === 'in-progress' && (
-                      <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
-                        💳 Fund Deposit
-                      </button>
+                    {proj.status === 'in-progress' && proj.source !== 'gig' && (
+                      proj.payment && (proj.payment.status === 'deposit_paid' || proj.payment.status === 'released') ? (
+                        <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
+                          ✅ Deposit Funded
+                        </button>
+                      ) : (
+                        <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
+                          💳 Fund Deposit
+                        </button>
+                      )
                     )}
                     {proj.status === 'completed' && (
-                      <button 
-                        className="cl-btn cl-btn--ghost cl-btn--sm"
-                        onClick={() => setShowReviewModal({ jobId: proj.id, targetName: 'Freelancer' })}
-                      >
-                        ⭐️ Leave Review
-                      </button>
+                      <>
+                        <button className="cl-btn cl-btn--secondary cl-btn--sm" onClick={() => openReview(proj)}>
+                          📂 View Submitted Work
+                        </button>
+                        <button 
+                          className="cl-btn cl-btn--ghost cl-btn--sm"
+                          onClick={() => setShowReviewModal({ jobId: proj.id, targetName: 'Freelancer' })}
+                        >
+                          ⭐️ Leave Review
+                        </button>
+                      </>
                     )}
                     {proj.status === 'delivered' && (
                       <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={() => openReview(proj)}>
-                        📦 Review Delivery
+                        📦 Review Submitted Work
                       </button>
                     )}
-                    {proj.status !== 'draft' && (
+                    {proj.status !== 'draft' && proj.source !== 'gig' && (
                       <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
                         👥 View Proposals ({proj.proposals?.length || 0})
+                      </Link>
+                    )}
+                    {proj.hiredFreelancer && (
+                      <Link to={`/client/messages?user=${proj.hiredFreelancer._id}`} className="cl-btn cl-btn--ghost cl-btn--sm">
+                        💬 Contact Freelancer
                       </Link>
                     )}
                     <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}>✏ Edit</button>
@@ -573,26 +594,34 @@ const ClientProjects = () => {
               <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Loading delivery details…</p>
             )}
 
-            <div className="cl-form-group" style={{ marginBottom: '1rem' }}>
-              <label className="cl-label">Need changes? Describe what to revise (optional for accept)</label>
-              <textarea
-                className="cl-textarea"
-                rows={3}
-                placeholder="e.g. Please adjust the colour scheme and fix the mobile layout…"
-                value={revisionNote}
-                onChange={(e) => setRevisionNote(e.target.value)}
-              />
-            </div>
+            {!reviewing.isCompleted ? (
+              <>
+                <div className="cl-form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="cl-label">Need changes? Describe what to revise (optional for accept)</label>
+                  <textarea
+                    className="cl-textarea"
+                    rows={3}
+                    placeholder="e.g. Please adjust the colour scheme and fix the mobile layout…"
+                    value={revisionNote}
+                    onChange={(e) => setRevisionNote(e.target.value)}
+                  />
+                </div>
 
-            <div className="cl-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button className="cl-btn cl-btn--primary" onClick={handleAccept} disabled={actioning}>
-                {actioning ? 'Working…' : '✅ Accept & Complete'}
-              </button>
-              <button className="cl-btn cl-btn--outline" onClick={handleRequestRevision} disabled={actioning} style={{ color: '#d97706', borderColor: '#d97706' }}>
-                🔁 Request Revision
-              </button>
-              <button className="cl-btn cl-btn--ghost" onClick={() => setReviewing(null)} disabled={actioning}>Cancel</button>
-            </div>
+                <div className="cl-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button className="cl-btn cl-btn--primary" onClick={handleAccept} disabled={actioning}>
+                    {actioning ? 'Working…' : '✅ Accept & Complete'}
+                  </button>
+                  <button className="cl-btn cl-btn--outline" onClick={handleRequestRevision} disabled={actioning} style={{ color: '#d97706', borderColor: '#d97706' }}>
+                    🔁 Request Revision
+                  </button>
+                  <button className="cl-btn cl-btn--ghost" onClick={() => setReviewing(null)} disabled={actioning}>Cancel</button>
+                </div>
+              </>
+            ) : (
+              <div className="cl-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button className="cl-btn cl-btn--ghost" onClick={() => setReviewing(null)} disabled={actioning}>Close</button>
+              </div>
+            )}
           </div>
         )}
       </Modal>

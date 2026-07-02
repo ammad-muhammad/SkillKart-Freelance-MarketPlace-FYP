@@ -72,6 +72,8 @@ const freelancerProfileSchema = new mongoose.Schema({
   completedProjects: { type: Number, default: 0 },
   totalEarnings: { type: Number, default: 0 },
   walletBalance: { type: Number, default: 0 },
+  stripeAccountId: { type: String },
+  stripeOnboardingComplete: { type: Boolean, default: false },
   verificationDetails: {
     emailVerified: { type: Boolean, default: false },
     onboardingCompleted: { type: Boolean, default: false },

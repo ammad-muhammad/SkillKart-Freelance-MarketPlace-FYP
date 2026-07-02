@@ -231,11 +231,20 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const query = { clientId };
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
+    .populate('hiredFreelancer', 'firstName lastName profilePicture _id')
     .skip(skip)
     .limit(limit)
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
-  sendPaginated(res, { data: jobs, page, limit, total });
+  const payments = await Payment.find({ jobId: { $in: jobs.map((j) => j._id) } })
+    .select('jobId status depositAmount finalAmount totalAmount')
+    .lean();
+  const payByJob = new Map(payments.map((p) => [String(p.jobId), p]));
+
+  const items = jobs.map((j) => ({ ...j, payment: payByJob.get(String(j._id)) || null }));
+
+  sendPaginated(res, { data: items, page, limit, total });
 });
 
 /**

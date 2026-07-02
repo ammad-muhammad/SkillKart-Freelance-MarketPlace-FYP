@@ -119,22 +119,22 @@ const onNewMessage = (recipientId, { senderName, role }) => notify(recipientId, 
 
 const onWithdrawalRequested = (freelancerId, { amount, method }) => notify(freelancerId, {
   type: TYPES.WITHDRAWAL_REQUESTED,
-  title: 'Withdrawal Requested',
-  message: `Your request to withdraw $${amount} via ${method} has been received and is pending processing.`,
+  title: 'Withdrawal Initiated 💸',
+  message: `Your withdrawal of PKR ${amount} via ${method === 'stripe' ? 'Stripe Connect' : method} has been successfully initiated.`,
   link: '/freelancer/wallet',
 });
 
 const onWithdrawalCompleted = (freelancerId, { amount }) => notify(freelancerId, {
   type: TYPES.WITHDRAWAL_COMPLETED,
   title: 'Withdrawal Completed 💸',
-  message: `Your withdrawal of $${amount} has been successfully processed.`,
+  message: `Your withdrawal of PKR ${amount} has been successfully processed.`,
   link: '/freelancer/wallet',
 });
 
 const onEscrowRefunded = (clientId, { amount, job }) => notify(clientId, {
   type: TYPES.ESCROW_REFUNDED,
   title: 'Escrow Refunded',
-  message: `$${amount} has been refunded to your wallet for the cancelled project "${job?.title}".`,
+  message: `PKR ${amount} has been refunded to your wallet for the cancelled project "${job?.title}".`,
   link: '/client/wallet',
   jobId: job?._id,
 });
