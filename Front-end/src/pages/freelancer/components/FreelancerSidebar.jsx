@@ -4,24 +4,42 @@ import { useFreelancer } from '../../../context/FreelancerContext';
 import { useAuth } from '../../../hooks/useAuth';
 import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import { useNotification } from '../../../context/NotificationContext';
+import {
+  Zap,
+  Search,
+  User,
+  Eye,
+  Package,
+  PlusSquare,
+  Briefcase,
+  CreditCard,
+  Layers,
+  ClipboardList,
+  FileText,
+  MessageSquare,
+  Bell,
+  Settings,
+  Lock,
+  CheckCircle2
+} from 'lucide-react';
 import './FreelancerSidebar.css';
 
 const NAV_ITEMS = [
-  { to: '/freelancer/dashboard', icon: '⚡', label: 'Dashboard' },
-  { to: '/browse-projects', icon: '🔍', label: 'Find Work' },
-  { to: '/freelancer/profile', icon: '👤', label: 'My Profile' },
-  { to: '__public_profile__', icon: '👁️', label: 'View Public Profile' },
-  { to: '/freelancer/gigs', icon: '📦', label: 'My Gigs' },
-  { to: '/freelancer/gigs/create', icon: '✚', label: 'Create New Gig' },
-  { to: '/freelancer/work', icon: '💼', label: 'My Work' },
-  { to: '/freelancer/wallet', icon: '💳', label: 'Wallet & Earnings' },
-  { to: '/freelancer/portfolio', icon: '🗂️', label: 'Portfolio' },
-  { to: '/freelancer/proposals', icon: '📋', label: 'My Proposals' },
-  { to: '/freelancer/saved', icon: '📑', label: 'Saved Projects' },
-  { to: '/freelancer/messages', icon: '💬', label: 'Messages' },
-  { to: '/freelancer/notifications', icon: '🔔', label: 'Notifications' },
-  { to: '/freelancer/settings', icon: '⚙️', label: 'Settings' },
-  { to: '/freelancer/security', icon: '🔒', label: 'Security' },
+  { to: '/freelancer/dashboard', icon: <Zap size={20} />, label: 'Dashboard' },
+  { to: '/browse-projects', icon: <Search size={20} />, label: 'Find Work' },
+  { to: '/freelancer/profile', icon: <User size={20} />, label: 'My Profile' },
+  { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile' },
+  { to: '/freelancer/gigs', icon: <Package size={20} />, label: 'My Gigs' },
+  { to: '/freelancer/gigs/create', icon: <PlusSquare size={20} />, label: 'Create New Gig' },
+  { to: '/freelancer/work', icon: <Briefcase size={20} />, label: 'My Work' },
+  { to: '/freelancer/wallet', icon: <CreditCard size={20} />, label: 'Wallet & Earnings' },
+  { to: '/freelancer/portfolio', icon: <Layers size={20} />, label: 'Portfolio' },
+  { to: '/freelancer/proposals', icon: <ClipboardList size={20} />, label: 'My Proposals' },
+  { to: '/freelancer/saved', icon: <FileText size={20} />, label: 'Saved Projects' },
+  { to: '/freelancer/messages', icon: <MessageSquare size={20} />, label: 'Messages' },
+  { to: '/freelancer/notifications', icon: <Bell size={20} />, label: 'Notifications' },
+  { to: '/freelancer/settings', icon: <Settings size={20} />, label: 'Settings' },
+  { to: '/freelancer/security', icon: <Lock size={20} />, label: 'Security' },
 ];
 
 const FreelancerSidebar = () => {
@@ -69,7 +87,9 @@ const FreelancerSidebar = () => {
             <p className="fl-sidebar__name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fullName}</span>
               {profile.verificationStatus === 'verified' && (
-                <span className="fl-verified-badge" style={{ flexShrink: 0 }} title="Verified Expert">✓</span>
+                <span className="fl-verified-badge" style={{ flexShrink: 0 }} title="Verified Expert">
+                  <CheckCircle2 size={14} color="var(--fl-accent-primary)" style={{ marginLeft: 4 }} />
+                </span>
               )}
             </p>
             <p className="fl-sidebar__title">{title}</p>

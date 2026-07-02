@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
-import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, CheckCircle2 } from 'lucide-react';
+import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2 } from 'lucide-react';
 import './ClientDashboard.css';
 
 const StatCard = ({ icon, value, label, to }) => {
@@ -69,7 +69,7 @@ const ClientDashboardOverview = () => {
             <h2 className="cl-dash-hero__name">{personalInfo.fullName}</h2>
             <p className="cl-dash-hero__company">
               {personalInfo.companyType === 'Individual' ? (
-                <>👤 Individual</>
+                <><User size={13} style={{display:'inline',verticalAlign:'middle'}} /> Individual</>
               ) : (
                 <>
                   <Building2 size={13} style={{display:'inline',verticalAlign:'middle'}} /> {personalInfo.companyName} · {personalInfo.industry}
@@ -83,7 +83,7 @@ const ClientDashboardOverview = () => {
             </div>
           </div>
           <Link to="/client/profile" className="cl-btn cl-btn--outline">
-            ✏ Edit Profile
+            <Edit2 size={16} style={{ marginRight: 6 }} /> Edit Profile
           </Link>
         </div>
       </div>
@@ -97,11 +97,11 @@ const ClientDashboardOverview = () => {
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <h3 className="cl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link to="/client/projects/create" className="cl-btn cl-btn--primary">＋ Post New Project</Link>
-          <Link to="/browse-freelancers" className="cl-btn cl-btn--outline">🔍 Find Freelancers</Link>
-          <Link to="/client/projects" className="cl-btn cl-btn--ghost">View My Projects</Link>
-          <Link to="/client/messages" className="cl-btn cl-btn--ghost">💬 Messages</Link>
-          <Link to="/ai-matchmaking" className="cl-btn cl-btn--ghost">🤖 AI Matchmaking</Link>
+          <Link to="/client/projects/create" className="cl-btn cl-btn--primary"><PlusSquare size={16} style={{ marginRight: 6 }} /> Post New Project</Link>
+          <Link to="/browse-freelancers" className="cl-btn cl-btn--outline"><Search size={16} style={{ marginRight: 6 }} /> Find Freelancers</Link>
+          <Link to="/client/projects" className="cl-btn cl-btn--ghost"><FolderOpen size={16} style={{ marginRight: 6 }} /> View My Projects</Link>
+          <Link to="/client/messages" className="cl-btn cl-btn--ghost"><MessageSquare size={16} style={{ marginRight: 6 }} /> Messages</Link>
+          <Link to="/ai-matchmaking" className="cl-btn cl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
         </div>
       </div>
 

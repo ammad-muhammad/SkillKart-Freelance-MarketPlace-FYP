@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
-import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award } from 'lucide-react';
+import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle } from 'lucide-react';
 import ShareStory from './components/ShareStory';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import './FreelancerDashboard.css';
@@ -157,12 +157,12 @@ const DashboardOverview = () => {
         <h3 className="fl-section-title">
           <Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions
         </h3>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link to="/browse-projects" className="fl-btn fl-btn--primary">🔍 Find Work</Link>
-          <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline">＋ Create New Gig</Link>
-          <Link to="/freelancer/proposals" className="fl-btn fl-btn--ghost">📋 My Proposals</Link>
-          <Link to="/freelancer/messages" className="fl-btn fl-btn--ghost">💬 Messages</Link>
-          <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost">🤖 AI Matchmaking</Link>
+        <div className="fl-dashboard-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link to="/browse-projects" className="fl-btn fl-btn--primary"><Search size={16} style={{ marginRight: 6 }} /> Find Work</Link>
+          <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline">✚ Create Gig</Link>
+          <Link to="/freelancer/proposals" className="fl-btn fl-btn--ghost"><ClipboardList size={16} style={{ marginRight: 6 }} /> My Proposals</Link>
+          <Link to="/freelancer/messages" className="fl-btn fl-btn--ghost"><MessageSquare size={16} style={{ marginRight: 6 }} /> Messages</Link>
+          <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
         </div>
       </div>
 
@@ -193,10 +193,10 @@ const DashboardOverview = () => {
                   </span>
                   <Link 
                     to={`/freelancer/skill-test?skill=${encodeURIComponent(skill.name)}`} 
-                    className="fl-skill-action-btn"
-                    title={skill.isVerified ? 'Retake to improve rank' : 'Take test to verify'}
                   >
-                    {skill.isVerified ? '↺ Retake' : '▶ Take Test'}
+                    <button className="fl-btn fl-btn--sm fl-btn--outline">
+                      {skill.isVerified ? <><RotateCcw size={14} style={{ marginRight: 4 }} /> Retake</> : <><Play size={14} style={{ marginRight: 4 }} /> Take Test</>}
+                    </button>
                   </Link>
                 </div>
               </div>
@@ -251,8 +251,8 @@ const DashboardOverview = () => {
                   <p className="fl-recent-gig__title">{gig.title}</p>
                   <p className="fl-recent-gig__meta">{gig.category} · ${gig.pricing.basic.price} starting</p>
                 </div>
-                <span className={`fl-badge fl-badge--${gig.status}`}>
-                  {gig.status === 'active' ? '● Active' : '⏸ Paused'}
+                <span className={`fl-status-badge fl-status-badge--${gig.status}`}>
+                  {gig.status === 'active' ? <><Circle size={10} style={{ marginRight: 4, fill: 'currentColor' }} /> Active</> : <><PauseCircle size={12} style={{ marginRight: 4 }} /> Paused</>}
                 </span>
               </div>
             ))}

@@ -7,7 +7,7 @@ import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 
 import { LANGUAGES } from '../../data/languages';
-import { Plus, Trash2, Globe, Building2, Linkedin, Zap, Clock, Search, Lightbulb, Target, Sparkles, User } from 'lucide-react';
+import { Camera, Building2, Image as ImageIcon, User, MapPin, Calendar, Globe, Edit2, AlertTriangle, Target, Check, Plus, Trash2, Zap, Clock, Search, Lightbulb, Sparkles } from 'lucide-react';
 import Select from 'react-select';
 import countryList from 'react-select-country-list';
 import { timezones } from '../../utils/timezones';
@@ -301,7 +301,6 @@ const ClientProfile = () => {
       if (field === 'companyLogo') {
         url = await apiUploadCompanyLogo(file);
       } else if (field === 'coverPhoto') {
-        console.log('Using apiUploadCover which should be uploadClientCover:', apiUploadCover.toString());
         url = await apiUploadCover(file);
       } else {
         url = await apiUploadAvatar(file, 'client');
@@ -350,7 +349,7 @@ const ClientProfile = () => {
               {editing && (
                 <>
                   <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => avatarRef.current?.click()}>
-                    📷 Change
+                    <Camera size={14} style={{ marginRight: 6 }} /> Change
                   </button>
                   <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'avatar')} />
                 </>
@@ -363,12 +362,12 @@ const ClientProfile = () => {
                 <div className="cl-logo-box">
                   {(editing ? form.companyLogo : profile?.personalInfo?.companyLogo) ? (
                     <img src={editing ? form.companyLogo : profile?.personalInfo?.companyLogo} alt="logo" />
-                  ) : <span style={{ fontSize: '2rem' }}>🏢</span>}
+                  ) : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}><Building2 size={32} /></span>}
                 </div>
                 {editing && (
                   <>
                     <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => logoRef.current?.click()}>
-                      📷 Upload
+                      <ImageIcon size={14} style={{ marginRight: 6 }} /> Upload
                     </button>
                     <input ref={logoRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'companyLogo')} />
                   </>
@@ -382,12 +381,12 @@ const ClientProfile = () => {
               <div className="cl-logo-box" style={{ width: '160px', border: '1px dashed #cbd5e1' }}>
                 {(editing ? form.coverPhoto : profile?.personalInfo?.coverPhoto) ? (
                   <img src={editing ? form.coverPhoto : profile?.personalInfo?.coverPhoto} alt="cover" style={{ objectFit: 'cover' }} />
-                ) : <span style={{ fontSize: '1.5rem', color: '#94a3b8' }}>🖼️</span>}
+                ) : <span style={{ fontSize: '1.5rem', color: '#94a3b8' }}><ImageIcon size={24} /></span>}
               </div>
               {editing && (
                 <>
                   <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => coverRef.current?.click()}>
-                    📷 Upload
+                    <ImageIcon size={14} style={{ marginRight: 6 }} /> Upload
                   </button>
                   <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'coverPhoto')} />
                 </>
@@ -397,31 +396,37 @@ const ClientProfile = () => {
 
           <div className="cl-profile-hero__info">
             <h2 className="cl-profile-hero__name">{data.fullName || 'New Client'}</h2>
-            <p className="cl-profile-hero__company">
+            <div className="cl-prof-header-meta">
               {data.companyType === 'Individual' ? (
-                <span>👤 Individual Client</span>
+                <span><User size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> Individual Client</span>
               ) : (
-                <span>🏢 {data.companyName || 'No Company'} · {data.industry || 'No Industry Specified'}</span>
+                <span><Building2 size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {data.companyName || 'No Company'} · {data.industry || 'No Industry Specified'}</span>
               )}
-            </p>
-            <div className="cl-profile-hero__meta">
-              <span>📍 {data.location || 'Location Not Specified'}</span>
-              <span>🗓️ Member Since: {data.memberSince || 'N/A'}</span>
-              {data.companyType !== 'Individual' && data.website && (
-                <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>🌐 Website</a>
-              )}
+              <div className="cl-prof-header-stats">
+                <span><MapPin size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {data.location || 'Location Not Specified'}</span>
+                <span><Calendar size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> Member Since: {data.memberSince || 'N/A'}</span>
+                {data.website && (
+                  <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Globe size={14} /> Website
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
           {!editing && (
-            <button className="cl-btn cl-btn--primary" style={{ width: 'auto' }} onClick={startEdit}>✏ Edit Profile</button>
+            <div className="cl-prof-actions">
+              <button className="cl-btn cl-btn--primary" style={{ width: 'auto' }} onClick={startEdit}>
+                <Edit2 size={14} style={{marginRight: 6}} /> Edit Profile
+              </button>
+            </div>
           )}
         </div>
       </div>
 
       {/* Personal Info */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title">👤 Personal Information</h3>
+        <h3 className="cl-section-title"><User size={18} style={{marginRight:6, verticalAlign:'middle'}} /> Personal Information</h3>
         <div className="cl-form-grid">
           {/* Full Name */}
           <div className="cl-form-group">
@@ -434,7 +439,7 @@ const ClientProfile = () => {
               disabled={!editing}
               placeholder="e.g. John Doe"
             />
-            {editing && errors.fullName && <span className="cl-error">⚠ {errors.fullName}</span>}
+            {editing && errors.fullName && <span className="cl-error"><AlertTriangle size={12} /> {errors.fullName}</span>}
           </div>
 
           {/* Username */}
@@ -517,7 +522,7 @@ const ClientProfile = () => {
                 disabled={!editing}
                 placeholder="e.g. Acme Corp"
               />
-              {editing && errors.companyName && <span className="cl-error">⚠ {errors.companyName}</span>}
+              {editing && errors.companyName && <span className="cl-error"><AlertTriangle size={12} /> {errors.companyName}</span>}
             </div>
           )}
 
@@ -582,7 +587,7 @@ const ClientProfile = () => {
                     : (profile?.personalInfo?.industry || 'N/A')}
                 </div>
               )}
-              {editing && errors.industry && <span className="cl-error">⚠ {errors.industry}</span>}
+              {editing && errors.industry && <span className="cl-error"><AlertTriangle size={12} /> {errors.industry}</span>}
             </div>
           )}
 
@@ -632,7 +637,7 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label">LinkedIn Profile (Optional)</label>
             <div style={{ position: 'relative' }}>
-              <Linkedin size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+              <div style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }}><Building2 size={16} /></div>
               <input
                 type="text"
                 className="cl-input"
@@ -719,7 +724,7 @@ const ClientProfile = () => {
             />
             {editing && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem' }}>
-                {errors.bio ? <span className="cl-error">⚠ {errors.bio}</span> : <span />}
+                {errors.bio ? <span className="cl-error"><AlertTriangle size={12} /> {errors.bio}</span> : <span />}
                 <span className="cl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>
               </div>
             )}
@@ -730,7 +735,7 @@ const ClientProfile = () => {
       {/* Languages */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 className="cl-section-title" style={{ marginBottom: 0 }}>🌐 Languages Spoken</h3>
+          <h3 className="cl-section-title" style={{ marginBottom: 0 }}><Globe size={18} style={{marginRight:6, verticalAlign:'middle'}} /> Languages Spoken</h3>
           {editing && (
             <button 
               className="cl-btn cl-btn--ghost cl-btn--sm" 
@@ -783,7 +788,7 @@ const ClientProfile = () => {
               {editing && (
                 <button 
                   className="cl-btn cl-btn--ghost cl-btn--sm" 
-                  style={{ color: '#ef4444', height: '42px', border: '1px solid #fee2e2', background: '#fef2f2', width: 'auto' }}
+                  style={{ color: '#ef4444', height: '42px', border: '1px solid #fee2e2', background: '#fef2e2', width: 'auto' }}
                   onClick={() => setLanguages(languages.filter((_, i) => i !== idx))}
                 >
                   <Trash2 size={16} />
@@ -791,14 +796,14 @@ const ClientProfile = () => {
               )}
             </div>
           ))}
-          {languages.length === 0 && <p style={{ fontSize: '0.85rem', color: '#ef4444' }}>⚠ No languages added. At least one is required.</p>}
-          {editing && errors.languages && <span className="cl-error">⚠ {errors.languages}</span>}
+          {languages.length === 0 && <p style={{ fontSize: '0.85rem', color: '#ef4444' }}><AlertTriangle size={12} /> No languages added. At least one is required.</p>}
+          {editing && errors.languages && <span className="cl-error"><AlertTriangle size={12} /> {errors.languages}</span>}
         </div>
       </div>
 
       {/* Project Preferences */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title">🎯 Project Preferences</h3>
+        <h3 className="cl-section-title"><Target size={18} style={{marginRight:6, verticalAlign:'middle'}} /> Project Preferences</h3>
 
         {/* Preferred Skills */}
         <div className="cl-form-group" style={{ marginBottom: '1.25rem' }}>
@@ -869,7 +874,7 @@ const ClientProfile = () => {
                 className="onboarding__slider"
                 style={{ background: `linear-gradient(to right, var(--color-primary, #042E4C) ${((technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((technicalUnderstanding - 1) / 9) * 100}%)`, width: '100%' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
                 <span>Conceptual</span>
                 <span>Deep Tech</span>
               </div>
@@ -908,7 +913,7 @@ const ClientProfile = () => {
 
         {editing && errors.global && (
           <div className="cl-error-banner" style={{ marginTop: '1rem' }}>
-            ⚠ {errors.global}
+            <AlertTriangle size={16} /> {errors.global}
           </div>
         )}
       </div>
@@ -921,7 +926,7 @@ const ClientProfile = () => {
             onClick={save} disabled={saving}
             style={{ width: 'auto' }}
           >
-            {saving ? 'Saving...' : '✔ Save Changes'}
+            {saving ? 'Saving...' : <><Check size={16} style={{marginRight:6}} /> Save Changes</>}
           </button>
           <button className="cl-btn cl-btn--ghost" style={{ width: 'auto' }} onClick={() => setEditing(false)}>Cancel</button>
         </div>

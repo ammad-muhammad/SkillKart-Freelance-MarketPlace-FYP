@@ -4,7 +4,7 @@ import { authAPI } from '../../api/auth';
 import { 
   Plus, Trash2, Edit3, Briefcase, Award, GraduationCap, MapPin, 
   DollarSign, Clock, Globe, Github, Linkedin, ExternalLink,
-  ChevronDown, Calendar, FileText, Check, X, User, Link as LinkIcon
+  ChevronDown, Calendar, FileText, Check, X, User, Link as LinkIcon, Camera, Image as ImageIcon, Sparkles, FolderOpen, AlertTriangle
 } from 'lucide-react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -516,7 +516,7 @@ const FreelancerProfile = () => {
 
       {/* Skills & Languages */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="fl-section-title">🛠️ Skills & Languages</h3>
+        <h3 className="fl-section-title"><Sparkles size={18} style={{marginRight:6, verticalAlign:'middle'}} /> Skills & Languages</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <label className="fl-label">Skills (press Enter to add)*</label>
@@ -627,7 +627,7 @@ const FreelancerProfile = () => {
       {/* Portfolio Projects (Rich) */}
       <div className="fl-card" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 className="fl-section-title" style={{ marginBottom: 0 }}>📂 Portfolio Projects</h3>
+          <h3 className="fl-section-title" style={{ marginBottom: 0 }}><FolderOpen size={18} style={{marginRight:6, verticalAlign:'middle'}} /> Portfolio Projects</h3>
           <Link to="/freelancer/portfolio" className="fl-btn fl-btn--ghost fl-btn--sm">Manage All</Link>
         </div>
         
@@ -638,7 +638,7 @@ const FreelancerProfile = () => {
             {profile.portfolio.slice(0, 3).map((item, i) => (
               <div key={item._id || i} className="fl-mini-p-card">
                 <div className="fl-mini-p-card__img">
-                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} /> : <span>🖼️</span>}
+                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} /> : <span><ImageIcon size={24} color="#94a3b8" /></span>}
                 </div>
                 <div className="fl-mini-p-card__info">
                   <h4 className="fl-mini-p-card__title">{item.title}</h4>
@@ -789,11 +789,11 @@ const FreelancerProfile = () => {
             onClick={save}
             disabled={saving}
           >
-            {saving ? 'Saving...' : '✔ Save Changes'}
+            {saving ? 'Saving...' : <><Check size={16} style={{marginRight:6}} /> Save Changes</>}
           </button>
           <button className="fl-btn fl-btn--ghost" onClick={cancel}>Cancel</button>
           <button className="fl-btn fl-btn--danger" style={{ marginLeft: 'auto' }} onClick={() => { setDeleteStep(1); setDeleteOtp(''); setDeleteModal(true); }}>
-            🗑 Delete Account
+            <Trash2 size={16} style={{marginRight:6}} /> Delete Account
           </button>
         </div>
       )}
