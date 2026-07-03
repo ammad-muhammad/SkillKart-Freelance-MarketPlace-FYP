@@ -116,7 +116,7 @@ export default function ClientWallet() {
           <div className="cl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
             <DollarSign size={24} />
           </div>
-          <div className="cl-stat-card__value" style={{ color: 'var(--color-white)', background: 'none', WebkitTextFillColor: 'var(--color-white)' }}>Rs. {walletBalance.toLocaleString()}</div>
+          <div className="cl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="cl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available Wallet Balance</div>
         </div>
 

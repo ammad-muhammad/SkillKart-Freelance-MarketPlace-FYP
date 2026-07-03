@@ -83,7 +83,7 @@ export default function FreelancerWork() {
         <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
           <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}><Wallet size={100} /></div>
           <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}><Wallet size={24} /></div>
-          <div className="fl-stat-card__value" style={{ color: 'var(--color-white)' }}>Rs. {totalEarned.toLocaleString()}</div>
+          <div className="fl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {totalEarned.toLocaleString()}</div>
           <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total earned from completed contracts</div>
         </div>
         <div className="fl-stat-card">
