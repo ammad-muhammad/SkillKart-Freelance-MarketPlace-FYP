@@ -76,6 +76,12 @@ export default function TrendingSkills() {
       }
     }, sectionRef);
 
+    // Refresh ScrollTriggers globally because this component's async height change
+    // shifts all elements below it, breaking TeamLegacy's pin trigger points.
+    setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 100);
+
     return () => ctx.revert();
   }, [skills]);
 

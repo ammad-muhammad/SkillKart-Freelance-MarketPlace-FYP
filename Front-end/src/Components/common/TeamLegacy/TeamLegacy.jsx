@@ -170,20 +170,22 @@ const TeamLegacy = () => {
             gsapCtx = gsap.context(() => {
                 const totalWidth = horizontalSections.scrollWidth - window.innerWidth;
 
-                gsap.to(horizontalSections, {
-                    x: -totalWidth,
-                    ease: "none",
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: "top top",
-                        end: `+=${totalWidth * 1.5}`,
-                        pin: true,
-                        pinSpacing: true,
-                        invalidateOnRefresh: true,
-                        scrub: 1,
-                        // markers: true,
+                const scrollTween = gsap.fromTo(horizontalSections, 
+                    { x: 0 },
+                    {
+                        x: -totalWidth,
+                        ease: "none",
+                        scrollTrigger: {
+                            trigger: sectionRef.current,
+                            start: "top top",
+                            end: `+=${totalWidth * 1.5}`,
+                            pin: true,
+                            pinSpacing: true,
+                            invalidateOnRefresh: true,
+                            scrub: 1,
+                        }
                     }
-                });
+                );
 
                 // ── Reveal Animations for each slide ──
                 const slides = horizontalSections.querySelectorAll('.legacy-showcase-item');
@@ -194,7 +196,7 @@ const TeamLegacy = () => {
                             opacity: 1, x: 0,
                             scrollTrigger: {
                                 trigger: slide,
-                                containerAnimation: gsap.to(horizontalSections, { x: -totalWidth }), // Need to sync with horizontal
+                                containerAnimation: scrollTween,
                                 start: "left center",
                                 toggleActions: "play none none reverse",
                             }

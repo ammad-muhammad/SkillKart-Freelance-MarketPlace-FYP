@@ -63,8 +63,7 @@ import PrivacyPolicy from "../pages/public/Legal/PrivacyPolicy";
 import TermsOfService from "../pages/public/Legal/TermsOfService";
 import CookiePolicy from "../pages/public/Legal/CookiePolicy";
 import ServicesAgreement from "../pages/public/Legal/ServicesAgreement";
-import Careers from "../pages/public/Careers/Careers";
-import PressKit from "../pages/public/PressKit/PressKit";
+
 import BrowseFreelancers from "../pages/public/BrowseFreelancers/BrowseFreelancers";
 import PostProject from "../pages/public/PostProject/PostProject";
 import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
@@ -112,8 +111,7 @@ const AppRoutes = () => {
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/cookies" element={<CookiePolicy />} />
             <Route path="/services-agreement" element={<ServicesAgreement />} />
-            <Route path="/careers" element={<Careers />} />
-            <Route path="/press" element={<PressKit />} />
+
             <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
             <Route path="/post-project" element={<PostProject />} />
             <Route path="/ai-matchmaking" element={<AiMatchmaking />} />

@@ -43,8 +43,6 @@ const FOOTER_LINKS = [
     heading: 'Company',
     links: [
       { label: 'About SkillKart', to: '/about' },
-      { label: 'Careers', to: '/careers' },
-      { label: 'Press Kit', to: '/press' },
       { label: 'Contact Us', to: '/contact' },
     ],
   },
