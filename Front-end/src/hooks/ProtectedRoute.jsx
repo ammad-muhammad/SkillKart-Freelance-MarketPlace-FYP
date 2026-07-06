@@ -1,3 +1,4 @@
+import Loader from '../Components/common/Loader/Loader';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
 
@@ -5,7 +6,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div style={{padding: '40px', textAlign: 'center'}}>Loading...</div>;
+    return <Loader text="Loading..." fullScreen={true} />;
   }
 
   if (!user) {

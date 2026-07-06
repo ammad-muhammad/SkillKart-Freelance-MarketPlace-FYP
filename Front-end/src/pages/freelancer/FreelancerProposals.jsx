@@ -1,3 +1,4 @@
+import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
@@ -55,7 +56,7 @@ export default function FreelancerProposals() {
     return null;
   };
 
-  if (loading) return <div className="fl-loading">Loading your proposals...</div>;
+  if (loading) return <Loader text="Loading your proposals..." fullScreen={true} />;
 
   return (
     <div className="fl-proposals">

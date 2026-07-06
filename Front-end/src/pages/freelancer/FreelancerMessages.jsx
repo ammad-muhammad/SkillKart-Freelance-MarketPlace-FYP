@@ -1,9 +1,10 @@
+import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useRef } from 'react';
 import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
-import { MessageSquare, FileText, Loader, Paperclip, Send } from 'lucide-react';
+import { MessageSquare, FileText, Loader2, Paperclip, Send } from 'lucide-react';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import '../client/ClientDashboard.css';
 
@@ -111,7 +112,7 @@ const FreelancerMessages = () => {
     return `${other?.firstName || ''} ${other?.lastName || ''}`.toLowerCase().includes(search.toLowerCase());
   });
 
-  if (loading) return <div className="fl-loading">Loading chats...</div>;
+  if (loading) return <Loader text="Loading chats..." fullScreen={true} />;
 
   return (
     <div className="fl-messages-page">
@@ -253,7 +254,7 @@ const FreelancerMessages = () => {
                   disabled={uploading}
                   title="Attach a file"
                 >
-                  {uploading ? <Loader size={18} className="spin" /> : <Paperclip size={18} />}
+                  {uploading ? <Loader2 size={18} className="spin" /> : <Paperclip size={18} />}
                 </button>
                 <input
                   type="text"

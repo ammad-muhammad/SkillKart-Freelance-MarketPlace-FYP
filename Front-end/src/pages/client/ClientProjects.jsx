@@ -1,3 +1,4 @@
+import Loader from '../../Components/common/Loader/Loader';
 import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -566,7 +567,7 @@ const ClientProjects = () => {
         {editLoading || !editingProject?.title ? (
           <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
             <div className="cl-spinner" />
-            <p style={{ color: 'var(--color-text-light)', marginTop: '1rem' }}>Loading project details…</p>
+            <Loader text="Loading project details…" />
           </div>
         ) : (
           <form className="cl-edit-form" onSubmit={handleEditSubmit}>
@@ -782,7 +783,7 @@ const ClientProjects = () => {
                 )}
               </div>
             ) : (
-              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>Loading delivery details…</p>
+              <Loader text="Loading delivery details…" />
             )}
 
             {!reviewing.isCompleted ? (

@@ -1,3 +1,4 @@
+import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { paymentsAPI } from '../../api/payments';
@@ -95,7 +96,7 @@ export default function FreelancerWallet() {
   };
 
   if (profileLoading || loading) {
-    return <div className="fl-loading">Loading your wallet…</div>;
+    return <Loader text="Loading your wallet…" fullScreen={true} />;
   }
 
   return (

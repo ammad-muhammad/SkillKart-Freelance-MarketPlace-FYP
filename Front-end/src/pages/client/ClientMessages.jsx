@@ -1,3 +1,4 @@
+import Loader from '../../Components/common/Loader/Loader';
 import { FileText, Paperclip, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { messagesAPI } from '../../api/messages';
@@ -112,7 +113,7 @@ const ClientMessages = () => {
     return `${other?.firstName || ''} ${other?.lastName || ''}`.toLowerCase().includes(search.toLowerCase());
   });
 
-  if (loading) return <div className="cl-loading">Loading chats...</div>;
+  if (loading) return <Loader text="Loading chats..." fullScreen={true} />;
 
   return (
     <div className="cl-messages-page">

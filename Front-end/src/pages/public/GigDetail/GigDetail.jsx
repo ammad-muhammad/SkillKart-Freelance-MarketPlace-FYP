@@ -1,3 +1,4 @@
+import Loader from '../../../Components/common/Loader/Loader';
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { gigsAPI } from '../../../api/gigs';
@@ -115,7 +116,7 @@ export default function GigDetail() {
     return (
       <>
         <Navbar />
-        <div className="gd-state">Loading gig details...</div>
+        <Loader text="Loading gig details..." fullScreen={true} />
         <Footer />
       </>
     );

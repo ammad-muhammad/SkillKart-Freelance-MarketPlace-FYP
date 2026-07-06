@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
+import Loader from '../../Components/common/Loader/Loader';
 import './ClientDashboard.css';
 
 const StatCard = ({ icon, value, label, to }) => {
@@ -29,12 +30,7 @@ const ClientDashboardOverview = () => {
   const totalSpent = profile?.stats?.totalSpent || 0;
 
   if (loading) {
-    return (
-      <div className="cl-loading-container">
-        <div className="cl-loader"></div>
-        <p>Fetching your workspace...</p>
-      </div>
-    );
+    return <Loader text="Fetching your workspace..." fullScreen={true} />;
   }
 
   const initials = (personalInfo.fullName || 'User')

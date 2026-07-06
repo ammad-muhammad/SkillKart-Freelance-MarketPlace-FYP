@@ -1,3 +1,4 @@
+import Loader from '../../../Components/common/Loader/Loader';
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { jobsAPI } from '../../../api/jobs';
@@ -184,7 +185,7 @@ export default function JobDetails() {
     }
   };
 
-  if (loading) return <div className="jd-loading">Loading project details...</div>;
+  if (loading) return <Loader text="Loading project details..." fullScreen={true} />;
   if (!job) return <div className="jd-error">Project not found.</div>;
 
   const isFreelancer = user?.role === 'freelancer';

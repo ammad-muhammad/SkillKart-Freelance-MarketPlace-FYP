@@ -1,3 +1,4 @@
+import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw } from 'lucide-react';
@@ -142,7 +143,7 @@ export default function FreelancerWork() {
     }
   };
 
-  if (loading) return <div className="cl-loading">Loading your work...</div>;
+  if (loading) return <Loader text="Loading your work..." fullScreen={true} />;
 
   return (
     <div className="fl-work">
