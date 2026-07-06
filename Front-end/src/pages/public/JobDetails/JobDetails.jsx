@@ -25,8 +25,10 @@ export default function JobDetails() {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [proposalData, setProposalData] = useState({
     coverLetter: '',
-    proposedRate: '',
-    estimatedDuration: '1-2 weeks',
+    fixedPrice: '',
+    hourlyRate: '',
+    estimatedDeliveryTime: '1-2 weeks',
+    estimatedWeeklyHours: '',
     attachments: []
   });
 
@@ -38,7 +40,12 @@ export default function JobDetails() {
     try {
       const res = await jobsAPI.getJobById(id);
       setJob(res.data.data.job);
-      setProposalData(prev => ({ ...prev, proposedRate: res.data.data.job.budget?.min || '' }));
+      const isHourly = res.data.data.job.budget?.type === 'hourly';
+      setProposalData(prev => ({
+        ...prev,
+        hourlyRate: isHourly ? res.data.data.job.budget?.min || '' : '',
+        fixedPrice: !isHourly ? res.data.data.job.budget?.min || '' : ''
+      }));
     } catch (error) {
       console.error('Failed to fetch job:', error);
       toast.error('Job not found or error loading details.');
@@ -91,18 +98,44 @@ export default function JobDetails() {
       toast.error('Cover letter must be at most 2000 characters.');
       return;
     }
-    const rate = Number(proposalData.proposedRate);
-    if (!rate || rate <= 0) {
-      toast.error('Enter a valid proposed rate greater than 0.');
-      return;
+    const isHourly = job.budget?.type === 'hourly';
+    
+    if (isHourly) {
+      const rate = Number(proposalData.hourlyRate);
+      if (!rate || rate <= 0) {
+        toast.error('Enter a valid hourly rate greater than 0.');
+        return;
+      }
+      const hrs = Number(proposalData.estimatedWeeklyHours);
+      if (!hrs || hrs <= 0 || hrs > 168) {
+        toast.error('Enter a valid number of weekly hours (1-168).');
+        return;
+      }
+    } else {
+      const price = Number(proposalData.fixedPrice);
+      if (!price || price <= 0) {
+        toast.error('Enter a valid fixed price greater than 0.');
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      await proposalsAPI.submitProposal({
+      const payload = {
         jobId: id,
-        ...proposalData
-      });
+        coverLetter: proposalData.coverLetter,
+        attachments: proposalData.attachments
+      };
+
+      if (isHourly) {
+        payload.hourlyRate = Number(proposalData.hourlyRate);
+        payload.estimatedWeeklyHours = Number(proposalData.estimatedWeeklyHours);
+      } else {
+        payload.fixedPrice = Number(proposalData.fixedPrice);
+        payload.estimatedDeliveryTime = proposalData.estimatedDeliveryTime;
+      }
+
+      await proposalsAPI.submitProposal(payload);
       toast.success('Proposal submitted successfully! 🚀');
       setShowApplyModal(false);
       // Send the freelancer to their applications so they can track status.
@@ -311,31 +344,65 @@ export default function JobDetails() {
               <button onClick={() => setShowApplyModal(false)}>&times;</button>
             </div>
             <form onSubmit={handleApply} className="jd-modal__body">
-              <div className="jd-form-group">
-                <label>Proposed Rate ($)</label>
-                <div className="jd-input-icon">
-                  <DollarSign size={16} />
-                  <input 
-                    type="number" 
-                    required 
-                    value={proposalData.proposedRate}
-                    onChange={e => setProposalData({ ...proposalData, proposedRate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="jd-form-group">
-                <label>Estimated Duration</label>
-                <select 
-                  value={proposalData.estimatedDuration}
-                  onChange={e => setProposalData({ ...proposalData, estimatedDuration: e.target.value })}
-                >
-                  <option>Less than 1 week</option>
-                  <option>1-2 weeks</option>
-                  <option>1 month</option>
-                  <option>3+ months</option>
-                </select>
-              </div>
+              {job?.budget?.type === 'hourly' ? (
+                <>
+                  <div className="jd-form-group">
+                    <label>Hourly Rate ($/hr)</label>
+                    <div className="jd-input-icon">
+                      <DollarSign size={16} />
+                      <input 
+                        type="number" 
+                        required 
+                        value={proposalData.hourlyRate}
+                        onChange={e => setProposalData({ ...proposalData, hourlyRate: e.target.value })}
+                        min="1"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <div className="jd-form-group">
+                    <label>Estimated Weekly Hours</label>
+                    <input 
+                      type="number" 
+                      required 
+                      placeholder="e.g. 20"
+                      value={proposalData.estimatedWeeklyHours}
+                      onChange={e => setProposalData({ ...proposalData, estimatedWeeklyHours: e.target.value })}
+                      min="1"
+                      max="168"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="jd-form-group">
+                    <label>Fixed Price ($)</label>
+                    <div className="jd-input-icon">
+                      <DollarSign size={16} />
+                      <input 
+                        type="number" 
+                        required 
+                        value={proposalData.fixedPrice}
+                        onChange={e => setProposalData({ ...proposalData, fixedPrice: e.target.value })}
+                        min="1"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <div className="jd-form-group">
+                    <label>Estimated Delivery Time</label>
+                    <select 
+                      value={proposalData.estimatedDeliveryTime}
+                      onChange={e => setProposalData({ ...proposalData, estimatedDeliveryTime: e.target.value })}
+                    >
+                      <option>Less than 1 week</option>
+                      <option>1-2 weeks</option>
+                      <option>1 month</option>
+                      <option>3+ months</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               <div className="jd-form-group">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

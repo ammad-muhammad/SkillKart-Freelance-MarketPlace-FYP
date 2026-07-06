@@ -14,12 +14,20 @@ const notifications = require('../services/notification.service');
 const FEE_RATE = 0.005; // 0.5% platform fee
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
-// Derive the agreed project amount from the accepted proposal (preferred) or
-// fall back to the job budget midpoint.
 async function resolveAmount(job) {
-  const accepted = await Proposal.findOne({ jobId: job._id, status: 'accepted' }).select('proposedRate');
-  const rate = Number(accepted?.proposedRate);
-  if (rate > 0) return rate;
+  // If a contract exists, use its price
+  if (job.contractId) {
+    const Contract = require('../models/Contract');
+    const contract = await Contract.findById(job.contractId);
+    if (contract && contract.type === 'fixed') {
+      return Number(contract.fixedPrice) || 0;
+    }
+  }
+
+  // Fallback to accepted proposal
+  const accepted = await Proposal.findOne({ jobId: job._id, status: 'accepted' });
+  if (accepted && accepted.fixedPrice) return Number(accepted.fixedPrice);
+  
   const min = Number(job.budget?.min) || 0;
   const max = Number(job.budget?.max) || 0;
   if (min && max) return (min + max) / 2;
@@ -37,6 +45,7 @@ async function getOrCreatePayment(job) {
 
   payment = await Payment.create({
     jobId: job._id,
+    contractId: job.contractId || null,
     clientId: job.clientId,
     freelancerId: job.hiredFreelancer,
     totalAmount: total,
@@ -44,6 +53,7 @@ async function getOrCreatePayment(job) {
     finalAmount: final,
     feeRate: FEE_RATE,
     status: 'deposit_pending',
+    type: 'job_escrow'
   });
   return payment;
 }
@@ -65,6 +75,14 @@ const startDeposit = asyncHandler(async (req, res) => {
   assertClientOwns(job, req.user._id);
   if (!job.hiredFreelancer) throw new BadRequestError('No freelancer is hired for this project yet');
 
+  if (job.contractId) {
+    const Contract = require('../models/Contract');
+    const contract = await Contract.findById(job.contractId);
+    if (contract && contract.type === 'hourly') {
+      throw new BadRequestError('Hourly contracts are billed weekly, no upfront deposit is required.');
+    }
+  }
+
   const payment = await getOrCreatePayment(job);
   if (payment.status !== 'deposit_pending') {
     throw new BadRequestError('Deposit has already been paid for this project');
@@ -80,6 +98,11 @@ const startDeposit = asyncHandler(async (req, res) => {
     payment.depositPaidAt = new Date();
     payment.stripe.simulated = true;
     await payment.save();
+
+    if (payment.contractId) {
+      const Contract = require('../models/Contract');
+      await Contract.findByIdAndUpdate(payment.contractId, { paymentStatus: 'funded' });
+    }
 
     if (job.hiredFreelancer) {
       notifications.onDepositFunded(job.hiredFreelancer, { job });
@@ -118,7 +141,7 @@ const startFinal = asyncHandler(async (req, res) => {
   if (!job) throw new NotFoundError('Job not found');
   assertClientOwns(job, req.user._id);
 
-  const payment = await Payment.findOne({ jobId: job._id });
+  const payment = await Payment.findOne({ jobId: job._id, type: 'job_escrow' });
   if (!payment) throw new BadRequestError('No payment record — pay the deposit first');
   if (payment.status === 'deposit_pending') throw new BadRequestError('Pay the 50% deposit before the final payment');
   if (payment.status === 'released') throw new BadRequestError('This project has already been fully paid');
@@ -207,6 +230,12 @@ const confirmPayment = asyncHandler(async (req, res) => {
       payment.depositPaidAt = new Date();
       payment.stripe.depositPaymentIntent = result.paymentIntent;
       await payment.save();
+      
+      if (payment.contractId) {
+        const Contract = require('../models/Contract');
+        await Contract.findByIdAndUpdate(payment.contractId, { paymentStatus: 'funded' });
+      }
+
       // Tell the freelancer they can start/deliver now.
       if (job.hiredFreelancer) notifications.onDepositFunded(job.hiredFreelancer, { job });
     }

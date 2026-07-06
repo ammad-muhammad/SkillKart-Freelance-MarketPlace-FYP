@@ -134,6 +134,9 @@ const cmsRoutes = require('./routes/cms.routes');
 const publicRoutes = require('./routes/public.routes');
 const jobRoutes = require('./routes/job.routes');
 const proposalRoutes = require('./routes/proposal.routes');
+const contractRoutes = require('./routes/contract.routes');
+const timeTrackingRoutes = require('./routes/timeTracking.routes');
+const deliveryRoutes = require('./routes/delivery.routes');
 const gigRoutes = require('./routes/gig.routes');
 const messageRoutes = require('./routes/message.routes');
 const skillTestRoutes = require('./routes/skillTest.routes');
@@ -155,6 +158,9 @@ app.use(`${API_PREFIX}/cms`, cmsRoutes);
 app.use(`${API_PREFIX}/public`, publicRoutes);
 app.use(`${API_PREFIX}/jobs`, jobRoutes);
 app.use(`${API_PREFIX}/proposals`, proposalRoutes);
+app.use(`${API_PREFIX}/contracts`, contractRoutes);
+app.use(`${API_PREFIX}/time-tracking`, timeTrackingRoutes);
+app.use(`${API_PREFIX}/deliveries`, deliveryRoutes);
 app.use(`${API_PREFIX}/gigs`, gigRoutes);
 app.use(`${API_PREFIX}/messages`, messageRoutes);
 app.use(`${API_PREFIX}/skill-tests`, skillTestRoutes);
@@ -171,14 +177,6 @@ const stripeWebhook = require('./webhooks/stripe.webhook');
 app.post('/webhooks/supabase', supabaseWebhook.handleWebhook);
 app.use('/webhooks/stripe', stripeWebhook);
 
-// Temporary route placeholder
-app.get(`${API_PREFIX}/status`, (req, res) => {
-  res.json({
-    message: 'API is running',
-    version: config.apiVersion,
-    routes: 'Routes will be mounted here'
-  });
-});
 
 // =======================
 // 404 Handler

@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare } from 'lucide-react';
+import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { jobsAPI } from '../../api/jobs';
+import { contractsAPI } from '../../api/contracts';
+import { deliveriesAPI } from '../../api/deliveries';
+import { timeTrackingAPI } from '../../api/timeTracking';
+import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import './FreelancerDashboard.css';
 
 const STAGES = {
+  'active': { label: 'In Progress', color: '#2563eb' },
   'in-progress': { label: 'In Progress', color: '#2563eb' },
+  'in_revision': { label: 'In Revision', color: '#b45309' },
   delivered: { label: 'Delivered — awaiting review', color: '#d97706' },
   completed: { label: 'Completed', color: '#16a34a' },
   cancelled: { label: 'Cancelled', color: '#64748b' },
@@ -26,11 +31,12 @@ export default function FreelancerWork() {
   const [deliverFor, setDeliverFor] = useState(null);
   const [delivery, setDelivery] = useState({ message: '', links: '' });
   const [delivering, setDelivering] = useState(false);
+  const [tracking, setTracking] = useState({}); // state for tracking operations
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await jobsAPI.getMyContracts({ limit: 50 });
+      const { data } = await contractsAPI.getMyContracts({ limit: 50 });
       setContracts(Array.isArray(data?.data) ? data.data : []);
     } catch { /* global toast */ } finally { setLoading(false); }
   }, []);
@@ -41,7 +47,7 @@ export default function FreelancerWork() {
   const totalEarned = contracts
     .filter((c) => c.status === 'completed' && c.payment?.status === 'released')
     .reduce((sum, c) => sum + (Number(c.payment?.freelancerPayout) || 0), 0);
-  const activeCount = contracts.filter((c) => ['in-progress', 'delivered'].includes(c.status)).length;
+  const activeCount = contracts.filter((c) => ['active', 'in-progress', 'delivered'].includes(c.status)).length;
 
   const submitDelivery = async () => {
     if (!deliverFor) return;
@@ -51,16 +57,34 @@ export default function FreelancerWork() {
     }
     setDelivering(true);
     try {
-      const links = delivery.links.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
-      await jobsAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), links });
+      const externalLinks = delivery.links.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+      await deliveriesAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), externalLinks });
       toast.success('Work delivered! The client will review it. 🚀');
       setDeliverFor(null);
       setDelivery({ message: '', links: '' });
       load();
     } catch (err) {
-      if (!err.response) toast.error('Failed to submit delivery.');
+      toast.error(err.response?.data?.message || 'Failed to submit delivery.');
     } finally {
       setDelivering(false);
+    }
+  };
+
+  const handleTimer = async (contract, action) => {
+    setTracking(prev => ({ ...prev, [contract._id]: true }));
+    try {
+      if (action === 'start') {
+        await timeTrackingAPI.startTimer(contract._id);
+        toast.success('Timer started');
+      } else {
+        await timeTrackingAPI.stopTimer(contract._id, { description: 'Working on ' + contract.jobId?.title });
+        toast.success('Timer stopped and time logged');
+      }
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to ${action} timer.`);
+    } finally {
+      setTracking(prev => ({ ...prev, [contract._id]: false }));
     }
   };
 
@@ -106,15 +130,22 @@ export default function FreelancerWork() {
           {contracts.map((c) => {
             const stage = STAGES[c.status] || { label: c.status, color: '#64748b' };
             const escrow = c.payment ? ESCROW[c.payment.status] : null;
-            const canDeliver = c.status === 'in-progress' && c.payment?.status === 'deposit_paid';
-            const waitingDeposit = c.status === 'in-progress' && (!c.payment || c.payment.status === 'deposit_pending');
+            
+            const isFixed = c.type === 'fixed';
+            const isHourly = c.type === 'hourly';
+            
+            const canDeliver = ['active', 'in-progress', 'in_revision'].includes(c.status);
+            const waitingDeposit = isFixed && ['active', 'in-progress'].includes(c.status) && (!c.payment || c.payment.status === 'deposit_pending');
+            
+            const timerActive = isHourly && c.timer?.isActive;
+
             return (
               <div key={c._id} className="fl-card fl-contract">
                 <div className="fl-contract__top">
                   <div>
-                    <h3 className="fl-contract__title">{c.title}</h3>
+                    <h3 className="fl-contract__title">{c.jobId?.title || 'Unknown Job'}</h3>
                     <p className="fl-contract__meta">
-                      {c.source === 'gig' ? '🛍️ Gig order' : '📋 Project'} · {c.category}
+                      {isHourly ? '⏱️ Hourly Project' : '📋 Fixed Price Project'} · {c.jobId?.category || 'Unknown'}
                       {c.clientId && ` · ${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`}
                     </p>
                   </div>
@@ -122,19 +153,51 @@ export default function FreelancerWork() {
                 </div>
 
                 <div className="fl-contract__money">
-                  <span><DollarSign size={14} /> Agreed: <strong>Rs. {c.budget?.min ?? c.budget?.max ?? '—'}</strong></span>
-                  {escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
-                  {c.payment?.status === 'released' && (
+                  {isFixed ? (
+                    <span><DollarSign size={14} /> Agreed: <strong>Rs. {c.fixedPrice ?? '—'}</strong></span>
+                  ) : (
+                    <span><DollarSign size={14} /> Rate: <strong>Rs. {c.hourlyRate ?? '—'} / hr</strong> (Max {c.weeklyHourLimit} hrs/wk)</span>
+                  )}
+                  {isFixed && escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
+                  {isFixed && c.payment?.status === 'released' && (
                     <span style={{ color: '#16a34a' }}>You received: <strong>Rs. {Number(c.payment.freelancerPayout).toLocaleString()}</strong></span>
                   )}
                 </div>
 
-                {c.revisionNote && c.status === 'in-progress' && (
+                {isHourly && (
+                  <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      {['completed', 'cancelled'].includes(c.status) ? (
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ Contract has ended</span>
+                      ) : timerActive ? (
+                        <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                          🟢 You are currently working 
+                          <LiveTimer startedAt={c.timer?.startedAt} hourlyRate={c.hourlyRate} prefix=" (" suffix=")" />
+                        </span>
+                      ) : (
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ You are not tracking time</span>
+                      )}
+                    </div>
+                    <div style={{ color: 'var(--color-text-mid)' }}>
+                      🕒 Total logged: <strong>{Math.floor((c.totalDuration || 0) / 3600000)}h {Math.floor(((c.totalDuration || 0) % 3600000) / 60000)}m</strong>
+                      {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {(((c.totalDuration || 0) / 3600000) * c.hourlyRate).toFixed(2)})</span>}
+                      {c.lastTimeLog && (
+                        <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
+                          Last session: <strong>{Math.floor(c.lastTimeLog.duration / 3600000)}h {Math.floor((c.lastTimeLog.duration % 3600000) / 60000)}m</strong> 
+                          {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((c.lastTimeLog.duration / 3600000) * c.hourlyRate).toFixed(2)})</span>}
+                          {' '}({new Date(c.lastTimeLog.endTime).toLocaleDateString()})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {c.revisionNote && c.status === 'in_revision' && (
                   <div className="fl-contract__revision">🔁 Revision requested: {c.revisionNote}</div>
                 )}
 
                 <div className="fl-contract__footer">
-                  <Link to={`/jobs/${c._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
+                  <Link to={`/jobs/${c.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
                   {c.clientId && (
                     <Link to="/freelancer/messages" className="fl-btn fl-btn--outline fl-btn--sm">
                       <MessageSquare size={14} /> Contact Client
@@ -147,6 +210,17 @@ export default function FreelancerWork() {
                     <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => { setDeliverFor(c); setDelivery({ message: '', links: '' }); }}>
                       <UploadCloud size={14} /> Submit Work
                     </button>
+                  )}
+                  {isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && (
+                    timerActive ? (
+                      <button className="fl-btn fl-btn--sm" style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }} onClick={() => handleTimer(c, 'stop')} disabled={tracking[c._id]}>
+                        <Square size={14} /> Stop Timer
+                      </button>
+                    ) : (
+                      <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => handleTimer(c, 'start')} disabled={tracking[c._id]}>
+                        <Play size={14} /> Start Timer
+                      </button>
+                    )
                   )}
                 </div>
               </div>

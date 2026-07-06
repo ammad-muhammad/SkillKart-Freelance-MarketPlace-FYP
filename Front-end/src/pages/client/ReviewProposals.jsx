@@ -212,11 +212,11 @@ export default function ReviewProposals() {
                 <div className="rp-details">
                   <div className="rp-detail">
                     <DollarSign size={16} />
-                    <span>Bid: <strong>Rs. {prop.proposedRate}</strong></span>
+                    <span>Bid: <strong>Rs. {prop.fixedPrice || prop.hourlyRate}{prop.hourlyRate ? '/hr' : ''}</strong></span>
                   </div>
                   <div className="rp-detail">
                     <Clock size={16} />
-                    <span>Duration: <strong>{prop.estimatedDuration}</strong></span>
+                    <span>Duration: <strong>{prop.estimatedDeliveryTime || (prop.estimatedWeeklyHours ? `${prop.estimatedWeeklyHours} hrs/week` : '')}</strong></span>
                   </div>
                 </div>
 

@@ -1,9 +1,11 @@
 const Proposal = require('../models/Proposal');
 const Job = require('../models/Job');
+const Contract = require('../models/Contract');
+const ContractHistory = require('../models/ContractHistory');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const { sendSuccess, sendCreated, sendPaginated, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
-const { NotFoundError, ForbiddenError } = require('../utils/apiError');
+const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const { getAIProvider } = require('../services/ai');
 const { checkSkillGate } = require('../utils/skillGating');
 const notifications = require('../services/notification.service');
@@ -23,10 +25,28 @@ const createProposal = asyncHandler(async (req, res) => {
     throw new BadRequestError('You have already applied to this project.');
   }
 
-  // Need the job's required skills + category to gate the application.
-  const job = await Job.findById(proposalData.jobId).select('skills category clientId title');
+  // Need the job's required skills + category + budget to gate the application.
+  const job = await Job.findById(proposalData.jobId).select('skills category clientId title budget status contractId');
   if (!job) {
     throw new NotFoundError('Job not found');
+  }
+  if (job.status !== 'open') {
+    throw new ForbiddenError('This job is no longer accepting proposals.');
+  }
+  if (job.contractId) {
+    throw new ForbiddenError('An active contract already exists for this job.');
+  }
+
+  // Validate explicit fields based on job type
+  const isHourly = job.budget?.type === 'hourly';
+  if (isHourly) {
+    if (!proposalData.hourlyRate || !proposalData.estimatedWeeklyHours) {
+      throw new ForbiddenError('Hourly proposals must include hourlyRate and estimatedWeeklyHours.');
+    }
+  } else {
+    if (!proposalData.fixedPrice || !proposalData.estimatedDeliveryTime) {
+      throw new ForbiddenError('Fixed-price proposals must include fixedPrice and estimatedDeliveryTime.');
+    }
   }
 
   const gate = await checkSkillGate(freelancerId, job.skills, job.category);
@@ -84,8 +104,8 @@ const updateProposal = asyncHandler(async (req, res) => {
     throw new ForbiddenError(`A "${proposal.status}" proposal can no longer be edited.`);
   }
 
-  // Allow-list only — never let status/jobId/freelancerId/clientResponse be set.
-  for (const key of ['coverLetter', 'proposedRate', 'estimatedDuration', 'attachments']) {
+  // Allow-list only
+  for (const key of ['coverLetter', 'fixedPrice', 'hourlyRate', 'estimatedDeliveryTime', 'estimatedWeeklyHours', 'attachments']) {
     if (Object.prototype.hasOwnProperty.call(req.body, key)) proposal[key] = req.body[key];
   }
   await proposal.save();
@@ -177,15 +197,47 @@ const acceptProposal = asyncHandler(async (req, res) => {
   if (job.status !== 'open') {
     return res.status(400).json({ success: false, message: `Cannot accept proposal. Job is already ${job.status}` });
   }
+  if (job.contractId) {
+    throw new ForbiddenError('An active contract already exists for this job.');
+  }
 
   proposal.status = 'accepted';
   proposal.clientResponse = message;
   proposal.respondedAt = new Date();
   await proposal.save();
   
-  // Update job: move to in-progress and assign freelancer
+  // Create Contract
+  const isHourly = job.budget?.type === 'hourly';
+  
+  const contract = new Contract({
+    jobId: job._id,
+    proposalId: proposal._id,
+    clientId: job.clientId,
+    freelancerId: proposal.freelancerId,
+    type: isHourly ? 'hourly' : 'fixed',
+    status: 'active',
+    paymentStatus: 'pending',
+    
+    // Copy the agreed upon terms from the proposal
+    fixedPrice: proposal.fixedPrice,
+    hourlyRate: proposal.hourlyRate,
+    weeklyHourLimit: proposal.estimatedWeeklyHours
+  });
+  
+  await contract.save();
+  
+  // Create ContractHistory
+  await ContractHistory.create({
+    contractId: contract._id,
+    action: 'created',
+    newValue: { status: 'active' },
+    performedBy: req.user._id
+  });
+
+  // Update job: move to in-progress, assign freelancer, set contractId
   job.status = 'in-progress';
   job.hiredFreelancer = proposal.freelancerId;
+  job.contractId = contract._id;
   await job.save();
 
   // Automatically reject other pending proposals
@@ -199,7 +251,7 @@ const acceptProposal = asyncHandler(async (req, res) => {
 
   sendSuccess(res, {
     message: 'Proposal accepted successfully',
-    data: { proposal }
+    data: { proposal, contract }
   });
 });
 

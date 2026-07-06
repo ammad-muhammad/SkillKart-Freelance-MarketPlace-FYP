@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { jobsAPI } from '../../api/jobs';
+import { deliveriesAPI } from '../../api/deliveries';
 import { useAuth } from '../../hooks/useAuth';
 import {
   Clock, DollarSign, ExternalLink, UploadCloud, X, FileText
@@ -14,10 +15,7 @@ export default function FreelancerProposals() {
   const { user } = useAuth();
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Delivery modal state
-  const [deliverFor, setDeliverFor] = useState(null); // the job being delivered
-  const [delivery, setDelivery] = useState({ message: '', links: '' });
-  const [delivering, setDelivering] = useState(false);
+
 
   useEffect(() => {
     fetchProposals();
@@ -46,31 +44,6 @@ export default function FreelancerProposals() {
       fetchProposals();
     } catch (error) {
       toast.error('Failed to withdraw proposal.');
-    }
-  };
-
-  const openDeliver = (job) => {
-    setDeliverFor(job);
-    setDelivery({ message: '', links: '' });
-  };
-
-  const submitDelivery = async () => {
-    if (!deliverFor) return;
-    if (!delivery.message.trim() && !delivery.links.trim()) {
-      toast.warn('Add a delivery note or at least one link.');
-      return;
-    }
-    setDelivering(true);
-    try {
-      const links = delivery.links.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-      await jobsAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), links });
-      toast.success('Work delivered! The client will review it. 🚀');
-      setDeliverFor(null);
-      fetchProposals();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit delivery.');
-    } finally {
-      setDelivering(false);
     }
   };
 
@@ -122,11 +95,11 @@ export default function FreelancerProposals() {
                 <div className="fl-prop-card__details">
                   <div className="fl-prop-card__detail">
                     <DollarSign size={14} />
-                    <span>Your Bid: <strong>Rs. {prop.proposedRate}</strong></span>
+                    <span>Your Bid: <strong>Rs. {prop.fixedPrice || prop.hourlyRate}{prop.hourlyRate ? '/hr' : ''}</strong></span>
                   </div>
                   <div className="fl-prop-card__detail">
                     <Clock size={14} />
-                    <span>Duration: <strong>{prop.estimatedDuration}</strong></span>
+                    <span>Duration: <strong>{prop.estimatedDeliveryTime || (prop.estimatedWeeklyHours ? `${prop.estimatedWeeklyHours} hrs/week` : '')}</strong></span>
                   </div>
                 </div>
                 
@@ -163,12 +136,12 @@ export default function FreelancerProposals() {
                     </button>
                   )}
                   {prop.status === 'accepted' && prop.jobId?.status === 'in-progress' && (
-                    <button
+                    <Link
+                      to="/freelancer/work"
                       className="fl-btn fl-btn--primary fl-btn--sm"
-                      onClick={() => openDeliver(prop.jobId)}
                     >
                       <UploadCloud size={14} /> Submit Work
-                    </button>
+                    </Link>
                   )}
                 </div>
               </div>
@@ -177,41 +150,7 @@ export default function FreelancerProposals() {
         </div>
       )}
 
-      {/* Delivery modal */}
-      {deliverFor && (
-        <div className="fl-deliver-overlay" onClick={() => !delivering && setDeliverFor(null)}>
-          <div className="fl-deliver-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="fl-deliver-modal__head">
-              <h3>Submit Work — {deliverFor.title}</h3>
-              <button onClick={() => !delivering && setDeliverFor(null)}><X size={18} /></button>
-            </div>
-            <div className="fl-deliver-modal__body">
-              <label className="fl-label">Delivery note</label>
-              <textarea
-                className="fl-textarea"
-                rows={4}
-                placeholder="Describe what you delivered, any notes for the client…"
-                value={delivery.message}
-                onChange={(e) => setDelivery((d) => ({ ...d, message: e.target.value }))}
-              />
-              <label className="fl-label" style={{ marginTop: '0.75rem' }}>Links (one per line or comma-separated)</label>
-              <textarea
-                className="fl-textarea"
-                rows={3}
-                placeholder="https://github.com/...&#10;https://drive.google.com/..."
-                value={delivery.links}
-                onChange={(e) => setDelivery((d) => ({ ...d, links: e.target.value }))}
-              />
-            </div>
-            <div className="fl-deliver-modal__foot">
-              <button className="fl-btn fl-btn--ghost" onClick={() => setDeliverFor(null)} disabled={delivering}>Cancel</button>
-              <button className="fl-btn fl-btn--primary" onClick={submitDelivery} disabled={delivering}>
-                {delivering ? 'Submitting…' : 'Deliver Work'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       <style>{`
         .fl-prop-card { margin-bottom: 1rem; }

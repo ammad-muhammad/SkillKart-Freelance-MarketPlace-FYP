@@ -149,34 +149,7 @@ router.post('/:id/close',
   jobController.closeJob
 );
 
-// Cancel job (in-progress/delivered)
-router.post('/:id/cancel',
-  authenticate,
-  requireRole('client'),
-  jobController.cancelJob
-);
-
-// ── Delivery lifecycle ──
-// Freelancer submits work (in-progress → delivered)
-router.post('/:id/deliver',
-  authenticate,
-  requireRole('freelancer'),
-  jobController.submitDelivery
-);
-
-// Client accepts delivery (delivered → completed)
-router.post('/:id/accept-delivery',
-  authenticate,
-  requireRole('client'),
-  jobController.acceptDelivery
-);
-
-// Client requests a revision (delivered → in-progress)
-router.post('/:id/request-revision',
-  authenticate,
-  requireRole('client'),
-  jobController.requestRevision
-);
+// Delivery lifecycle routes removed. Deliveries are now managed by Delivery API.
 
 // Review a completed job
 router.post('/:id/review',

@@ -18,6 +18,9 @@ const Gig = require('../models/Gig');
  */
 async function finalizeJobCompletion(job, opts = {}) {
   if (!job) return;
+  if (job.statsRolledUp) {
+    throw new Error('Stats have already been rolled up for this job.');
+  }
 
   // Determine the monetary amounts. When a payment record drives completion it
   // passes the exact net earning; otherwise estimate from the job budget.
@@ -60,6 +63,9 @@ async function finalizeJobCompletion(job, opts = {}) {
   if (job.source === 'gig' && job.gigId) {
     await Gig.updateOne({ _id: job.gigId }, { $inc: { 'stats.orders': 1 } });
   }
+
+  job.statsRolledUp = true;
+  await job.save();
 }
 
 module.exports = { finalizeJobCompletion };

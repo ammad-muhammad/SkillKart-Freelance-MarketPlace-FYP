@@ -208,13 +208,22 @@ const getMyContracts = asyncHandler(async (req, res) => {
     .sort({ updatedAt: -1 })
     .lean();
 
-  // Attach each job's escrow record (deposit funded? released? payout?).
+  // Attach each job's escrow record
   const payments = await Payment.find({ jobId: { $in: jobs.map((j) => j._id) } })
     .select('jobId status depositAmount finalAmount totalAmount platformFee freelancerPayout')
     .lean();
   const payByJob = new Map(payments.map((p) => [String(p.jobId), p]));
 
-  const items = jobs.map((j) => ({ ...j, payment: payByJob.get(String(j._id)) || null }));
+  // Check which jobs this freelancer has already reviewed
+  const Review = require('../models/Review');
+  const reviews = await Review.find({ reviewerId: freelancerId, jobId: { $in: jobs.map((j) => j._id) } }).lean();
+  const reviewedJobIds = new Set(reviews.map((r) => String(r.jobId)));
+
+  const items = jobs.map((j) => ({ 
+    ...j, 
+    payment: payByJob.get(String(j._id)) || null,
+    hasReviewed: reviewedJobIds.has(String(j._id))
+  }));
 
   sendPaginated(res, { data: items, page, limit, total });
 });
@@ -232,6 +241,7 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
     .populate('hiredFreelancer', 'firstName lastName profilePicture _id')
+    .populate('contractId', 'status type timer hourlyRate')
     .skip(skip)
     .limit(limit)
     .sort({ createdAt: -1 })
@@ -242,7 +252,34 @@ const getMyProjects = asyncHandler(async (req, res) => {
     .lean();
   const payByJob = new Map(payments.map((p) => [String(p.jobId), p]));
 
-  const items = jobs.map((j) => ({ ...j, payment: payByJob.get(String(j._id)) || null }));
+  const Review = require('../models/Review');
+  const reviews = await Review.find({ reviewerId: clientId, jobId: { $in: jobs.map((j) => j._id) } }).lean();
+  const reviewedJobIds = new Set(reviews.map((r) => String(r.jobId)));
+
+  const TimeLog = require('../models/TimeLog');
+  const recentLogs = await TimeLog.aggregate([
+    { $match: { jobId: { $in: jobs.map((j) => j._id) } } },
+    { $sort: { endTime: -1 } },
+    { $group: { _id: "$jobId", lastLog: { $first: "$$ROOT" }, totalDuration: { $sum: "$duration" } } }
+  ]);
+  const logsByJob = new Map(recentLogs.map((log) => [String(log._id), log]));
+
+  const items = jobs.map((j) => {
+    const jobLogs = logsByJob.get(String(j._id)) || {};
+    return { 
+      ...j, 
+      payment: payByJob.get(String(j._id)) || null,
+      hasReviewed: reviewedJobIds.has(String(j._id)),
+      contractType: j.contractId?.type || 'fixed',
+      hourlyRate: j.contractId?.hourlyRate || 0,
+      timerActive: j.contractId?.timer?.isActive || false,
+      timerStartedAt: j.contractId?.timer?.startedAt || null,
+      lastTimeLog: jobLogs.lastLog || null,
+      totalDuration: jobLogs.totalDuration || 0
+    };
+  });
+
+  console.log(`Sending my projects. Found ${reviewedJobIds.size} reviews. First item hasReviewed:`, items[0]?.hasReviewed);
 
   sendPaginated(res, { data: items, page, limit, total });
 });
@@ -348,117 +385,7 @@ const closeJob = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Submit delivery (freelancer). in-progress → delivered.
- * Only the hired freelancer may deliver, and only while in-progress.
- */
-const submitDelivery = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { message, links = [], files = [] } = req.body;
-
-  const job = await Job.findById(id);
-  if (!job) throw new NotFoundError('Job not found');
-
-  if (!job.hiredFreelancer || String(job.hiredFreelancer) !== String(req.user._id)) {
-    throw new ForbiddenError('Only the hired freelancer can deliver this project');
-  }
-  if (job.status !== 'in-progress') {
-    throw new BadRequestError(`Cannot deliver a project that is "${job.status}". It must be in progress.`);
-  }
-
-  // Escrow gate: the client must have paid the 50% deposit before work can be
-  // delivered (so the freelancer is protected before handing over results).
-  const payment = await Payment.findOne({ jobId: job._id }).select('status');
-  if (!payment || payment.status === 'deposit_pending') {
-    throw new BadRequestError('The client hasn’t paid the 50% deposit yet. You can deliver once the deposit is funded.');
-  }
-
-  job.delivery = {
-    message: message || '',
-    links: Array.isArray(links) ? links.filter(Boolean) : [],
-    files: Array.isArray(files) ? files.filter(Boolean) : [],
-    submittedAt: new Date(),
-  };
-  job.status = 'delivered';
-  await job.save();
-
-  // Notify the client that work is ready to review.
-  notifications.onWorkDelivered(job.clientId, { job });
-
-  sendSuccess(res, { message: 'Work delivered. Waiting for client approval.', data: { job } });
-});
-
-/**
- * Accept delivery (client). delivered → completed.
- * Triggers stats roll-up. Only the owning client may accept.
- */
-const acceptDelivery = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const job = await Job.findById(id);
-  if (!job) throw new NotFoundError('Job not found');
-
-  if (String(job.clientId) !== String(req.user._id)) {
-    throw new ForbiddenError('Only the project owner can accept the delivery');
-  }
-  if (job.status !== 'delivered') {
-    throw new BadRequestError(`Cannot accept a project that is "${job.status}". It must be delivered first.`);
-  }
-
-  // Escrow gate: accepting delivery requires the final 50% to be paid. The
-  // payment confirm step is what releases funds and completes the job, so if
-  // it isn't released yet, send the client to pay the remaining balance.
-  const payment = await Payment.findOne({ jobId: job._id }).select('status finalAmount freelancerPayout totalAmount');
-  if (!payment || payment.status !== 'released') {
-    return sendSuccess(res, {
-      message: 'Pay the remaining 50% to release funds and complete the project.',
-      data: { paymentRequired: true, phase: 'final', finalAmount: payment?.finalAmount || 0, job },
-    });
-  }
-
-  // Already paid/released (e.g. confirm ran) — ensure the job is completed.
-  if (job.status !== 'completed') {
-    job.status = 'completed';
-    job.completedAt = new Date();
-    await job.save();
-    try {
-      await finalizeJobCompletion(job, { freelancerEarning: payment.freelancerPayout, clientSpend: payment.totalAmount });
-    } catch (e) {
-      console.error('[acceptDelivery] stats roll-up failed:', e.message);
-    }
-  }
-
-  sendSuccess(res, { message: 'Delivery accepted. Project completed! 🎉', data: { job } });
-});
-
-/**
- * Request revision (client). delivered → in-progress.
- * Records the revision note + increments the counter.
- */
-const requestRevision = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { note } = req.body;
-
-  const job = await Job.findById(id);
-  if (!job) throw new NotFoundError('Job not found');
-
-  if (String(job.clientId) !== String(req.user._id)) {
-    throw new ForbiddenError('Only the project owner can request a revision');
-  }
-  if (job.status !== 'delivered') {
-    throw new BadRequestError(`Cannot request a revision on a project that is "${job.status}". It must be delivered first.`);
-  }
-
-  job.status = 'in-progress';
-  job.revisionCount = (job.revisionCount || 0) + 1;
-  job.revisionNote = note || '';
-  await job.save();
-
-  // Notify the freelancer that changes were requested.
-  if (job.hiredFreelancer) notifications.onRevisionRequested(job.hiredFreelancer, { job });
-
-  sendSuccess(res, { message: 'Revision requested. The freelancer has been asked to make changes.', data: { job } });
-});
+// Removed deprecated submitDelivery, acceptDelivery, requestRevision functions.
 
 /**
  * Review a completed job.
@@ -556,59 +483,9 @@ const uploadAttachment = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Cancel an in-progress or delivered job.
- * Only the client can cancel. Refunds the 50% deposit if applicable.
- */
-const cancelJob = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+// Obsolete cancelJob function removed. Cancellation is now managed by Contract API.
 
-  const job = await Job.findById(id);
-  if (!job) throw new NotFoundError('Job not found');
 
-  if (String(job.clientId) !== String(req.user._id)) {
-    throw new ForbiddenError('Only the project owner can cancel the project');
-  }
-
-  // Prevent clients from cancelling and refunding themselves AFTER work is delivered.
-  // Disputes on delivered work must be handled by support in the MVP.
-  if (!['in-progress'].includes(job.status)) {
-    if (job.status === 'delivered') {
-      throw new BadRequestError('Cannot cancel a project after work has been delivered. Please request a revision or contact support to dispute the delivery.');
-    }
-    throw new BadRequestError(`Cannot cancel a project that is "${job.status}".`);
-  }
-
-  job.status = 'cancelled';
-  await job.save();
-
-  // Refund the deposit
-  const payment = await Payment.findOne({ jobId: id, status: 'deposit_paid' });
-  if (payment) {
-    payment.status = 'refunded';
-    await payment.save();
-    
-    // Simulate refund by adding funds to client wallet since this is test mode
-    await ClientProfile.findOneAndUpdate(
-      { userId: job.clientId },
-      { $inc: { walletBalance: payment.depositAmount } }
-    );
-  }
-
-  if (job.hiredFreelancer) {
-    notifications.notify(job.hiredFreelancer, {
-      type: 'contract_cancelled',
-      title: 'Contract Cancelled',
-      message: `The client has cancelled the contract for "${job.title}".`,
-      link: `/jobs/${job._id}`
-    });
-  }
-
-  sendSuccess(res, {
-    message: 'Project cancelled successfully and deposit refunded',
-    data: { job }
-  });
-});
 
 module.exports = {
   createJob,
@@ -622,9 +499,5 @@ module.exports = {
   recommendCategory,
   getMyProjects,
   getMyContracts,
-  submitDelivery,
-  acceptDelivery,
-  requestRevision,
-  reviewJob,
-  cancelJob
+  reviewJob
 };

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { jobsAPI } from '../../api/jobs';
 import { paymentsAPI } from '../../api/payments';
+import { contractsAPI } from '../../api/contracts';
+import { deliveriesAPI } from '../../api/deliveries';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import Modal from '../freelancer/components/Modal';
 import TagInput from '../../Components/common/TagInput/TagInput';
@@ -10,6 +12,7 @@ import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import { FolderOpen } from 'lucide-react';
 import './ClientDashboard.css';
 
@@ -25,7 +28,7 @@ const toDateInput = (value) => {
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const ClientProjects = () => {
-  const { projects, deleteProject, updateProject, requestRevision, showToast, fetchProfile } = useClient();
+  const { projects, deleteProject, updateProject, showToast, fetchProfile } = useClient();
   const [filter, setFilter] = useState('all');
   const [deleteModal, setDeleteModal] = useState(null);
   const [editingProject, setEditingProject] = useState(null);
@@ -43,14 +46,37 @@ const ClientProjects = () => {
     setRevisionNote('');
     const projectId = proj._id || proj.id;
     setReviewing({ id: projectId, title: proj.title, isCompleted: proj.status === 'completed' });
-    // Fetch the full job to show the freelancer's delivery details.
     try {
+      // Find the contract associated with this job
+      const { data: contractData } = await contractsAPI.getMyContracts();
+      const contract = contractData?.data?.find(c => String(c.jobId?._id || c.jobId) === String(projectId));
+      
+      let delivery = null;
+      let revisionCount = 0;
+      if (contract) {
+        const { data: delivData } = await deliveriesAPI.getContractDeliveries(contract._id);
+        const deliveries = delivData?.data?.deliveries || [];
+        if (deliveries.length > 0) {
+          delivery = deliveries[0]; // Latest is first
+          revisionCount = deliveries.length - 1;
+        }
+      }
+      
       const { data } = await jobsAPI.getJobById(projectId);
       const job = data?.data?.job || data?.data || {};
       const freelancerName = job.hiredFreelancer ? `${job.hiredFreelancer.firstName} ${job.hiredFreelancer.lastName}` : 'Freelancer';
-      setReviewing({ id: projectId, title: proj.title, isCompleted: proj.status === 'completed', delivery: job.delivery || null, revisionCount: job.revisionCount || 0, freelancerName });
-    } catch {
-      /* keep the modal open with no delivery detail */
+      setReviewing({ 
+        id: projectId, 
+        contractId: contract?._id,
+        deliveryId: delivery?._id,
+        title: proj.title, 
+        isCompleted: proj.status === 'completed', 
+        delivery: delivery, 
+        revisionCount: revisionCount, 
+        freelancerName 
+      });
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -60,7 +86,7 @@ const ClientProjects = () => {
     // Try to complete; backend returns paymentRequired when the final 50% is
     // still owed → send the client to the final checkout.
     try {
-      const { data } = await jobsAPI.acceptDelivery(reviewing.id);
+      const { data } = await deliveriesAPI.reviewDelivery(reviewing.deliveryId, { action: 'accept' });
       const payload = data?.data || {};
       if (payload.paymentRequired) {
         const { data: pay } = await paymentsAPI.startFinal(reviewing.id);
@@ -110,12 +136,19 @@ const ClientProjects = () => {
   };
 
   const handleRequestRevision = async () => {
-    if (!reviewing) return;
+    if (!reviewing || !reviewing.deliveryId) return;
     if (!revisionNote.trim()) { showToast('Add a note describing the changes needed.', 'error'); return; }
     setActioning(true);
-    const res = await requestRevision(reviewing.id, revisionNote.trim());
-    setActioning(false);
-    if (res?.success) setReviewing(null);
+    try {
+      await deliveriesAPI.reviewDelivery(reviewing.deliveryId, { action: 'request_revision', feedback: revisionNote.trim() });
+      showToast('Revision requested.');
+      setReviewing(null);
+      await fetchProfile();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to request revision', 'error');
+    } finally {
+      setActioning(false);
+    }
   };
 
   // Open the edit modal with the FULL job (context only keeps a truncated
@@ -264,8 +297,9 @@ const ClientProjects = () => {
                   <span className={`cl-badge cl-badge--${proj.status}`}>
                     {proj.status === 'open' ? '🟢 Open' :
                      proj.status === 'draft' ? '📂 Draft' :
+                     proj.status === 'in-progress' && proj.contractStatus === 'delivered' ? '📦 Delivered — review needed' :
+                     proj.status === 'in-progress' && proj.contractStatus === 'in_revision' ? '🔁 In Revision' :
                      proj.status === 'in-progress' ? '🔵 In Progress' :
-                     proj.status === 'delivered' ? '📦 Delivered — review needed' :
                      proj.status === 'completed' ? '✅ Completed' :
                      proj.status === 'expired' ? '⏰ Expired' :
                      '⚪ Closed'}
@@ -279,6 +313,35 @@ const ClientProjects = () => {
               {Array.isArray(proj.skills) && proj.skills.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
                   {proj.skills.map((s) => <span key={s} className="cl-tag">{s}</span>)}
+                </div>
+              )}
+
+              {/* Hourly Project Info */}
+              {proj.contractType === 'hourly' && proj.status !== 'draft' && proj.status !== 'open' && (
+                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    {proj.status === 'completed' || proj.status === 'closed' ? (
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ Freelancer stopped working</span>
+                    ) : proj.timerActive ? (
+                      <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                        🟢 Freelancer is currently working 
+                        <LiveTimer startedAt={proj.timerStartedAt} hourlyRate={proj.hourlyRate} prefix=" (" suffix=")" />
+                      </span>
+                    ) : (
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ Freelancer is not working right now</span>
+                    )}
+                  </div>
+                  <div style={{ color: 'var(--color-text-mid)' }}>
+                    🕒 Total logged: <strong>{Math.floor(proj.totalDuration / 3600000)}h {Math.floor((proj.totalDuration % 3600000) / 60000)}m</strong>
+                    {proj.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((proj.totalDuration / 3600000) * proj.hourlyRate).toFixed(2)})</span>}
+                    {proj.lastTimeLog && (
+                      <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
+                        Last session: <strong>{Math.floor(proj.lastTimeLog.duration / 3600000)}h {Math.floor((proj.lastTimeLog.duration % 3600000) / 60000)}m</strong> 
+                        {proj.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((proj.lastTimeLog.duration / 3600000) * proj.hourlyRate).toFixed(2)})</span>}
+                        {' '}({new Date(proj.lastTimeLog.endTime).toLocaleDateString()})
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -325,19 +388,40 @@ const ClientProjects = () => {
                     {proj.status === 'completed' && (
                       <>
                         <button className="cl-btn cl-btn--secondary cl-btn--sm" onClick={() => openReview(proj)}>
-                          📂 View Submitted Work
+                          📂 View Submitted Work {proj.hasReviewed ? '(Reviewed)' : ''}
                         </button>
-                        <button 
-                          className="cl-btn cl-btn--ghost cl-btn--sm"
-                          onClick={() => setShowReviewModal({ jobId: proj.id, targetName: 'Freelancer' })}
-                        >
-                          ⭐️ Leave Review
-                        </button>
+                        {proj.hasReviewed !== true && (
+                          <button 
+                            className="cl-btn cl-btn--ghost cl-btn--sm"
+                            onClick={() => setShowReviewModal({ jobId: proj.id, targetName: 'Freelancer' })}
+                          >
+                            ⭐️ Leave Review
+                          </button>
+                        )}
                       </>
                     )}
-                    {proj.status === 'delivered' && (
+                    {proj.contractStatus === 'delivered' && (
                       <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={() => openReview(proj)}>
                         📦 Review Submitted Work
+                      </button>
+                    )}
+                    {proj.contractType === 'hourly' && proj.status === 'in-progress' && (
+                      <button 
+                        className="cl-btn cl-btn--sm" 
+                        style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }}
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to end this hourly contract? The freelancer will no longer be able to track time, and the contract will be marked as completed.")) {
+                            try {
+                              await contractsAPI.endContract(proj.contractId || proj.hiredFreelancer?.contractId || proj.id); // It uses contractId endpoint
+                              showToast('Contract ended successfully!');
+                              fetchProfile();
+                            } catch (err) {
+                              showToast(err.response?.data?.message || 'Failed to end contract', 'error');
+                            }
+                          }
+                        }}
+                      >
+                        🛑 End Contract
                       </button>
                     )}
                     {proj.status !== 'draft' && proj.source !== 'gig' && (
@@ -650,6 +734,10 @@ const ClientProjects = () => {
           jobId={showReviewModal.jobId}
           targetName={showReviewModal.targetName}
           onClose={() => setShowReviewModal(null)}
+          onSuccess={() => {
+            setShowReviewModal(null);
+            fetchProfile();
+          }}
         />
       )}
 

@@ -22,6 +22,7 @@ const TYPES = {
   ESCROW_REFUNDED: 'escrow_refunded',
   REVIEW_SUBMITTED: 'review_submitted',
   JOB_CANCELLED: 'job_cancelled',
+  CONTRACT_DISPUTED: 'contract_disputed',
 };
 
 /**
@@ -155,6 +156,21 @@ const onJobCancelled = (userId, { job }) => notify(userId, {
   jobId: job?._id,
 });
 
+const onContractDisputed = (userId, { contractId, actorName, reason }) => notify(userId, {
+  type: TYPES.CONTRACT_DISPUTED,
+  title: 'Contract Dispute Raised',
+  message: `${actorName} has requested to cancel the contract. Reason: ${reason}. This contract is now under review.`,
+  link: `/contract/${contractId}`,
+});
+
+const onProjectCompleted = (freelancerId, { job }) => notify(freelancerId, {
+  type: TYPES.PROJECT_COMPLETED,
+  title: 'Project Completed! 🎉',
+  message: `The client has accepted your delivery for "${job?.title}". Payment has been released!`,
+  link: `/freelancer/projects/${job?._id}`,
+  jobId: job?._id,
+});
+
 module.exports = {
   TYPES,
   notify,
@@ -166,10 +182,12 @@ module.exports = {
   onWorkDelivered,
   onRevisionRequested,
   onPaymentReleased,
+  onProjectCompleted,
   onNewMessage,
   onWithdrawalRequested,
   onWithdrawalCompleted,
   onEscrowRefunded,
   onReviewSubmitted,
   onJobCancelled,
+  onContractDisputed,
 };

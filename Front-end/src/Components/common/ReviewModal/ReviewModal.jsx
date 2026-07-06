@@ -16,8 +16,8 @@ export default function ReviewModal({ jobId, targetName, onClose, onSuccess }) {
       toast.error('Please select a star rating.');
       return;
     }
-    if (comment.trim().length < 5) {
-      toast.error('Please write a brief review (at least 5 characters).');
+    if (comment.trim().length > 0 && comment.trim().length < 5) {
+      toast.error('If you choose to write a review, please write at least 5 characters.');
       return;
     }
 
@@ -63,7 +63,7 @@ export default function ReviewModal({ jobId, targetName, onClose, onSuccess }) {
           </div>
 
           <div className="rm-form-group">
-            <label className="rm-label">Write your review</label>
+            <label className="rm-label">Write your review (Optional)</label>
             <textarea
               className="rm-textarea"
               placeholder="What went well? What could be improved?"

@@ -205,7 +205,16 @@ export const ClientProvider = ({ children }) => {
         proposals: j.proposals || [],
         source: j.source || 'project',
         hiredFreelancer: j.hiredFreelancer,
-        payment: j.payment
+        payment: j.payment,
+        contractId: j.contractId?._id || null,
+        contractStatus: j.contractId?.status || null,
+        contractType: j.contractType || 'fixed',
+        hourlyRate: j.hourlyRate || 0,
+        timerActive: j.timerActive || false,
+        timerStartedAt: j.timerStartedAt || null,
+        lastTimeLog: j.lastTimeLog || null,
+        totalDuration: j.totalDuration || 0,
+        hasReviewed: j.hasReviewed || false
       }));
 
       setProjects(transformedJobs);

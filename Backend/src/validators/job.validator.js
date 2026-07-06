@@ -208,14 +208,22 @@ const createProposalValidation = [
     .notEmpty().withMessage('Cover letter is required')
     .isLength({ min: 100, max: 2000 }).withMessage('Cover letter must be 100-2000 characters'),
 
-  body('proposedRate')
-    .notEmpty().withMessage('Proposed rate is required')
-    .isFloat({ min: 0 }).withMessage('Proposed rate must be positive'),
+  body('fixedPrice')
+    .optional()
+    .isFloat({ min: 0 }).withMessage('Fixed price must be positive'),
 
-  body('estimatedDuration')
+  body('hourlyRate')
+    .optional()
+    .isFloat({ min: 0 }).withMessage('Hourly rate must be positive'),
+
+  body('estimatedDeliveryTime')
     .optional()
     .trim()
-    .isLength({ max: 100 }).withMessage('Estimated duration too long'),
+    .isLength({ max: 100 }).withMessage('Estimated delivery time too long'),
+    
+  body('estimatedWeeklyHours')
+    .optional()
+    .isInt({ min: 1, max: 168 }).withMessage('Weekly hours must be between 1 and 168'),
 
   body('attachments')
     .optional()
@@ -236,14 +244,22 @@ const updateProposalValidation = [
     .trim()
     .isLength({ min: 100, max: 2000 }).withMessage('Cover letter must be 100-2000 characters'),
 
-  body('proposedRate')
+  body('fixedPrice')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Proposed rate must be positive'),
+    .isFloat({ min: 0 }).withMessage('Fixed price must be positive'),
 
-  body('estimatedDuration')
+  body('hourlyRate')
+    .optional()
+    .isFloat({ min: 0 }).withMessage('Hourly rate must be positive'),
+
+  body('estimatedDeliveryTime')
     .optional()
     .trim()
-    .isLength({ max: 100 }).withMessage('Estimated duration too long')
+    .isLength({ max: 100 }).withMessage('Estimated delivery time too long'),
+    
+  body('estimatedWeeklyHours')
+    .optional()
+    .isInt({ min: 1, max: 168 }).withMessage('Weekly hours must be between 1 and 168')
 ];
 
 // Get proposal validation
@@ -395,9 +411,9 @@ const reviewJobValidation = [
     .isFloat({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
 
   body('comment')
-    .notEmpty().withMessage('Comment is required')
+    .optional({ checkFalsy: true })
     .trim()
-    .isLength({ min: 5, max: 1000 }).withMessage('Comment must be between 5 and 1000 characters')
+    .isLength({ max: 1000 }).withMessage('Comment must not exceed 1000 characters')
 ];
 
 module.exports = {

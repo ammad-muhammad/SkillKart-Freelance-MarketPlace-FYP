@@ -58,6 +58,15 @@ const startServer = async () => {
       console.log('⚠️  Proceeding without AI features');
     }
 
+    // Initialize cron jobs
+    console.log('⏰ Initializing cron jobs...');
+    try {
+      const { initCronJobs } = require('./services/cron.service');
+      initCronJobs();
+    } catch (error) {
+      console.log('⚠️  Cron job initialization failed', error.message);
+    }
+
     // Start Express server
     server = app.listen(PORT, '0.0.0.0', () => {
       console.log('========================================');

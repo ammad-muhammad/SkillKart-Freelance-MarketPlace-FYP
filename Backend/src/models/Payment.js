@@ -15,9 +15,11 @@ const mongoose = require('mongoose');
  */
 const paymentSchema = new mongoose.Schema({
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', index: true },
+  contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract', index: true },
+  proposalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' },
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   freelancerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  type: { type: String, enum: ['job_escrow', 'wallet_deposit'], default: 'job_escrow' },
+  type: { type: String, enum: ['job_escrow', 'wallet_deposit', 'hourly_invoice'], default: 'job_escrow' },
 
   totalAmount: { type: Number, required: true },     // agreed project amount
   depositAmount: { type: Number, required: true },   // 50% upfront

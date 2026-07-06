@@ -122,7 +122,7 @@ const NODE_DEFINITIONS = [
   { name: 'Other',                    type: 'category',  icon: '✨', color: '#64748b' },
 
   /* ── Technologies / Programming Languages ──────────────────────────── */
-  { name: 'JavaScript',     type: 'technology', aliases: ['JS', 'ECMAScript'], weight: 1.0 },
+  { name: 'JavaScript',     type: 'technology', aliases: ['JS', 'ECMAScript', 'JavaScript Development'], weight: 1.0 },
   { name: 'TypeScript',     type: 'technology', aliases: ['TS'],               weight: 0.95 },
   { name: 'Python',         type: 'technology',                                 weight: 1.0 },
   { name: 'PHP',            type: 'technology',                                 weight: 0.85 },

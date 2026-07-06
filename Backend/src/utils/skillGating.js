@@ -14,7 +14,6 @@ const FreelancerProfile = require('../models/FreelancerProfile');
  * brittle category→skill table.
  */
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 
 /**
  * @returns {Promise<{ verifiedSkills: string[] }>} the freelancer's currently
@@ -46,15 +45,13 @@ async function checkSkillGate(userId, requiredSkills = [], category = '') {
   const { verifiedSkills } = await getVerifiedSkills(userId);
 
   // The set of things that, if verified, unlock this work.
-  const required = [...(Array.isArray(requiredSkills) ? requiredSkills : []), category]
-    .map(norm)
-    .filter(Boolean);
+  const required = [...(Array.isArray(requiredSkills) ? requiredSkills : []), category].filter(Boolean);
 
   // No required skills/category specified → nothing to gate against; allow.
   if (required.length === 0) return { allowed: true, verifiedSkills, required: [] };
 
-  const verifiedSet = new Set(verifiedSkills.map(norm));
-  const allowed = required.some((r) => verifiedSet.has(r));
+  const { checkSkillCoverage } = require('../services/skillMatching.service');
+  const allowed = await checkSkillCoverage(required, verifiedSkills);
 
   return { allowed, verifiedSkills, required };
 }

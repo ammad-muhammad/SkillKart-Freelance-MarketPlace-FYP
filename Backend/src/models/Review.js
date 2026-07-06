@@ -24,9 +24,9 @@ const reviewSchema = new mongoose.Schema({
   },
   comment: { 
     type: String, 
-    required: true,
     trim: true,
-    maxlength: 1000
+    maxlength: 1000,
+    default: ''
   },
   type: {
     type: String,

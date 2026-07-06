@@ -13,9 +13,7 @@ export const jobsAPI = {
   getMyProjects: (params) =>
     client.get('/jobs/my-projects', { params }),
 
-  // Get the freelancer's contracts (hired jobs + escrow status)
-  getMyContracts: (params) =>
-    client.get('/jobs/my-contracts', { params }),
+
 
   // Get job by ID
   getJobById: (id) => 
@@ -40,18 +38,7 @@ export const jobsAPI = {
   recommendCategory: (data) =>
     client.post('/jobs/ai/recommend-category', data),
 
-  // ── Delivery lifecycle ──
-  // Freelancer submits work (in-progress → delivered)
-  submitDelivery: (id, payload) =>
-    client.post(`/jobs/${id}/deliver`, payload),
 
-  // Client accepts delivery (delivered → completed)
-  acceptDelivery: (id) =>
-    client.post(`/jobs/${id}/accept-delivery`),
-
-  // Client requests a revision (delivered → in-progress)
-  requestRevision: (id, note) =>
-    client.post(`/jobs/${id}/request-revision`, { note }),
 
   // Leave a review for a completed job
   reviewJob: (id, data) =>

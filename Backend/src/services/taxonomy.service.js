@@ -60,7 +60,7 @@ async function traverseGraph(startId, relationshipTypes, maxDepth = 3) {
 
   // $graphLookup: follow SkillRelationship.from edges whose `type` is in the set
   const pipeline = [
-    { $match: { _id: typeof startId === 'string' ? require('mongoose').Types.ObjectId(startId) : startId } },
+    { $match: { _id: typeof startId === 'string' ? new (require('mongoose').Types.ObjectId)(startId) : startId } },
     {
       $graphLookup: {
         from: 'skillrelationships',
@@ -99,7 +99,7 @@ async function traverseReverse(endId, relationshipTypes, maxDepth = 3) {
   if (cached) return cached;
 
   const pipeline = [
-    { $match: { _id: typeof endId === 'string' ? require('mongoose').Types.ObjectId(endId) : endId } },
+    { $match: { _id: typeof endId === 'string' ? new (require('mongoose').Types.ObjectId)(endId) : endId } },
     {
       $graphLookup: {
         from: 'skillrelationships',
