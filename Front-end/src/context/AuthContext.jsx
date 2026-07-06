@@ -299,6 +299,8 @@ export const AuthProvider = ({ children }) => {
     handleSupabaseOAuth,
     logout,
     isAuthenticated: !!user,
+    isClient: user?.role === 'client',
+    isFreelancer: user?.role === 'freelancer',
     getAccessToken: () => tokenManager.getAccessToken(),
     refreshAuth: checkAuth,
     refreshUser

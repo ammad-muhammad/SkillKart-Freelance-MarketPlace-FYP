@@ -46,6 +46,10 @@
   min-height: 70vh;
 }
 
+.pfp-page--loading::before {
+  height: 100vh;
+}
+
 /* Background Blobs for Premium Feel */
 .pfp-bg-blob {
   position: absolute;
@@ -637,17 +641,17 @@
   background: #eff6ff;
 }
 .pfp-skill-verified {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+  background: #f0f7ff;
+  border-color: var(--pfp-accent);
+  color: var(--pfp-primary);
 }
 .pfp-skill-verified:hover {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: #15803d;
+  background: #e0f0ff;
+  border-color: var(--pfp-secondary);
+  color: var(--pfp-secondary);
 }
 .pfp-skill-check {
-  color: #22c55e;
+  color: var(--pfp-primary);
 }
 
 /* Languages */

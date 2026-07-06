@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText } from 'lucide-react';
+import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { contractsAPI } from '../../api/contracts';
 import { useAuth } from '../../hooks/useAuth';
@@ -68,7 +68,7 @@ export default function FreelancerWork() {
     try {
       const externalLinks = delivery.links.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
       await deliveriesAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), externalLinks });
-      toast.success('Work delivered! The client will review it. 🚀');
+      toast.success('Work delivered! The client will review it.');
       setDeliverFor(null);
       setDelivery({ message: '', links: '' });
       load();
@@ -152,7 +152,7 @@ export default function FreelancerWork() {
           <p className="fl-page-sub">Your active contracts, deliveries, and earnings.</p>
         </div>
         <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          🔍 Find Work
+          <Search size={14} style={{ marginRight: '4px' }} /> Find Work
         </Link>
       </div>
 
@@ -174,7 +174,7 @@ export default function FreelancerWork() {
 
       {contracts.length === 0 ? (
         <div className="fl-empty-state">
-          <div className="fl-empty-state__icon">💼</div>
+          <div className="fl-empty-state__icon"><Briefcase size={48} style={{ color: 'var(--color-primary)' }} /></div>
           <h3>No contracts yet</h3>
           <p>When a client hires you (via a proposal or a gig order), your work will appear here.</p>
           <Link to="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</Link>
@@ -199,7 +199,7 @@ export default function FreelancerWork() {
                   <div>
                     <h3 className="fl-contract__title">{c.jobId?.title || 'Unknown Job'}</h3>
                     <p className="fl-contract__meta">
-                      {isHourly ? '⏱️ Hourly Project' : '📋 Fixed Price Project'} · {c.jobId?.category || 'Unknown'}
+                      {isHourly ? <span style={{ display: 'inline-flex', alignItems: 'center' }}><Clock size={14} style={{ marginRight: '4px' }} /> Hourly Project</span> : <span style={{ display: 'inline-flex', alignItems: 'center' }}><FileText size={14} style={{ marginRight: '4px' }} /> Fixed Price Project</span>} · {c.jobId?.category || 'Unknown'}
                       {c.clientId && ` · ${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`}
                     </p>
                   </div>
@@ -222,7 +222,7 @@ export default function FreelancerWork() {
                 {isHourly && c.dispute && c.dispute.status === 'pending' && (
                   <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                     <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      ⚠️ Contract under Dispute
+                      <AlertTriangle size={18} style={{ marginRight: '8px' }} /> Contract under Dispute
                     </h4>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
                       This contract has been escalated to Admin review. Reason: {c.dispute.reason}.
@@ -233,13 +233,13 @@ export default function FreelancerWork() {
                 {isHourly && c.endRequest && c.endRequest.status === 'pending' && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                     {String(c.endRequest.requestedBy) === String(user?._id) ? (
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534' }}>
-                        ⏳ Waiting for the client to approve your request to end this contract.
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534', display: 'flex', alignItems: 'center' }}>
+                        <Clock size={14} style={{ marginRight: '4px' }} /> Waiting for the client to approve your request to end this contract.
                       </p>
                     ) : (
                       <>
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>
-                          🛑 Client has requested to end this contract
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534', display: 'flex', alignItems: 'center' }}>
+                          <StopCircle size={18} style={{ marginRight: '8px' }} /> Client has requested to end this contract
                         </h4>
                         <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#15803d' }}>
                           Reason: {c.endRequest.reason} 
@@ -262,18 +262,18 @@ export default function FreelancerWork() {
                   <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       {['completed', 'cancelled'].includes(c.status) ? (
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ Contract has ended</span>
+                        <span style={{ color: '#64748b', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> Contract has ended</span>
                       ) : timerActive ? (
-                        <span style={{ color: '#16a34a', fontWeight: 600 }}>
-                          🟢 You are currently working 
+                        <span style={{ color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+                          <CheckCircle2 size={14} style={{ marginRight: '4px' }} /> You are currently working 
                           <LiveTimer startedAt={c.timer?.startedAt} hourlyRate={c.hourlyRate} prefix=" (" suffix=")" />
                         </span>
                       ) : (
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ You are not tracking time</span>
+                        <span style={{ color: '#64748b', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> You are not tracking time</span>
                       )}
                     </div>
                     <div style={{ color: 'var(--color-text-mid)' }}>
-                      🕒 Total logged: <strong>{Math.floor((c.totalDuration || 0) / 3600000)}h {Math.floor(((c.totalDuration || 0) % 3600000) / 60000)}m</strong>
+                      <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Total logged: <strong>{Math.floor((c.totalDuration || 0) / 3600000)}h {Math.floor(((c.totalDuration || 0) % 3600000) / 60000)}m</strong>
                       {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {(((c.totalDuration || 0) / 3600000) * c.hourlyRate).toFixed(2)})</span>}
                       {c.lastTimeLog && (
                         <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
@@ -287,7 +287,7 @@ export default function FreelancerWork() {
                 )}
 
                 {c.revisionNote && c.status === 'in_revision' && (
-                  <div className="fl-contract__revision">🔁 Revision requested: {c.revisionNote}</div>
+                  <div className="fl-contract__revision"><RefreshCw size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Revision requested: {c.revisionNote}</div>
                 )}
 
                 <div className="fl-contract__footer">
@@ -321,17 +321,17 @@ export default function FreelancerWork() {
                         <>
                           <button 
                             className="fl-btn fl-btn--sm fl-btn--ghost" 
-                            style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                            style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
                             onClick={() => setEndRequestModal({ contractId: c._id })}
                           >
-                            🛑 End Contract
+                            <StopCircle size={14} /> End Contract
                           </button>
                           <button 
                             className="fl-btn fl-btn--sm fl-btn--ghost" 
-                            style={{ color: '#ef4444' }}
+                            style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}
                             onClick={() => setDisputeModal({ contractId: c._id })}
                           >
-                            ⚠️ Dispute
+                            <AlertTriangle size={14} /> Dispute
                           </button>
                         </>
                       )}

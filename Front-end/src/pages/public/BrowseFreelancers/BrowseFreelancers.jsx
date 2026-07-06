@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Star, CheckCircle2, MapPin, Bookmark, BookmarkCheck } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
@@ -11,6 +12,7 @@ import { ALL_SKILLS, LOCATIONS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import TagInput from '../../../Components/common/TagInput/TagInput';
 import { useClient } from '../../../context/ClientContext';
+import { useAuth } from '../../../hooks/useAuth';
 import './BrowseFreelancers.css';
 
 /* Map a FreelancerProfile (with populated userId) from the API → card shape */
@@ -71,7 +73,7 @@ function SkeletonCard({ list }) {
 }
 
 /* ── Freelancer Card ── */
-function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
+function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave, isClient }) {
     const {
         id, name, avatar, avatarUrl, avatarBg, role, bio, skills,
         rating, reviewCount, hourlyRate, currency,
@@ -92,22 +94,24 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
                     <div className="bf-card__name">{name}</div>
                     <div className="bf-card__role">{role}</div>
                     {isVerified && (
-                        <div className="bf-card__verified">
-                            <span>✓</span> Verified Expert
+                        <div className="bf-card__verified" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={14} color="#10b981" /> Verified Expert
                         </div>
                     )}
                 </div>
                 <div className="bf-card__rating-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                    <button 
-                        className={`bf-card__save ${isSaved ? 'bf-card__save--active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); onToggleSave(freelancer); }}
-                        title={isSaved ? "Remove from saved" : "Save freelancer"}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: 0 }}
-                    >
-                        {isSaved ? '🔖' : '📑'}
-                    </button>
+                    {isClient && (
+                        <button
+                            className={`bf-card__save ${isSaved ? 'bf-card__save--active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); onToggleSave(freelancer); }}
+                            title={isSaved ? "Remove from saved" : "Save freelancer"}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: isSaved ? 'var(--color-primary)' : '#94a3b8' }}
+                        >
+                            {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                        </button>
+                    )}
                     <div className="bf-card__rating">
-                        <span className="star">★</span>
+                        <Star size={14} fill="#f59e0b" color="#f59e0b" />
                         <span>{rating.toFixed(1)}</span>
                         <span className="count">({reviewCount})</span>
                     </div>
@@ -125,12 +129,13 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
             </div>
 
             <div className="bf-card__footer">
-                <div>
-                    <div className="bf-card__rate">
+                <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+                    <div className="bf-card__rate" style={{ display: 'flex', justifyContent: 'flex-start' }}>
                         {currency === 'PKR' ? 'Rs. ' : ''}{hourlyRate}<span>/hr</span>
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginTop: 2 }}>
-                        📍 {location}
+                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', maxWidth: '100%' }}>
+                        <MapPin size={12} color="#f43f5e" style={{ flexShrink: 0 }} />
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{location}</span>
                     </div>
                 </div>
                 <button className="bf-card__btn" onClick={() => onInvite(id)}>
@@ -145,6 +150,7 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave }) {
 export default function BrowseFreelancers() {
     const navigate = useNavigate();
     const { savedFreelancers, toggleSavedFreelancer } = useClient();
+    const { isClient } = useAuth();
     /* filter state */
     const [query, setQuery] = useState('');
     const [draftQuery, setDraftQuery] = useState('');
@@ -169,15 +175,15 @@ export default function BrowseFreelancers() {
                 setHeroStats(chips);
             })
             .catch(() => { if (on) setHeroStats([]); });
-            
+
         freelancersAPI.getLocations()
             .then((res) => {
                 if (on && res.data?.data) {
                     setDynamicLocations(res.data.data);
                 }
             })
-            .catch(() => {});
-            
+            .catch(() => { });
+
         return () => { on = false; };
     }, []);
 
@@ -200,10 +206,10 @@ export default function BrowseFreelancers() {
 
         const tl = gsap.timeline({ delay: 0.1 });
         tl.fromTo('.bf-hero__tag', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
-          .fromTo('.bf-hero h1', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
-          .fromTo('.bf-hero p', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
-          .fromTo('.bf-search', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2')
-          .fromTo('.bf-hero-stat', { y: 15, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.4, ease: 'power3.out' }, '-=0.1');
+            .fromTo('.bf-hero h1', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+            .fromTo('.bf-hero p', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+            .fromTo('.bf-search', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2')
+            .fromTo('.bf-hero-stat', { y: 15, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.4, ease: 'power3.out' }, '-=0.1');
 
     }, []);
 
@@ -265,216 +271,217 @@ export default function BrowseFreelancers() {
             <Navbar />
             <div className="bf-page">
 
-            {/* ── Hero Banner ── */}
-            <section className="bf-hero">
-                <div className="bf-hero__orb bf-hero__orb--1" />
-                <div className="bf-hero__orb bf-hero__orb--2" />
-                <div className="bf-hero__grid" />
-                <div className="container bf-hero__inner">
-                    <div className="bf-hero__tag">🔍 Browse Talent</div>
-                    <h1>Browse <span>Verified Freelancers</span></h1>
-                    <p>Discover AI-verified student talent across 40+ skill categories. Every profile is screened for quality and expertise.</p>
+                {/* ── Hero Banner ── */}
+                <section className="bf-hero">
+                    <div className="bf-hero__orb bf-hero__orb--1" />
+                    <div className="bf-hero__orb bf-hero__orb--2" />
+                    <div className="bf-hero__grid" />
+                    <div className="container bf-hero__inner">
+                        <div className="bf-hero__tag">🔍 Browse Talent</div>
+                        <h1>Browse <span>Verified Freelancers</span></h1>
+                        <p>Discover AI-verified student talent across 40+ skill categories. Every profile is screened for quality and expertise.</p>
 
-                    <form onSubmit={handleSearch} className="bf-search">
-                        <input
-                            id="bf-search-input"
-                            className="bf-search__input"
-                            placeholder="Search by name, skill, or role…"
-                            value={draftQuery}
-                            onChange={e => setDraftQuery(e.target.value)}
-                        />
-                        <button type="submit" className="bf-search__btn">Search</button>
-                    </form>
-
-                    {heroStats.length > 0 && (
-                        <div className="bf-hero-stats">
-                            {heroStats.map((chip) => (
-                                <span key={chip} className="bf-hero-stat">{chip}</span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <div className="bf-hero__wave">
-                    <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                        <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
-                    </svg>
-                </div>
-            </section>
-
-            {/* ── Main Content ── */}
-            <div className="container">
-                <div className="bf-layout">
-
-                    {/* ── Sidebar Filters ── */}
-                    <aside className="bf-sidebar">
-                        <div className="bf-sidebar__header">
-                            <span className="bf-sidebar__title">🎛 Filters</span>
-                            <button className="bf-sidebar__clear" onClick={clearFilters}>Clear all</button>
-                        </div>
-
-                        {/* Hourly Rate */}
-                        <div className="bf-filter-group">
-                            <label className="bf-filter-label">Max Hourly Rate</label>
+                        <form onSubmit={handleSearch} className="bf-search">
                             <input
-                                type="range"
-                                className="bf-range"
-                                min={5} max={100} step={1}
-                                value={maxRate}
-                                onChange={e => { setMaxRate(+e.target.value); setPage(1); }}
-                                style={{ background: `linear-gradient(to right, var(--color-primary, #042E4C) ${((maxRate - 5) / 95) * 100}%, #e2e8f0 ${((maxRate - 5) / 95) * 100}%)` }}
+                                id="bf-search-input"
+                                className="bf-search__input"
+                                placeholder="Search by name, skill, or role…"
+                                value={draftQuery}
+                                onChange={e => setDraftQuery(e.target.value)}
                             />
-                            <div className="bf-range-vals">
-                                <span>Rs. 5/hr</span>
-                                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Rs. {maxRate}/hr</span>
-                            </div>
-                        </div>
+                            <button type="submit" className="bf-search__btn">Search</button>
+                        </form>
 
-                        {/* Min Rating */}
-                        <div className="bf-filter-group">
-                            <label className="bf-filter-label">Minimum Rating</label>
-                            <div className="bf-rating-opts">
-                                <label className="bf-rating-opt">
-                                    <input type="radio" name="rating" value={0} checked={minRating === 0}
-                                        onChange={() => { setMinRating(0); setPage(1); }} />
-                                    <span>Any rating</span>
-                                </label>
-                                {RATINGS.map(r => (
-                                    <label key={r} className="bf-rating-opt">
-                                        <input type="radio" name="rating" value={r} checked={minRating === r}
-                                            onChange={() => { setMinRating(r); setPage(1); }} />
-                                        <span className="bf-stars">{'★'.repeat(r)}{'☆'.repeat(5 - r)}</span>
-                                        <span>&amp; up</span>
-                                    </label>
+                        {heroStats.length > 0 && (
+                            <div className="bf-hero-stats">
+                                {heroStats.map((chip) => (
+                                    <span key={chip} className="bf-hero-stat">{chip}</span>
                                 ))}
                             </div>
-                        </div>
+                        )}
+                    </div>
+                    <div className="bf-hero__wave">
+                        <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                            <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
+                        </svg>
+                    </div>
+                </section>
 
-                        {/* Skills */}
-                        <div className="bf-filter-group">
-                            <label className="bf-filter-label" style={{ marginBottom: '0.5rem' }}>Skills</label>
-                            <TagInput 
-                                tags={selectedSkills}
-                                onChange={(tags) => { setSelectedSkills(tags); setPage(1); }}
-                                validateFn={aiAPI.validateSkill}
-                                placeholder="E.g. Web Development, React..."
-                                hintText={<span>Type a skill and press <strong>Enter</strong>. AI will suggest valid alternatives.</span>}
-                            />
-                        </div>
+                {/* ── Main Content ── */}
+                <div className="container">
+                    <div className="bf-layout">
 
-                        {/* Location */}
-                        <div className="bf-filter-group">
-                            <label className="bf-filter-label">Location</label>
-                            <CustomSelect
-                                value={location}
-                                onChange={val => { setLocation(val); setPage(1); }}
-                                placeholder="All locations"
-                                options={[
-                                    { value: '', label: 'All locations' },
-                                    ...dynamicLocations.map(l => ({ value: l, label: l }))
-                                ]}
-                            />
-                        </div>
-                    </aside>
-
-                    {/* ── Results ── */}
-                    <div className="bf-content">
-                        {/* Toolbar */}
-                        <div className="bf-toolbar">
-                            <div className="bf-toolbar__count">
-                                Showing <strong>{freelancers.length}</strong> of <strong>{total}</strong> freelancers
-                                {query && <> for "<em>{query}</em>"</>}
+                        {/* ── Sidebar Filters ── */}
+                        <aside className="bf-sidebar">
+                            <div className="bf-sidebar__header">
+                                <span className="bf-sidebar__title">🎛 Filters</span>
+                                <button className="bf-sidebar__clear" onClick={clearFilters}>Clear all</button>
                             </div>
-                            <div className="bf-toolbar__right">
-                                <CustomSelect
-                                    compact
-                                    value={sortBy}
-                                    onChange={val => { setSortBy(val); setPage(1); }}
-                                    options={SORT_OPTIONS}
+
+                            {/* Hourly Rate */}
+                            <div className="bf-filter-group">
+                                <label className="bf-filter-label">Max Hourly Rate</label>
+                                <input
+                                    type="range"
+                                    className="bf-range"
+                                    min={5} max={100} step={1}
+                                    value={maxRate}
+                                    onChange={e => { setMaxRate(+e.target.value); setPage(1); }}
+                                    style={{ background: `linear-gradient(to right, var(--color-primary, #042E4C) ${((maxRate - 5) / 95) * 100}%, #e2e8f0 ${((maxRate - 5) / 95) * 100}%)` }}
                                 />
-                                <div className="bf-view-btns">
-                                    <button
-                                        className={`bf-view-btn${viewMode === 'grid' ? ' bf-view-btn--active' : ''}`}
-                                        onClick={() => setViewMode('grid')} title="Grid view"
-                                    >⊞</button>
-                                    <button
-                                        className={`bf-view-btn${viewMode === 'list' ? ' bf-view-btn--active' : ''}`}
-                                        onClick={() => setViewMode('list')} title="List view"
-                                    >≡</button>
+                                <div className="bf-range-vals">
+                                    <span>Rs. 5/hr</span>
+                                    <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Rs. {maxRate}/hr</span>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Error */}
-                        {error && (
-                            <div className="bf-error">
-                                <div className="bf-error__icon">⚠️</div>
-                                <div className="bf-error__title">Something went wrong</div>
-                                <div className="bf-error__sub">{error}</div>
-                                <button className="bf-error__btn" onClick={fetchFreelancers}>Try Again</button>
+                            {/* Min Rating */}
+                            <div className="bf-filter-group">
+                                <label className="bf-filter-label">Minimum Rating</label>
+                                <div className="bf-rating-opts">
+                                    <label className="bf-rating-opt">
+                                        <input type="radio" name="rating" value={0} checked={minRating === 0}
+                                            onChange={() => { setMinRating(0); setPage(1); }} />
+                                        <span>Any rating</span>
+                                    </label>
+                                    {RATINGS.map(r => (
+                                        <label key={r} className="bf-rating-opt">
+                                            <input type="radio" name="rating" value={r} checked={minRating === r}
+                                                onChange={() => { setMinRating(r); setPage(1); }} />
+                                            <span className="bf-stars">{'★'.repeat(r)}{'☆'.repeat(5 - r)}</span>
+                                            <span>&amp; up</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
-                        )}
 
-                        {/* Loading — skeleton cards */}
-                        {loading && !error && (
-                            <div className={viewMode === 'grid' ? 'bf-grid' : 'bf-list-view'}>
-                                {Array.from({ length: PER_PAGE }).map((_, i) => (
-                                    <SkeletonCard key={i} list={viewMode === 'list'} />
-                                ))}
+                            {/* Skills */}
+                            <div className="bf-filter-group">
+                                <label className="bf-filter-label" style={{ marginBottom: '0.5rem' }}>Skills</label>
+                                <TagInput
+                                    tags={selectedSkills}
+                                    onChange={(tags) => { setSelectedSkills(tags); setPage(1); }}
+                                    validateFn={aiAPI.validateSkill}
+                                    placeholder="E.g. Web Development, React..."
+                                    hintText={<span>Type a skill and press <strong>Enter</strong>. AI will suggest valid alternatives.</span>}
+                                />
                             </div>
-                        )}
 
-                        {/* Cards */}
-                        {!loading && !error && freelancers.length > 0 && (
-                            <div className={viewMode === 'grid' ? 'bf-grid' : 'bf-list-view'}>
-                                {freelancers.map(f => (
-                                    <FreelancerCard
-                                        key={f.id}
-                                        freelancer={f}
-                                        list={viewMode === 'list'}
-                                        onInvite={handleInvite}
-                                        isSaved={savedFreelancers.some(sf => sf.id === f.id)}
-                                        onToggleSave={toggleSavedFreelancer}
+                            {/* Location */}
+                            <div className="bf-filter-group">
+                                <label className="bf-filter-label">Location</label>
+                                <CustomSelect
+                                    value={location}
+                                    onChange={val => { setLocation(val); setPage(1); }}
+                                    placeholder="All locations"
+                                    options={[
+                                        { value: '', label: 'All locations' },
+                                        ...dynamicLocations.map(l => ({ value: l, label: l }))
+                                    ]}
+                                />
+                            </div>
+                        </aside>
+
+                        {/* ── Results ── */}
+                        <div className="bf-content">
+                            {/* Toolbar */}
+                            <div className="bf-toolbar">
+                                <div className="bf-toolbar__count">
+                                    Showing <strong>{freelancers.length}</strong> of <strong>{total}</strong> freelancers
+                                    {query && <> for "<em>{query}</em>"</>}
+                                </div>
+                                <div className="bf-toolbar__right">
+                                    <CustomSelect
+                                        compact
+                                        value={sortBy}
+                                        onChange={val => { setSortBy(val); setPage(1); }}
+                                        options={SORT_OPTIONS}
                                     />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Empty */}
-                        {!loading && !error && freelancers.length === 0 && (
-                            <div className="bf-empty">
-                                <div className="bf-empty__icon">🔍</div>
-                                <div className="bf-empty__title">No freelancers found</div>
-                                <div className="bf-empty__sub">
-                                    Try adjusting your filters or search terms.
+                                    <div className="bf-view-btns">
+                                        <button
+                                            className={`bf-view-btn${viewMode === 'grid' ? ' bf-view-btn--active' : ''}`}
+                                            onClick={() => setViewMode('grid')} title="Grid view"
+                                        >⊞</button>
+                                        <button
+                                            className={`bf-view-btn${viewMode === 'list' ? ' bf-view-btn--active' : ''}`}
+                                            onClick={() => setViewMode('list')} title="List view"
+                                        >≡</button>
+                                    </div>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Pagination */}
-                        {!loading && totalPages > 1 && (
-                            <div className="bf-pagination">
-                                <button
-                                    className="bf-page-btn"
-                                    disabled={page === 1}
-                                    onClick={() => setPage(p => p - 1)}
-                                >←</button>
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            {/* Error */}
+                            {error && (
+                                <div className="bf-error">
+                                    <div className="bf-error__icon">⚠️</div>
+                                    <div className="bf-error__title">Something went wrong</div>
+                                    <div className="bf-error__sub">{error}</div>
+                                    <button className="bf-error__btn" onClick={fetchFreelancers}>Try Again</button>
+                                </div>
+                            )}
+
+                            {/* Loading — skeleton cards */}
+                            {loading && !error && (
+                                <div className={viewMode === 'grid' ? 'bf-grid' : 'bf-list-view'}>
+                                    {Array.from({ length: PER_PAGE }).map((_, i) => (
+                                        <SkeletonCard key={i} list={viewMode === 'list'} />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Cards */}
+                            {!loading && !error && freelancers.length > 0 && (
+                                <div className={viewMode === 'grid' ? 'bf-grid' : 'bf-list-view'}>
+                                    {freelancers.map(f => (
+                                        <FreelancerCard
+                                            key={f.id}
+                                            freelancer={f}
+                                            list={viewMode === 'list'}
+                                            onInvite={handleInvite}
+                                            isSaved={savedFreelancers.some(sf => sf.id === f.id)}
+                                            onToggleSave={toggleSavedFreelancer}
+                                            isClient={isClient}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Empty */}
+                            {!loading && !error && freelancers.length === 0 && (
+                                <div className="bf-empty">
+                                    <div className="bf-empty__icon">🔍</div>
+                                    <div className="bf-empty__title">No freelancers found</div>
+                                    <div className="bf-empty__sub">
+                                        Try adjusting your filters or search terms.
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {!loading && totalPages > 1 && (
+                                <div className="bf-pagination">
                                     <button
-                                        key={p}
-                                        className={`bf-page-btn${page === p ? ' bf-page-btn--active' : ''}`}
-                                        onClick={() => setPage(p)}
-                                    >{p}</button>
-                                ))}
-                                <button
-                                    className="bf-page-btn"
-                                    disabled={page === totalPages}
-                                    onClick={() => setPage(p => p + 1)}
-                                >→</button>
+                                        className="bf-page-btn"
+                                        disabled={page === 1}
+                                        onClick={() => setPage(p => p - 1)}
+                                    >←</button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                        <button
+                                            key={p}
+                                            className={`bf-page-btn${page === p ? ' bf-page-btn--active' : ''}`}
+                                            onClick={() => setPage(p)}
+                                        >{p}</button>
+                                    ))}
+                                    <button
+                                        className="bf-page-btn"
+                                        disabled={page === totalPages}
+                                        onClick={() => setPage(p => p + 1)}
+                                    >→</button>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
-            </div>
-            </div>
             </div>
             <Footer />
         </>

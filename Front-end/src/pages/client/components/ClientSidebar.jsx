@@ -62,17 +62,19 @@ const ClientSidebar = () => {
       <aside className={`cl-sidebar${open ? ' cl-sidebar--open' : ''}`}>
         {/* Brand */}
         <div className="cl-sidebar__brand">
-          <span className="cl-sidebar__logo">SkillKart</span>
+          <span className="cl-sidebar__logo">SkillKart</span>
           <button className="cl-sidebar__close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
         </div>
 
         {/* Avatar */}
         <div className="cl-sidebar__avatar-wrap">
-          <div className="cl-sidebar__avatar">
-            <UserAvatar 
-              src={avatar}
-              fullName={fullName}
-            />
+          <div className="cl-sidebar__avatar-container" style={{ position: 'relative', display: 'flex' }}>
+            <div className="cl-sidebar__avatar">
+              <UserAvatar 
+                src={avatar}
+                fullName={fullName}
+              />
+            </div>
             <span className="cl-sidebar__online-dot" />
           </div>
           <div className="cl-sidebar__user-info" style={{ minWidth: 0 }}>

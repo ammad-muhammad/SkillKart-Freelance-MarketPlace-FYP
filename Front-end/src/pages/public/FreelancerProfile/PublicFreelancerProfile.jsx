@@ -47,7 +47,7 @@ const itemVariants = {
 export default function PublicFreelancerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isClient, isFreelancer } = useAuth();
   const { savedFreelancers, toggleSavedFreelancer } = useClient();
 
   const [profile, setProfile] = useState(null);
@@ -55,6 +55,7 @@ export default function PublicFreelancerProfile() {
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -91,7 +92,6 @@ export default function PublicFreelancerProfile() {
   const u = profile?.userId || {};
   const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Freelancer';
   const isSaved = savedFreelancers.some((f) => f.id === (u._id || id));
-  const isClient = user?.role === 'client';
   const isOwner = user && (user._id === u._id || user._id === id);
 
   const handleSave = () => {
@@ -129,10 +129,9 @@ export default function PublicFreelancerProfile() {
     return (
       <>
         <Navbar />
-        <div className="pfp-page pfp-centered">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pfp-loading-card">
-            <Loader2 className="pfp-spinner" />
-            <p>Loading premium profile...</p>
+        <div className="pfp-page pfp-page--loading pfp-centered">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Loader2 className="pfp-spinner" style={{ width: '60px', height: '60px', color: 'white', margin: 0 }} />
           </motion.div>
         </div>
         <Footer />
@@ -144,7 +143,7 @@ export default function PublicFreelancerProfile() {
     return (
       <>
         <Navbar />
-        <div className="pfp-page pfp-centered">
+        <div className="pfp-page pfp-page--loading pfp-centered">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pfp-error-card">
             <div className="pfp-error-icon-bg"><Search size={32} /></div>
             <h2>Freelancer Not Found</h2>
@@ -258,15 +257,15 @@ export default function PublicFreelancerProfile() {
                   </div>
                 )}
                 <div className="pfp-action-buttons">
-                  {!isOwner ? (
-                    <button className="pfp-btn pfp-btn-primary pfp-btn-contact" onClick={handleContact}>
-                      <MessageSquare size={18} /> Contact Me
-                    </button>
-                  ) : (
+                  {isOwner ? (
                     <button className="pfp-btn pfp-btn-secondary pfp-btn-contact" onClick={() => navigate('/freelancer/profile')}>
                       <FileEdit size={18} /> Edit Profile
                     </button>
-                  )}
+                  ) : !isFreelancer ? (
+                    <button className="pfp-btn pfp-btn-primary pfp-btn-contact" onClick={handleContact}>
+                      <MessageSquare size={18} /> Contact Me
+                    </button>
+                  ) : null}
                   {isClient && !isOwner && (
                     <button className={`pfp-btn pfp-btn-icon ${isSaved ? 'pfp-btn-saved' : 'pfp-btn-secondary'}`} onClick={handleSave} title={isSaved ? "Remove from saved" : "Save freelancer"}>
                       {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
@@ -501,7 +500,7 @@ export default function PublicFreelancerProfile() {
                     <h2 className="pfp-section-title">Client Reviews</h2>
                   </div>
                   <div className="pfp-card-body pfp-reviews-container">
-                    {reviews.map((rev) => (
+                    {(showAllReviews ? reviews : reviews.slice(0, 3)).map((rev) => (
                       <div key={rev._id} className="pfp-review-card">
                         <div className="pfp-review-header">
                           <div className="pfp-reviewer-avatar">
@@ -528,6 +527,17 @@ export default function PublicFreelancerProfile() {
                         <p className="pfp-review-text">"{rev.comment}"</p>
                       </div>
                     ))}
+                    {reviews.length > 3 && (
+                      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                        <button 
+                          className="pfp-btn pfp-btn-outline" 
+                          onClick={() => setShowAllReviews(!showAllReviews)}
+                          style={{ width: '100%', justifyContent: 'center' }}
+                        >
+                          {showAllReviews ? 'Show Less' : `Show All Reviews (${reviews.length})`}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.section>
               )}

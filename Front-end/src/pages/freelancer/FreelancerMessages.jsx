@@ -3,7 +3,7 @@ import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, FileText, Loader, Paperclip, Send } from 'lucide-react';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import '../client/ClientDashboard.css';
 
@@ -222,7 +222,7 @@ const FreelancerMessages = () => {
                               </a>
                             ) : (
                               <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="fl-msg__att-file">
-                                📄 {a.name || 'Document'}
+                                <FileText size={14} style={{ marginRight: '4px' }} /> {a.name || 'Document'}
                               </a>
                             );
                           })}
@@ -253,7 +253,7 @@ const FreelancerMessages = () => {
                   disabled={uploading}
                   title="Attach a file"
                 >
-                  {uploading ? '⏳' : '📎'}
+                  {uploading ? <Loader size={18} className="spin" /> : <Paperclip size={18} />}
                 </button>
                 <input
                   type="text"

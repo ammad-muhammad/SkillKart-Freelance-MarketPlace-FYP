@@ -3,6 +3,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
 import { validatePassword } from '../../utils/validation';
+import { Key, Save, Shield, Bell, Lock, AlertCircle } from 'lucide-react';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -190,7 +191,7 @@ const FreelancerSecurity = () => {
       {/* Change Password */}
       {isSupabaseUser ? (
         <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-          <h3 className="fl-section-title">🔑 Account Information</h3>
+          <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Key size={18} /> Account Information</h3>
           <div className="fl-form-grid">
             <div className="fl-form-group">
               <label className="fl-label">Email Address</label>
@@ -211,7 +212,7 @@ const FreelancerSecurity = () => {
         </div>
       ) : (
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-        <h3 className="fl-section-title">🔑 Change Password</h3>
+        <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Key size={18} /> Change Password</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -284,7 +285,7 @@ const FreelancerSecurity = () => {
             disabled={saving}
             onClick={changePassword}
           >
-            {saving ? 'Updating...' : '🔒 Update Password'}
+            {saving ? 'Updating...' : <><Save size={18} style={{ marginRight: '8px' }} /> Update Password</>}
           </button>
         </div>
       </div>
@@ -292,12 +293,12 @@ const FreelancerSecurity = () => {
 
       {/* Security Options */}
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-        <h3 className="fl-section-title">🛡️ Security Options</h3>
+        <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Shield size={18} /> Security Options</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {/* Available for ALL users */}
           <div className="fl-toggle">
             <div className="fl-toggle__info">
-              <span className="fl-toggle__label">🔔 Login Alerts</span>
+              <span className="fl-toggle__label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Bell size={18} /> Login Alerts</span>
               <span className="fl-toggle__desc">Get notified whenever someone logs into your account.</span>
             </div>
             <div
@@ -311,7 +312,7 @@ const FreelancerSecurity = () => {
             <>
               <div className="fl-toggle">
                 <div className="fl-toggle__info">
-                  <span className="fl-toggle__label">🔐 Two-Factor Authentication</span>
+                  <span className="fl-toggle__label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Lock size={18} /> Two-Factor Authentication</span>
                   <span className="fl-toggle__desc">Add an extra layer of security to your account.</span>
                 </div>
                 <div
@@ -321,7 +322,7 @@ const FreelancerSecurity = () => {
               </div>
               <div className="fl-toggle">
                 <div className="fl-toggle__info">
-                  <span className="fl-toggle__label">🛡️ Password Change Alerts</span>
+                  <span className="fl-toggle__label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertCircle size={18} /> Password Change Alerts</span>
                   <span className="fl-toggle__desc">Get notified immediately if your password is changed.</span>
                 </div>
                 <div
@@ -339,7 +340,7 @@ const FreelancerSecurity = () => {
         <Modal title="Reset Password" onClose={() => setForgotModal(false)}>
           {forgotSent ? (
             <div style={{ textAlign: 'center', padding: '1rem' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📧</div>
+              <div style={{ marginBottom: '1rem', color: 'var(--color-primary)' }}><Lock size={40} /></div>
               <p>We've sent a password reset link to your email address.</p>
               <button className="fl-btn fl-btn--primary" style={{ marginTop: '1rem' }} onClick={() => setForgotModal(false)}>Close</button>
             </div>

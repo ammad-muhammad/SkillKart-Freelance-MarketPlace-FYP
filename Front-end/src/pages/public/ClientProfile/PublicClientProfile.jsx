@@ -95,10 +95,9 @@ export default function PublicClientProfile() {
     return (
       <>
         <Navbar />
-        <div className="pub-cl-page pub-cl-centered">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pub-cl-loading-card">
-            <Loader2 className="pub-cl-spinner" />
-            <p>Loading premium profile...</p>
+        <div className="pub-cl-page pub-cl-page--loading pub-cl-centered">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Loader2 className="pub-cl-spinner" style={{ width: '60px', height: '60px', color: 'white', margin: 0 }} />
           </motion.div>
         </div>
         <Footer />
@@ -110,7 +109,7 @@ export default function PublicClientProfile() {
     return (
       <>
         <Navbar />
-        <div className="pub-cl-page pub-cl-centered">
+        <div className="pub-cl-page pub-cl-page--loading pub-cl-centered">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pub-cl-error-card">
             <div className="pub-cl-error-icon-bg"><Search size={32} /></div>
             <h2>Client Not Found</h2>

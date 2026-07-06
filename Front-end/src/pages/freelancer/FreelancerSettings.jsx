@@ -3,6 +3,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api/auth';
 import { freelancersAPI } from '../../api/freelancers';
+import { Tag, Mail, Shield, AlertTriangle } from 'lucide-react';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -179,7 +180,7 @@ const FreelancerSettings = () => {
 
       {/* Change Username */}
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-        <h3 className="fl-section-title">🏷️ Change Username</h3>
+        <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Tag size={18} /> Change Username</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <label className="fl-label">Current Username</label>
@@ -209,7 +210,7 @@ const FreelancerSettings = () => {
 
       {/* Change Email */}
       <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-        <h3 className="fl-section-title">📧 {isSupabaseUser ? "Email Address" : "Change Email"}</h3>
+        <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={18} /> {isSupabaseUser ? "Email Address" : "Change Email"}</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
             <label className="fl-label">Current Email</label>
@@ -244,7 +245,7 @@ const FreelancerSettings = () => {
       {/* Recovery Info */}
       {!isSupabaseUser && (
         <div className="fl-card" style={{ marginBottom: '1.25rem' }}>
-          <h3 className="fl-section-title">🛡️ Recovery Information</h3>
+          <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Shield size={18} /> Recovery Information</h3>
           <div className="fl-form-grid">
             <div className="fl-form-group">
               <label className="fl-label">Recovery Email</label>
@@ -292,7 +293,7 @@ const FreelancerSettings = () => {
 
       {/* Danger Zone */}
       <div className="fl-card">
-        <h3 className="fl-section-title" style={{ color: '#dc2626', borderColor: '#fecaca' }}>⚠️ Danger Zone</h3>
+        <h3 className="fl-section-title" style={{ color: '#dc2626', borderColor: '#fecaca', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertTriangle size={18} /> Danger Zone</h3>
         <div className="fl-danger-zone">
           <p className="fl-danger-zone__title">Deactivate Account</p>
           <p className="fl-danger-zone__desc">

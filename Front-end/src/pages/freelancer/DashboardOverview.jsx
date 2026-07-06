@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
-import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle, ChevronRight } from 'lucide-react';
+import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle, ChevronRight, Plus } from 'lucide-react';
 import ShareStory from './components/ShareStory';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import './FreelancerDashboard.css';
@@ -23,6 +23,24 @@ const StatCard = ({ icon, value, label, to }) => {
 const DashboardOverview = () => {
   const { profile, gigs, proposals, loading } = useFreelancer();
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const [columns, setColumns] = useState(5);
+  const gridRef = useRef(null);
+
+  useEffect(() => {
+    if (!gridRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        // Based on grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) with 1.5rem (24px) gap
+        const width = entry.contentRect.width;
+        const cols = Math.floor((width + 24) / 304) || 1;
+        setColumns(cols);
+      }
+    });
+    observer.observe(gridRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const maxVisibleSkills = columns * 2;
   const personalInfo = profile?.personalInfo || {};
   
   // Real stats calculation
@@ -164,7 +182,7 @@ const DashboardOverview = () => {
         </h3>
         <div className="fl-dashboard-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/browse-projects" className="fl-btn fl-btn--primary"><Search size={16} style={{ marginRight: 6 }} /> Find Work</Link>
-          <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline">✚ Create Gig</Link>
+          <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline"><Plus size={16} style={{ marginRight: 6 }} /> Create Gig</Link>
           <Link to="/freelancer/proposals" className="fl-btn fl-btn--ghost"><ClipboardList size={16} style={{ marginRight: 6 }} /> My Proposals</Link>
           <Link to="/freelancer/messages" className="fl-btn fl-btn--ghost"><MessageSquare size={16} style={{ marginRight: 6 }} /> Messages</Link>
           <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
@@ -187,8 +205,8 @@ const DashboardOverview = () => {
           )}
         </div>
         
-        <div className="fl-skill-grid">
-          {(profile.verifiedSkills || []).slice(0, showAllSkills ? undefined : 8).map((skill) => (
+        <div className="fl-skill-grid" ref={gridRef}>
+          {(profile.verifiedSkills || []).slice(0, showAllSkills ? undefined : maxVisibleSkills).map((skill) => (
             <div key={skill._id || skill.name} className={`fl-skill-card ${skill.isVerified ? 'fl-skill-card--verified' : ''}`}>
               <div className="fl-skill-card__top">
                 <div className="fl-skill-card__info">
@@ -230,14 +248,14 @@ const DashboardOverview = () => {
             </div>
           )}
         </div>
-        {(profile.verifiedSkills || []).length > 8 && (
+        {(profile.verifiedSkills || []).length > maxVisibleSkills && (
           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
             <button 
               type="button"
               className="fl-btn fl-btn--primary fl-btn--sm" 
               onClick={() => setShowAllSkills(!showAllSkills)}
             >
-              {showAllSkills ? 'Show Less' : `Show More (${profile.verifiedSkills.length - 8} hidden)`}
+              {showAllSkills ? 'Show Less' : `Show More (${profile.verifiedSkills.length - maxVisibleSkills} hidden)`}
             </button>
           </div>
         )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { paymentsAPI } from '../../api/payments';
-import { Wallet, DollarSign, ArrowDownToLine, CheckCircle2, Clock } from 'lucide-react';
+import { Wallet, DollarSign, ArrowDownToLine, CheckCircle2, Clock, Lightbulb } from 'lucide-react';
 import { toast } from 'react-toastify';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
@@ -287,7 +287,7 @@ export default function FreelancerWallet() {
               </div>
               
               <div style={{ background: 'rgba(4, 46, 76, 0.04)', borderRadius: '16px', padding: '1.25rem', marginTop: '2rem', display: 'flex', gap: '1rem', alignItems: 'flex-start', border: '1px solid rgba(4, 46, 76, 0.08)' }}>
-                <span style={{ fontSize: '1.5rem', lineHeight: '1' }}>💡</span>
+                <span style={{ fontSize: '1.5rem', lineHeight: '1' }}><Lightbulb size={24} style={{ color: 'var(--color-primary)' }} /></span>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', margin: 0, lineHeight: '1.6' }}>
                   Withdrawals are securely transferred to your configured payout method. If you haven't connected a bank account, Stripe will guide you through the setup.
                 </p>

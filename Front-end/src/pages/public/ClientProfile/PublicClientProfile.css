@@ -46,6 +46,10 @@
   min-height: 70vh;
 }
 
+.pub-cl-page--loading::before {
+  height: 100vh;
+}
+
 /* Background Blobs for Premium Feel */
 .pub-cl-bg-blob {
   position: absolute;

@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
+import { FileText, DollarSign, AlignLeft, Image as ImageIcon, Rocket, Save, CheckCircle2, XCircle, Star, Zap, Crown, X, Plus } from 'lucide-react';
 import Stepper from './components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
@@ -272,7 +273,7 @@ const Step4 = ({ gig, set }) => {
             <img src={gig.media.banner} alt="banner" className="fl-upload-zone__preview" />
           ) : (
             <div className="fl-upload-zone__placeholder">
-              <span style={{ fontSize: '2.5rem' }}>🖼️</span>
+              <ImageIcon size={40} style={{ color: 'var(--color-text-light)', marginBottom: '0.5rem' }} />
               <p>Click to upload banner image</p>
               <span style={{ fontSize: '0.75rem' }}>WEBP, PNG, JPG up to 5MB · Recommended: 1200×628</span>
             </div>
@@ -282,10 +283,10 @@ const Step4 = ({ gig, set }) => {
         {gig.media.banner && (
           <button
             className="fl-btn fl-btn--ghost fl-btn--sm"
-            style={{ marginTop: '0.5rem' }}
+            style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
             onClick={() => set('media', { ...gig.media, banner: null })}
           >
-            ✕ Remove Banner
+            <X size={14} /> Remove Banner
           </button>
         )}
       </div>
@@ -295,8 +296,8 @@ const Step4 = ({ gig, set }) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <label className="fl-label">Portfolio Images (max 5)</label>
           {gig.media.images.length < 5 && (
-            <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => imagesRef.current?.click()}>
-              ＋ Add Images
+            <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => imagesRef.current?.click()}>
+              <Plus size={14} /> Add Images
             </button>
           )}
         </div>
@@ -305,7 +306,7 @@ const Step4 = ({ gig, set }) => {
           {gig.media.images.map((img, i) => (
             <div key={i} className="fl-image-thumb">
               <img src={img} alt={`portfolio-${i}`} />
-              <button className="fl-image-thumb__remove" onClick={() => removeImage(i)}>✕</button>
+              <button className="fl-image-thumb__remove" onClick={() => removeImage(i)}><X size={14} /></button>
             </div>
           ))}
           {gig.media.images.length === 0 && (
@@ -330,7 +331,7 @@ const Step4 = ({ gig, set }) => {
       <div className="fl-form-group full">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <label className="fl-label">Portfolio Links (Optional)</label>
-          <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={addPortfolioLink}>＋ Add Link</button>
+          <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={addPortfolioLink}><Plus size={14} /> Add Link</button>
         </div>
         {gig.media.portfolioLinks.map((link, i) => (
           <div key={i} className="fl-link-row">
@@ -341,7 +342,7 @@ const Step4 = ({ gig, set }) => {
               onChange={(e) => updatePortfolioLink(i, e.target.value)}
               placeholder="https://your-project.com"
             />
-            <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}>✕</button>
+            <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}><X size={14} /></button>
           </div>
         ))}
       </div>
@@ -351,9 +352,9 @@ const Step4 = ({ gig, set }) => {
 
 const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
   const tiers = [
-    { key: 'basic', label: 'Basic', icon: '🥉' },
-    { key: 'standard', label: 'Standard', icon: '🥈' },
-    { key: 'premium', label: 'Premium', icon: '🥇' },
+    { key: 'basic', label: 'Basic', icon: <Star size={16} /> },
+    { key: 'standard', label: 'Standard', icon: <Zap size={16} /> },
+    { key: 'premium', label: 'Premium', icon: <Crown size={16} /> },
   ];
 
   return (
@@ -365,7 +366,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
 
       {/* Summary */}
       <div className="fl-review-section">
-        <h4 className="fl-review-section__title">📋 Basic Info</h4>
+        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FileText size={18} /> Basic Info</h4>
         <div className="fl-review-row">
           <span>Title:</span> <strong>{gig.title || '—'}</strong>
         </div>
@@ -384,11 +385,11 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
       </div>
 
       <div className="fl-review-section">
-        <h4 className="fl-review-section__title">💰 Pricing</h4>
+        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><DollarSign size={18} /> Pricing</h4>
         <div className="fl-review-pricing">
           {tiers.map(({ key, label, icon }) => (
             <div key={key} className="fl-review-pricing__tier">
-              <p className="fl-review-pricing__tier-label">{icon} {label}</p>
+              <p className="fl-review-pricing__tier-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>{icon} {label}</p>
               <p className="fl-review-pricing__tier-val">Rs. {gig.pricing[key].price || '—'}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
                 {gig.pricing[key].delivery || '—'} days · {gig.pricing[key].revisions || '—'} revisions
@@ -399,7 +400,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
       </div>
 
       <div className="fl-review-section">
-        <h4 className="fl-review-section__title">📝 Description</h4>
+        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlignLeft size={18} /> Description</h4>
         <p style={{ fontSize: '0.875rem', color: 'var(--color-text-mid)', whiteSpace: 'pre-wrap' }}>
           {gig.fullDescription || '(No description provided)'}
         </p>
@@ -411,9 +412,9 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
       </div>
 
       <div className="fl-review-section">
-        <h4 className="fl-review-section__title">🖼️ Media</h4>
+        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ImageIcon size={18} /> Media</h4>
         <div className="fl-review-row">
-          <span>Banner:</span> <strong>{gig.media.banner ? '✅ Uploaded' : '⬜ None'}</strong>
+          <span>Banner:</span> <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>{gig.media.banner ? <><CheckCircle2 size={14} className="text-success" /> Uploaded</> : <><XCircle size={14} className="text-muted" /> None</>}</strong>
         </div>
         <div className="fl-review-row">
           <span>Images:</span> <strong>{gig.media.images.length} uploaded</strong>
@@ -429,12 +430,12 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
           className={`fl-btn fl-btn--primary${publishing ? ' fl-btn--loading' : ''}`}
           onClick={onPublish}
           disabled={publishing}
-          style={{ padding: '0.85rem 2rem', fontSize: '1rem' }}
+          style={{ padding: '0.85rem 2rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          {publishing ? 'Publishing...' : '🚀 Publish Gig'}
+          {publishing ? 'Publishing...' : <><Rocket size={18} /> Publish Gig</>}
         </button>
-        <button className="fl-btn fl-btn--outline" onClick={onDraft} disabled={publishing}>
-          💾 Save as Draft
+        <button className="fl-btn fl-btn--outline" onClick={onDraft} disabled={publishing} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Save size={18} /> Save as Draft
         </button>
       </div>
     </div>

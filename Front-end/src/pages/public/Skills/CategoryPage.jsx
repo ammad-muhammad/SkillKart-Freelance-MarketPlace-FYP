@@ -370,7 +370,7 @@ export default function CategoryPage() {
 
         {/* ═══════════════════ TRENDING ═══════════════════ */}
         {allTrending.length > 0 && (
-          <div className="mp-section mp-section--alt" style={{ paddingTop: 0 }}>
+          <div className="mp-section mp-section--alt">
             <div className="mp-container">
               <div className="mp-section-head">
                 <div>
@@ -391,7 +391,7 @@ export default function CategoryPage() {
 
         {/* ═══════════════════ FREELANCERS ═══════════════════ */}
         {(flLoading || freelancers.length > 0) && (
-        <div className="mp-section" style={{ paddingTop: 0 }}>
+        <div className="mp-section">
           <div className="mp-container">
             <div className="mp-section-head">
               <div>

@@ -6,7 +6,7 @@ import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
-import { Plus, X, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, Upload, Trash2, Image as ImageIcon, Eye, Star, Pause, Play, Edit2, Package } from 'lucide-react';
 import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import './FreelancerDashboard.css';
 
@@ -21,7 +21,7 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
         <img src={gig.media.banner} alt={gig.title} />
       ) : (
         <div className="fl-gig-card__placeholder">
-          <span>📦</span>
+          <Package size={40} style={{ color: 'var(--color-text-light)' }} />
         </div>
       )}
       <div className="fl-gig-card__badges">
@@ -30,8 +30,8 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
         </span>
       </div>
       <div className="fl-gig-card__stats-overlay">
-        <div className="fl-stat-chip">👁 {gig.stats?.views || 0}</div>
-        <div className="fl-stat-chip">⭐ {gig.stats?.rating?.toFixed(1) || '0.0'}</div>
+        <div className="fl-stat-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Eye size={14} /> {gig.stats?.views || 0}</div>
+        <div className="fl-stat-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Star size={14} /> {gig.stats?.rating?.toFixed(1) || '0.0'}</div>
       </div>
     </div>
     <div className="fl-gig-card__body">
@@ -74,13 +74,13 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
             onClick={() => onToggleStatus(gig._id)}
             title={gig.status === 'active' ? 'Pause Gig' : 'Activate Gig'}
           >
-            {gig.status === 'active' ? '⏸' : '▶'}
+            {gig.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
           </button>
           <button className="fl-btn fl-btn--sm fl-btn--outline" onClick={() => onEdit(gig)}>
-            ✏
+            <Edit2 size={14} />
           </button>
           <button className="fl-btn fl-btn--sm fl-btn--danger" onClick={() => onDelete(gig._id)}>
-            🗑
+            <Trash2 size={14} />
           </button>
         </div>
       </div>
@@ -246,7 +246,7 @@ const FreelancerGigs = () => {
       {/* Gig Grid */}
       {filtered.length === 0 ? (
         <div className="fl-card fl-empty-message">
-          <p style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📦</p>
+          <p style={{ marginBottom: '0.75rem' }}><Package size={48} style={{ color: 'var(--color-primary)' }} /></p>
           <h3 style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)', marginBottom: '0.5rem' }}>
             {filter === 'all' ? 'No Gigs Yet' : `No ${filter} gigs`}
           </h3>
@@ -411,7 +411,7 @@ const FreelancerGigs = () => {
                         onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
                         onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                       >
-                        ✕
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
@@ -452,7 +452,7 @@ const FreelancerGigs = () => {
                       placeholder="https://..."
                     />
                     <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: p.media.portfolioLinks.filter((_, idx) => idx !== i) } }))}>
-                      ✕
+                      <X size={14} />
                     </button>
                   </div>
                 ))}

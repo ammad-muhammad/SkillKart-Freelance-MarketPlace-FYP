@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Rocket, Trophy, Bot, Heart } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { publicAPI } from '../../../api/publicData';
 import './Footer.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -92,12 +93,23 @@ export default function Footer() {
   const footerRef = useRef(null);
   const [email, setEmail] = useState('');
 
-  const handleSubscribe = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     if (!ok) { toast.error('Please enter a valid email address.'); return; }
-    toast.success("You're subscribed! Watch your inbox for weekly tips. 🚀");
-    setEmail('');
+    
+    setLoading(true);
+    try {
+      await publicAPI.subscribeNewsletter(email.trim());
+      toast.success("You're subscribed! Watch your inbox for weekly tips. 🚀");
+      setEmail('');
+    } catch (err) {
+      toast.error('Failed to subscribe. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -135,7 +147,9 @@ export default function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button type="submit" className="footer__newsletter-btn">Subscribe</button>
+            <button type="submit" className="footer__newsletter-btn" disabled={loading}>
+              {loading ? '...' : 'Subscribe'}
+            </button>
           </form>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { Link } from 'react-router-dom';
+import { Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen, Package, Loader } from 'lucide-react';
 import Modal from './components/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import './FreelancerDashboard.css';
@@ -13,13 +14,13 @@ const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
         <img src={item.images[0]} alt={item.title} className="fl-gig-card__img" />
       ) : (
         <div className="fl-gig-card__placeholder">
-          <div className="fl-placeholder-icon">🖼️</div>
+          <ImageIcon size={40} className="fl-placeholder-icon" />
         </div>
       )}
       <div className="fl-gig-card__overlay">
         <div className="fl-p-card__actions">
-          <button className="fl-action-btn fl-action-btn--edit" onClick={() => onEdit(item)} title="Edit Project">✏️</button>
-          <button className="fl-action-btn fl-action-btn--delete" onClick={() => onDelete(item._id)} title="Delete Project">🗑️</button>
+          <button className="fl-action-btn fl-action-btn--edit" onClick={() => onEdit(item)} title="Edit Project"><Edit2 size={14} /></button>
+          <button className="fl-action-btn fl-action-btn--delete" onClick={() => onDelete(item._id)} title="Delete Project"><Trash2 size={14} /></button>
         </div>
         {item.url && (
           <a href={item.url} target="_blank" rel="noopener noreferrer" className="fl-p-card__link-btn">
@@ -120,9 +121,9 @@ const FreelancerPortfolio = () => {
             className="fl-btn fl-btn--outline" 
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
           >
-            👁️ View Public Profile
+            <Eye size={14} /> View Public Profile
           </Link>
-          <button className="fl-btn fl-btn--primary" onClick={handleOpenAdd}>＋ Add Project</button>
+          <button className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={handleOpenAdd}><Plus size={14} /> Add Project</button>
         </div>
       </div>
 
@@ -130,7 +131,7 @@ const FreelancerPortfolio = () => {
       <div className="fl-portfolio-main-grid">
         {(profile?.portfolio || []).length === 0 ? (
           <div className="fl-empty-message">
-            <div className="fl-empty-icon">📂</div>
+            <div className="fl-empty-icon"><FolderOpen size={48} /></div>
             <h3>Your Portfolio is Empty</h3>
             <p style={{ color: '#64748b', marginBottom: '1.5rem', maxWidth: '400px', marginInline: 'auto' }}>
               Adding projects with descriptions and images helps you get noticed by clients.
@@ -154,7 +155,7 @@ const FreelancerPortfolio = () => {
       {/* Service Gigs (Secondary) */}
       <div className="fl-service-gigs-section" style={{ marginTop: '3rem' }}>
         <div className="fl-section-header">
-          <h3 className="fl-section-title">📦 Service Gigs</h3>
+          <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Package size={18} /> Service Gigs</h3>
           <p className="fl-section-sub">Quick view of your active freelance services.</p>
         </div>
         {gigs.length === 0 ? (
@@ -168,7 +169,7 @@ const FreelancerPortfolio = () => {
                     <img src={gig.media.banner} alt={gig.title} className="fl-gig-card__img" />
                   ) : (
                     <div className="fl-gig-card__placeholder">
-                      <div className="fl-placeholder-icon">📦</div>
+                      <Package size={40} className="fl-placeholder-icon" />
                     </div>
                   )}
                 </div>
@@ -254,7 +255,7 @@ const FreelancerPortfolio = () => {
                   <img src={formData.images[0]} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div className="fl-p-upload-zone__content" style={{ textAlign: 'center', color: 'var(--color-primary)' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', opacity: 0.8 }}>{isUploading ? '⌛' : '🖼️'}</div>
+                    <div style={{ marginBottom: '0.75rem', opacity: 0.8 }}>{isUploading ? <Loader className="spin" size={40} /> : <ImageIcon size={40} />}</div>
                     <p style={{ fontSize: '1rem', fontWeight: 600 }}>{isUploading ? 'Uploading Image...' : 'Click to upload a cover image'}</p>
                     <p style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', marginTop: '0.25rem' }}>(WEBP, PNG, JPG accepted)</p>
                   </div>
@@ -513,6 +514,16 @@ const FreelancerPortfolio = () => {
         .fl-placeholder-icon {
           font-size: 4rem;
           opacity: 0.4;
+        }
+
+        .fl-gig-card__placeholder {
+          width: 100%; 
+          height: 100%; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.02);
+          color: var(--color-primary);
         }
       `}</style>
     </div>

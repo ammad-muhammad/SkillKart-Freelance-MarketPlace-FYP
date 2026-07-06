@@ -27,4 +27,7 @@ export const publicAPI = {
 
   // Submit the public contact form
   submitContact: (payload) => client.post('/public/contact', payload),
+
+  // Submit the public newsletter subscription
+  subscribeNewsletter: (email) => client.post('/public/newsletter', { email }),
 };

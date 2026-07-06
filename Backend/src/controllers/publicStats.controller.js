@@ -3,6 +3,7 @@ const Job = require('../models/Job');
 const User = require('../models/User');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const ContactMessage = require('../models/ContactMessage');
+const NewsletterSubscriber = require('../models/NewsletterSubscriber');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError } = require('../utils/apiError');
@@ -353,6 +354,53 @@ const submitContact = asyncHandler(async (req, res) => {
   sendCreated(res, 'Message received', { received: true });
 });
 
+/**
+ * POST /public/newsletter — subscribe to newsletter.
+ * Body: { email }
+ */
+const submitNewsletter = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+    throw new BadRequestError('Please provide a valid email address');
+  }
+
+  // Use updateOne with upsert to ignore duplicates but still return success
+  await NewsletterSubscriber.updateOne(
+    { email: String(email).slice(0, 160).toLowerCase() },
+    {
+      $setOnInsert: {
+        meta: { ip: req.ip, userAgent: req.get('User-Agent') },
+      }
+    },
+    { upsert: true }
+  );
+
+  // Send the email via SMTP to the platform's marketing inbox
+  const marketingEmail = process.env.MARKETING_EMAIL || config.email.from || 'marketing@skillkart.app';
+  const emailSubject = `New Newsletter Subscriber!`;
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #4F46E5; margin-top: 0;">New Newsletter Subscription</h2>
+        <p>A new user has just subscribed to the newsletter!</p>
+        <p><strong>Email:</strong> ${email}</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  try {
+    await sendEmail(marketingEmail, emailSubject, emailHtml);
+  } catch (err) {
+    console.error("Failed to send newsletter SMTP email:", err);
+  }
+
+  sendCreated(res, 'Subscribed successfully', { subscribed: true });
+});
+
 module.exports = {
   getStats,
   getCategories,
@@ -361,4 +409,5 @@ module.exports = {
   getTrending,
   getTopFreelancers,
   submitContact,
+  submitNewsletter,
 };

@@ -77,11 +77,13 @@ const FreelancerSidebar = () => {
 
         {/* Avatar */}
         <div className="fl-sidebar__avatar-wrap">
-          <div className="fl-sidebar__avatar">
-            <UserAvatar 
-              src={avatar}
-              fullName={fullName}
-            />
+          <div className="fl-sidebar__avatar-container" style={{ position: 'relative', display: 'flex' }}>
+            <div className="fl-sidebar__avatar">
+              <UserAvatar 
+                src={avatar}
+                fullName={fullName}
+              />
+            </div>
             <span className="fl-sidebar__online-dot" />
           </div>
           <div className="fl-sidebar__user-info">

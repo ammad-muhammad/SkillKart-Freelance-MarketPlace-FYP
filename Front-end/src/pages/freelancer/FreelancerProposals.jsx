@@ -5,7 +5,7 @@ import { jobsAPI } from '../../api/jobs';
 import { deliveriesAPI } from '../../api/deliveries';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  Clock, DollarSign, ExternalLink, UploadCloud, X, FileText
+  Clock, DollarSign, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
@@ -49,9 +49,9 @@ export default function FreelancerProposals() {
 
   // Status badge for the underlying job (work stage), shown on accepted props.
   const workStage = (status) => {
-    if (status === 'in-progress') return { label: '🛠 In Progress', color: '#2563eb' };
-    if (status === 'delivered') return { label: '📦 Delivered — awaiting review', color: '#d97706' };
-    if (status === 'completed') return { label: '✅ Completed', color: '#16a34a' };
+    if (status === 'in-progress') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Settings size={14} /> In Progress</span>, color: '#2563eb' };
+    if (status === 'delivered') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Package size={14} /> Delivered — awaiting review</span>, color: '#d97706' };
+    if (status === 'completed') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><CheckCircle2 size={14} /> Completed</span>, color: '#16a34a' };
     return null;
   };
 
@@ -83,11 +83,11 @@ export default function FreelancerProposals() {
                     {prop.jobId?.category} · Submitted {new Date(prop.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <span className={`fl-badge fl-badge--${prop.status}`}>
-                  {prop.status === 'pending' && '🕒 Pending'}
-                  {prop.status === 'accepted' && '✅ Accepted'}
-                  {prop.status === 'rejected' && '❌ Rejected'}
-                  {prop.status === 'withdrawn' && '🏳️ Withdrawn'}
+                <span className={`fl-badge fl-badge--${prop.status}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  {prop.status === 'pending' && <><Clock size={14} /> Pending</>}
+                  {prop.status === 'accepted' && <><CheckCircle2 size={14} /> Accepted</>}
+                  {prop.status === 'rejected' && <><XCircle size={14} /> Rejected</>}
+                  {prop.status === 'withdrawn' && <><Flag size={14} /> Withdrawn</>}
                 </span>
               </div>
 

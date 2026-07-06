@@ -328,7 +328,8 @@ const searchFreelancers = asyncHandler(async (req, res) => {
   }
   
   if (location) {
-    query.timezone = { $regex: new RegExp(location, 'i') };
+    const escapedLocation = location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    query.timezone = { $regex: new RegExp(escapedLocation, 'i') };
   }
   
   if (minRate || maxRate) {

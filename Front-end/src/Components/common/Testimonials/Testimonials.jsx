@@ -88,7 +88,8 @@ export default function Testimonials() {
   const half = Math.ceil(stories.length / 2);
   const col1 = stories.slice(0, half);
   const col2 = stories.slice(half);
-  const avgRating = (stories.reduce((s, t) => s + (t.stars || 5), 0) / stories.length).toFixed(1);
+  const rawAvg = stories.reduce((s, t) => s + (t.stars || 5), 0) / stories.length;
+  const avgRating = parseFloat(rawAvg.toFixed(1));
 
   return (
     <section ref={sectionRef} className="testimonials">

@@ -1,5 +1,6 @@
 import { useFreelancer } from '../../context/FreelancerContext';
 import { Link } from 'react-router-dom';
+import { Bookmark, X, DollarSign, Clock } from 'lucide-react';
 import './FreelancerSavedProjects.css';
 
 export default function FreelancerSavedProjects() {
@@ -19,7 +20,7 @@ export default function FreelancerSavedProjects() {
 
             {savedProjects.length === 0 ? (
                 <div className="fsp-empty">
-                    <div className="fsp-empty__icon">🔖</div>
+                    <div className="fsp-empty__icon" style={{ color: 'var(--color-primary)' }}><Bookmark size={40} /></div>
                     <h3 className="fsp-empty__title">No saved projects yet</h3>
                     <p className="fsp-empty__text">Explore projects and bookmark the ones that interest you to apply later.</p>
                     <Link to="/browse-projects" className="fsp-empty__btn">Browse Projects</Link>
@@ -37,7 +38,7 @@ export default function FreelancerSavedProjects() {
                                     onClick={() => toggleSavedProject(project)}
                                     title="Remove from saved"
                                 >
-                                    ✕
+                                    <X size={14} />
                                 </button>
                             </div>
 
@@ -47,13 +48,13 @@ export default function FreelancerSavedProjects() {
                                 
                                 <div className="fsp-card__meta">
                                     <span className="fsp-card__meta-item">
-                                        <span className="icon">💰</span> 
+                                        <DollarSign size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: 'var(--color-text-light)' }} />
                                         {typeof project.budget === 'object' 
                                             ? `Rs. ${project.budget.min} - Rs. ${project.budget.max}`
                                             : project.budget || 'Rs. 500+'}
                                     </span>
                                     <span className="fsp-card__meta-item">
-                                        <span className="icon">⏱️</span> {project.duration || 'Flexible'}
+                                        <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: 'var(--color-text-light)' }} /> {project.duration || 'Flexible'}
                                     </span>
                                 </div>
 

@@ -37,7 +37,7 @@ const SkillTest = () => {
     attemptId,
     onWarn: (reason) => {
       setWarning(reason);
-      toast.warn('⚠ Final warning: leaving the test again will cancel it.');
+      toast.warn('Final warning: leaving the test again will cancel it.');
     },
     onAbort: (reason) => {
       setAbortReason(reason);

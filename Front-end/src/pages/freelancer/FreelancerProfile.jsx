@@ -200,8 +200,8 @@ const FreelancerProfile = () => {
         >
           {editing && (
             <div style={{ position: 'absolute', bottom: '1rem', right: '1rem' }}>
-              <button className="fl-btn fl-btn--outline" style={{ background: 'white' }} onClick={() => coverRef.current?.click()}>
-                📷 Change Cover
+              <button className="fl-btn fl-btn--outline" style={{ background: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => coverRef.current?.click()}>
+                <Camera size={14} /> Change Cover
               </button>
               <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCoverChange} />
             </div>
@@ -219,8 +219,8 @@ const FreelancerProfile = () => {
             </div>
             {editing && (
               <>
-                <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => fileRef.current?.click()}>
-                  📷 Change Photo
+                <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => fileRef.current?.click()}>
+                  <Camera size={14} /> Change Photo
                 </button>
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
               </>
@@ -523,7 +523,7 @@ const FreelancerProfile = () => {
             {editing ? (
               <>
                 <TagInput tags={skills} onChange={setSkills} placeholder="e.g. React, Node.js" />
-                {skills.length === 0 && <span className="fl-error">⚠ At least one skill is required</span>}
+                {skills.length === 0 && <span className="fl-error" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={14} /> At least one skill is required</span>}
                 {/* AI suggest — skills + experience level from the freelancer's title/bio */}
                 <AiSuggestFill
                   label="Suggest skills & level (AI)"
@@ -618,7 +618,7 @@ const FreelancerProfile = () => {
                   })}
                 </div>
               )}
-              {editing && languages.length === 0 && <p className="fl-error" style={{ margin: 0 }}>⚠ At least one language is required</p>}
+              {editing && languages.length === 0 && <p className="fl-error" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={14} /> At least one language is required</p>}
             </div>
           </div>
         </div>

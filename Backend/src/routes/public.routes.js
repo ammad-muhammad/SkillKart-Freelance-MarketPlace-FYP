@@ -73,6 +73,7 @@ router.get('/testimonials', testimonialController.getPublicTestimonials);
 // Contact form submission (rate-limited to deter spam)
 const { strictLimiter } = require('../middleware/rateLimit.middleware');
 router.post('/contact', strictLimiter, publicStatsController.submitContact);
+router.post('/newsletter', strictLimiter, publicStatsController.submitNewsletter);
 
 /**
  * @swagger

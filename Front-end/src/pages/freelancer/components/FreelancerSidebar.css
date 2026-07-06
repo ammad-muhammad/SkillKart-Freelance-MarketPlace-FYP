@@ -99,13 +99,14 @@
 
 .fl-sidebar__online-dot {
   position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 10px;
-  height: 10px;
+  bottom: 0px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
   background: #34d399;
   border-radius: 50%;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--color-primary, #042E4C);
+  z-index: 2;
 }
 
 .fl-sidebar__user-info {
