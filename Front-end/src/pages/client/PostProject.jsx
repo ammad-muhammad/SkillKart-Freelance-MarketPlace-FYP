@@ -1,3 +1,4 @@
+import { AlertCircle, Sparkles, Bot, X, Plus, Camera, Folder, Send, Save, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
@@ -41,7 +42,7 @@ const stepForApiField = (field) => {
 };
 
 const FieldError = ({ message }) =>
-  message ? <span className="cl-error">⚠ {message}</span> : null;
+  message ? <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {message}</span> : null;
 
 const attachmentUrl = (item) => (typeof item === 'string' ? item : item?.url);
 
@@ -422,7 +423,7 @@ const PostProject = () => {
                     onClick={suggestCategory}
                     disabled={suggestingCategory || saving}
                   >
-                    {suggestingCategory ? 'Analyzing…' : '✨ Suggest category (AI)'}
+                    {suggestingCategory ? 'Analyzing…' : <><Sparkles size={14} style={{ marginRight: '6px' }} /> Suggest category (AI)</>}
                   </button>
                 </div>
                 {categorySuggestions.length > 0 && (
@@ -511,7 +512,7 @@ const PostProject = () => {
                 background: '#eef2ff', padding: '6px 12px', borderRadius: '8px',
               }}
             >
-              🤖 Not sure what to pay? Estimate a fair budget →
+              <Bot size={14} style={{ marginRight: '6px' }} /> Not sure what to pay? Estimate a fair budget →
             </a>
             <div className="cl-form-grid">
               <div className="cl-form-group">
@@ -610,10 +611,10 @@ const PostProject = () => {
                   placeholder="https://..."
                   onChange={(e) => updateRefLink(i, e.target.value)}
                 />
-                <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeRefLink(i)}>✕</button>
+                <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeRefLink(i)}><X size={14} /></button>
               </div>
             ))}
-            <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addRefLink}>＋ Add Link</button>
+            <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addRefLink}><Plus size={14} style={{ marginRight: '4px' }} /> Add Link</button>
 
             <div className="cl-divider" />
             <h4 className="cl-label" style={{ marginBottom: '1rem' }}>Frequently Asked Questions</h4>
@@ -621,7 +622,7 @@ const PostProject = () => {
               <div key={i} className="cl-faq-item">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span className="cl-label">Question {i + 1}</span>
-                  <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeFaq(i)}>✕</button>
+                  <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeFaq(i)}><X size={14} /></button>
                 </div>
                 <input
                   className="cl-input"
@@ -639,7 +640,7 @@ const PostProject = () => {
                 />
               </div>
             ))}
-            <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addFaq}>＋ Add FAQ</button>
+            <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addFaq}><Plus size={14} style={{ marginRight: '4px' }} /> Add FAQ</button>
           </div>
         );
       case 4:
@@ -651,7 +652,7 @@ const PostProject = () => {
               <label className="cl-label">Project Images</label>
               <div className="cl-upload-zone" onClick={() => !saving && bannerRef.current?.click()}>
                 <div className="cl-upload-zone__placeholder">
-                  <span>📸</span>
+                  <span><Camera size={40} /></span>
                   <p>Click to upload project-related images or screenshots</p>
                   <small>JPG, PNG up to 5MB</small>
                 </div>
@@ -670,7 +671,7 @@ const PostProject = () => {
                           const newImgs = form.attachments.images.filter((_, idx) => idx !== i);
                           updateForm({ attachments: { ...form.attachments, images: newImgs } });
                         }}
-                      >✕</button>
+                      ><X size={14} /></button>
                     </div>
                   ))}
                 </div>
@@ -686,7 +687,7 @@ const PostProject = () => {
                 onClick={() => !saving && documentsRef.current?.click()}
               >
                 <div className="cl-upload-zone__placeholder">
-                  <span>📁</span>
+                  <span><Folder size={40} /></span>
                   <p>Click to upload briefs, specs, or reference files</p>
                   <small>PDF, DOC, DOCX, TXT up to 10MB</small>
                 </div>
@@ -742,7 +743,7 @@ const PostProject = () => {
                               const docs = form.attachments.documents.filter((_, idx) => idx !== i);
                               updateForm({ attachments: { ...form.attachments, documents: docs } });
                             }}
-                          >✕</button>
+                          ><X size={14} /></button>
                         </div>
                       </li>
                     );
@@ -813,7 +814,7 @@ const PostProject = () => {
                 onClick={() => publish(false)}
                 disabled={saving}
               >
-                {saving ? 'Publishing...' : '🚀 Publish Project Now'}
+                {saving ? 'Publishing...' : <><Send size={16} style={{ marginRight: '8px' }} /> Publish Project Now</>}
               </button>
               <button
                 type="button"
@@ -821,7 +822,7 @@ const PostProject = () => {
                 onClick={() => publish(true)}
                 disabled={saving}
               >
-                💾 Save as Draft
+                <Save size={16} style={{ marginRight: '8px' }} /> Save as Draft
               </button>
             </div>
           </div>
@@ -852,7 +853,7 @@ const PostProject = () => {
             onClick={prevStep}
             disabled={step === 1 || saving}
           >
-            ← Previous
+            <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Previous
           </button>
 
           {step < 5 && (
@@ -862,7 +863,7 @@ const PostProject = () => {
               onClick={nextStep}
               disabled={saving}
             >
-              Continue →
+              Continue <ArrowRight size={16} style={{ marginLeft: '8px' }} />
             </button>
           )}
         </div>

@@ -1,3 +1,4 @@
+import { FileText, Paperclip, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
@@ -222,7 +223,7 @@ const ClientMessages = () => {
                               </a>
                             ) : (
                               <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="cl-msg__att-file">
-                                📄 {a.name || 'Document'}
+                                <FileText size={16} /> <span style={{marginLeft: '4px'}}>{a.name || 'Document'}</span>
                               </a>
                             );
                           })}
@@ -253,7 +254,7 @@ const ClientMessages = () => {
                   disabled={uploading}
                   title="Attach a file"
                 >
-                  {uploading ? '⏳' : '📎'}
+                  {uploading ? <Loader2 className="spin" size={18}/> : <Paperclip size={18}/>}
                 </button>
                 <input
                   type="text"

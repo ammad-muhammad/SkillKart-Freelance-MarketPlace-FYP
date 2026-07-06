@@ -17,7 +17,9 @@ import {
   Bell,
   Settings,
   Lock,
-  LogOut
+  LogOut,
+  Building,
+  X
 } from 'lucide-react';
 import './ClientSidebar.css';
 
@@ -62,8 +64,8 @@ const ClientSidebar = () => {
       <aside className={`cl-sidebar${open ? ' cl-sidebar--open' : ''}`}>
         {/* Brand */}
         <div className="cl-sidebar__brand">
-          <span className="cl-sidebar__logo">SkillKart</span>
-          <button className="cl-sidebar__close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
+          <span className="cl-sidebar__logo">SkillKart</span>
+          <button className="cl-sidebar__close" onClick={() => setOpen(false)} aria-label="Close"><X size={16} /></button>
         </div>
 
         {/* Avatar */}
@@ -85,7 +87,7 @@ const ClientSidebar = () => {
 
         {/* Role Badge */}
         <div className="cl-sidebar__badge-wrap">
-          <span className="cl-sidebar__badge">🏢 Client Account</span>
+          <span className="cl-sidebar__badge"><Building size={14} style={{ marginRight: '4px' }} /> Client Account</span>
         </div>
 
         {/* Navigation */}

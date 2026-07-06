@@ -1,3 +1,4 @@
+import { Tag, AlertCircle, RefreshCw, Bell, AlertTriangle, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
@@ -188,7 +189,7 @@ const ClientSettings = () => {
 
       {/* Account Settings */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title">🏷️ Account Information</h3>
+        <h3 className="cl-section-title"><Tag size={18} style={{ marginRight: '8px' }} /> Account Information</h3>
         <div className="cl-form-grid">
           <div className="cl-form-group">
             <label className="cl-label">Current Username</label>
@@ -198,7 +199,7 @@ const ClientSettings = () => {
             <label className="cl-label">New Username</label>
             <input className={`cl-input${errors.newUsername ? ' cl-input--error' : ''}`} value={account.newUsername}
               onChange={(e) => setAccount((p) => ({ ...p, newUsername: e.target.value }))} />
-            {errors.newUsername && <span className="cl-error">⚠ {errors.newUsername}</span>}
+            {errors.newUsername && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.newUsername}</span>}
           </div>
         </div>
         <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
@@ -217,7 +218,7 @@ const ClientSettings = () => {
               <label className="cl-label">New Email</label>
               <input type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
                 onChange={(e) => setAccount((p) => ({ ...p, newEmail: e.target.value }))} />
-              {errors.newEmail && <span className="cl-error">⚠ {errors.newEmail}</span>}
+              {errors.newEmail && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.newEmail}</span>}
             </div>
           )}
         </div>
@@ -230,19 +231,19 @@ const ClientSettings = () => {
         {isEmailUser && (
           <>
             <div className="cl-divider" />
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-primary)' }}>🔁 Recovery Options</h4>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-primary)' }}><RefreshCw size={16} style={{ marginRight: '6px' }} /> Recovery Options</h4>
             <div className="cl-form-grid">
               <div className="cl-form-group">
                 <label className="cl-label">Recovery Email</label>
                 <input type="email" className={`cl-input${errors.recoveryEmail ? ' cl-input--error' : ''}`} value={account.recoveryEmail}
                   onChange={(e) => setAccount((p) => ({ ...p, recoveryEmail: e.target.value }))} />
-                {errors.recoveryEmail && <span className="cl-error">⚠ {errors.recoveryEmail}</span>}
+                {errors.recoveryEmail && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.recoveryEmail}</span>}
               </div>
               <div className="cl-form-group">
                 <label className="cl-label">Recovery Phone</label>
                 <input className={`cl-input${errors.recoveryPhone ? ' cl-input--error' : ''}`} value={account.recoveryPhone}
                   onChange={(e) => setAccount((p) => ({ ...p, recoveryPhone: e.target.value }))} />
-                {errors.recoveryPhone && <span className="cl-error">⚠ {errors.recoveryPhone}</span>}
+                {errors.recoveryPhone && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.recoveryPhone}</span>}
               </div>
             </div>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -259,7 +260,7 @@ const ClientSettings = () => {
 
       {/* Notification Settings */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title">🔔 Notification Settings</h3>
+        <h3 className="cl-section-title"><Bell size={18} style={{ marginRight: '8px' }} /> Notification Settings</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {[
             { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive project and platform updates via email' },
@@ -282,14 +283,14 @@ const ClientSettings = () => {
 
       {/* Danger Zone */}
       <div className="cl-card">
-        <h3 className="cl-section-title" style={{ color: '#dc2626' }}>⚠️ Danger Zone</h3>
+        <h3 className="cl-section-title" style={{ color: '#dc2626' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
         <div className="cl-danger-zone">
           <div className="cl-danger-zone__title">Delete Account</div>
           <div className="cl-danger-zone__desc">
             Permanently delete your account and all associated projects. This action cannot be undone.
           </div>
           <button className="cl-btn cl-btn--danger cl-btn--sm" onClick={() => setDeleteModal(true)}>
-            🗑 Delete My Account
+            <Trash2 size={16} style={{ marginRight: '8px' }} /> Delete My Account
           </button>
         </div>
       </div>

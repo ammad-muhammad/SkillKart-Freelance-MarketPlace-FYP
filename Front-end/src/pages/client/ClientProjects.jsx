@@ -1,3 +1,4 @@
+import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
@@ -99,7 +100,7 @@ const ClientProjects = () => {
       if (payload.paymentRequired) {
         const { data: pay } = await paymentsAPI.startFinal(reviewing.id);
         if (pay?.data?.walletPaid) {
-          showToast('Remaining 50% paid directly from your wallet balance! 🎉');
+          showToast('Remaining 50% paid directly from your wallet balance!');
           setShowReviewModal({ 
             jobId: reviewing.id, 
             targetName: reviewing.freelancerName || 'Freelancer' 
@@ -112,7 +113,7 @@ const ClientProjects = () => {
         if (url) { window.location.assign(url); return; }
         showToast('Could not start the final payment. Please try again.', 'error');
       } else {
-        showToast('Delivery accepted. Project completed! 🎉');
+        showToast('Delivery accepted. Project completed!');
         setShowReviewModal({ 
           jobId: reviewing.id, 
           targetName: reviewing.freelancerName || 'Freelancer' 
@@ -131,7 +132,7 @@ const ClientProjects = () => {
     try {
       const { data } = await paymentsAPI.startDeposit(projId);
       if (data?.data?.walletPaid) {
-        showToast('50% deposit funded successfully from your wallet balance! Work can begin. 🚀', 'success');
+        showToast('50% deposit funded successfully from your wallet balance! Work can begin.', 'success');
         await fetchProfile();
         return;
       }
@@ -359,17 +360,17 @@ const ClientProjects = () => {
                 </div>
                 <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <span className={`cl-badge`} style={{ background: proj.source === 'gig' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(59, 130, 246, 0.1)', color: proj.source === 'gig' ? '#a855f7' : '#3b82f6' }}>
-                    {proj.source === 'gig' ? '🛍️ Gig Order' : '📝 Custom Project'}
+                    {proj.source === 'gig' ? <span><ShoppingBag size={14} style={{ marginRight: '6px' }} /> Gig Order</span> : <span><FileEdit size={14} style={{ marginRight: '6px' }} /> Custom Project</span>}
                   </span>
                   <span className={`cl-badge cl-badge--${proj.status}`}>
-                    {proj.status === 'open' ? '🟢 Open' :
-                     proj.status === 'draft' ? '📂 Draft' :
-                     proj.status === 'in-progress' && proj.contractStatus === 'delivered' ? '📦 Delivered — review needed' :
-                     proj.status === 'in-progress' && proj.contractStatus === 'in_revision' ? '🔁 In Revision' :
-                     proj.status === 'in-progress' ? '🔵 In Progress' :
-                     proj.status === 'completed' ? '✅ Completed' :
+                    {proj.status === 'open' ? <span><Circle fill="#22c55e" size={10} style={{ marginRight: '6px' }} /> Open</span> :
+                     proj.status === 'draft' ? <span><Folder size={14} style={{ marginRight: '6px' }} /> Draft</span> :
+                     proj.status === 'in-progress' && proj.contractStatus === 'delivered' ? <span><Package size={14} style={{ marginRight: '6px' }} /> Delivered — review needed</span> :
+                     proj.status === 'in-progress' && proj.contractStatus === 'in_revision' ? <span><RefreshCw size={14} style={{ marginRight: '6px' }} /> In Revision</span> :
+                     proj.status === 'in-progress' ? <span><Circle fill="#3b82f6" size={10} style={{ marginRight: '6px' }} /> In Progress</span> :
+                     proj.status === 'completed' ? <span><CheckCircle size={14} style={{ marginRight: '6px', color: '#22c55e' }} /> Completed</span> :
                      proj.status === 'expired' ? '⏰ Expired' :
-                     '⚪ Closed'}
+                     <span><Circle fill="#64748b" size={10} style={{ marginRight: '6px' }} /> Closed</span>}
                   </span>
                 </span>
               </div>
@@ -387,7 +388,7 @@ const ClientProjects = () => {
               {proj.contractType === 'hourly' && proj.dispute && proj.dispute.status === 'pending' && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    ⚠️ Contract under Dispute
+                    <AlertTriangle size={14} style={{ marginRight: '6px' }} /> Contract under Dispute
                   </h4>
                   <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
                     This contract has been escalated to Admin review. Reason: {proj.dispute.reason}.
@@ -404,7 +405,7 @@ const ClientProjects = () => {
                   ) : (
                     <>
                       <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>
-                        🛑 Freelancer has requested to end this contract
+                        <XCircle size={14} style={{ marginRight: '6px' }} /> Freelancer has requested to end this contract
                       </h4>
                       <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#15803d' }}>
                         Reason: {proj.endRequest.reason} 
@@ -428,18 +429,18 @@ const ClientProjects = () => {
                 <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     {proj.status === 'completed' || proj.status === 'closed' ? (
-                      <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ Freelancer stopped working</span>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}><Circle fill="#64748b" size={10} style={{ marginRight: '6px' }} /> Freelancer stopped working</span>
                     ) : proj.timerActive ? (
                       <span style={{ color: '#16a34a', fontWeight: 600 }}>
-                        🟢 Freelancer is currently working 
+                        <Circle fill="#22c55e" size={10} style={{ marginRight: '6px' }} /> Freelancer is currently working 
                         <LiveTimer startedAt={proj.timerStartedAt} hourlyRate={proj.hourlyRate} prefix=" (" suffix=")" />
                       </span>
                     ) : (
-                      <span style={{ color: '#64748b', fontWeight: 600 }}>⚪ Freelancer is not working right now</span>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}><Circle fill="#64748b" size={10} style={{ marginRight: '6px' }} /> Freelancer is not working right now</span>
                     )}
                   </div>
                   <div style={{ color: 'var(--color-text-mid)' }}>
-                    🕒 Total logged: <strong>{Math.floor(proj.totalDuration / 3600000)}h {Math.floor((proj.totalDuration % 3600000) / 60000)}m</strong>
+                    <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> Total logged: <strong>{Math.floor(proj.totalDuration / 3600000)}h {Math.floor((proj.totalDuration % 3600000) / 60000)}m</strong>
                     {proj.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((proj.totalDuration / 3600000) * proj.hourlyRate).toFixed(2)})</span>}
                     {proj.lastTimeLog && (
                       <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
@@ -455,13 +456,13 @@ const ClientProjects = () => {
               <div className="cl-proj-card__footer">
                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
-                    💰 Budget: <strong>{proj.budget?.min === proj.budget?.max ? `Rs. ${proj.budget?.min || 0}` : `Rs. ${proj.budget?.min || 0}–${proj.budget?.max || 0}`}</strong>
+                    <DollarSign size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> Budget: <strong>{proj.budget?.min === proj.budget?.max ? `Rs. ${proj.budget?.min || 0}` : `Rs. ${proj.budget?.min || 0}–${proj.budget?.max || 0}`}</strong>
                   </span>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
                     ⏱ {proj.duration}
                   </span>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
-                    📅 Deadline: {proj.deadline || 'N/A'}
+                    <Calendar size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> Deadline: {proj.deadline || 'N/A'}
                   </span>
                 </div>
 
@@ -475,41 +476,41 @@ const ClientProjects = () => {
                         className="cl-btn cl-btn--primary cl-btn--sm" 
                         onClick={async () => {
                           const ok = await updateProject(proj.id, { status: 'open' });
-                          if (ok) showToast('Project published successfully! 🚀');
+                          if (ok) showToast('Project published successfully!');
                         }}
                       >
-                        🚀 Publish Draft
+                        <Send size={14} style={{ marginRight: '6px' }} /> Publish Draft
                       </button>
                     )}
                     {proj.status === 'in-progress' && proj.source !== 'gig' && (
                       proj.payment && (proj.payment.status === 'deposit_paid' || proj.payment.status === 'released') ? (
                         <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
-                          ✅ Deposit Funded
+                          <CheckCircle size={14} style={{ marginRight: '6px', color: '#22c55e' }} /> Deposit Funded
                         </button>
                       ) : (
                         <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
-                          💳 Fund Deposit
+                          <CreditCard size={14} style={{ marginRight: '6px' }} /> Fund Deposit
                         </button>
                       )
                     )}
                     {proj.status === 'completed' && (
                       <>
                         <button className="cl-btn cl-btn--secondary cl-btn--sm" onClick={() => openReview(proj)}>
-                          📂 View Submitted Work {proj.hasReviewed ? '(Reviewed)' : ''}
+                          <Folder size={14} style={{ marginRight: '6px' }} /> View Submitted Work {proj.hasReviewed ? '(Reviewed)' : ''}
                         </button>
                         {proj.hasReviewed !== true && (
                           <button 
                             className="cl-btn cl-btn--ghost cl-btn--sm"
                             onClick={() => setShowReviewModal({ jobId: proj.id, targetName: 'Freelancer' })}
                           >
-                            ⭐️ Leave Review
+                            <Star size={14} style={{ marginRight: '6px' }} /> Leave Review
                           </button>
                         )}
                       </>
                     )}
                     {proj.contractStatus === 'delivered' && (
                       <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={() => openReview(proj)}>
-                        📦 Review Submitted Work
+                        <Package size={14} style={{ marginRight: '6px' }} /> Review Submitted Work
                       </button>
                     )}
                     {proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status) && proj.endRequest?.status !== 'pending' && proj.dispute?.status !== 'pending' && (
@@ -519,33 +520,33 @@ const ClientProjects = () => {
                           style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }}
                           onClick={() => setEndRequestModal({ contractId: proj.contractId })}
                         >
-                          🛑 End Contract
+                          <XCircle size={14} style={{ marginRight: '6px' }} /> End Contract
                         </button>
                         <button 
                           className="cl-btn cl-btn--sm cl-btn--ghost" 
                           style={{ color: '#ef4444' }}
                           onClick={() => setDisputeModal({ contractId: proj.contractId })}
                         >
-                          ⚠️ Dispute (Force End)
+                          <AlertTriangle size={14} style={{ marginRight: '6px' }} /> Dispute (Force End)
                         </button>
                       </>
                     )}
                     {proj.status !== 'draft' && proj.source !== 'gig' && (
                       <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
-                        👥 View Proposals ({proj.proposals?.length || 0})
+                        <Users size={14} style={{ marginRight: '6px' }} /> View Proposals ({proj.proposals?.length || 0})
                       </Link>
                     )}
                     {proj.hiredFreelancer && (
                       <Link to={`/client/messages?user=${proj.hiredFreelancer._id}`} className="cl-btn cl-btn--ghost cl-btn--sm">
-                        💬 Contact Freelancer
+                        <MessageSquare size={14} style={{ marginRight: '6px' }} /> Contact Freelancer
                       </Link>
                     )}
-                    <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}>✏ Edit</button>
+                    <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}><Edit3 size={14} style={{ marginRight: '6px' }} /> Edit</button>
                     <button
                       className="cl-btn cl-btn--danger cl-btn--sm"
                       onClick={() => setDeleteModal(proj.id)}
                     >
-                      🗑 Delete
+                      <Trash2 size={14} style={{ marginRight: '6px' }} /> Delete
                     </button>
                   </div>
                 </div>
@@ -579,7 +580,7 @@ const ClientProjects = () => {
                     onChange={e => { setField({ title: e.target.value }); clearEditError('title'); }}
                     style={{ background: '#f8fafc' }}
                   />
-                  {editErrors.title && <span className="cl-error">⚠ {editErrors.title}</span>}
+                  {editErrors.title && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.title}</span>}
                 </div>
 
                 {/* AI suggest & fill — category, skills & experience level from the brief */}
@@ -612,7 +613,7 @@ const ClientProjects = () => {
                     placeholder="Type to search categories…"
                     showHint={false}
                   />
-                  {editErrors.category && <span className="cl-error">⚠ {editErrors.category}</span>}
+                  {editErrors.category && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.category}</span>}
                 </div>
 
                 <div className="cl-form-group">
@@ -633,7 +634,7 @@ const ClientProjects = () => {
                     onChange={tags => { setField({ skills: tags }); clearEditError('skills'); }}
                     placeholder="e.g. React, CSS, Figma"
                   />
-                  {editErrors.skills && <span className="cl-error">⚠ {editErrors.skills}</span>}
+                  {editErrors.skills && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.skills}</span>}
                 </div>
 
                 <div className="cl-form-group">
@@ -672,7 +673,7 @@ const ClientProjects = () => {
                     onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
                     style={{ background: '#f8fafc' }}
                   />
-                  {editErrors.budgetMin && <span className="cl-error">⚠ {editErrors.budgetMin}</span>}
+                  {editErrors.budgetMin && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMin}</span>}
                 </div>
 
                 <div className="cl-form-group">
@@ -683,7 +684,7 @@ const ClientProjects = () => {
                     onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
                     style={{ background: '#f8fafc' }}
                   />
-                  {editErrors.budgetMax && <span className="cl-error">⚠ {editErrors.budgetMax}</span>}
+                  {editErrors.budgetMax && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMax}</span>}
                 </div>
 
                 <div className="cl-form-group">
@@ -705,7 +706,7 @@ const ClientProjects = () => {
                     onChange={e => { setField({ deadline: e.target.value }); clearEditError('deadline'); }}
                     style={{ background: '#f8fafc' }}
                   />
-                  {editErrors.deadline && <span className="cl-error">⚠ {editErrors.deadline}</span>}
+                  {editErrors.deadline && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.deadline}</span>}
                 </div>
 
                 {/* Status is intentionally NOT editable here — it's driven by the gated lifecycle */}
@@ -725,7 +726,7 @@ const ClientProjects = () => {
                     style={{ minHeight: '160px', background: '#f8fafc', resize: 'vertical' }}
                     placeholder="Describe the project scope, responsibilities, and deliverables (min 50 characters)…"
                   />
-                  {editErrors.description && <span className="cl-error">⚠ {editErrors.description}</span>}
+                  {editErrors.description && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.description}</span>}
                 </div>
               </div>
             </div>
@@ -799,10 +800,10 @@ const ClientProjects = () => {
 
                 <div className="cl-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <button className="cl-btn cl-btn--primary" onClick={handleAccept} disabled={actioning}>
-                    {actioning ? 'Working…' : '✅ Accept & Complete'}
+                    {actioning ? 'Working…' : <><Check size={14} style={{ marginRight: '6px' }} /> Accept & Complete</>}
                   </button>
                   <button className="cl-btn cl-btn--outline" onClick={handleRequestRevision} disabled={actioning} style={{ color: '#d97706', borderColor: '#d97706' }}>
-                    🔁 Request Revision
+                    <RefreshCw size={14} style={{ marginRight: '6px' }} /> Request Revision
                   </button>
                   <button className="cl-btn cl-btn--ghost" onClick={() => setReviewing(null)} disabled={actioning}>Cancel</button>
                 </div>

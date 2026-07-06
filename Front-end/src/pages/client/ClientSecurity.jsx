@@ -1,3 +1,4 @@
+import { Key, EyeOff, Eye, AlertCircle, Lock, Shield, Bell, AlertTriangle, Trash2, Mail } from 'lucide-react';
 import { useState, useContext, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { LogOut } from 'lucide-react';
@@ -263,7 +264,7 @@ const ClientSecurity = () => {
       {/* Change Password / Account Info */}
       {isSupabaseUser ? (
         <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-          <h3 className="cl-section-title">🔑 Account Information</h3>
+          <h3 className="cl-section-title"><Key size={18} style={{ marginRight: '8px' }} /> Account Information</h3>
           <div style={{ maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="cl-form-group">
               <label className="cl-label">Email Address</label>
@@ -284,7 +285,7 @@ const ClientSecurity = () => {
         </div>
       ) : (
         <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-          <h3 className="cl-section-title">🔑 Change Password</h3>
+          <h3 className="cl-section-title"><Key size={18} style={{ marginRight: '8px' }} /> Change Password</h3>
           <div style={{ maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {[
             { key: 'currentPassword', label: 'Current Password' },
@@ -306,10 +307,10 @@ const ClientSecurity = () => {
                   style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', color: 'var(--color-text-light)' }}
                   onClick={() => setShowPwd((p) => ({ ...p, [key]: !p[key] }))}
                 >
-                  {showPwd[key] ? '🙈' : '👁️'}
+                  {showPwd[key] ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors[key] && <span className="cl-error">⚠ {errors[key]}</span>}
+              {errors[key] && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors[key]}</span>}
               {key === 'newPassword' && passwords.newPassword && (
                 <div style={{ marginTop: '0.4rem' }}>
                     <div style={{ display: 'flex', gap: '4px' }}>
@@ -333,7 +334,7 @@ const ClientSecurity = () => {
                 className={`cl-btn cl-btn--primary${saving ? ' cl-btn--loading' : ''}`}
                 onClick={changePassword} disabled={saving}
               >
-                {saving ? 'Saving...' : '🔒 Change Password'}
+                {saving ? 'Saving...' : <><Lock size={16} style={{ marginRight: '8px' }} /> Change Password</>}
               </button>
             </div>
           </div>
@@ -342,12 +343,12 @@ const ClientSecurity = () => {
 
       {/* Security Options */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title">🛡️ Security Options</h3>
+        <h3 className="cl-section-title"><Shield size={18} style={{ marginRight: '8px' }} /> Security Options</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {/* Available for ALL users */}
           <div className="cl-toggle">
             <div className="cl-toggle__info">
-              <span className="cl-toggle__label">🔔 Login Alerts</span>
+              <span className="cl-toggle__label"><Bell size={16} style={{ marginRight: '8px' }} /> Login Alerts</span>
               <span className="cl-toggle__desc">Get notified whenever someone logs into your account.</span>
             </div>
             <div
@@ -361,7 +362,7 @@ const ClientSecurity = () => {
             <>
               <div className="cl-toggle">
                 <div className="cl-toggle__info">
-                  <span className="cl-toggle__label">🔐 Two-Factor Authentication</span>
+                  <span className="cl-toggle__label"><Lock size={16} style={{ marginRight: '8px' }} /> Two-Factor Authentication</span>
                   <span className="cl-toggle__desc">Add an extra layer of security with 2FA</span>
                 </div>
                 <div
@@ -371,7 +372,7 @@ const ClientSecurity = () => {
               </div>
               <div className="cl-toggle">
                 <div className="cl-toggle__info">
-                  <span className="cl-toggle__label">🛡️ Password Change Alerts</span>
+                  <span className="cl-toggle__label"><Shield size={16} style={{ marginRight: '8px' }} /> Password Change Alerts</span>
                   <span className="cl-toggle__desc">Get notified immediately if your password is changed.</span>
                 </div>
                 <div
@@ -386,13 +387,13 @@ const ClientSecurity = () => {
 
       {/* Danger Zone */}
       <div className="cl-card">
-        <h3 className="cl-section-title" style={{ color: '#dc2626' }}>⚠️ Danger Zone</h3>
+        <h3 className="cl-section-title" style={{ color: '#dc2626' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button className="cl-btn cl-btn--ghost" onClick={handleLogoutAll} disabled={loggingOutAll}>
             <LogOut size={16} /> {loggingOutAll ? 'Signing out…' : 'Logout from All Devices'}
           </button>
           <button className="cl-btn cl-btn--danger" onClick={() => { setDeactivateStep(1); setDeactivateOtp(''); setDeactivateModal(true); }}>
-            🗑 Deactivate Account
+            <Trash2 size={16} style={{ marginRight: '8px' }} /> Deactivate Account
           </button>
         </div>
       </div>
@@ -419,7 +420,7 @@ const ClientSecurity = () => {
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-            <div style={{ fontSize: '3rem' }}>📧</div>
+            <div style={{ color: 'var(--color-primary)' }}><Mail size={48} /></div>
             <h4 style={{ marginTop: '0.75rem', color: 'var(--color-primary)' }}>Reset Link Sent!</h4>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text-mid)', marginTop: '0.5rem' }}>
               A password reset link has been sent to <strong>{forgotEmail}</strong>.

@@ -26,7 +26,7 @@ const ClientSavedFreelancers = () => {
         </div>
       ) : saved.length === 0 ? (
         <div className="cl-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🔖</div>
+          <div style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}><Bookmark size={64} /></div>
           <h3 style={{ color: 'var(--color-primary)' }}>Your list is empty</h3>
           <p style={{ color: 'var(--color-text-light)', marginTop: '0.5rem' }}>
             Browse freelancers and click the bookmark icon to save them here.

@@ -1,3 +1,4 @@
+import { Inbox } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
@@ -91,7 +92,7 @@ export default function ReviewProposals() {
       try {
         const { data } = await paymentsAPI.startDeposit(jobId);
         if (data?.data?.walletPaid) {
-          toast.success('50% deposit funded successfully from your wallet balance! Work can begin. 🚀');
+          toast.success('50% deposit funded successfully from your wallet balance! Work can begin.');
           await fetchProfile(); // Sync global state
           navigate('/client/projects');
           return;
@@ -176,7 +177,7 @@ export default function ReviewProposals() {
 
       {proposals.length === 0 ? (
         <div className="rp-empty">
-          <div className="rp-empty__icon">📭</div>
+          <div className="rp-empty__icon"><Inbox size={48} /></div>
           <h3>No Proposals Yet</h3>
           <p>This project hasn't received any proposals from freelancers yet.</p>
         </div>
