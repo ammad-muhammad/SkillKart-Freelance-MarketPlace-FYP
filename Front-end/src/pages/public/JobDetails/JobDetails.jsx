@@ -362,15 +362,18 @@ export default function JobDetails() {
                   </div>
                   <div className="jd-form-group">
                     <label>Estimated Weekly Hours</label>
-                    <input 
-                      type="number" 
-                      required 
-                      placeholder="e.g. 20"
-                      value={proposalData.estimatedWeeklyHours}
-                      onChange={e => setProposalData({ ...proposalData, estimatedWeeklyHours: e.target.value })}
-                      min="1"
-                      max="168"
-                    />
+                    <div className="jd-input-icon">
+                      <Clock size={16} />
+                      <input 
+                        type="number" 
+                        required 
+                        placeholder="e.g. 20"
+                        value={proposalData.estimatedWeeklyHours}
+                        onChange={e => setProposalData({ ...proposalData, estimatedWeeklyHours: e.target.value })}
+                        min="1"
+                        max="168"
+                      />
+                    </div>
                   </div>
                 </>
               ) : (
