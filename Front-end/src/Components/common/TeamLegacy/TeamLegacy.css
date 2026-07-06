@@ -203,10 +203,34 @@
 }
 
 @media (max-width: 768px) {
-    .legacy-showcase-item {
-        width: 90vw;
+    .team-legacy-v2 {
         height: auto;
-        min-height: 70vh;
+        padding-bottom: var(--space-12);
+    }
+
+    .legacy-intro {
+        padding: 40px 5% 20px 5%;
+        text-align: center;
+    }
+
+    .legacy-title {
+        font-size: 2.5rem;
+    }
+
+    .legacy-showcase-container {
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+        padding: 0 5%;
+        gap: var(--space-8);
+        padding-bottom: 2rem;
+    }
+
+    .legacy-showcase-item {
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        margin-right: 0;
     }
 
     .showcase-card {
@@ -217,14 +241,24 @@
     }
 
     .showcase-content {
-        padding: 30px;
+        padding: 24px;
     }
 
     .showcase-name {
-        font-size: 2.22rem;
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+
+    .showcase-desc {
+        font-size: 1rem;
+        margin-bottom: 20px;
     }
 
     .showcase-img-overlay {
-        background: linear-gradient(to top, #fff, transparent 60%);
+        background: linear-gradient(to top, #fff, transparent 80%);
+    }
+
+    .showcase-padding {
+        display: none;
     }
 }

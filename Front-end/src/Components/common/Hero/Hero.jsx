@@ -138,9 +138,7 @@ export default function Hero() {
 
           <h1 ref={headingRef} className="hero__heading">
             {headingWords.map((w, i) => (
-              <span key={i} className="hero__word">
-                {w}{i === 2 ? ' ' : ' '}
-              </span>
+              <span key={i} className="hero__word">{w}&nbsp;</span>
             ))}
           </h1>
 

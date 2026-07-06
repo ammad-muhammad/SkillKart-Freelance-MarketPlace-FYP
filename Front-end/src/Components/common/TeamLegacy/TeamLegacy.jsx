@@ -164,6 +164,8 @@ const TeamLegacy = () => {
         // trigger to a gsap.context so it tears down cleanly.
         let gsapCtx;
         const rafId = requestAnimationFrame(() => {
+            if (window.innerWidth <= 768) return; // Disable horizontal scroll pin on mobile
+
             const horizontalSections = scrollRef.current;
             if (!horizontalSections) return;
 
