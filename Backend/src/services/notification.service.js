@@ -171,6 +171,13 @@ const onProjectCompleted = (freelancerId, { job }) => notify(freelancerId, {
   jobId: job?._id,
 });
 
+const onContractStatusChanged = (userId, { contractId, status }) => notify(userId, {
+  type: 'contract_status_changed',
+  title: 'Contract Update',
+  message: `The status of your contract has been updated to ${status}.`,
+  link: `/contract/${contractId}`,
+});
+
 module.exports = {
   TYPES,
   notify,
@@ -190,4 +197,5 @@ module.exports = {
   onReviewSubmitted,
   onJobCancelled,
   onContractDisputed,
+  onContractStatusChanged,
 };

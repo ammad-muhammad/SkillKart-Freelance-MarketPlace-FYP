@@ -30,7 +30,26 @@ const contractSchema = new mongoose.Schema({
   },
   
   startedAt: { type: Date, default: Date.now },
-  completedAt: { type: Date }
+  completedAt: { type: Date },
+
+  endRequest: {
+    requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason: { type: String, enum: ['Work completed', 'Mutual agreement', 'Client no longer requires work', 'Freelancer unavailable', 'Communication issues', 'Other'] },
+    additionalDetails: { type: String },
+    status: { type: String, enum: ['pending', 'rejected', 'approved'] },
+    requestedAt: { type: Date }
+  },
+
+  dispute: {
+    raisedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason: { type: String },
+    description: { type: String },
+    status: { type: String, enum: ['pending', 'resolved'] },
+    raisedAt: { type: Date },
+    resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    resolutionNotes: { type: String },
+    resolvedAt: { type: Date }
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Contract', contractSchema);

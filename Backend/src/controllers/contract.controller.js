@@ -83,7 +83,7 @@ const requestCancellation = asyncHandler(async (req, res) => {
   await ContractHistory.create({
     contractId: contract._id,
     action: 'status_changed',
-    oldValue: { status: oldStatus },
+    previousValue: { status: oldStatus },
     newValue: { status: contract.status, reason },
     performedBy: req.user._id
   });
@@ -171,6 +171,8 @@ const getMyContracts = asyncHandler(async (req, res) => {
     return {
       ...c,
       payment: payByContract.get(String(c._id)) || null,
+      endRequest: c.endRequest || null,
+      dispute: c.dispute || null,
       lastTimeLog: logs.lastLog || null,
       totalDuration: logs.totalDuration || 0
     };
@@ -180,17 +182,19 @@ const getMyContracts = asyncHandler(async (req, res) => {
 });
 
 /**
- * End contract manually (primarily for hourly contracts)
+ * Request to end an hourly contract
  */
-const endContract = asyncHandler(async (req, res) => {
+const requestEndContract = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const contract = await Contract.findById(id);
+  const { reason, additionalDetails } = req.body;
 
-  if (!contract) {
-    throw new NotFoundError('Contract not found');
+  const contract = await Contract.findById(id);
+  if (!contract) throw new NotFoundError('Contract not found');
+
+  if (contract.type !== 'hourly') {
+    throw new BadRequestError('This action is only for hourly contracts');
   }
 
-  // Ensure only the client (or freelancer) can end it
   const isClient = String(contract.clientId) === String(req.user._id);
   const isFreelancer = String(contract.freelancerId) === String(req.user._id);
 
@@ -198,40 +202,248 @@ const endContract = asyncHandler(async (req, res) => {
     throw new ForbiddenError('You do not have permission to end this contract');
   }
 
-  if (contract.status === 'completed' || contract.status === 'cancelled') {
-    throw new BadRequestError(`Contract is already ${contract.status}`);
+  if (contract.status === 'completed' || contract.status === 'cancelled' || contract.status === 'under_review') {
+    throw new BadRequestError(`Cannot end contract that is ${contract.status}`);
   }
 
-  contract.status = 'completed';
-  contract.completedAt = Date.now();
-  
-  // If timer is active, stop it
+  if (contract.endRequest && contract.endRequest.status === 'pending') {
+    throw new BadRequestError('An end request is already pending for this contract');
+  }
+
+  contract.endRequest = {
+    requestedBy: req.user._id,
+    reason,
+    additionalDetails: reason === 'Other' ? additionalDetails : undefined,
+    status: 'pending',
+    requestedAt: Date.now()
+  };
+
+  await contract.save();
+
+  // Notify the other party
+  const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
+  notifications.onContractStatusChanged(notifyUserId, {
+    contractId: contract._id,
+    status: 'end_requested'
+  });
+
+  sendSuccess(res, { message: 'End request sent successfully', data: { contract } });
+});
+
+/**
+ * Respond to an end request
+ */
+const respondEndContract = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { action } = req.body; // 'approve' or 'reject'
+
+  const contract = await Contract.findById(id);
+  if (!contract) throw new NotFoundError('Contract not found');
+
+  if (contract.type !== 'hourly') {
+    throw new BadRequestError('This action is only for hourly contracts');
+  }
+
+  if (!contract.endRequest || contract.endRequest.status !== 'pending') {
+    throw new BadRequestError('No pending end request found');
+  }
+
+  const isClient = String(contract.clientId) === String(req.user._id);
+  const isFreelancer = String(contract.freelancerId) === String(req.user._id);
+
+  if (!isClient && !isFreelancer) {
+    throw new ForbiddenError('You do not have permission');
+  }
+
+  // The responder must NOT be the requester
+  if (String(contract.endRequest.requestedBy) === String(req.user._id)) {
+    throw new BadRequestError('You cannot respond to your own request');
+  }
+
+  if (action === 'reject') {
+    contract.endRequest.status = 'rejected';
+    await contract.save();
+    
+    notifications.onContractStatusChanged(contract.endRequest.requestedBy, {
+      contractId: contract._id,
+      status: 'end_request_rejected'
+    });
+
+    return sendSuccess(res, { message: 'End request rejected', data: { contract } });
+  }
+
+  if (action === 'approve') {
+    contract.status = 'completed';
+    contract.completedAt = Date.now();
+    contract.endRequest.status = 'approved';
+    
+    if (contract.timer && contract.timer.isActive) {
+      contract.timer.isActive = false;
+    }
+
+    // Process immediate payment for any pending time logs
+    if (contract.type === 'hourly') {
+      const TimeLog = require('../models/TimeLog');
+      const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' });
+      
+      if (pendingLogs.length > 0) {
+        const totalDurationMs = pendingLogs.reduce((sum, log) => sum + log.duration, 0);
+        const totalHours = totalDurationMs / (1000 * 60 * 60);
+        const amount = totalHours * contract.hourlyRate;
+        
+        if (amount > 0.01) {
+          await Payment.create({
+            jobId: contract.jobId,
+            contractId: contract._id,
+            clientId: contract.clientId,
+            freelancerId: contract.freelancerId,
+            type: 'hourly_invoice',
+            totalAmount: amount,
+            depositAmount: amount,
+            finalAmount: amount,
+            feeRate: 0.05,
+            freelancerPayout: amount * 0.95,
+            status: 'released',
+          });
+        }
+
+        await TimeLog.updateMany(
+          { _id: { $in: pendingLogs.map(l => l._id) } },
+          { $set: { status: 'billed', approvedBy: null } }
+        );
+      }
+
+      // Release any previously generated unpaid invoices for this contract, regardless of whether there are new pending logs
+      await Payment.updateMany(
+        { contractId: contract._id, status: { $in: ['deposit_pending', 'escrow_funded'] } },
+        { $set: { status: 'released' } }
+      );
+    }
+
+    await contract.save();
+    
+    await Job.findByIdAndUpdate(contract.jobId, { status: 'completed' });
+
+    await ContractHistory.create({
+      contractId: contract._id,
+      action: 'status_change',
+      performedBy: req.user._id,
+      notes: 'Contract mutually ended',
+      previousValue: 'active',
+      newValue: 'completed'
+    });
+
+    const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
+    notifications.onContractStatusChanged(notifyUserId, {
+      contractId: contract._id,
+      status: 'completed'
+    });
+
+    return sendSuccess(res, { message: 'Contract completed successfully', data: { contract } });
+  }
+
+  throw new BadRequestError('Invalid action');
+});
+
+/**
+ * Raise a Dispute for Hourly Contract
+ */
+const raiseDispute = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reason, description } = req.body;
+
+  const contract = await Contract.findById(id);
+  if (!contract) throw new NotFoundError('Contract not found');
+
+  if (contract.type !== 'hourly') {
+    throw new BadRequestError('This action is only for hourly contracts');
+  }
+
+  const isClient = String(contract.clientId) === String(req.user._id);
+  const isFreelancer = String(contract.freelancerId) === String(req.user._id);
+
+  if (!isClient && !isFreelancer) {
+    throw new ForbiddenError('You do not have permission to dispute this contract');
+  }
+
+  const lockedStatuses = ['completed', 'cancelled', 'pending_cancellation', 'under_review'];
+  if (lockedStatuses.includes(contract.status)) {
+    throw new BadRequestError(`Cannot dispute a contract that is ${contract.status}`);
+  }
+
+  contract.status = 'under_review';
   if (contract.timer && contract.timer.isActive) {
     contract.timer.isActive = false;
-    // We ideally should calculate accumulatedMs but for simplicity we just stop it
+  }
+
+  contract.dispute = {
+    raisedBy: req.user._id,
+    reason,
+    description,
+    status: 'pending',
+    raisedAt: Date.now()
+  };
+
+  // Clear any pending end requests
+  if (contract.endRequest && contract.endRequest.status === 'pending') {
+    contract.endRequest.status = 'rejected';
   }
 
   await contract.save();
 
-  // Also update the job status
-  await Job.findByIdAndUpdate(contract.jobId, { status: 'completed' });
-
-  // Add history
   await ContractHistory.create({
     contractId: contract._id,
     action: 'status_change',
-    actorId: req.user._id,
-    actorModel: 'User',
-    details: 'Contract was manually ended',
-    previousStatus: contract.status,
-    newStatus: 'completed'
+    performedBy: req.user._id,
+    notes: `Dispute raised: ${reason}`,
+    previousValue: 'active',
+    newValue: 'under_review'
   });
 
-  // Notify the other party
   const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
-  // We'll skip complex notification logic for now, or just use basic notification
+  notifications.onContractDisputed(notifyUserId, {
+    contractId: contract._id,
+    actorName: req.user.firstName,
+    reason
+  });
 
-  sendSuccess(res, { message: 'Contract ended successfully', data: { contract } });
+  sendSuccess(res, { message: 'Dispute raised successfully', data: { contract } });
+});
+
+/**
+ * Admin: Resolve Dispute (Future API hook)
+ */
+const adminResolveDispute = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { outcome, resolutionNotes } = req.body; // e.g. 'release_freelancer', 'refund_client', 'split', 'resume'
+
+  // Admin authorization would normally happen in middleware
+  // For now, this is just a skeleton for future admin dashboard
+  
+  const contract = await Contract.findById(id);
+  if (!contract) throw new NotFoundError('Contract not found');
+
+  if (!contract.dispute || contract.dispute.status !== 'pending') {
+    throw new BadRequestError('No pending dispute found');
+  }
+
+  if (outcome === 'resume') {
+    contract.status = 'active';
+  } else {
+    contract.status = 'completed'; // or cancelled
+    contract.completedAt = Date.now();
+  }
+
+  contract.dispute.status = 'resolved';
+  contract.dispute.resolutionNotes = resolutionNotes;
+  contract.dispute.resolvedBy = req.user._id; // Admin ID
+  contract.dispute.resolvedAt = Date.now();
+
+  await contract.save();
+
+  // (Future logic: process wallet transfers atomically here)
+
+  sendSuccess(res, { message: 'Dispute resolved successfully', data: { contract } });
 });
 
 module.exports = {
@@ -239,5 +451,8 @@ module.exports = {
   requestCancellation,
   getContractHistory,
   getMyContracts,
-  endContract
+  requestEndContract,
+  respondEndContract,
+  raiseDispute,
+  adminResolveDispute
 };

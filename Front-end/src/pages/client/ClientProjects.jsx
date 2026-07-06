@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
+import { useAuth } from '../../hooks/useAuth';
 import { jobsAPI } from '../../api/jobs';
 import { paymentsAPI } from '../../api/payments';
 import { contractsAPI } from '../../api/contracts';
@@ -39,6 +40,13 @@ const ClientProjects = () => {
   const [revisionNote, setRevisionNote] = useState('');
   const [actioning, setActioning] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(null); // { jobId, targetName }
+  const [endRequestModal, setEndRequestModal] = useState(null); // proj
+  const [endReason, setEndReason] = useState('Work completed');
+  const [endDetails, setEndDetails] = useState('');
+  const [disputeModal, setDisputeModal] = useState(null); // proj
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeDesc, setDisputeDesc] = useState('');
+  const { user } = useAuth(); // Need user to check requestedBy
 
   const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter);
 
@@ -146,6 +154,65 @@ const ClientProjects = () => {
       await fetchProfile();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to request revision', 'error');
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const completeContract = async (projId, contractId) => {
+    try {
+      if (!window.confirm('Are you sure you want to end this contract?')) return;
+      setActioning(true);
+      await contractsAPI.endContract(contractId);
+      showToast('Contract ended successfully', 'success');
+      fetchProfile(true);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to end contract', 'error');
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleRequestEnd = async (e) => {
+    e.preventDefault();
+    if (!endReason || (endReason === 'Other' && !endDetails.trim())) return;
+    try {
+      setActioning(true);
+      await contractsAPI.requestEnd(endRequestModal.contractId, endReason, endDetails);
+      showToast('End request sent', 'success');
+      setEndRequestModal(null);
+      fetchProfile(true);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to send request', 'error');
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleRespondEnd = async (contractId, action) => {
+    try {
+      setActioning(true);
+      await contractsAPI.respondEnd(contractId, action);
+      showToast(`Request ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
+      fetchProfile(true);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to respond', 'error');
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleRaiseDispute = async (e) => {
+    e.preventDefault();
+    if (!disputeReason.trim()) return;
+    try {
+      setActioning(true);
+      await contractsAPI.raiseDispute(disputeModal.contractId, disputeReason, disputeDesc);
+      showToast('Dispute raised successfully', 'success');
+      setDisputeModal(null);
+      fetchProfile(true);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to raise dispute', 'error');
     } finally {
       setActioning(false);
     }
@@ -316,6 +383,46 @@ const ClientProjects = () => {
                 </div>
               )}
 
+              {/* Pending Banners */}
+              {proj.contractType === 'hourly' && proj.dispute && proj.dispute.status === 'pending' && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    ⚠️ Contract under Dispute
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
+                    This contract has been escalated to Admin review. Reason: {proj.dispute.reason}.
+                  </p>
+                </div>
+              )}
+
+              {proj.contractType === 'hourly' && proj.endRequest && proj.endRequest.status === 'pending' && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                  {String(proj.endRequest.requestedBy) === String(user?._id) ? (
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534' }}>
+                      ⏳ Waiting for the freelancer to approve your request to end this contract.
+                    </p>
+                  ) : (
+                    <>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>
+                        🛑 Freelancer has requested to end this contract
+                      </h4>
+                      <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#15803d' }}>
+                        Reason: {proj.endRequest.reason} 
+                        {proj.endRequest.additionalDetails && <span> - {proj.endRequest.additionalDetails}</span>}
+                      </p>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button className="cl-btn cl-btn--sm" style={{ background: '#16a34a', color: '#fff' }} onClick={() => handleRespondEnd(proj.contractId, 'approve')} disabled={actioning}>
+                          Approve & End Contract
+                        </button>
+                        <button className="cl-btn cl-btn--sm cl-btn--ghost" onClick={() => handleRespondEnd(proj.contractId, 'reject')} disabled={actioning}>
+                          Reject Request
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Hourly Project Info */}
               {proj.contractType === 'hourly' && proj.status !== 'draft' && proj.status !== 'open' && (
                 <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
@@ -405,24 +512,23 @@ const ClientProjects = () => {
                         📦 Review Submitted Work
                       </button>
                     )}
-                    {proj.contractType === 'hourly' && proj.status === 'in-progress' && (
-                      <button 
-                        className="cl-btn cl-btn--sm" 
-                        style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }}
-                        onClick={async () => {
-                          if (window.confirm("Are you sure you want to end this hourly contract? The freelancer will no longer be able to track time, and the contract will be marked as completed.")) {
-                            try {
-                              await contractsAPI.endContract(proj.contractId || proj.hiredFreelancer?.contractId || proj.id); // It uses contractId endpoint
-                              showToast('Contract ended successfully!');
-                              fetchProfile();
-                            } catch (err) {
-                              showToast(err.response?.data?.message || 'Failed to end contract', 'error');
-                            }
-                          }
-                        }}
-                      >
-                        🛑 End Contract
-                      </button>
+                    {proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status) && proj.endRequest?.status !== 'pending' && proj.dispute?.status !== 'pending' && (
+                      <>
+                        <button 
+                          className="cl-btn cl-btn--sm" 
+                          style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }}
+                          onClick={() => setEndRequestModal({ contractId: proj.contractId })}
+                        >
+                          🛑 End Contract
+                        </button>
+                        <button 
+                          className="cl-btn cl-btn--sm cl-btn--ghost" 
+                          style={{ color: '#ef4444' }}
+                          onClick={() => setDisputeModal({ contractId: proj.contractId })}
+                        >
+                          ⚠️ Dispute (Force End)
+                        </button>
+                      </>
                     )}
                     {proj.status !== 'draft' && proj.source !== 'gig' && (
                       <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
@@ -740,6 +846,77 @@ const ClientProjects = () => {
           }}
         />
       )}
+
+      {/* End Request Modal */}
+      <Modal open={!!endRequestModal} title="End Hourly Contract" onClose={() => setEndRequestModal(null)}>
+        <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+          This will send a request to the freelancer to mutually end this hourly contract.
+        </p>
+        <form onSubmit={handleRequestEnd}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="cl-label">Reason for ending</label>
+            <select className="cl-input" value={endReason} onChange={e => setEndReason(e.target.value)} required>
+              <option value="Work completed">Work completed</option>
+              <option value="Mutual agreement">Mutual agreement</option>
+              <option value="Client no longer requires work">Client no longer requires work</option>
+              <option value="Freelancer unavailable">Freelancer unavailable</option>
+              <option value="Communication issues">Communication issues</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          {endReason === 'Other' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="cl-label">Additional Details</label>
+              <textarea 
+                className="cl-input" 
+                rows="3" 
+                value={endDetails} 
+                onChange={e => setEndDetails(e.target.value)}
+                placeholder="Please explain..."
+                required
+              />
+            </div>
+          )}
+          <div className="cl-actions">
+            <button type="submit" className="cl-btn cl-btn--primary" disabled={actioning}>Send Request</button>
+            <button type="button" className="cl-btn cl-btn--ghost" onClick={() => setEndRequestModal(null)} disabled={actioning}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Dispute Modal */}
+      <Modal open={!!disputeModal} title="Raise Dispute (Force End)" onClose={() => setDisputeModal(null)}>
+        <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+          If you and the freelancer cannot agree, you can raise a dispute. The contract will be locked, and our Admin will review the case.
+        </p>
+        <form onSubmit={handleRaiseDispute}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="cl-label">Dispute Reason</label>
+            <input 
+              className="cl-input" 
+              type="text" 
+              value={disputeReason} 
+              onChange={e => setDisputeReason(e.target.value)} 
+              placeholder="e.g. Freelancer stopped communicating"
+              required 
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="cl-label">Description (Optional)</label>
+            <textarea 
+              className="cl-input" 
+              rows="3" 
+              value={disputeDesc} 
+              onChange={e => setDisputeDesc(e.target.value)}
+              placeholder="Provide more details for the admin..."
+            />
+          </div>
+          <div className="cl-actions">
+            <button type="submit" className="cl-btn cl-btn--danger" disabled={actioning}>Raise Dispute</button>
+            <button type="button" className="cl-btn cl-btn--ghost" onClick={() => setDisputeModal(null)} disabled={actioning}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
 
       <style>{`
         .cl-proj-card { display: flex; flex-direction: column; gap: 0.75rem; }

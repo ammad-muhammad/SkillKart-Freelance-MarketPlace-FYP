@@ -13,6 +13,11 @@ export const contractsAPI = {
   requestCancellation: (id, reason) => 
     client.post(`/contracts/${id}/cancel`, { reason }),
 
+  // Hourly Contract Workflows
+  requestEnd: (id, reason, additionalDetails) => client.post(`/contracts/${id}/end-request`, { reason, additionalDetails }),
+  respondEnd: (id, action) => client.post(`/contracts/${id}/end-respond`, { action }),
+  raiseDispute: (id, reason, description) => client.post(`/contracts/${id}/dispute`, { reason, description }),
+
   // End contract manually (for hourly)
   endContract: (id) =>
     client.post(`/contracts/${id}/end`),

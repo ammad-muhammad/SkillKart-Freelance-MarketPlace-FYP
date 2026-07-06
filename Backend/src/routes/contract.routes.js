@@ -9,8 +9,10 @@ router.use(protect);
 
 router.get('/my', contractController.getMyContracts);
 router.get('/:id', contractController.getContract);
-router.post('/:id/cancel', contractController.requestCancellation);
-router.post('/:id/end', contractController.endContract);
+router.post('/:id/cancel', contractController.requestCancellation); // Dispute
+router.post('/:id/end-request', contractController.requestEndContract);
+router.post('/:id/end-respond', contractController.respondEndContract);
+router.post('/:id/dispute', contractController.raiseDispute);
 router.get('/:id/history', contractController.getContractHistory);
 
 module.exports = router;

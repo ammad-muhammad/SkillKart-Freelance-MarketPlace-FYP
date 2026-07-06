@@ -241,7 +241,7 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
     .populate('hiredFreelancer', 'firstName lastName profilePicture _id')
-    .populate('contractId', 'status type timer hourlyRate')
+    .populate('contractId', 'status type timer hourlyRate endRequest dispute')
     .skip(skip)
     .limit(limit)
     .sort({ createdAt: -1 })
@@ -274,6 +274,8 @@ const getMyProjects = asyncHandler(async (req, res) => {
       hourlyRate: j.contractId?.hourlyRate || 0,
       timerActive: j.contractId?.timer?.isActive || false,
       timerStartedAt: j.contractId?.timer?.startedAt || null,
+      endRequest: j.contractId?.endRequest || null,
+      dispute: j.contractId?.dispute || null,
       lastTimeLog: jobLogs.lastLog || null,
       totalDuration: jobLogs.totalDuration || 0
     };

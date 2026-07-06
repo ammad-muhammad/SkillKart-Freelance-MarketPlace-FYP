@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { contractsAPI } from '../../api/contracts';
+import { useAuth } from '../../hooks/useAuth';
+import Modal from './components/Modal';
 import { deliveriesAPI } from '../../api/deliveries';
 import { timeTrackingAPI } from '../../api/timeTracking';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
@@ -32,6 +34,13 @@ export default function FreelancerWork() {
   const [delivery, setDelivery] = useState({ message: '', links: '' });
   const [delivering, setDelivering] = useState(false);
   const [tracking, setTracking] = useState({}); // state for tracking operations
+  const [endRequestModal, setEndRequestModal] = useState(null); // contractId
+  const [endReason, setEndReason] = useState('Work completed');
+  const [endDetails, setEndDetails] = useState('');
+  const [disputeModal, setDisputeModal] = useState(null); // contractId
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeDesc, setDisputeDesc] = useState('');
+  const { user } = useAuth();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,25 +79,70 @@ export default function FreelancerWork() {
     }
   };
 
-  const handleTimer = async (contract, action) => {
-    setTracking(prev => ({ ...prev, [contract._id]: true }));
+  const toggleTimer = async (contractId, isActive) => {
     try {
-      if (action === 'start') {
-        await timeTrackingAPI.startTimer(contract._id);
-        toast.success('Timer started');
+      setTracking(prev => ({ ...prev, [contractId]: true }));
+      if (isActive) {
+        await timeTrackingAPI.stopTimer(contractId);
+        toast.success('Timer stopped successfully');
       } else {
-        await timeTrackingAPI.stopTimer(contract._id, { description: 'Working on ' + contract.jobId?.title });
-        toast.success('Timer stopped and time logged');
+        await timeTrackingAPI.startTimer(contractId);
+        toast.success('Timer started successfully');
       }
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to ${action} timer.`);
+      toast.error(err.response?.data?.message || 'Failed to toggle timer');
     } finally {
-      setTracking(prev => ({ ...prev, [contract._id]: false }));
+      setTracking(prev => ({ ...prev, [contractId]: false }));
     }
   };
 
-  if (loading) return <div className="fl-loading">Loading your work…</div>;
+  const handleRequestEnd = async (e) => {
+    e.preventDefault();
+    if (!endReason || (endReason === 'Other' && !endDetails.trim())) return;
+    try {
+      setDelivering(true);
+      await contractsAPI.requestEnd(endRequestModal.contractId, endReason, endDetails);
+      toast.success('End request sent');
+      setEndRequestModal(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send request');
+    } finally {
+      setDelivering(false);
+    }
+  };
+
+  const handleRespondEnd = async (contractId, action) => {
+    try {
+      setDelivering(true);
+      await contractsAPI.respondEnd(contractId, action);
+      toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'}`);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to respond');
+    } finally {
+      setDelivering(false);
+    }
+  };
+
+  const handleRaiseDispute = async (e) => {
+    e.preventDefault();
+    if (!disputeReason.trim()) return;
+    try {
+      setDelivering(true);
+      await contractsAPI.raiseDispute(disputeModal.contractId, disputeReason, disputeDesc);
+      toast.success('Dispute raised successfully');
+      setDisputeModal(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to raise dispute');
+    } finally {
+      setDelivering(false);
+    }
+  };
+
+  if (loading) return <div className="cl-loading">Loading your work...</div>;
 
   return (
     <div className="fl-work">
@@ -164,6 +218,46 @@ export default function FreelancerWork() {
                   )}
                 </div>
 
+                {/* Pending Banners */}
+                {isHourly && c.dispute && c.dispute.status === 'pending' && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      ⚠️ Contract under Dispute
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
+                      This contract has been escalated to Admin review. Reason: {c.dispute.reason}.
+                    </p>
+                  </div>
+                )}
+
+                {isHourly && c.endRequest && c.endRequest.status === 'pending' && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                    {String(c.endRequest.requestedBy) === String(user?._id) ? (
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534' }}>
+                        ⏳ Waiting for the client to approve your request to end this contract.
+                      </p>
+                    ) : (
+                      <>
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>
+                          🛑 Client has requested to end this contract
+                        </h4>
+                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#15803d' }}>
+                          Reason: {c.endRequest.reason} 
+                          {c.endRequest.additionalDetails && <span> - {c.endRequest.additionalDetails}</span>}
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                          <button className="fl-btn fl-btn--sm" style={{ background: '#16a34a', color: '#fff' }} onClick={() => handleRespondEnd(c._id, 'approve')} disabled={delivering}>
+                            Approve & End Contract
+                          </button>
+                          <button className="fl-btn fl-btn--sm fl-btn--ghost" onClick={() => handleRespondEnd(c._id, 'reject')} disabled={delivering}>
+                            Reject Request
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {isHourly && (
                   <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -212,15 +306,36 @@ export default function FreelancerWork() {
                     </button>
                   )}
                   {isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && (
-                    timerActive ? (
-                      <button className="fl-btn fl-btn--sm" style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }} onClick={() => handleTimer(c, 'stop')} disabled={tracking[c._id]}>
-                        <Square size={14} /> Stop Timer
-                      </button>
-                    ) : (
-                      <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => handleTimer(c, 'start')} disabled={tracking[c._id]}>
-                        <Play size={14} /> Start Timer
-                      </button>
-                    )
+                    <>
+                      {timerActive ? (
+                        <button className="fl-btn fl-btn--sm" style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }} onClick={() => toggleTimer(c._id, true)} disabled={tracking[c._id]}>
+                          <Square size={14} /> Stop Timer
+                        </button>
+                      ) : (
+                        <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => toggleTimer(c._id, false)} disabled={tracking[c._id]}>
+                          <Play size={14} /> Start Timer
+                        </button>
+                      )}
+                      
+                      {c.endRequest?.status !== 'pending' && c.dispute?.status !== 'pending' && (
+                        <>
+                          <button 
+                            className="fl-btn fl-btn--sm fl-btn--ghost" 
+                            style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                            onClick={() => setEndRequestModal({ contractId: c._id })}
+                          >
+                            🛑 End Contract
+                          </button>
+                          <button 
+                            className="fl-btn fl-btn--sm fl-btn--ghost" 
+                            style={{ color: '#ef4444' }}
+                            onClick={() => setDisputeModal({ contractId: c._id })}
+                          >
+                            ⚠️ Dispute
+                          </button>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -254,6 +369,77 @@ export default function FreelancerWork() {
           </div>
         </div>
       )}
+
+      {/* End Request Modal */}
+      <Modal open={!!endRequestModal} title="End Hourly Contract" onClose={() => setEndRequestModal(null)}>
+        <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+          This will send a request to the client to mutually end this hourly contract.
+        </p>
+        <form onSubmit={handleRequestEnd}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="fl-label">Reason for ending</label>
+            <select className="fl-input" value={endReason} onChange={e => setEndReason(e.target.value)} required>
+              <option value="Work completed">Work completed</option>
+              <option value="Mutual agreement">Mutual agreement</option>
+              <option value="Client no longer requires work">Client no longer requires work</option>
+              <option value="Freelancer unavailable">Freelancer unavailable</option>
+              <option value="Communication issues">Communication issues</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          {endReason === 'Other' && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="fl-label">Additional Details</label>
+              <textarea 
+                className="fl-input" 
+                rows="3" 
+                value={endDetails} 
+                onChange={e => setEndDetails(e.target.value)}
+                placeholder="Please explain..."
+                required
+              />
+            </div>
+          )}
+          <div className="fl-actions">
+            <button type="submit" className="fl-btn fl-btn--primary" disabled={delivering}>Send Request</button>
+            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setEndRequestModal(null)} disabled={delivering}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Dispute Modal */}
+      <Modal open={!!disputeModal} title="Raise Dispute (Force End)" onClose={() => setDisputeModal(null)}>
+        <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+          If you and the client cannot agree, you can raise a dispute. The contract will be locked, and our Admin will review the case.
+        </p>
+        <form onSubmit={handleRaiseDispute}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="fl-label">Dispute Reason</label>
+            <input 
+              className="fl-input" 
+              type="text" 
+              value={disputeReason} 
+              onChange={e => setDisputeReason(e.target.value)} 
+              placeholder="e.g. Client is unresponsive"
+              required 
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="fl-label">Description (Optional)</label>
+            <textarea 
+              className="fl-input" 
+              rows="3" 
+              value={disputeDesc} 
+              onChange={e => setDisputeDesc(e.target.value)}
+              placeholder="Provide more details for the admin..."
+            />
+          </div>
+          <div className="fl-actions">
+            <button type="submit" className="fl-btn fl-btn--danger" disabled={delivering}>Raise Dispute</button>
+            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setDisputeModal(null)} disabled={delivering}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
 
       <style>{`
         .fl-contract { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 1rem; padding: var(--space-5); }

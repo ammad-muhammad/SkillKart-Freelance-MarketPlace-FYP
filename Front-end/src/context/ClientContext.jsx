@@ -212,6 +212,8 @@ export const ClientProvider = ({ children }) => {
         hourlyRate: j.hourlyRate || 0,
         timerActive: j.timerActive || false,
         timerStartedAt: j.timerStartedAt || null,
+        endRequest: j.endRequest || null,
+        dispute: j.dispute || null,
         lastTimeLog: j.lastTimeLog || null,
         totalDuration: j.totalDuration || 0,
         hasReviewed: j.hasReviewed || false
