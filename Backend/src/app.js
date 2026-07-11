@@ -171,6 +171,14 @@ app.use(`${API_PREFIX}/testimonials`, testimonialRoutes);
 app.use(`${API_PREFIX}/payments`, paymentRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 
+// ========================
+// Admin Panel Routes (Isolated)
+// All admin routes → /api/v1/admin-panel/*
+// Auth: admin_token cookie + ADMIN_JWT_SECRET (never marketplace JWT)
+// ========================
+const adminPanelRoutes = require('./routes/adminPanel.routes');
+app.use(`${API_PREFIX}/admin-panel`, adminPanelRoutes);
+
 // Webhook routes (no API prefix)
 const supabaseWebhook = require('./webhooks/supabase.webhook');
 const stripeWebhook = require('./webhooks/stripe.webhook');

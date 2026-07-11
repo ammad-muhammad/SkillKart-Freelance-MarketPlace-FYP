@@ -67,7 +67,16 @@ const clientProfileSchema = new mongoose.Schema({
   totalSpent: { type: Number, default: 0 },
   walletBalance: { type: Number, default: 0 },
   processedSessions: [String],
-  savedFreelancers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+  savedFreelancers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+  // ========================
+  // Admin Panel Fields
+  // ========================
+  isFrozenWallet: { type: Boolean, default: false },
+  walletFrozenBy: { type: String },       // Admin email
+  walletFrozenAt: { type: Date },
+  walletFrozenReason: { type: String }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('ClientProfile', clientProfileSchema);

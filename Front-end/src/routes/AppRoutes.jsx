@@ -12,8 +12,24 @@ import AppLayout from "../layouts/AppLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import FreelancerLayout from "../layouts/FreelancerLayout";
 
-// Admin Pages
+// Admin Pages (marketplace)
 import TaxonomyAdmin from "../pages/admin/TaxonomyAdmin";
+
+// ─── Admin Panel ─────────────────────────────────────────────────────────────
+import { AdminAuthProvider } from '../context/AdminAuthContext';
+import AdminProtectedRoute from '../hooks/AdminProtectedRoute';
+import AdminPanelLayout from '../layouts/AdminPanelLayout';
+import AdminLogin from '../pages/adminPanel/AdminLogin';
+import AdminDashboard from '../pages/adminPanel/AdminDashboard';
+import UsersPage from '../pages/adminPanel/UsersPage';
+import {
+  JobsPage, ContractsPage, DisputesPage,
+  PaymentsPage, WalletsPage, WithdrawalsPage, TransactionsPage,
+  ChatPage as AdminChatPage,
+  ReviewsPage as AdminReviewsPage,
+  NotificationsPage as AdminNotificationsPage,
+  ReportsPage, MonitoringPage, AuditLogsPage, AnalyticsPage, SettingsPage
+} from '../pages/adminPanel/AdminPages';
 
 // Freelancer Pages
 import DashboardOverview from "../pages/freelancer/DashboardOverview";
@@ -90,9 +106,43 @@ const NotFound = () => <h1>404 – Page Not Found</h1>;
 const AppRoutes = () => {
   return (
     <ErrorBoundary>
+      <AdminAuthProvider>
       <ClientProvider>
         <FreelancerProvider>
         <Routes>
+
+          {/* ================= ADMIN PANEL ROUTES ================= */}
+          {/* Login — public, no layout wrapper */}
+          <Route path="/admin-panel/login" element={<AdminLogin />} />
+
+          {/* Protected admin panel — all under /admin-panel/* */}
+          <Route
+            path="/admin-panel"
+            element={
+              <AdminProtectedRoute>
+                <AdminPanelLayout />
+              </AdminProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin-panel/dashboard" replace />} />
+            <Route path="dashboard"    element={<AdminDashboard />} />
+            <Route path="users"        element={<UsersPage />} />
+            <Route path="jobs"         element={<JobsPage />} />
+            <Route path="contracts"    element={<ContractsPage />} />
+            <Route path="disputes"     element={<DisputesPage />} />
+            <Route path="payments"     element={<PaymentsPage />} />
+            <Route path="wallets"      element={<WalletsPage />} />
+            <Route path="withdrawals"  element={<WithdrawalsPage />} />
+            <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="chat"         element={<AdminChatPage />} />
+            <Route path="reviews"      element={<AdminReviewsPage />} />
+            <Route path="notifications" element={<AdminNotificationsPage />} />
+            <Route path="reports"      element={<ReportsPage />} />
+            <Route path="monitoring"   element={<MonitoringPage />} />
+            <Route path="audit-logs"   element={<AuditLogsPage />} />
+            <Route path="analytics"    element={<AnalyticsPage />} />
+            <Route path="settings"     element={<SettingsPage />} />
+          </Route>
 
           {/* ================= PUBLIC ROUTES ================= */}
           <Route element={<PublicLayout />}>
@@ -213,7 +263,7 @@ const AppRoutes = () => {
             <Route path="projects/:jobId/proposals" element={<ReviewProposals />} />
           </Route>
 
-          {/* ================= ADMIN ROUTES ================= */}
+          {/* ================= ADMIN ROUTES (marketplace taxonomy) ================= */}
           <Route
             path="/admin"
             element={
@@ -230,7 +280,8 @@ const AppRoutes = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </FreelancerProvider>
-    </ClientProvider >
+    </ClientProvider>
+    </AdminAuthProvider>
     </ErrorBoundary>
   );
 };

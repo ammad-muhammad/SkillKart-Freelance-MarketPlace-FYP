@@ -90,7 +90,16 @@ const freelancerProfileSchema = new mongoose.Schema({
     default: 'unverified'
   },
   aiClassification: { type: String },
-  savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }]
+  savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
+
+  // ========================
+  // Admin Panel Fields
+  // ========================
+  isFrozenWallet: { type: Boolean, default: false },
+  walletFrozenBy: { type: String },       // Admin email
+  walletFrozenAt: { type: Date },
+  walletFrozenReason: { type: String }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('FreelancerProfile', freelancerProfileSchema);

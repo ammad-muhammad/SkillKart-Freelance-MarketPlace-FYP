@@ -120,6 +120,20 @@ const config = {
   // Logging
   log: {
     level: process.env.LOG_LEVEL || 'info'
+  },
+
+  // ========================
+  // Admin Panel (Isolated from marketplace auth)
+  // ========================
+  adminPanel: {
+    email:          process.env.ADMIN_EMAIL,
+    passwordHash:   process.env.ADMIN_PASSWORD_HASH,
+    sessionTimeout: process.env.ADMIN_SESSION_TIMEOUT  || '30m',
+    otpExpiry:      process.env.ADMIN_OTP_EXPIRY        || '10m',
+    maxOtpAttempts: parseInt(process.env.ADMIN_MAX_OTP_ATTEMPTS || '5'),
+    jwtSecret:      process.env.ADMIN_JWT_SECRET,
+    panelUrl:       process.env.ADMIN_PANEL_URL          || 'http://localhost:3001',
+    useRBAC:        false   // flip to true when AdminUser collection is ready for multi-admin
   }
 };
 

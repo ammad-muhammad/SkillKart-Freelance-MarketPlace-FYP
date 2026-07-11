@@ -216,7 +216,18 @@ const userSchema = new mongoose.Schema({
     userAgent: String,
     registrationSource: String,
     deviceInfo: String
-  }
+  },
+
+  // ========================
+  // Admin Panel Fields
+  // ========================
+  suspendedAt: { type: Date },
+  suspendedReason: { type: String },
+  suspendedBy: { type: String }, // Admin email
+
+  // Soft delete — data preserved, user can't log in
+  deletedAt: { type: Date },
+  deletedBy: { type: String }   // Admin email
 
 }, {
   timestamps: true,

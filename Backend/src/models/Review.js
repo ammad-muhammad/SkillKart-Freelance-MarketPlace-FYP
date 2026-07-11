@@ -32,7 +32,16 @@ const reviewSchema = new mongoose.Schema({
     type: String,
     enum: ['client_to_freelancer', 'freelancer_to_client'],
     required: true
-  }
+  },
+
+  // ========================
+  // Admin Panel Fields
+  // ========================
+  isHidden: { type: Boolean, default: false },
+  hiddenBy: { type: String },     // Admin email
+  hiddenAt: { type: Date },
+  hiddenReason: { type: String }
+
 }, { timestamps: true });
 
 // A user can only review a specific job once
