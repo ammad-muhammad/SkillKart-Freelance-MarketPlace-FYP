@@ -14,9 +14,20 @@ const { auditLog } = require('../../utils/adminAudit');
 
 const getConversations = async (req, res) => {
   try {
-    const { search, page = 1, limit = 20 } = req.query;
+    const { search, userId, page = 1, limit = 20 } = req.query;
     const filter = {};
-    if (search) filter.$or = [{ 'participants.email': new RegExp(search, 'i') }];
+
+    // Filter by a specific participant (userId), or resolve an email/name search
+    // to participant ids first (participants is an array of ObjectId refs, so we
+    // can't regex it directly).
+    if (userId) {
+      filter.participants = userId;
+    } else if (search) {
+      const User = require('../../models/User');
+      const regex = new RegExp(search.trim(), 'i');
+      const matched = await User.find({ $or: [{ email: regex }, { firstName: regex }, { lastName: regex }] }).select('_id').lean();
+      filter.participants = { $in: matched.map(u => u._id) };
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [conversations, total] = await Promise.all([
@@ -26,23 +37,148 @@ const getConversations = async (req, res) => {
       Conversation.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ success: true, conversations, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    // messageCount per conversation for the list column
+    const withCounts = await Promise.all(conversations.map(async (c) => ({
+      ...c,
+      messageCount: await Message.countDocuments({ conversationId: c._id })
+    })));
+
+    return res.status(200).json({ success: true, conversations: withCounts, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
   } catch (err) {
+    console.error('[Chat] getConversations error:', err);
     return res.status(500).json({ success: false, message: 'Failed to load conversations' });
   }
 };
 
 const getConversationMessages = async (req, res) => {
   try {
-    const messages = await Message.find({ conversationId: req.params.conversationId })
-      .populate('senderId', 'email firstName lastName')
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
+    const { q } = req.query;
+    const filter = { conversationId: req.params.conversationId };
+    // Message-level search within a conversation
+    if (q) filter.content = new RegExp(q.trim(), 'i');
 
-    return res.status(200).json({ success: true, messages });
+    const [conversation, messages] = await Promise.all([
+      Conversation.findById(req.params.conversationId)
+        .populate('participants', 'email firstName lastName profilePicture')
+        .lean(),
+      Message.find(filter)
+        .populate('sender', 'email firstName lastName profilePicture')
+        .sort({ createdAt: 1 })
+        .lean()
+    ]);
+
+    return res.status(200).json({ success: true, conversation, messages });
   } catch (err) {
+    console.error('[Chat] getConversationMessages error:', err);
     return res.status(500).json({ success: false, message: 'Failed to load messages' });
+  }
+};
+
+// ─── Admin → user messaging (as "SkillKart Support") ───────────────────────────
+// Admins have no User id, so all admin-sent messages are attributed to a single
+// dedicated support User. The recipient sees/replies in their normal inbox.
+const { getSupportUser } = require('../../services/supportUser.service');
+const notifications = require('../../services/notification.service');
+
+// Post a message into a conversation as the support user, bumping unread for the
+// other participants and firing their new-message notification.
+const postSupportMessage = async (conversation, supportUser, content, attachments) => {
+  const message = await Message.create({
+    conversationId: conversation._id,
+    sender: supportUser._id,
+    content,
+    attachments: attachments || []
+  });
+
+  conversation.lastMessage = message._id;
+  const recipients = (conversation.participants || [])
+    .map(p => (p._id || p).toString())
+    .filter(id => id !== String(supportUser._id));
+
+  recipients.forEach(rid => {
+    const current = conversation.unreadCount?.get?.(rid) || 0;
+    conversation.unreadCount?.set?.(rid, current + 1);
+  });
+  await conversation.save();
+
+  // Notify each recipient (fire-and-forget)
+  const User = require('../../models/User');
+  recipients.forEach(rid => {
+    User.findById(rid).select('role').lean()
+      .then(r => notifications.onNewMessage(rid, { senderName: 'SkillKart Support', role: r?.role }))
+      .catch(() => {});
+  });
+
+  return message;
+};
+
+/**
+ * POST /chat/send  { userId, content, attachments? }
+ * Start or continue the support↔user thread with a specific user.
+ */
+const sendAdminMessage = async (req, res) => {
+  try {
+    const { userId, content, attachments } = req.body;
+    if (!userId) return res.status(400).json({ success: false, message: 'userId is required' });
+    if (!content || !content.trim()) return res.status(400).json({ success: false, message: 'Message content is required' });
+
+    const User = require('../../models/User');
+    const target = await User.findById(userId).select('_id role').lean();
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const support = await getSupportUser();
+    if (String(support._id) === String(userId)) {
+      return res.status(400).json({ success: false, message: 'Cannot message the support account' });
+    }
+
+    let conversation = await Conversation.findOne({ participants: { $all: [support._id, userId] } });
+    if (!conversation) {
+      conversation = await Conversation.create({ participants: [support._id, userId] });
+    }
+
+    const message = await postSupportMessage(conversation, support, content.trim(), attachments);
+
+    auditLog(req, {
+      action: 'chat.admin_message', category: 'chat', resource: 'Conversation', resourceId: conversation._id,
+      newValue: { to: userId, preview: content.trim().slice(0, 120) }, severity: 'info'
+    });
+
+    return res.status(201).json({ success: true, message: 'Message sent', conversationId: conversation._id, data: message });
+  } catch (err) {
+    console.error('[Chat] sendAdminMessage error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to send message' });
+  }
+};
+
+/**
+ * POST /chat/:conversationId/reply  { content, attachments? }
+ * Reply into an existing conversation as SkillKart Support (moderation reply).
+ */
+const replyAsAdmin = async (req, res) => {
+  try {
+    const { content, attachments } = req.body;
+    if (!content || !content.trim()) return res.status(400).json({ success: false, message: 'Message content is required' });
+
+    const conversation = await Conversation.findById(req.params.conversationId);
+    if (!conversation) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    const support = await getSupportUser();
+    // Make sure the support user is a participant so replies belong to the thread.
+    if (!conversation.participants.map(p => String(p)).includes(String(support._id))) {
+      conversation.participants.push(support._id);
+    }
+
+    const message = await postSupportMessage(conversation, support, content.trim(), attachments);
+
+    auditLog(req, {
+      action: 'chat.admin_reply', category: 'chat', resource: 'Conversation', resourceId: conversation._id,
+      newValue: { preview: content.trim().slice(0, 120) }, severity: 'info'
+    });
+
+    return res.status(201).json({ success: true, message: 'Reply sent', data: message });
+  } catch (err) {
+    console.error('[Chat] replyAsAdmin error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to send reply' });
   }
 };
 
@@ -459,7 +595,7 @@ const getAnalytics = async (req, res) => {
 
 module.exports = {
   // Chat
-  getConversations, getConversationMessages,
+  getConversations, getConversationMessages, sendAdminMessage, replyAsAdmin,
   // Reviews
   getReviews, hideReview, restoreReview, deleteReview,
   // Notifications

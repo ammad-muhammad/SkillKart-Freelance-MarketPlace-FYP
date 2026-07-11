@@ -35,6 +35,10 @@ const getDisputes = async (req, res) => {
 
 const getDisputeById = async (req, res) => {
   try {
+    const Delivery = require('../../models/Delivery');
+    const Conversation = require('../../models/Conversation');
+    const Message = require('../../models/Message');
+
     const contract = await Contract.findById(req.params.contractId)
       .populate('clientId', 'email firstName lastName profilePicture')
       .populate('freelancerId', 'email firstName lastName profilePicture')
@@ -43,13 +47,40 @@ const getDisputeById = async (req, res) => {
 
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
 
-    const [history, payment] = await Promise.all([
-      ContractHistory.find({ contractId: contract._id }).sort({ createdAt: -1 }).lean(),
-      Payment.findOne({ contractId: contract._id }).lean()
+    // Full context for an informed decision: history, escrow, deliveries, and
+    // the complete chat (with attachments) between the two parties.
+    const [history, payment, deliveries] = await Promise.all([
+      ContractHistory.find({ contractId: contract._id })
+        .populate('performedBy', 'email firstName lastName')
+        .sort({ createdAt: 1 }).lean(),
+      Payment.findOne({ contractId: contract._id }).lean(),
+      Delivery.find({ contractId: contract._id }).sort({ version: 1 }).lean()
     ]);
 
-    return res.status(200).json({ success: true, contract, history, payment });
+    // Find the conversation between the two parties and pull all messages.
+    let messages = [];
+    let conversationId = null;
+    const clientId = contract.clientId?._id || contract.clientId;
+    const freelancerId = contract.freelancerId?._id || contract.freelancerId;
+    if (clientId && freelancerId) {
+      const conversation = await Conversation.findOne({
+        participants: { $all: [clientId, freelancerId] }
+      }).lean();
+      if (conversation) {
+        conversationId = conversation._id;
+        messages = await Message.find({ conversationId: conversation._id })
+          .populate('sender', 'email firstName lastName profilePicture')
+          .sort({ createdAt: 1 })
+          .lean();
+      }
+    }
+
+    return res.status(200).json({
+      success: true, contract, history, payment, deliveries,
+      conversation: { id: conversationId, messages }
+    });
   } catch (err) {
+    console.error('[Disputes] getDisputeById error:', err);
     return res.status(500).json({ success: false, message: 'Failed to load dispute' });
   }
 };
@@ -140,8 +171,8 @@ const resolveDispute = async (req, res) => {
     await ContractHistory.create({
       contractId,
       action: 'dispute_resolved',
-      description: `[Admin] Dispute resolved via "${action}". Notes: ${notes}`,
-      performedBy: req.admin.email
+      notes: `[Admin] Dispute resolved via "${action}". Notes: ${notes}`,
+      performedByAdmin: req.admin.email
     });
 
     auditLog(req, {

@@ -14,6 +14,7 @@ import {
   adminChat, adminReviews, adminNotifications, adminReports,
   adminMonitoring, adminAuditLogs, adminAnalytics, adminSettings
 } from '../../api/adminPanel';
+import { AdjustWalletModal } from './AdminDetailPages';
 
 // ─── Reusable page shell ───────────────────────────────────────
 const PageShell = ({ title, desc, icon, headerRight, children }) => (
@@ -88,7 +89,7 @@ export const JobsPage = () => {
 
   return (
     <PageShell title="Jobs" desc="All platform job listings" icon="💼"
-      headerRight={<ExportButtons onExport={fmt => window.open(`/api/v1/admin-panel/jobs/export?format=${fmt}`, '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => window.open(adminJobs.exportUrl({ format }), '_blank')} />}>
       <AdminFilterBar>
         <input className="ap-input" style={{ maxWidth: 240 }} placeholder="Search title…"
           onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })}
@@ -104,9 +105,9 @@ export const JobsPage = () => {
         renderRow={(job) => (
           <tr key={job._id}>
             <td style={{ fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</td>
-            <td style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>{job.postedBy?.email || '—'}</td>
+            <td style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>{job.clientId?.email || '—'}</td>
             <td><StatusBadge status={job.status} /></td>
-            <td style={{ fontSize: '0.85rem' }}>{fmt.currency(job.budget)}</td>
+            <td style={{ fontSize: '0.85rem' }}>{fmt.budget(job.budget)}</td>
             <td style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>{fmt.date(job.createdAt)}</td>
             <td>
               <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/jobs/${job._id}`)}>👁</button>
@@ -127,7 +128,7 @@ export const ContractsPage = () => {
 
   return (
     <PageShell title="Contracts" desc="All platform contracts" icon="📋"
-      headerRight={<ExportButtons onExport={fmt => window.open(`/api/v1/admin-panel/contracts/export?format=${fmt}`, '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => window.open(adminContracts.exportUrl({ format }), '_blank')} />}>
       <ListTable loading={loading} data={data} emptyIcon="📋" emptyTitle="No contracts found"
         columns={['Type','Status','Client','Freelancer','Amount','Started','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
@@ -188,13 +189,21 @@ export const DisputesPage = () => {
 // PAYMENTS
 // ═══════════════════════════════════════════════════════════════
 export const PaymentsPage = () => {
+  const navigate = useNavigate();
   const { data, pagination, loading, page, setPage, load } = useList(adminPayments.list, 'payments');
+  const [status, setStatus] = useState('');
 
   return (
     <PageShell title="Payments" desc="All escrow and payment records" icon="💳"
-      headerRight={<ExportButtons onExport={fmt => window.open(`/api/v1/admin-panel/payments/export?format=${fmt}`, '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => window.open(adminPayments.exportUrl({ format }), '_blank')} />}>
+      <AdminFilterBar>
+        <select className="ap-select" style={{ maxWidth: 180 }} value={status} onChange={e => { setStatus(e.target.value); load({ status: e.target.value, page: 1 }); }}>
+          <option value="">All statuses</option>
+          {['deposit_pending','deposit_paid','released','refunded'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </AdminFilterBar>
       <ListTable loading={loading} data={data} emptyIcon="💳" emptyTitle="No payments found"
-        columns={['ID','Client','Freelancer','Total','Fee','Status','Date']}
+        columns={['ID','Client','Freelancer','Total','Fee','Status','Date','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(p) => (
           <tr key={p._id}>
@@ -205,6 +214,7 @@ export const PaymentsPage = () => {
             <td style={{ color: 'var(--ap-green)', fontSize: '0.82rem' }}>{fmt.currency(p.platformFee, p.currency)}</td>
             <td><StatusBadge status={p.status} /></td>
             <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.date(p.createdAt)}</td>
+            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/payments/${p._id}`)}>👁</button></td>
           </tr>
         )}
       />
@@ -217,6 +227,14 @@ export const PaymentsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const WalletsPage = () => {
   const { data, loading, load } = useList(adminWallets.list, 'wallets');
+  const [adjustTarget, setAdjustTarget] = useState(null); // userId
+
+  const freeze = (userId) => {
+    const r = prompt('Freeze reason? (min 5 chars)');
+    if (r == null) return;
+    if (r.trim().length < 5) return alert('Reason must be at least 5 characters.');
+    adminWallets.freeze(userId, r.trim()).then(() => load()).catch(e => alert(e?.message || 'Failed'));
+  };
 
   return (
     <PageShell title="Wallets" desc="All user wallet balances" icon="👛">
@@ -229,13 +247,22 @@ export const WalletsPage = () => {
             <td style={{ fontWeight: 600, color: 'var(--ap-green)' }}>{fmt.currency(w.walletBalance)}</td>
             <td>{w.isFrozenWallet ? <StatusBadge status="frozen" /> : <StatusBadge status="active" />}</td>
             <td>
-              {w.isFrozenWallet
-                ? <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => adminWallets.unfreeze(w.userId?._id).then(() => load())}>Unfreeze</button>
-                : <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => { const r = prompt('Reason?'); if (r) adminWallets.freeze(w.userId?._id, r).then(() => load()); }}>Freeze</button>
-              }
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => setAdjustTarget(w.userId?._id)}>💰 Adjust</button>
+                {w.isFrozenWallet
+                  ? <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => adminWallets.unfreeze(w.userId?._id).then(() => load()).catch(e => alert(e?.message || 'Failed'))}>Unfreeze</button>
+                  : <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => freeze(w.userId?._id)}>Freeze</button>
+                }
+              </div>
             </td>
           </tr>
         )}
+      />
+      <AdjustWalletModal
+        open={!!adjustTarget}
+        userId={adjustTarget}
+        onClose={() => setAdjustTarget(null)}
+        onSaved={() => { setAdjustTarget(null); load(); }}
       />
     </PageShell>
   );
@@ -253,16 +280,23 @@ export const WithdrawalsPage = () => {
     try {
       if (action === 'approve') await adminWithdrawals.approve(id);
       else if (action === 'reject') {
-        const r = prompt('Rejection reason?');
-        if (r) await adminWithdrawals.reject(id, r);
+        const r = prompt('Rejection reason? (min 5 chars)');
+        if (r == null) return;
+        if (r.trim().length < 5) { alert('Reason must be at least 5 characters.'); return; }
+        await adminWithdrawals.reject(id, r.trim());
+      } else if (action === 'complete') {
+        const ref = prompt('Payout reference ID (e.g. bank/transfer ref). Leave blank if none:');
+        if (ref === null) return; // cancelled
+        await adminWithdrawals.complete(id, ref.trim() || undefined);
       }
       load();
-    } finally { setBusy(false); }
+    } catch (e) { alert(e?.message || 'Action failed'); }
+    finally { setBusy(false); }
   };
 
   return (
     <PageShell title="Withdrawals" desc="Pending and processed withdrawal requests" icon="💸"
-      headerRight={<ExportButtons onExport={fmt => window.open(`/api/v1/admin-panel/withdrawals/export?format=${fmt}`, '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => window.open(adminWithdrawals.exportUrl({ format }), '_blank')} />}>
       <AdminFilterBar>
         <select className="ap-select" style={{ maxWidth: 160 }} onChange={e => load({ status: e.target.value, page: 1 })}>
           <option value="">All statuses</option>
@@ -281,8 +315,8 @@ export const WithdrawalsPage = () => {
             <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.date(w.createdAt)}</td>
             <td>
               {w.status === 'pending' && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="ap-btn ap-btn-success ap-btn-sm" disabled={busy} onClick={() => act(w._id, 'approve')}>✅ Approve</button>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button className="ap-btn ap-btn-success ap-btn-sm" disabled={busy} onClick={() => act(w._id, 'complete')} title="Mark paid out, record a reference ID">✅ Complete</button>
                   <button className="ap-btn ap-btn-danger ap-btn-sm" disabled={busy} onClick={() => act(w._id, 'reject')}>❌ Reject</button>
                 </div>
               )}
@@ -302,7 +336,7 @@ export const TransactionsPage = () => {
 
   return (
     <PageShell title="Transactions" desc="Unified view of payments and withdrawals" icon="↕️"
-      headerRight={<ExportButtons onExport={fmt => window.open(`/api/v1/admin-panel/transactions/export?format=${fmt}`, '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => window.open(adminTransactions.exportUrl({ format }), '_blank')} />}>
       <ListTable loading={loading} data={data} emptyIcon="↕️" emptyTitle="No transactions"
         columns={['Type','Amount','Status','Date']}
         renderRow={(t, i) => (
@@ -322,6 +356,7 @@ export const TransactionsPage = () => {
 // CHAT
 // ═══════════════════════════════════════════════════════════════
 export const ChatPage = () => {
+  const navigate = useNavigate();
   const { data, pagination, loading, page, setPage, load } = useList(adminChat.list, 'conversations');
 
   return (
@@ -334,7 +369,7 @@ export const ChatPage = () => {
             <td style={{ fontSize: '0.83rem' }}>{conv.participants?.map(p => p.email).join(', ') || '—'}</td>
             <td>{conv.messageCount || '—'}</td>
             <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.relative(conv.updatedAt)}</td>
-            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => window.open(`/admin-panel/chat/${conv._id}`, '_blank')}>View</button></td>
+            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/chat/${conv._id}`)}>View</button></td>
           </tr>
         )}
       />
@@ -450,21 +485,8 @@ export const NotificationsPage = () => {
 // REPORTS
 // ═══════════════════════════════════════════════════════════════
 export const ReportsPage = () => {
+  const navigate = useNavigate();
   const { data, pagination, loading, page, setPage, load } = useList(adminReports.list, 'reports');
-  const [busy, setBusy] = useState(false);
-
-  const resolve = async (id) => {
-    const resolution = prompt('Resolution notes?');
-    if (!resolution) return;
-    setBusy(true);
-    try { await adminReports.resolve(id, { resolution }); load(); } finally { setBusy(false); }
-  };
-  const dismiss = async (id) => {
-    const reason = prompt('Dismissal reason?');
-    if (!reason) return;
-    setBusy(true);
-    try { await adminReports.dismiss(id, reason); load(); } finally { setBusy(false); }
-  };
 
   return (
     <PageShell title="Reports" desc="User-submitted reports and flags" icon="🚩">
@@ -485,12 +507,9 @@ export const ReportsPage = () => {
             <td><StatusBadge status={r.status} /></td>
             <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.date(r.createdAt)}</td>
             <td>
-              {r.status === 'pending' && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="ap-btn ap-btn-primary ap-btn-sm" disabled={busy} onClick={() => resolve(r._id)}>Resolve</button>
-                  <button className="ap-btn ap-btn-secondary ap-btn-sm" disabled={busy} onClick={() => dismiss(r._id)}>Dismiss</button>
-                </div>
-              )}
+              <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/reports/${r._id}`)}>
+                {['pending','investigating'].includes(r.status) ? 'Review' : 'View'}
+              </button>
             </td>
           </tr>
         )}

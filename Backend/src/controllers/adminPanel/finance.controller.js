@@ -95,6 +95,89 @@ const exportPayments = async (req, res) => {
   }
 };
 
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+/**
+ * POST /payments/:id/refund — refund escrow to the client (internal ledger).
+ * Marks the Payment refunded and credits the client's walletBalance. No live
+ * Stripe call — matches how the simulated escrow already works. Audit-logged.
+ * Financial history (the Payment doc) is preserved, not deleted.
+ */
+const refundPayment = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+    if (payment.status === 'refunded') return res.status(400).json({ success: false, message: 'Payment already refunded' });
+    if (payment.status === 'released') return res.status(400).json({ success: false, message: 'Cannot refund a released payment' });
+
+    const refundAmount = round2(payment.depositAmount || payment.totalAmount);
+    const prev = payment.status;
+    payment.status = 'refunded';
+    await payment.save();
+
+    await ClientProfile.updateOne(
+      { userId: payment.clientId },
+      { $inc: { walletBalance: refundAmount } }
+    );
+
+    // Cancel the linked contract if any
+    if (payment.contractId) {
+      const Contract = require('../../models/Contract');
+      await Contract.updateOne({ _id: payment.contractId }, { status: 'cancelled' });
+    }
+
+    auditLog(req, {
+      action: 'payment.refund', category: 'payment', resource: 'Payment',
+      resourceId: payment._id, previousValue: { status: prev },
+      newValue: { status: 'refunded', refundedToClient: refundAmount }, notes: reason, severity: 'critical'
+    });
+    return res.status(200).json({ success: true, message: 'Payment refunded to client wallet', refundAmount });
+  } catch (err) {
+    console.error('[Finance] refund error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to refund payment' });
+  }
+};
+
+/**
+ * POST /payments/:id/release — release escrow to the freelancer (internal ledger).
+ * Computes the platform fee, credits the freelancer's wallet, marks released.
+ */
+const releaseEscrow = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+    if (payment.status === 'released') return res.status(400).json({ success: false, message: 'Payment already released' });
+    if (payment.status === 'refunded') return res.status(400).json({ success: false, message: 'Cannot release a refunded payment' });
+    if (!payment.freelancerId) return res.status(400).json({ success: false, message: 'No freelancer on this payment' });
+
+    const fee = round2(payment.totalAmount * (payment.feeRate || 0.005));
+    const payout = round2(payment.totalAmount - fee);
+    const prev = payment.status;
+    payment.platformFee = fee;
+    payment.freelancerPayout = payout;
+    payment.status = 'released';
+    payment.releasedAt = new Date();
+    await payment.save();
+
+    await FreelancerProfile.updateOne(
+      { userId: payment.freelancerId },
+      { $inc: { walletBalance: payout, totalEarnings: payout } }
+    );
+
+    auditLog(req, {
+      action: 'payment.release', category: 'payment', resource: 'Payment',
+      resourceId: payment._id, previousValue: { status: prev },
+      newValue: { status: 'released', payout, fee }, notes: reason, severity: 'critical'
+    });
+    return res.status(200).json({ success: true, message: 'Escrow released to freelancer', payout, fee });
+  } catch (err) {
+    console.error('[Finance] release error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to release escrow' });
+  }
+};
+
 // ─── Wallets ──────────────────────────────────────────────────────────────────
 
 const getWallets = async (req, res) => {
@@ -355,6 +438,7 @@ const exportTransactions = async (req, res) => {
 module.exports = {
   // Payments
   getPayments, getPaymentById, getPaymentSummary, exportPayments,
+  refundPayment, releaseEscrow,
   // Wallets
   getWallets, getWalletByUser, adjustWallet, freezeWallet, unfreezeWallet,
   // Withdrawals

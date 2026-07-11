@@ -36,7 +36,7 @@ const getUsers = async (req, res) => {
       page = 1, limit = 20
     } = req.query;
 
-    const filter = {};
+    const filter = { isSystemAccount: { $ne: true } }; // hide the Support system account
 
     // Role filter
     if (role && role !== 'all') {
@@ -125,7 +125,7 @@ const getUserById = async (req, res) => {
       Contract.countDocuments({
         $or: [{ clientId: user._id }, { freelancerId: user._id }]
       }),
-      Job.countDocuments({ postedBy: user._id }),
+      Job.countDocuments({ clientId: user._id }),
       Payment.countDocuments({
         $or: [{ clientId: user._id }, { freelancerId: user._id }]
       }),
@@ -294,7 +294,7 @@ const getUserContracts = async (req, res) => {
 
 const getUserJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ postedBy: req.params.id })
+    const jobs = await Job.find({ clientId: req.params.id })
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();
@@ -422,6 +422,270 @@ const exportUsers = async (req, res) => {
   }
 };
 
+// ─── Full profile management ────────────────────────────────────────────────────
+
+const { syncFreelancerVerification } = require('../../services/verification.service');
+
+// Fields an admin may write on each profile type. Everything the user can edit
+// themselves during onboarding/settings is editable here; computed/financial
+// fields (walletBalance, totalEarnings, rating, stripe*) are intentionally NOT
+// in these lists — those are managed through the wallet/finance actions.
+const FREELANCER_EDITABLE = [
+  'bio', 'title', 'coverPhoto', 'phone', 'hourlyRate', 'skills',
+  'portfolioLinks', 'portfolio', 'education', 'certifications', 'languages',
+  'availability', 'timezone', 'socialLinks', 'experienceLevel',
+  'notificationSettings'
+];
+const CLIENT_EDITABLE = [
+  'companyName', 'companyType', 'companyLogo', 'coverPhoto', 'companySize',
+  'industry', 'industryType', 'customIndustry', 'role', 'phone', 'website',
+  'description', 'location', 'services', 'techStack', 'budgetRange',
+  'hiringFrequency', 'timezone', 'socialLinks', 'languages', 'notificationSettings'
+];
+
+/**
+ * GET /users/:id/profile — full role profile for the admin editor.
+ */
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -passwordResetToken').lean();
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    let profile = null;
+    if (user.role === 'freelancer') profile = await FreelancerProfile.findOne({ userId: user._id }).lean();
+    else if (user.role === 'client') profile = await ClientProfile.findOne({ userId: user._id }).lean();
+
+    return res.status(200).json({ success: true, user, profile });
+  } catch (err) {
+    console.error('[Users] getUserProfile error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to load profile' });
+  }
+};
+
+/**
+ * PATCH /users/:id/profile — edit the full freelancer/client profile.
+ * Creates the profile if it doesn't exist yet (e.g. user never onboarded).
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const isFreelancer = user.role === 'freelancer';
+    const isClient = user.role === 'client';
+    if (!isFreelancer && !isClient) {
+      return res.status(400).json({ success: false, message: 'Only freelancer/client profiles are editable' });
+    }
+
+    const Model = isFreelancer ? FreelancerProfile : ClientProfile;
+    const allowed = isFreelancer ? FREELANCER_EDITABLE : CLIENT_EDITABLE;
+
+    let profile = await Model.findOne({ userId: user._id });
+    if (!profile) profile = new Model({ userId: user._id });
+
+    const prev = {}, next = {};
+    allowed.forEach(f => {
+      if (req.body[f] !== undefined) {
+        prev[f] = profile[f];
+        // Special-case skills: the editor only sends { name, level }, so merge
+        // rather than overwrite — otherwise we'd wipe isVerified/verificationScore
+        // on skills that were already verified. Existing verification state is
+        // preserved by name; brand-new skills start unverified.
+        if (f === 'skills' && isFreelancer && Array.isArray(req.body.skills)) {
+          const existing = new Map((profile.skills || []).map(s => [String(s.name).toLowerCase(), s]));
+          profile.skills = req.body.skills.map(incoming => {
+            const match = existing.get(String(incoming.name).toLowerCase());
+            if (match) {
+              // keep verification fields, update the editable level/name
+              match.name = incoming.name;
+              if (incoming.level) match.level = incoming.level;
+              return match;
+            }
+            return { name: incoming.name, level: incoming.level || 'Beginner', isVerified: false, verificationScore: 0 };
+          });
+          next.skills = profile.skills.map(s => ({ name: s.name, level: s.level, isVerified: s.isVerified }));
+        } else {
+          profile[f] = req.body[f];
+          next[f] = req.body[f];
+        }
+      }
+    });
+    if (Object.keys(next).length === 0) {
+      return res.status(400).json({ success: false, message: 'No editable fields provided' });
+    }
+
+    await profile.save();
+
+    // Keep the freelancer's aggregate verification status consistent after edits
+    // that affect the profile-completed / skills checklist.
+    if (isFreelancer) {
+      try { await syncFreelancerVerification(user._id); } catch { /* non-fatal */ }
+    }
+
+    auditLog(req, {
+      action: 'user.profile.edit', category: 'user', resource: isFreelancer ? 'FreelancerProfile' : 'ClientProfile',
+      resourceId: profile._id, previousValue: prev, newValue: next, notes: `Edited ${Object.keys(next).join(', ')}`, severity: 'warning'
+    });
+
+    return res.status(200).json({ success: true, message: 'Profile updated', profile });
+  } catch (err) {
+    console.error('[Users] updateProfile error:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Failed to update profile' });
+  }
+};
+
+/**
+ * PATCH /users/:id/avatar — set the user's profile picture from a URL.
+ */
+const updateAvatar = async (req, res) => {
+  try {
+    const { profilePicture } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const prev = user.profilePicture;
+    user.profilePicture = profilePicture || null;
+    await user.save();
+
+    auditLog(req, {
+      action: 'user.avatar.update', category: 'user', resource: 'User', resourceId: user._id,
+      previousValue: { profilePicture: prev }, newValue: { profilePicture: user.profilePicture }, severity: 'info'
+    });
+    return res.status(200).json({ success: true, message: 'Avatar updated', profilePicture: user.profilePicture });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to update avatar' });
+  }
+};
+
+/**
+ * PATCH /users/:id/verify-email  — directly verify/unverify a user's email
+ * without them clicking the OTP. Body: { verified: true|false }.
+ */
+const setEmailVerified = async (req, res) => {
+  try {
+    const { verified = true } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const prev = user.isEmailVerified;
+    user.isEmailVerified = !!verified;
+    user.emailVerifiedAt = verified ? new Date() : null;
+    await user.save();
+
+    if (user.role === 'freelancer') {
+      try { await syncFreelancerVerification(user._id); } catch { /* non-fatal */ }
+    }
+
+    auditLog(req, {
+      action: verified ? 'user.email.verify' : 'user.email.unverify', category: 'user', resource: 'User',
+      resourceId: user._id, previousValue: { isEmailVerified: prev }, newValue: { isEmailVerified: !!verified }, severity: 'warning'
+    });
+    return res.status(200).json({ success: true, message: verified ? 'Email verified' : 'Email unverified' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to update email verification' });
+  }
+};
+
+/**
+ * PATCH /users/:id/skills/verify — directly pass/fail a freelancer's skill test.
+ * Writes the SAME fields the real skill test writes (isVerified, verificationScore,
+ * lastTestedAt, expiresAt, level) then re-syncs aggregate verification.
+ * Body: { skill?: 'React', verified: true|false, score?: 90, all?: true }
+ */
+const setSkillVerification = async (req, res) => {
+  try {
+    const { skill, verified = true, score, all } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.role !== 'freelancer') return res.status(400).json({ success: false, message: 'Only freelancers have skills' });
+
+    const profile = await FreelancerProfile.findOne({ userId: user._id });
+    if (!profile || !profile.skills?.length) {
+      return res.status(400).json({ success: false, message: 'Freelancer has no skills to verify' });
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
+    const pct = score != null ? Number(score) : (verified ? 100 : 0);
+
+    const apply = (s) => {
+      s.isVerified = !!verified;
+      s.verificationScore = pct;
+      s.lastTestedAt = new Date();
+      s.expiresAt = verified ? expiresAt : undefined;
+      if (verified && pct >= 80) s.level = 'Expert';
+      else if (verified && pct >= 50) s.level = 'Intermediate';
+    };
+
+    let affected = [];
+    if (all) {
+      profile.skills.forEach(s => { apply(s); affected.push(s.name); });
+    } else {
+      const target = profile.skills.find(s => String(s.name).toLowerCase() === String(skill).toLowerCase());
+      if (!target) return res.status(404).json({ success: false, message: `Skill "${skill}" not found on this freelancer` });
+      apply(target);
+      affected.push(target.name);
+    }
+
+    await profile.save();
+    let sync = null;
+    try { sync = await syncFreelancerVerification(user._id); } catch { /* non-fatal */ }
+
+    auditLog(req, {
+      action: verified ? 'user.skill.verify' : 'user.skill.unverify', category: 'user', resource: 'FreelancerProfile',
+      resourceId: profile._id, newValue: { skills: affected, verified: !!verified, score: pct },
+      notes: `Admin ${verified ? 'passed' : 'reset'} skill test for: ${affected.join(', ')}`, severity: 'warning'
+    });
+    return res.status(200).json({ success: true, message: `${affected.length} skill(s) ${verified ? 'verified' : 'reset'}`, verificationStatus: sync?.verificationStatus });
+  } catch (err) {
+    console.error('[Users] setSkillVerification error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update skill verification' });
+  }
+};
+
+/**
+ * PATCH /users/:id/verification — directly set verification checklist flags and/or
+ * the overall verificationStatus (identity/KYC, phone, portfolio, payment, status).
+ * Body: { flags?: { identityVerified, phoneVerified, portfolioReviewed, paymentMethodAdded }, status?: 'verified'|'pending'|'unverified' }
+ */
+const setVerification = async (req, res) => {
+  try {
+    const { flags, status } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (user.role === 'freelancer') {
+      const profile = await FreelancerProfile.findOne({ userId: user._id }) || new FreelancerProfile({ userId: user._id });
+      const prev = { verificationDetails: { ...(profile.verificationDetails || {}) }, verificationStatus: profile.verificationStatus };
+      if (flags && typeof flags === 'object') {
+        profile.verificationDetails = { ...(profile.verificationDetails || {}), ...flags };
+      }
+      if (status) profile.verificationStatus = status;
+      await profile.save();
+      auditLog(req, {
+        action: 'user.verification.set', category: 'user', resource: 'FreelancerProfile', resourceId: profile._id,
+        previousValue: prev, newValue: { flags, status }, severity: 'critical'
+      });
+    } else if (user.role === 'client') {
+      const profile = await ClientProfile.findOne({ userId: user._id }) || new ClientProfile({ userId: user._id });
+      const prev = { verificationStatus: profile.verificationStatus };
+      if (status) profile.verificationStatus = status;
+      await profile.save();
+      auditLog(req, {
+        action: 'user.verification.set', category: 'user', resource: 'ClientProfile', resourceId: profile._id,
+        previousValue: prev, newValue: { status }, severity: 'critical'
+      });
+    } else {
+      return res.status(400).json({ success: false, message: 'No profile to verify for this role' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Verification updated' });
+  } catch (err) {
+    console.error('[Users] setVerification error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update verification' });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
@@ -436,5 +700,11 @@ module.exports = {
   getUserDisputes,
   getUserReports,
   getUserActivity,
-  exportUsers
+  exportUsers,
+  getUserProfile,
+  updateProfile,
+  updateAvatar,
+  setEmailVerified,
+  setSkillVerification,
+  setVerification
 };

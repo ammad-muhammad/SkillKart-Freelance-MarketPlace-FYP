@@ -221,6 +221,9 @@ const userSchema = new mongoose.Schema({
   // ========================
   // Admin Panel Fields
   // ========================
+  // Marks a non-human system account (e.g. the "SkillKart Support" chat identity
+  // used for admin↔user messaging). Excluded from public/admin user listings.
+  isSystemAccount: { type: Boolean, default: false },
   suspendedAt: { type: Date },
   suspendedReason: { type: String },
   suspendedBy: { type: String }, // Admin email

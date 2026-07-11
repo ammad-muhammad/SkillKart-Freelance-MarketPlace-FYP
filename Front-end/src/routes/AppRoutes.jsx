@@ -30,6 +30,10 @@ import {
   NotificationsPage as AdminNotificationsPage,
   ReportsPage, MonitoringPage, AuditLogsPage, AnalyticsPage, SettingsPage
 } from '../pages/adminPanel/AdminPages';
+import {
+  UserDetailPage, JobDetailPage, ContractDetailPage,
+  DisputeDetailPage, ReportDetailPage, ChatDetailPage, PaymentDetailPage
+} from '../pages/adminPanel/AdminDetailPages';
 
 // Freelancer Pages
 import DashboardOverview from "../pages/freelancer/DashboardOverview";
@@ -127,17 +131,24 @@ const AppRoutes = () => {
             <Route index element={<Navigate to="/admin-panel/dashboard" replace />} />
             <Route path="dashboard"    element={<AdminDashboard />} />
             <Route path="users"        element={<UsersPage />} />
+            <Route path="users/:id"    element={<UserDetailPage />} />
             <Route path="jobs"         element={<JobsPage />} />
+            <Route path="jobs/:id"     element={<JobDetailPage />} />
             <Route path="contracts"    element={<ContractsPage />} />
+            <Route path="contracts/:id" element={<ContractDetailPage />} />
             <Route path="disputes"     element={<DisputesPage />} />
+            <Route path="disputes/:contractId" element={<DisputeDetailPage />} />
             <Route path="payments"     element={<PaymentsPage />} />
+            <Route path="payments/:id" element={<PaymentDetailPage />} />
             <Route path="wallets"      element={<WalletsPage />} />
             <Route path="withdrawals"  element={<WithdrawalsPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="chat"         element={<AdminChatPage />} />
+            <Route path="chat/:conversationId" element={<ChatDetailPage />} />
             <Route path="reviews"      element={<AdminReviewsPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
             <Route path="reports"      element={<ReportsPage />} />
+            <Route path="reports/:id"  element={<ReportDetailPage />} />
             <Route path="monitoring"   element={<MonitoringPage />} />
             <Route path="audit-logs"   element={<AuditLogsPage />} />
             <Route path="analytics"    element={<AnalyticsPage />} />

@@ -629,7 +629,10 @@
 .admin-layout .ap-btn-icon { padding: 8px; border-radius: var(--ap-radius-md); }
 
 /* ─── Inputs / Forms ─────────────────────────────────────────── */
-.admin-layout .ap-form-group { display: flex; flex-direction: column; gap: 6px; }
+/* gap = label↔input; margin-bottom = space between consecutive fields in a
+   modal/form (previously 0, which made fields touch). */
+.admin-layout .ap-form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.admin-layout .ap-form-group:last-child { margin-bottom: 0; }
 .admin-layout .ap-label {
   font-size: 0.8rem;
   font-weight: 600;

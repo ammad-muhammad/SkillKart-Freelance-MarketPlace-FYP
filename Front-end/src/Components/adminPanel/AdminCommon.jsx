@@ -3,6 +3,7 @@
  * Import individually:
  *   import { AdminBadge, AdminLoader, AdminEmptyState, StatusBadge, AdminPagination } from './AdminCommon';
  */
+import { useEffect, useState } from 'react';
 
 // ─── AdminBadge ────────────────────────────────────────────────
 export const AdminBadge = ({ children, variant = 'blue' }) => (
@@ -178,20 +179,39 @@ export const SkeletonTable = ({ rows = 8, cols = 5 }) => (
 );
 
 // ─── AdminUserAvatar ───────────────────────────────────────────
-export const AdminUserAvatar = ({ email, firstName, lastName, size = 32 }) => {
+// Shows the user's profile picture when `src` is provided; falls back to
+// coloured initials when there's no image or the image fails to load.
+export const AdminUserAvatar = ({ email, firstName, lastName, src, size = 32 }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+
   const initials = firstName
     ? `${firstName[0]}${lastName?.[0] || ''}`.toUpperCase()
     : (email?.[0] || 'U').toUpperCase();
 
   const hue = (email || '').split('').reduce((h, c) => h + c.charCodeAt(0), 0) % 360;
 
+  const base = {
+    width: size, height: size, borderRadius: '50%', flexShrink: 0,
+    border: '2px solid rgba(255,255,255,0.1)'
+  };
+
+  if (src && !imgFailed) {
+    return (
+      <img
+        src={src}
+        alt={initials}
+        onError={() => setImgFailed(true)}
+        style={{ ...base, objectFit: 'cover', background: `hsl(${hue},60%,35%)` }}
+      />
+    );
+  }
+
   return (
     <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      ...base,
       background: `hsl(${hue},60%,35%)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.36, fontWeight: 700, color: '#fff',
-      border: '2px solid rgba(255,255,255,0.1)'
+      fontSize: size * 0.36, fontWeight: 700, color: '#fff'
     }}>
       {initials}
     </div>
@@ -222,6 +242,16 @@ export const fmt = {
   date:     (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
   datetime: (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
   currency: (n, c = 'PKR') => n != null ? `${c} ${Number(n).toLocaleString()}` : '—',
+  // Job budget is an embedded { min, max, type } object — render it as a range.
+  budget: (b, c = 'PKR') => {
+    if (b == null) return '—';
+    if (typeof b === 'number') return `${c} ${b.toLocaleString()}`;
+    const { min, max, type } = b;
+    const suffix = type === 'hourly' ? '/hr' : '';
+    if (min != null && max != null && min !== max) return `${c} ${Number(min).toLocaleString()}–${Number(max).toLocaleString()}${suffix}`;
+    const val = max ?? min;
+    return val != null ? `${c} ${Number(val).toLocaleString()}${suffix}` : '—';
+  },
   number:   (n) => n != null ? Number(n).toLocaleString() : '—',
   percent:  (n) => n != null ? `${Number(n).toFixed(1)}%` : '—',
   relative: (d) => {

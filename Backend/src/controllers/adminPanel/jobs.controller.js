@@ -21,17 +21,20 @@ const getJobs = async (req, res) => {
 
     const filter = {};
     if (status) filter.status = status;
-    if (type) filter.type = type;
-    if (clientId) filter.postedBy = clientId;
+    // Job budget is embedded as { min, max, type: 'fixed'|'hourly' } — `type`
+    // filters on that nested budget type; the client link is `clientId`.
+    if (type) filter['budget.type'] = type;
+    if (clientId) filter.clientId = clientId;
     if (dateFrom || dateTo) {
       filter.createdAt = {};
       if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
       if (dateTo)   filter.createdAt.$lte = new Date(dateTo);
     }
+    // budget is a sub-document, not a scalar — range-filter against budget.max.
     if (budgetMin || budgetMax) {
-      filter.budget = {};
-      if (budgetMin) filter.budget.$gte = parseFloat(budgetMin);
-      if (budgetMax) filter.budget.$lte = parseFloat(budgetMax);
+      filter['budget.max'] = {};
+      if (budgetMin) filter['budget.max'].$gte = parseFloat(budgetMin);
+      if (budgetMax) filter['budget.max'].$lte = parseFloat(budgetMax);
     }
     if (search) {
       filter.$or = [{ title: new RegExp(search, 'i') }, { description: new RegExp(search, 'i') }];
@@ -40,7 +43,7 @@ const getJobs = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [jobs, total] = await Promise.all([
       Job.find(filter)
-        .populate('postedBy', 'email firstName lastName')
+        .populate('clientId', 'email firstName lastName')
         .sort({ [sortBy]: order === 'asc' ? 1 : -1 })
         .skip(skip)
         .limit(parseInt(limit))
@@ -61,7 +64,8 @@ const getJobs = async (req, res) => {
 const getJobById = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id)
-      .populate('postedBy', 'email firstName lastName')
+      .populate('clientId', 'email firstName lastName')
+      .populate('hiredFreelancer', 'email firstName lastName')
       .lean();
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
     return res.status(200).json({ success: true, job });
@@ -75,7 +79,14 @@ const editJob = async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
 
-    const allowedFields = ['title', 'description', 'status', 'budget'];
+    // Every content/classification field is editable. Relational & system fields
+    // (clientId, hiredFreelancer, contractId, proposals, source, gigId, gigTier,
+    // statsRolledUp) are intentionally NOT editable here — those are driven by the
+    // marketplace lifecycle, not free-form admin edits.
+    const allowedFields = [
+      'title', 'description', 'status', 'budget', 'skills', 'category',
+      'subcategory', 'experienceLevel', 'duration', 'attachments', 'deadline'
+    ];
     const prev = {}, next = {};
     allowedFields.forEach(f => {
       if (req.body[f] !== undefined) {

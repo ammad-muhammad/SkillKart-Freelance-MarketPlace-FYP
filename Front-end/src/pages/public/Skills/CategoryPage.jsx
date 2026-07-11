@@ -102,26 +102,6 @@ export default function CategoryPage() {
   const freelanceRef  = useRef(null);
   const gigsRef       = useRef(null);
 
-
-
-  /* ── Not found ── */
-  if (!category && !loadingCategory) {
-    return (
-      <>
-        <Navbar />
-        <div className="mp-page">
-          <div className="mp-not-found">
-            <div className="mp-not-found__emoji">🔍</div>
-            <div className="mp-not-found__title">Category Not Found</div>
-            <div className="mp-not-found__sub">The category you're looking for doesn't exist.</div>
-            <Link to="/" className="mp-not-found__link">Back to Home</Link>
-          </div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-
   /* Real trending = the skills that actually appear most across this category's
      live gigs (ranked by frequency). Falls back to the static taxonomy tags
      only when there are no gigs yet. */
@@ -264,6 +244,27 @@ export default function CategoryPage() {
       });
     }
   }, [loadingCategory]);
+
+  /* ── Not found ──
+     Placed AFTER every hook so the hook order is identical on every render
+     (React's rules-of-hooks). The GSAP effects above no-op while there's no
+     category, so it's safe for them to run before this bails out. */
+  if (!category && !loadingCategory) {
+    return (
+      <>
+        <Navbar />
+        <div className="mp-page">
+          <div className="mp-not-found">
+            <div className="mp-not-found__emoji">🔍</div>
+            <div className="mp-not-found__title">Category Not Found</div>
+            <div className="mp-not-found__sub">The category you're looking for doesn't exist.</div>
+            <Link to="/" className="mp-not-found__link">Back to Home</Link>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>

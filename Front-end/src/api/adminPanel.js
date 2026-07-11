@@ -19,10 +19,17 @@ api.interceptors.response.use(
     const code    = err.response?.data?.code;
     const message = err.response?.data?.message || 'Network error';
 
-    // On session expiry/inactivity → redirect to admin login
+    // On session expiry/inactivity → redirect to admin login.
+    // Only do this when the user is actually INSIDE the admin panel. The
+    // AdminAuthProvider runs a getSession() probe globally on every page (it
+    // wraps the whole app), so a public-site visitor gets a 401 from that probe
+    // — we must NOT hijack them to /admin-panel/login. The provider's own catch
+    // handles that silently, and AdminProtectedRoute guards the real pages.
     if (status === 401) {
-      const isLoginPage = window.location.pathname === '/admin-panel/login';
-      if (!isLoginPage) {
+      const path = window.location.pathname;
+      const inAdminPanel = path.startsWith('/admin-panel');
+      const isLoginPage = path === '/admin-panel/login';
+      if (inAdminPanel && !isLoginPage) {
         window.location.href = `/admin-panel/login?reason=${code || 'session_expired'}`;
       }
     }
@@ -67,6 +74,13 @@ export const adminUsers = {
   suspend:         (id, reason)   => api.patch(`/users/${id}/suspend`, { reason }),
   unsuspend:       (id)           => api.patch(`/users/${id}/unsuspend`),
   delete:          (id)           => api.delete(`/users/${id}`),
+  // Full profile management + direct verification grants
+  getProfile:      (id)           => api.get(`/users/${id}/profile`),
+  updateProfile:   (id, data)     => api.patch(`/users/${id}/profile`, data),
+  updateAvatar:    (id, url)      => api.patch(`/users/${id}/avatar`, { profilePicture: url }),
+  verifyEmail:     (id, verified) => api.patch(`/users/${id}/verify-email`, { verified }),
+  verifySkill:     (id, data)     => api.patch(`/users/${id}/skills/verify`, data),
+  setVerification: (id, data)     => api.patch(`/users/${id}/verification`, data),
   getContracts:    (id)           => api.get(`/users/${id}/contracts`),
   getJobs:         (id)           => api.get(`/users/${id}/jobs`),
   getPayments:     (id)           => api.get(`/users/${id}/payments`),
@@ -92,10 +106,16 @@ export const adminJobs = {
 // ─── Contracts ────────────────────────────────────────────────────────────────
 
 export const adminContracts = {
-  list:      (params)      => api.get('/contracts', { params }),
-  getById:   (id)          => api.get(`/contracts/${id}`),
-  addNote:   (id, note)    => api.post(`/contracts/${id}/notes`, { note }),
-  exportUrl: (params)      => `${BASE}/contracts/export?${new URLSearchParams(params)}`
+  list:          (params)      => api.get('/contracts', { params }),
+  getById:       (id)          => api.get(`/contracts/${id}`),
+  addNote:       (id, note)    => api.post(`/contracts/${id}/notes`, { note }),
+  edit:          (id, data)    => api.patch(`/contracts/${id}`, data),
+  pause:         (id, reason)  => api.patch(`/contracts/${id}/pause`, { reason }),
+  resume:        (id, reason)  => api.patch(`/contracts/${id}/resume`, { reason }),
+  cancel:        (id, reason)  => api.patch(`/contracts/${id}/cancel`, { reason }),
+  forceComplete: (id, reason)  => api.post(`/contracts/${id}/force-complete`, { reason }),
+  reassign:      (id, data)    => api.post(`/contracts/${id}/reassign`, data),
+  exportUrl:     (params)      => `${BASE}/contracts/export?${new URLSearchParams(params)}`
 };
 
 // ─── Disputes ─────────────────────────────────────────────────────────────────
@@ -109,10 +129,12 @@ export const adminDisputes = {
 // ─── Finance ──────────────────────────────────────────────────────────────────
 
 export const adminPayments = {
-  list:       (params)  => api.get('/payments', { params }),
-  getSummary: ()        => api.get('/payments/summary'),
-  getById:    (id)      => api.get(`/payments/${id}`),
-  exportUrl:  (params)  => `${BASE}/payments/export?${new URLSearchParams(params)}`
+  list:       (params)     => api.get('/payments', { params }),
+  getSummary: ()           => api.get('/payments/summary'),
+  getById:    (id)         => api.get(`/payments/${id}`),
+  refund:     (id, reason) => api.post(`/payments/${id}/refund`, { reason }),
+  release:    (id, reason) => api.post(`/payments/${id}/release`, { reason }),
+  exportUrl:  (params)     => `${BASE}/payments/export?${new URLSearchParams(params)}`
 };
 
 export const adminWallets = {
@@ -139,9 +161,14 @@ export const adminTransactions = {
 // ─── Moderation ───────────────────────────────────────────────────────────────
 
 export const adminChat = {
-  list:        (params)           => api.get('/chat', { params }),
-  getMessages: (conversationId)   => api.get(`/chat/${conversationId}/messages`)
+  list:        (params)               => api.get('/chat', { params }),
+  getMessages: (conversationId, params) => api.get(`/chat/${conversationId}/messages`, { params }),
+  // Admin↔user messaging (sent as "SkillKart Support")
+  send:        (userId, content)      => api.post('/chat/send', { userId, content }),
+  reply:       (conversationId, content) => api.post(`/chat/${conversationId}/reply`, { content })
 };
+
+// Disputes list/detail/resolve already declared below.
 
 export const adminReviews = {
   list:    (params)          => api.get('/reviews', { params }),

@@ -5,6 +5,7 @@ import {
   AdminLoader, AdminEmptyState, StatusBadge, AdminPagination,
   ConfirmDialog, ExportButtons, AdminFilterBar, SkeletonTable, AdminUserAvatar, fmt
 } from '../../Components/adminPanel/AdminCommon';
+import { EditUserModal } from './AdminDetailPages';
 
 const ROLES = ['all', 'freelancer', 'client'];
 
@@ -28,6 +29,7 @@ const UsersPage = () => {
   const [suspendTarget, setSuspendTarget] = useState(null); // user obj
   const [suspendReason, setSuspendReason] = useState('');
   const [deleteTarget, setDeleteTarget]   = useState(null);
+  const [editTarget, setEditTarget]       = useState(null); // user obj
 
   // ── Fetch ──────────────────────────────────────────────────────
   const load = useCallback(async (params = {}) => {
@@ -93,10 +95,10 @@ const UsersPage = () => {
   };
 
   const handleExport = (format) => {
-    const params = new URLSearchParams({ format });
-    if (role && role !== 'all') params.set('role', role);
-    if (search) params.set('search', search);
-    window.open(`/api/v1/admin-panel/users/export?${params}`, '_blank');
+    const params = { format };
+    if (role && role !== 'all') params.role = role;
+    if (search) params.search = search;
+    window.open(adminUsers.exportUrl(params), '_blank');
   };
 
   return (
@@ -176,7 +178,7 @@ const UsersPage = () => {
                 <tr key={user._id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <AdminUserAvatar email={user.email} firstName={user.firstName} lastName={user.lastName} />
+                      <AdminUserAvatar email={user.email} firstName={user.firstName} lastName={user.lastName} src={user.profilePicture} />
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--ap-text-primary)' }}>
                           {user.firstName} {user.lastName}
@@ -205,6 +207,13 @@ const UsersPage = () => {
                         title="View details"
                       >
                         👁
+                      </button>
+                      <button
+                        className="ap-btn ap-btn-primary ap-btn-sm"
+                        onClick={() => setEditTarget(user)}
+                        title="Edit user"
+                      >
+                        ✏️
                       </button>
                       <button
                         className={`ap-btn ap-btn-sm ${user.isBlocked ? 'ap-btn-success' : 'ap-btn-danger'}`}
@@ -282,6 +291,14 @@ const UsersPage = () => {
         message={`This will soft-delete ${deleteTarget?.email}. Their data is preserved. This action can be reviewed in audit logs.`}
         confirmLabel="Delete"
         loading={busy}
+      />
+
+      {/* Edit user */}
+      <EditUserModal
+        open={!!editTarget}
+        user={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSaved={() => { setEditTarget(null); load(); }}
       />
     </div>
   );

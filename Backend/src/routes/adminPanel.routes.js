@@ -59,6 +59,13 @@ router.patch ('/users/:id',                   usersCtrl.editUser);
 router.patch ('/users/:id/suspend',           suspendSchema, requirePermission('users.write'), usersCtrl.suspendUser);
 router.patch ('/users/:id/unsuspend',         requirePermission('users.write'), usersCtrl.unsuspendUser);
 router.delete('/users/:id',                   requirePermission('users.write'), usersCtrl.deleteUser);
+// Full profile management + direct verification grants
+router.get   ('/users/:id/profile',           usersCtrl.getUserProfile);
+router.patch ('/users/:id/profile',           requirePermission('users.write'), usersCtrl.updateProfile);
+router.patch ('/users/:id/avatar',            requirePermission('users.write'), usersCtrl.updateAvatar);
+router.patch ('/users/:id/verify-email',      requirePermission('users.write'), usersCtrl.setEmailVerified);
+router.patch ('/users/:id/skills/verify',     requirePermission('users.write'), usersCtrl.setSkillVerification);
+router.patch ('/users/:id/verification',      requirePermission('users.write'), usersCtrl.setVerification);
 router.get   ('/users/:id/contracts',         usersCtrl.getUserContracts);
 router.get   ('/users/:id/jobs',              usersCtrl.getUserJobs);
 router.get   ('/users/:id/payments',          usersCtrl.getUserPayments);
@@ -81,6 +88,12 @@ router.get  ('/contracts',                     paginationSchema, contractsCtrl.g
 router.get  ('/contracts/export',              contractsCtrl.exportContracts);
 router.get  ('/contracts/:id',                 contractsCtrl.getContractById);
 router.post ('/contracts/:id/notes',           contractsCtrl.addContractNote);
+router.patch('/contracts/:id',                 requirePermission('contracts.write'), contractsCtrl.editContract);
+router.patch('/contracts/:id/pause',           requirePermission('contracts.write'), contractsCtrl.pauseContract);
+router.patch('/contracts/:id/resume',          requirePermission('contracts.write'), contractsCtrl.resumeContract);
+router.patch('/contracts/:id/cancel',          requirePermission('contracts.write'), contractsCtrl.cancelContract);
+router.post ('/contracts/:id/force-complete',  requirePermission('contracts.write'), contractsCtrl.forceComplete);
+router.post ('/contracts/:id/reassign',        requirePermission('contracts.write'), contractsCtrl.reassignContract);
 
 // DISPUTES (sub-resource of contracts)
 router.get  ('/disputes',                             paginationSchema, disputesCtrl.getDisputes);
@@ -88,10 +101,12 @@ router.get  ('/disputes/:contractId',                 disputesCtrl.getDisputeByI
 router.post ('/disputes/:contractId/resolve',         resolveDisputeSchema, requirePermission('disputes.resolve'), disputesCtrl.resolveDispute);
 
 // PAYMENTS
-router.get('/payments',         paginationSchema, financeCtrl.getPayments);
-router.get('/payments/summary', financeCtrl.getPaymentSummary);
-router.get('/payments/export',  financeCtrl.exportPayments);
-router.get('/payments/:id',     financeCtrl.getPaymentById);
+router.get('/payments',            paginationSchema, financeCtrl.getPayments);
+router.get('/payments/summary',    financeCtrl.getPaymentSummary);
+router.get('/payments/export',     financeCtrl.exportPayments);
+router.get('/payments/:id',        financeCtrl.getPaymentById);
+router.post('/payments/:id/refund',  requirePermission('wallets.write'), financeCtrl.refundPayment);
+router.post('/payments/:id/release', requirePermission('wallets.write'), financeCtrl.releaseEscrow);
 
 // WALLETS
 router.get   ('/wallets',                    financeCtrl.getWallets);
@@ -111,9 +126,11 @@ router.patch('/withdrawals/:id/complete',   requirePermission('withdrawals.write
 router.get('/transactions',        financeCtrl.getTransactions);
 router.get('/transactions/export', financeCtrl.exportTransactions);
 
-// CHAT MODERATION
-router.get('/chat',                            paginationSchema, modCtrl.getConversations);
-router.get('/chat/:conversationId/messages',   modCtrl.getConversationMessages);
+// CHAT MODERATION + admin↔user messaging (as "SkillKart Support")
+router.get ('/chat',                            paginationSchema, modCtrl.getConversations);
+router.post('/chat/send',                       modCtrl.sendAdminMessage);
+router.get ('/chat/:conversationId/messages',   modCtrl.getConversationMessages);
+router.post('/chat/:conversationId/reply',      modCtrl.replyAsAdmin);
 
 // REVIEWS
 router.get   ('/reviews',             paginationSchema, modCtrl.getReviews);

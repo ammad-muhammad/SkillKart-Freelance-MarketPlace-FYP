@@ -9,7 +9,18 @@ export const AdminAuthProvider = ({ children }) => {
   const [ready, setReady]       = useState(false);  // true once first check done
 
   // ─── Restore session on mount ──────────────────────────────────────────────
+  // This provider wraps the whole app, but the admin session only matters inside
+  // the admin panel. Skip the getSession() probe entirely on the public site /
+  // marketplace so normal visitors don't fire a guaranteed-401 request on every
+  // page load (and can never be bounced to the admin login).
   useEffect(() => {
+    const inAdminPanel = window.location.pathname.startsWith('/admin-panel');
+    if (!inAdminPanel) {
+      setLoading(false);
+      setReady(true);
+      return;
+    }
+
     let cancelled = false;
 
     const restore = async () => {
