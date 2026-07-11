@@ -421,7 +421,18 @@ const SUCCESS_MESSAGES = {
   PROFILE_UPDATED: 'Profile updated successfully'
 };
 
+// ── Platform economics ─────────────────────────────────────────────────────────
+// Single source of truth for the commission rate. Every money path (escrow
+// release, hourly invoice, dispute split/refund) MUST use this so the fee stays
+// consistent — previously the hourly-invoice path hardcoded 0.05 (a 10× bug).
+const PLATFORM_FEE_RATE = 0.005; // 0.5%
+
+// Round a monetary value to 2 decimal places (whole-currency-unit cents).
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
 module.exports = {
+  PLATFORM_FEE_RATE,
+  round2,
   FEATURE_FLAGS,
   USER_ROLES,
   ROLE_HIERARCHY,

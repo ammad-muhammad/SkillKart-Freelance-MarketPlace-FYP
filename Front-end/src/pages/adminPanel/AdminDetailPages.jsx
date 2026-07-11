@@ -1530,19 +1530,36 @@ export const EditContractModal = ({ open, contract, onClose, onSaved }) => {
 
 // ─── Reassign Contract modal ───────────────────────────────────
 export const ReassignContractModal = ({ open, contractId, onClose, onSaved }) => {
-  const [freelancerId, setFreelancerId] = useState('');
+  const [query, setQuery]     = useState('');
+  const [results, setResults] = useState([]);
+  const [selected, setSelected] = useState(null); // { _id, email, firstName, lastName }
+  const [searching, setSearching] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr]   = useState('');
 
-  useEffect(() => { if (open) { setFreelancerId(''); setReason(''); setErr(''); } }, [open]);
+  useEffect(() => { if (open) { setQuery(''); setResults([]); setSelected(null); setReason(''); setErr(''); } }, [open]);
+
+  // Debounced freelancer search (by email/name) via the users list endpoint.
+  useEffect(() => {
+    if (!open || selected || query.trim().length < 2) { setResults([]); return; }
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(() => {
+      adminUsers.list({ role: 'freelancer', search: query.trim(), limit: 8 })
+        .then(res => { if (!cancelled) setResults(res?.users || []); })
+        .catch(() => { if (!cancelled) setResults([]); })
+        .finally(() => { if (!cancelled) setSearching(false); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [query, open, selected]);
 
   const save = async () => {
     setErr('');
-    if (!freelancerId.trim()) return setErr('Enter the new freelancer\'s user ID.');
+    if (!selected) return setErr('Search for and select a freelancer first.');
     setBusy(true);
     try {
-      await adminContracts.reassign(contractId, { freelancerId: freelancerId.trim(), reason: reason.trim() || undefined });
+      await adminContracts.reassign(contractId, { freelancerId: selected._id, reason: reason.trim() || undefined });
       onSaved?.();
     } catch (e) { setErr(e?.message || 'Failed to reassign'); }
     finally { setBusy(false); }
@@ -1552,15 +1569,44 @@ export const ReassignContractModal = ({ open, contractId, onClose, onSaved }) =>
     <AdminModal open={open} onClose={onClose} title="Reassign Contract"
       footer={<>
         <button className="ap-btn ap-btn-secondary" onClick={onClose} disabled={busy}>Cancel</button>
-        <button className="ap-btn ap-btn-primary" onClick={save} disabled={busy}>{busy ? 'Reassigning…' : 'Reassign'}</button>
+        <button className="ap-btn ap-btn-primary" onClick={save} disabled={busy || !selected}>{busy ? 'Reassigning…' : 'Reassign'}</button>
       </>}>
       {err && <div className="ap-alert ap-alert-error" style={{ marginBottom: 12 }}><span>⛔</span><span>{err}</span></div>}
       <p style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)', marginTop: 0 }}>
-        Moves this contract (and its job's hired freelancer) to a different freelancer. Find the target's user ID on their profile page.
+        Moves this contract (and its job's hired freelancer) to a different freelancer.
       </p>
+
       <div className="ap-form-group">
-        <label className="ap-label">New freelancer user ID</label>
-        <input className="ap-input" value={freelancerId} onChange={e => setFreelancerId(e.target.value)} placeholder="e.g. 665f1a…" />
+        <label className="ap-label">New freelancer</label>
+        {selected ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', border: '1px solid var(--ap-border)', borderRadius: 8 }}>
+            <AdminUserAvatar email={selected.email} firstName={selected.firstName} lastName={selected.lastName} src={selected.profilePicture} size={30} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{userLabel(selected)}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{selected.email}</div>
+            </div>
+            <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => { setSelected(null); setQuery(''); }}>Change</button>
+          </div>
+        ) : (
+          <>
+            <input className="ap-input" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search freelancers by name or email…" autoFocus />
+            {query.trim().length >= 2 && (
+              <div style={{ marginTop: 6, border: '1px solid var(--ap-border)', borderRadius: 8, overflow: 'hidden' }}>
+                {searching ? <div style={{ padding: 12, fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>Searching…</div>
+                  : results.length === 0 ? <div style={{ padding: 12, fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>No freelancers found.</div>
+                  : results.map(u => (
+                    <button key={u._id} onClick={() => setSelected(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderBottom: '1px solid var(--ap-border)', cursor: 'pointer', textAlign: 'left' }}>
+                      <AdminUserAvatar email={u.email} firstName={u.firstName} lastName={u.lastName} src={u.profilePicture} size={28} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.84rem', color: 'var(--ap-text-primary)' }}>{userLabel(u)}</div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--ap-text-muted)' }}>{u.email}</div>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
       <div className="ap-form-group">
         <label className="ap-label">Reason (optional)</label>

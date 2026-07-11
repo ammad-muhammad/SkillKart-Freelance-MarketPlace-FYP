@@ -31,7 +31,7 @@ const PageShell = ({ title, desc, icon, headerRight, children }) => (
 );
 
 // ─── Generic list table ────────────────────────────────────────
-const ListTable = ({ loading, data, columns, renderRow, emptyIcon, emptyTitle, pagination, onPage }) => (
+const ListTable = ({ loading, data, error, onRetry, columns, renderRow, emptyIcon, emptyTitle, pagination, onPage }) => (
   <div className="ap-card" style={{ padding: 0 }}>
     <div className="ap-table-wrap">
       <table className="ap-table">
@@ -39,14 +39,19 @@ const ListTable = ({ loading, data, columns, renderRow, emptyIcon, emptyTitle, p
         <tbody>
           {loading
             ? <SkeletonTable rows={8} cols={columns.length} />
-            : data.length === 0
-              ? <tr><td colSpan={columns.length}><AdminEmptyState icon={emptyIcon || '📭'} title={emptyTitle || 'No data'} /></td></tr>
-              : data.map((item, i) => renderRow(item, i))
+            : error
+              ? <tr><td colSpan={columns.length}>
+                  <AdminEmptyState icon="⚠️" title="Couldn't load data" desc={error}
+                    action={onRetry && <button className="ap-btn ap-btn-secondary ap-btn-sm" style={{ marginTop: 12 }} onClick={() => onRetry()}>🔄 Retry</button>} />
+                </td></tr>
+              : data.length === 0
+                ? <tr><td colSpan={columns.length}><AdminEmptyState icon={emptyIcon || '📭'} title={emptyTitle || 'No data'} /></td></tr>
+                : data.map((item, i) => renderRow(item, i))
           }
         </tbody>
       </table>
     </div>
-    {pagination && (
+    {pagination && !error && (
       <AdminPagination
         page={pagination.page} pages={pagination.pages}
         total={pagination.total} limit={pagination.limit}
@@ -61,21 +66,26 @@ const useList = (fetchFn, dataKey) => {
   const [data, setData]      = useState([]);
   const [pagination, setPag] = useState({ total: 0, page: 1, limit: 20, pages: 1 });
   const [loading, setLoading]= useState(true);
+  const [error, setError]    = useState('');
   const [page, setPage]      = useState(1);
 
   const load = useCallback(async (params = {}) => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
       const res = await fetchFn({ page, limit: 20, ...params });
       const key = dataKey || Object.keys(res || {}).find(k => Array.isArray(res[k]));
       setData(res?.[key] || []);
       if (res?.pagination) setPag(res.pagination);
-    } catch { } finally { setLoading(false); }
+    } catch (e) {
+      // Surface the failure instead of silently showing an empty table.
+      setError(e?.message || 'Network error — please try again.');
+      setData([]);
+    } finally { setLoading(false); }
   }, [page, fetchFn]);
 
   useEffect(() => { load(); }, [load]);
 
-  return { data, setData, pagination, loading, page, setPage, load };
+  return { data, setData, pagination, loading, error, page, setPage, load };
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -83,7 +93,7 @@ const useList = (fetchFn, dataKey) => {
 // ═══════════════════════════════════════════════════════════════
 export const JobsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, page, setPage, load } = useList(adminJobs.list, 'jobs');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminJobs.list, 'jobs');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
 
@@ -99,7 +109,7 @@ export const JobsPage = () => {
           {['open','in-progress','completed','closed','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </AdminFilterBar>
-      <ListTable loading={loading} data={data} emptyIcon="💼" emptyTitle="No jobs found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💼" emptyTitle="No jobs found"
         columns={['Title','Client','Status','Budget','Posted','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(job) => (
@@ -124,12 +134,12 @@ export const JobsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ContractsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, page, setPage, load } = useList(adminContracts.list, 'contracts');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminContracts.list, 'contracts');
 
   return (
     <PageShell title="Contracts" desc="All platform contracts" icon="📋"
       headerRight={<ExportButtons onExport={format => window.open(adminContracts.exportUrl({ format }), '_blank')} />}>
-      <ListTable loading={loading} data={data} emptyIcon="📋" emptyTitle="No contracts found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="📋" emptyTitle="No contracts found"
         columns={['Type','Status','Client','Freelancer','Amount','Started','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(c) => (
@@ -153,7 +163,7 @@ export const ContractsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const DisputesPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, page, setPage, load } = useList(adminDisputes.list, 'disputes');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminDisputes.list, 'disputes');
 
   return (
     <PageShell title="Disputes" desc="All contract disputes requiring attention" icon="⚠️">
@@ -164,7 +174,7 @@ export const DisputesPage = () => {
           <option value="resolved">Resolved</option>
         </select>
       </AdminFilterBar>
-      <ListTable loading={loading} data={data} emptyIcon="⚠️" emptyTitle="No disputes found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="⚠️" emptyTitle="No disputes found"
         columns={['Contract','Status','Raised By','Raised At','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(c) => (
@@ -190,7 +200,7 @@ export const DisputesPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const PaymentsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, page, setPage, load } = useList(adminPayments.list, 'payments');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminPayments.list, 'payments');
   const [status, setStatus] = useState('');
 
   return (
@@ -202,7 +212,7 @@ export const PaymentsPage = () => {
           {['deposit_pending','deposit_paid','released','refunded'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </AdminFilterBar>
-      <ListTable loading={loading} data={data} emptyIcon="💳" emptyTitle="No payments found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💳" emptyTitle="No payments found"
         columns={['ID','Client','Freelancer','Total','Fee','Status','Date','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(p) => (
@@ -226,7 +236,7 @@ export const PaymentsPage = () => {
 // WALLETS
 // ═══════════════════════════════════════════════════════════════
 export const WalletsPage = () => {
-  const { data, loading, load } = useList(adminWallets.list, 'wallets');
+  const { data, loading, error, load } = useList(adminWallets.list, 'wallets');
   const [adjustTarget, setAdjustTarget] = useState(null); // userId
 
   const freeze = (userId) => {
@@ -238,7 +248,7 @@ export const WalletsPage = () => {
 
   return (
     <PageShell title="Wallets" desc="All user wallet balances" icon="👛">
-      <ListTable loading={loading} data={data} emptyIcon="👛" emptyTitle="No wallets found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="👛" emptyTitle="No wallets found"
         columns={['User','Type','Balance','Frozen','Actions']}
         renderRow={(w) => (
           <tr key={w._id}>
@@ -272,7 +282,7 @@ export const WalletsPage = () => {
 // WITHDRAWALS
 // ═══════════════════════════════════════════════════════════════
 export const WithdrawalsPage = () => {
-  const { data, pagination, loading, page, setPage, load } = useList(adminWithdrawals.list, 'withdrawals');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminWithdrawals.list, 'withdrawals');
   const [busy, setBusy] = useState(false);
 
   const act = async (id, action) => {
@@ -303,7 +313,7 @@ export const WithdrawalsPage = () => {
           {['pending','completed','failed','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </AdminFilterBar>
-      <ListTable loading={loading} data={data} emptyIcon="💸" emptyTitle="No withdrawals found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💸" emptyTitle="No withdrawals found"
         columns={['User','Amount','Method','Status','Requested','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(w) => (
@@ -332,12 +342,12 @@ export const WithdrawalsPage = () => {
 // TRANSACTIONS
 // ═══════════════════════════════════════════════════════════════
 export const TransactionsPage = () => {
-  const { data, loading, load } = useList(adminTransactions.list, 'transactions');
+  const { data, loading, error, load } = useList(adminTransactions.list, 'transactions');
 
   return (
     <PageShell title="Transactions" desc="Unified view of payments and withdrawals" icon="↕️"
       headerRight={<ExportButtons onExport={format => window.open(adminTransactions.exportUrl({ format }), '_blank')} />}>
-      <ListTable loading={loading} data={data} emptyIcon="↕️" emptyTitle="No transactions"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="↕️" emptyTitle="No transactions"
         columns={['Type','Amount','Status','Date']}
         renderRow={(t, i) => (
           <tr key={`${t._id}-${i}`}>
@@ -357,21 +367,27 @@ export const TransactionsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ChatPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, page, setPage, load } = useList(adminChat.list, 'conversations');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminChat.list, 'conversations');
 
   return (
     <PageShell title="Chat Moderation" desc="Monitor all platform conversations" icon="💬">
-      <ListTable loading={loading} data={data} emptyIcon="💬" emptyTitle="No conversations"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💬" emptyTitle="No conversations"
         columns={['Participants','Messages','Last Activity','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
-        renderRow={(conv) => (
-          <tr key={conv._id}>
-            <td style={{ fontSize: '0.83rem' }}>{conv.participants?.map(p => p.email).join(', ') || '—'}</td>
-            <td>{conv.messageCount || '—'}</td>
-            <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.relative(conv.updatedAt)}</td>
-            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/chat/${conv._id}`)}>View</button></td>
-          </tr>
-        )}
+        renderRow={(conv) => {
+          const isSupport = conv.participants?.some(p => p.email === 'support@skillkart.system');
+          return (
+            <tr key={conv._id}>
+              <td style={{ fontSize: '0.83rem' }}>
+                {isSupport && <span className="ap-badge ap-badge-blue" style={{ marginRight: 6 }}>Support</span>}
+                {conv.participants?.filter(p => p.email !== 'support@skillkart.system').map(p => p.email).join(', ') || '—'}
+              </td>
+              <td>{conv.messageCount || '—'}</td>
+              <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.relative(conv.updatedAt)}</td>
+              <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/chat/${conv._id}`)}>View</button></td>
+            </tr>
+          );
+        }}
       />
     </PageShell>
   );
@@ -381,7 +397,7 @@ export const ChatPage = () => {
 // REVIEWS
 // ═══════════════════════════════════════════════════════════════
 export const ReviewsPage = () => {
-  const { data, pagination, loading, page, setPage, load } = useList(adminReviews.list, 'reviews');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminReviews.list, 'reviews');
   const [busy, setBusy] = useState(false);
 
   const doHide = async (id) => {
@@ -402,7 +418,7 @@ export const ReviewsPage = () => {
           <option value="true">Hidden</option>
         </select>
       </AdminFilterBar>
-      <ListTable loading={loading} data={data} emptyIcon="⭐" emptyTitle="No reviews found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="⭐" emptyTitle="No reviews found"
         columns={['Reviewer','Reviewee','Rating','Status','Date','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(r) => (
@@ -486,7 +502,7 @@ export const NotificationsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ReportsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, page, setPage, load } = useList(adminReports.list, 'reports');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminReports.list, 'reports');
 
   return (
     <PageShell title="Reports" desc="User-submitted reports and flags" icon="🚩">
@@ -496,7 +512,7 @@ export const ReportsPage = () => {
           {['pending','investigating','resolved','dismissed'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </AdminFilterBar>
-      <ListTable loading={loading} data={data} emptyIcon="🚩" emptyTitle="No reports found"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="🚩" emptyTitle="No reports found"
         columns={['Reporter','Reported User','Category','Status','Date','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(r) => (
@@ -598,13 +614,13 @@ export const MonitoringPage = () => {
 // AUDIT LOGS
 // ═══════════════════════════════════════════════════════════════
 export const AuditLogsPage = () => {
-  const { data, pagination, loading, page, setPage, load } = useList(adminAuditLogs.list, 'logs');
+  const { data, pagination, loading, error, page, setPage, load } = useList(adminAuditLogs.list, 'logs');
 
   const SEV_COLOR = { info: 'blue', warning: 'yellow', critical: 'red' };
 
   return (
     <PageShell title="Audit Logs" desc="Immutable record of all admin actions" icon="📜">
-      <ListTable loading={loading} data={data} emptyIcon="📜" emptyTitle="No audit logs"
+      <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="📜" emptyTitle="No audit logs"
         columns={['Action','Category','Severity','Admin','Resource','Time']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(log) => (

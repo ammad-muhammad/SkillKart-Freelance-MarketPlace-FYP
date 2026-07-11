@@ -1,5 +1,12 @@
 const createEmailTransporter = require('../config/email');
 const config = require('../config');
+const EmailLog = require('../models/EmailLog');
+
+// Record every send attempt so the admin Monitoring → Email tab has real data.
+// Fire-and-forget; logging must never affect the send outcome.
+const logEmail = (to, subject, status, errorMessage) => {
+  EmailLog.create({ to, subject, status, errorMessage, sentAt: new Date() }).catch(() => {});
+};
 
 /**
  * Send email
@@ -17,9 +24,11 @@ const sendEmail = async (to, subject, html, text = '') => {
     };
 
     const info = await transporter.sendMail(mailOptions);
+    logEmail(to, subject, 'sent');
     return info;
   } catch (error) {
     console.error('Email send error:', error);
+    logEmail(to, subject, 'failed', error.message);
     throw new Error('Failed to send email');
   }
 };

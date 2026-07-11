@@ -4,6 +4,7 @@ const FreelancerProfile = require('../../models/FreelancerProfile');
 const ClientProfile = require('../../models/ClientProfile');
 const ContractHistory = require('../../models/ContractHistory');
 const { auditLog } = require('../../utils/adminAudit');
+const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 
 const getDisputes = async (req, res) => {
   try {
@@ -103,9 +104,9 @@ const resolveDispute = async (req, res) => {
       case 'release_freelancer': {
         // Release full escrow to freelancer
         if (payment) {
-          const fee = payment.totalAmount * (payment.feeRate || 0.005);
+          const fee = round2(payment.totalAmount * (payment.feeRate || PLATFORM_FEE_RATE));
           payment.platformFee = fee;
-          payment.freelancerPayout = payment.totalAmount - fee;
+          payment.freelancerPayout = round2(payment.totalAmount - fee);
           payment.status = 'released';
           payment.releasedAt = new Date();
           await payment.save();
@@ -134,12 +135,12 @@ const resolveDispute = async (req, res) => {
       }
       case 'split': {
         if (payment && splitPercentage) {
-          const freelancerShare = payment.totalAmount * (splitPercentage / 100);
-          const clientRefund    = payment.totalAmount - freelancerShare;
-          const fee = freelancerShare * (payment.feeRate || 0.005);
+          const freelancerShare = round2(payment.totalAmount * (splitPercentage / 100));
+          const clientRefund    = round2(payment.totalAmount - freelancerShare);
+          const fee = round2(freelancerShare * (payment.feeRate || PLATFORM_FEE_RATE));
           payment.status = 'released';
           payment.platformFee = fee;
-          payment.freelancerPayout = freelancerShare - fee;
+          payment.freelancerPayout = round2(freelancerShare - fee);
           payment.releasedAt = new Date();
           await payment.save();
           await FreelancerProfile.updateOne({ userId: contract.freelancerId }, { $inc: { walletBalance: payment.freelancerPayout } });

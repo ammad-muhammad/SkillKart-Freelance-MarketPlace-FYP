@@ -76,6 +76,10 @@ app.use(express.json({ limit: '10mb', verify: (req, res, buf) => { req.rawBody =
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
+// Observability — persist API request records for the admin Monitoring page.
+const { apiLogger, logError } = require('./middleware/requestLogger.middleware');
+app.use(apiLogger);
+
 // =======================
 // Logging Middleware
 // =======================
@@ -203,8 +207,9 @@ app.use((req, res, next) => {
 // =======================
 
 app.use((err, req, res, next) => {
-  // Log error
+  // Log error (console + persistent ErrorLog for the admin Monitoring page)
   console.error('Error:', err);
+  logError(err, req);
 
   // CORS errors
   if (err.message === 'Not allowed by CORS') {
@@ -278,16 +283,21 @@ app.use((err, req, res, next) => {
 // Graceful Shutdown
 // =======================
 
+const { logFatal } = require('./middleware/requestLogger.middleware');
+
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION! 💥 Shutting down...');
   console.error(err ? (err.name || 'Unknown Error') : 'No error object', err ? (err.message || err) : '');
-  process.exit(1);
+  logFatal(err, 'unhandledRejection');
+  // Give the log write a brief window before exiting.
+  setTimeout(() => process.exit(1), 250);
 });
 
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
   console.error(err.name, err.message);
-  process.exit(1);
+  logFatal(err, 'uncaughtException');
+  setTimeout(() => process.exit(1), 250);
 });
 
 module.exports = app;

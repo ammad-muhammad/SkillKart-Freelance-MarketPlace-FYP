@@ -4,8 +4,7 @@ const Payment = require('../../models/Payment');
 const TimeLog = require('../../models/TimeLog');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
-
-const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 
 const CONTRACT_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -194,7 +193,7 @@ const forceComplete = async (req, res) => {
     const payment = await Payment.findOne({ contractId: contract._id });
     let released = 0;
     if (payment && payment.status !== 'released' && payment.status !== 'refunded') {
-      const fee = round2(payment.totalAmount * (payment.feeRate || 0.005));
+      const fee = round2(payment.totalAmount * (payment.feeRate || PLATFORM_FEE_RATE));
       payment.platformFee = fee;
       payment.freelancerPayout = round2(payment.totalAmount - fee);
       payment.status = 'released';

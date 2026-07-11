@@ -6,6 +6,7 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const notifications = require('../services/notification.service');
+const { PLATFORM_FEE_RATE, round2 } = require('../utils/constants');
 
 /**
  * Get contract details
@@ -298,11 +299,12 @@ const respondEndContract = asyncHandler(async (req, res) => {
             clientId: contract.clientId,
             freelancerId: contract.freelancerId,
             type: 'hourly_invoice',
-            totalAmount: amount,
-            depositAmount: amount,
-            finalAmount: amount,
-            feeRate: 0.05,
-            freelancerPayout: amount * 0.95,
+            totalAmount: round2(amount),
+            depositAmount: round2(amount),
+            finalAmount: round2(amount),
+            feeRate: PLATFORM_FEE_RATE,
+            platformFee: round2(amount * PLATFORM_FEE_RATE),
+            freelancerPayout: round2(amount * (1 - PLATFORM_FEE_RATE)),
             status: 'released',
           });
         }

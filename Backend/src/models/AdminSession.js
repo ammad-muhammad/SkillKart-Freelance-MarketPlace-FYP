@@ -27,8 +27,9 @@ const adminSessionSchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    required: true,
-    index: true
+    required: true
+    // Indexed via the TTL index below (expireAfterSeconds) — don't also declare
+    // index:true here or Mongoose warns about a duplicate index.
   },
   isActive: {
     type: Boolean,

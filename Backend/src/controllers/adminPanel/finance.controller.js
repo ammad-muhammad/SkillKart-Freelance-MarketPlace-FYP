@@ -4,6 +4,7 @@ const ClientProfile = require('../../models/ClientProfile');
 const Withdrawal = require('../../models/Withdrawal');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
+const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 
 const PAYMENT_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -95,8 +96,6 @@ const exportPayments = async (req, res) => {
   }
 };
 
-const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-
 /**
  * POST /payments/:id/refund — refund escrow to the client (internal ledger).
  * Marks the Payment refunded and credits the client's walletBalance. No live
@@ -106,15 +105,23 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const refundPayment = async (req, res) => {
   try {
     const { reason } = req.body;
-    const payment = await Payment.findById(req.params.id);
-    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
-    if (payment.status === 'refunded') return res.status(400).json({ success: false, message: 'Payment already refunded' });
-    if (payment.status === 'released') return res.status(400).json({ success: false, message: 'Cannot refund a released payment' });
+    const existing = await Payment.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ success: false, message: 'Payment not found' });
+    if (existing.status === 'refunded') return res.status(400).json({ success: false, message: 'Payment already refunded' });
+    if (existing.status === 'released') return res.status(400).json({ success: false, message: 'Cannot refund a released payment' });
 
-    const refundAmount = round2(payment.depositAmount || payment.totalAmount);
-    const prev = payment.status;
-    payment.status = 'refunded';
-    await payment.save();
+    const refundAmount = round2(existing.depositAmount || existing.totalAmount);
+    const prev = existing.status;
+
+    // Atomic transition — only the request that actually flips the status out of
+    // its current state proceeds to credit the wallet. A concurrent second call
+    // matches nothing here and is rejected, preventing a double refund.
+    const payment = await Payment.findOneAndUpdate(
+      { _id: req.params.id, status: { $nin: ['refunded', 'released'] } },
+      { $set: { status: 'refunded' } },
+      { new: true }
+    );
+    if (!payment) return res.status(409).json({ success: false, message: 'Payment already processed by another request' });
 
     await ClientProfile.updateOne(
       { userId: payment.clientId },
@@ -146,20 +153,24 @@ const refundPayment = async (req, res) => {
 const releaseEscrow = async (req, res) => {
   try {
     const { reason } = req.body;
-    const payment = await Payment.findById(req.params.id);
-    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
-    if (payment.status === 'released') return res.status(400).json({ success: false, message: 'Payment already released' });
-    if (payment.status === 'refunded') return res.status(400).json({ success: false, message: 'Cannot release a refunded payment' });
-    if (!payment.freelancerId) return res.status(400).json({ success: false, message: 'No freelancer on this payment' });
+    const existing = await Payment.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ success: false, message: 'Payment not found' });
+    if (existing.status === 'released') return res.status(400).json({ success: false, message: 'Payment already released' });
+    if (existing.status === 'refunded') return res.status(400).json({ success: false, message: 'Cannot release a refunded payment' });
+    if (!existing.freelancerId) return res.status(400).json({ success: false, message: 'No freelancer on this payment' });
 
-    const fee = round2(payment.totalAmount * (payment.feeRate || 0.005));
-    const payout = round2(payment.totalAmount - fee);
-    const prev = payment.status;
-    payment.platformFee = fee;
-    payment.freelancerPayout = payout;
-    payment.status = 'released';
-    payment.releasedAt = new Date();
-    await payment.save();
+    const fee = round2(existing.totalAmount * (existing.feeRate || PLATFORM_FEE_RATE));
+    const payout = round2(existing.totalAmount - fee);
+    const prev = existing.status;
+
+    // Atomic transition (see refundPayment) — guards against a concurrent
+    // double-release crediting the freelancer twice.
+    const payment = await Payment.findOneAndUpdate(
+      { _id: req.params.id, status: { $nin: ['released', 'refunded'] } },
+      { $set: { status: 'released', platformFee: fee, freelancerPayout: payout, releasedAt: new Date() } },
+      { new: true }
+    );
+    if (!payment) return res.status(409).json({ success: false, message: 'Payment already processed by another request' });
 
     await FreelancerProfile.updateOne(
       { userId: payment.freelancerId },

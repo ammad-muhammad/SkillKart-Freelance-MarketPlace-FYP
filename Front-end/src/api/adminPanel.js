@@ -6,6 +6,7 @@ const BASE = `${API_URL}/admin-panel`;
 const api = axios.create({
   baseURL: BASE,
   withCredentials: true,   // sends admin_token cookie automatically
+  timeout: 30000,          // don't leave the UI spinning forever on a hung backend
   headers: { 'Content-Type': 'application/json' }
 });
 
