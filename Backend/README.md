@@ -14,8 +14,8 @@ Express + MongoDB REST API powering the SkillKart marketplace: authentication, R
 - **Reviews & disputes** — two-way reviews and an admin-mediated dispute workflow.
 - **Skill verification** — skill taxonomy, matching, and test attempts.
 - **Admin panel API** — isolated auth and endpoints under an admin prefix.
-- **AI services** — cost estimation, assistant, and skill matching via a provider router (Gemini / Groq / Claude).
-- **Hardening** — Helmet, rate limiting, request validation, sanitization, structured logging (Winston), and Swagger API docs.
+- **AI services** — Buddy assistant, cost estimation, skill matching, and CV analysis via a provider router with automatic fallback (**Gemini → Groq → Claude → Ollama**). When all providers fail it returns a clean `503` ("AI temporarily out of service") rather than a 500 — the app never crashes on an AI outage.
+- **Hardening** — Helmet, rate limiting, request validation, sanitization, structured logging (Winston), Swagger API docs, and an `unhandledRejection` guard that keeps operational errors from taking down the server.
 
 ## Prerequisites
 
@@ -71,7 +71,7 @@ src/
 
 ### Demo data
 
-`scripts/seedDemoData.js` populates the existing models with a coherent marketplace — users, jobs, gigs, proposals, contracts, payments, deliveries, messages, reviews, disputes, notifications — spread across the last ~12 months, with full referential integrity.
+`scripts/seedDemoData.js` populates the existing models with a coherent marketplace — users (realistic Pakistani names), jobs, gigs (covering every category), proposals, contracts, payments, deliveries, messages, reviews, testimonials, disputes, notifications — spread across the last ~12 months, with full referential integrity (no orphaned records).
 
 ```bash
 npm run seed:demo            # full dataset (clears marketplace collections first)

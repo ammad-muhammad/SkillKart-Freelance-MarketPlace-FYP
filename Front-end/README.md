@@ -13,7 +13,7 @@ The SkillKart single-page app: a React 19 + Vite client for the marketplace, cov
 - **Framer Motion** & **GSAP** for animation
 - **Chart.js** (`react-chartjs-2`) for dashboards
 - **Tailwind v4** + custom CSS
-- **lucide-react** for icons, **react-toastify** for notifications
+- **lucide-react** for icons; toast notifications via a small dependency-free `utils/safeToast.js` (react-toastify@9 is unreliable under React 19)
 
 ## Prerequisites
 
@@ -73,3 +73,8 @@ src/
 | `npm run build` | Production build → `dist/` |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Lint the source with ESLint |
+
+## Notes
+
+- **Toasts** — use `showSafeToast` / `safeToast` from [`src/utils/safeToast.js`](src/utils/safeToast.js). It renders a plain DOM node and can't crash the tree the way `react-toastify@9` does under React 19.
+- **AI failures** — any AI request failure (a `503`, a timeout, or a network error on `/ai/*` and `/matchmaking`) is caught centrally in [`src/api/client.js`](src/api/client.js) and surfaces a single "AI is temporarily out of service" toast. Individual AI features (Buddy, Cost Estimator, Matchmaking, CV parsing) also degrade gracefully in-place — they never crash the page.

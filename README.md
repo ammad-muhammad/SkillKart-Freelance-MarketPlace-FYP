@@ -47,7 +47,7 @@ It supports both marketplace models:
 - **MongoDB** is the system of record for all marketplace data.
 - **Supabase** provides optional social OAuth; email/OTP auth is handled by the backend directly.
 - **Stripe** powers escrow and payouts, and can be fully bypassed with simulated payments via `STRIPE_DUMMY=true` for local development.
-- **AI features** (cost estimator, assistant, skill matching) route through a provider layer supporting Gemini, Groq, or Claude.
+- **AI features** (Buddy assistant, cost estimator, skill matching, CV analysis) route through a provider chain with automatic fallback — **Gemini → Groq → Claude → Ollama** (local). If every provider is down or rate-limited the API returns a clean `503` and the UI shows an "AI is temporarily out of service" notice instead of crashing.
 
 ## Tech Stack
 
@@ -59,7 +59,7 @@ It supports both marketplace models:
 | Auth      | JWT (access + refresh) with RBAC; Supabase OAuth (optional) |
 | Payments  | Stripe (with dummy/simulated mode) |
 | Realtime-ish | Polling-based in-app messaging |
-| AI        | Provider router — Gemini / Groq / Claude |
+| AI        | Provider router with fallback — Gemini / Groq / Claude / Ollama (local) |
 | Tooling   | ESLint, Prettier, Nodemon, Swagger (API docs) |
 
 ## Repository Layout
@@ -163,10 +163,10 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 
 ## Seeding Demo Data
 
-The backend ships a production-grade seeder that populates a realistic, fully-interconnected marketplace (users → jobs/gigs → proposals → contracts → payments → deliveries → messages → reviews → disputes), spread across the last ~12 months.
+The backend ships a production-grade seeder that populates a realistic, fully-interconnected marketplace (users → jobs/gigs → proposals → contracts → payments → deliveries → messages → reviews → testimonials → disputes), spread across the last ~12 months. Gigs cover **every** marketplace category so the public `/categories` page never shows an empty one, and users have realistic (Pakistani) names.
 
 ```bash
-npm --prefix Backend run seed:demo          # full dataset (~200 users, 320 jobs, 100 gigs, ~230 contracts, ~3,400 messages)
+npm --prefix Backend run seed:demo          # full dataset (~200 users, 320 jobs, ~220 gigs, ~230 contracts, ~3,400 messages, ~24 testimonials, ~38 disputes)
 npm --prefix Backend run seed:demo:small    # small dataset for a quick smoke run
 ```
 
