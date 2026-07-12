@@ -477,7 +477,10 @@ const CreateGig = () => {
         showToast(`That doesn't seem to be a valid freelance service category. AI says: ${msg}`, 'error');
       }
     } catch (err) {
-      showToast('Validation failed. Please select from the dropdown.', 'error');
+      const aiDown = err.response?.status === 503 || !err.response;
+      showToast(aiDown
+        ? 'AI is temporarily out of service. Please pick a category from the dropdown.'
+        : 'Validation failed. Please select from the dropdown.', 'error');
     } finally {
       setValidatingCategory(false);
     }

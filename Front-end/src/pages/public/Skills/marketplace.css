@@ -467,6 +467,27 @@
   padding: 64px 0;
 }
 
+/* First section after the hero: the hero's wave already separates it, so trim
+   the heavy top padding to avoid an oversized gap. */
+section + .mp-section {
+  padding-top: 32px;
+}
+
+/* Consecutive PLAIN sections (no background band): the previous section's
+   bottom padding already provides contiguous whitespace, so drop the following
+   section's top padding to avoid doubling the gap.
+   Background sections (.mp-section--alt) are excluded — a coloured band needs
+   its own internal top padding, otherwise the section head sits flush against
+   the top edge. The two rules below re-assert full top padding whenever a
+   coloured band is involved on either side. */
+/* Collapse the top padding ONLY when a plain section follows another plain
+   section — both sides transparent, so the previous section's bottom padding
+   is the single contiguous gap. `:not(.mp-section--alt)` on both sides keeps
+   this from ever touching a coloured band, so no specificity tug-of-war. */
+.mp-section:not(.mp-section--alt) + .mp-section:not(.mp-section--alt) {
+  padding-top: 0;
+}
+
 .mp-section-head {
   display: flex;
   align-items: flex-end;

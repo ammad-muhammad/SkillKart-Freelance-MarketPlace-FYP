@@ -34,6 +34,7 @@ export default function Hero() {
   // value are simply not rendered.
   const [stats, setStats] = useState([]);
   const [trustCount, setTrustCount] = useState(null); // real user count, or null
+  const [topFreelancers, setTopFreelancers] = useState([]); // real top-rated freelancers for trust avatars
 
   useEffect(() => {
     let active = true;
@@ -56,6 +57,19 @@ export default function Hero() {
         setStats(real);
       })
       .catch(() => { if (active) setStats([]); });
+
+    // Real top-rated freelancers → the trust-strip avatars. Pull a wider pool
+    // and pick 4 at random each load so the strip feels fresh on every visit.
+    publicAPI.getTopFreelancers(12)
+      .then((res) => {
+        if (!active) return;
+        const list = res?.data?.data?.freelancers || [];
+        const withAvatar = list.filter(f => f?.avatar); // prefer real photos
+        const pool = withAvatar.length >= 4 ? withAvatar : list;
+        const four = [...pool].sort(() => Math.random() - 0.5).slice(0, 4);
+        setTopFreelancers(four);
+      })
+      .catch(() => { if (active) setTopFreelancers([]); });
 
     return () => { active = false; };
   }, []);
@@ -180,11 +194,32 @@ export default function Hero() {
           {trustCount && (
             <div className="hero__trust">
               <div className="hero__trust-avatars">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="hero__avatar" style={{ background: `hsl(${200 + i * 20}, 50%, ${40 + i * 5}%)` }}>
-                    {String.fromCharCode(64 + i)}
-                  </div>
-                ))}
+                {(topFreelancers.length ? topFreelancers : [null, null, null, null]).map((fl, i) => {
+                  const initials = fl?.name
+                    ? fl.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                    : String.fromCharCode(65 + i);
+                  return (
+                    <div
+                      key={fl?.id || i}
+                      className="hero__avatar"
+                      style={{ background: `hsl(${200 + i * 20}, 50%, ${40 + i * 5}%)` }}
+                      title={fl?.name || undefined}
+                    >
+                      {/* initials sit underneath; the photo overlays and, if it
+                          fails to load, hides itself to reveal the initials */}
+                      <span className="hero__avatar-initials">{initials}</span>
+                      {fl?.avatar && (
+                        <img
+                          src={fl.avatar}
+                          alt={fl.name}
+                          className="hero__avatar-img"
+                          loading="lazy"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <span className="hero__trust-text">
                 Trusted by <strong>{trustCount}</strong> students & graduates

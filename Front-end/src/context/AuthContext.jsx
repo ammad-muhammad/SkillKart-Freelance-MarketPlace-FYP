@@ -302,7 +302,12 @@ export const AuthProvider = ({ children }) => {
     isClient: user?.role === 'client',
     isFreelancer: user?.role === 'freelancer',
     getAccessToken: () => tokenManager.getAccessToken(),
-    refreshAuth: checkAuth,
+    // Explicit refreshAuth() calls always FORCE a fresh /auth/me fetch, bypassing
+    // the visibility/online throttle. Callers use this right after mutating the
+    // account (e.g. selecting a role) and must see the updated user immediately —
+    // otherwise a throttled no-op leaves user.role stale and route guards bounce
+    // the user to /unauthorized.
+    refreshAuth: () => checkAuth(true),
     refreshUser
   }), [user, loading]);
 

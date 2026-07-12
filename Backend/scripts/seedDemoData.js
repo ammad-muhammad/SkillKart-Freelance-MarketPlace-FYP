@@ -56,6 +56,8 @@ const Review = require('../src/models/Review');
 const Notification = require('../src/models/Notification');
 const Report = require('../src/models/Report');
 const AdminAuditLog = require('../src/models/AdminAuditLog');
+const Testimonial = require('../src/models/Testimonial');
+const { JOB_CATEGORIES } = require('../src/utils/constants');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 const ARGS = process.argv.slice(2);
@@ -64,7 +66,7 @@ const CLEAR = !ARGS.includes('--keep');
 
 const CFG = SMALL
   ? { freelancers: 12, clients: 12, extraJobs: 20, extraGigs: 15 }
-  : { freelancers: 100, clients: 100, extraJobs: 320, extraGigs: 100 };
+  : { freelancers: 100, clients: 100, extraJobs: 320, extraGigs: 220 };
 
 const PLATFORM_FEE_RATE = 0.005;
 const NOW = new Date();
@@ -75,7 +77,7 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const OWNED_MODELS = [
   User, FreelancerProfile, ClientProfile, Job, Gig, Proposal, Contract,
   ContractHistory, Payment, Withdrawal, Delivery, TimeLog, Conversation,
-  Message, Review, Notification, Report, AdminAuditLog,
+  Message, Review, Notification, Report, AdminAuditLog, Testimonial,
 ];
 
 // ─── Randomness helpers ─────────────────────────────────────────────────────
@@ -98,8 +100,24 @@ const addDays = (d, n) => new Date(d.getTime() + n * 24 * 3600 * 1000);
 const addHours = (d, n) => new Date(d.getTime() + n * 3600 * 1000);
 
 // ─── Data pools (curated, on-topic — not lorem) ─────────────────────────────
-const FIRST_NAMES = ['Ali', 'Ahmed', 'Hassan', 'Bilal', 'Usman', 'Hamza', 'Fahad', 'Zain', 'Omar', 'Saad', 'Ayesha', 'Fatima', 'Sara', 'Mariam', 'Hina', 'Zara', 'Noor', 'Iqra', 'Aisha', 'Sana', 'David', 'James', 'Michael', 'Daniel', 'Chris', 'John', 'Robert', 'Emily', 'Sarah', 'Jessica', 'Laura', 'Anna', 'Sofia', 'Elena', 'Lucas', 'Mateo', 'Diego', 'Wei', 'Chen', 'Yuki', 'Aarav', 'Rohan', 'Priya', 'Ananya', 'Ibrahim', 'Yousef', 'Layla', 'Mustafa', 'Ivan', 'Olga'];
-const LAST_NAMES = ['Khan', 'Ali', 'Ahmed', 'Malik', 'Sheikh', 'Butt', 'Raza', 'Iqbal', 'Hussain', 'Farooq', 'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Wang', 'Li', 'Zhang', 'Tanaka', 'Sharma', 'Patel', 'Gupta', 'Singh', 'Nguyen', 'Kumar', 'Silva', 'Santos', 'Ivanov', 'Petrov', 'Novak', 'Kovac', 'Hansen', 'Muller', 'Rossi', 'Costa'];
+// All-Pakistani name pools (male + female first names, common family names).
+const FIRST_NAMES = [
+  // Male
+  'Ali', 'Ahmed', 'Hassan', 'Hussain', 'Bilal', 'Usman', 'Hamza', 'Fahad', 'Zain', 'Saad',
+  'Omar', 'Ibrahim', 'Yousaf', 'Mustafa', 'Talha', 'Danish', 'Faizan', 'Rehan', 'Kashif', 'Waqas',
+  'Adnan', 'Asad', 'Imran', 'Bilawal', 'Shahzaib', 'Umair', 'Junaid', 'Nabeel', 'Arslan', 'Haris',
+  'Abdullah', 'Abdul Rehman', 'Muhammad', 'Taimoor', 'Zohaib', 'Sami', 'Owais', 'Raheel', 'Salman', 'Waleed',
+  // Female
+  'Ayesha', 'Fatima', 'Sara', 'Maryam', 'Hina', 'Zara', 'Noor', 'Iqra', 'Aisha', 'Sana',
+  'Mahnoor', 'Areeba', 'Rabia', 'Amna', 'Laiba', 'Kiran', 'Zoya', 'Hania', 'Eman', 'Bushra',
+  'Komal', 'Anaya', 'Alishba', 'Sadia', 'Nimra', 'Warda', 'Aqsa', 'Rida', 'Mehak', 'Javeria',
+];
+const LAST_NAMES = [
+  'Khan', 'Ali', 'Ahmed', 'Malik', 'Sheikh', 'Butt', 'Raza', 'Iqbal', 'Hussain', 'Farooq',
+  'Chaudhry', 'Qureshi', 'Siddiqui', 'Abbasi', 'Mughal', 'Awan', 'Bhatti', 'Gondal', 'Rana', 'Cheema',
+  'Nawaz', 'Aslam', 'Javed', 'Akhtar', 'Shah', 'Hashmi', 'Ansari', 'Baig', 'Dar', 'Memon',
+  'Zafar', 'Riaz', 'Yousafzai', 'Tariq', 'Rashid', 'Saleem', 'Ashraf', 'Nadeem', 'Mahmood', 'Sattar',
+];
 
 const COUNTRIES = [
   { c: 'Pakistan', cities: ['Lahore', 'Karachi', 'Islamabad', 'Faisalabad'], tz: 'Asia/Karachi' },
@@ -115,64 +133,176 @@ const COUNTRIES = [
 ];
 
 // Skill clusters keep freelancers coherent (no random unrelated skills).
-const SKILL_CLUSTERS = {
-  'Frontend Development': ['React', 'Vue', 'Angular', 'TypeScript', 'Tailwind CSS', 'Next.js', 'HTML/CSS', 'JavaScript'],
-  'Backend Development': ['Node.js', 'Express', 'Laravel', 'PHP', 'Python', 'Django', 'Java', 'Spring Boot', 'MongoDB', 'PostgreSQL', 'MySQL', 'REST APIs'],
-  'Full Stack Development': ['React', 'Node.js', 'MongoDB', 'Express', 'TypeScript', 'Next.js', 'PostgreSQL', 'GraphQL'],
-  'Mobile Development': ['Flutter', 'React Native', 'Kotlin', 'Swift', 'Dart', 'Firebase'],
-  'UI/UX Design': ['Figma', 'Adobe XD', 'Wireframing', 'Prototyping', 'User Research', 'Design Systems'],
-  'Graphic Design': ['Logo Design', 'Brand Identity', 'Illustrator', 'Photoshop', 'Print Design'],
-  'DevOps & Cloud': ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform', 'Linux', 'Nginx'],
-  'AI & Machine Learning': ['Python', 'TensorFlow', 'PyTorch', 'NLP', 'Computer Vision', 'Machine Learning', 'Data Science'],
-  'Data Science': ['Python', 'Pandas', 'SQL', 'Data Visualization', 'Machine Learning', 'Statistics'],
-  'WordPress': ['WordPress', 'WooCommerce', 'Elementor', 'PHP', 'Shopify'],
-  'Digital Marketing': ['SEO', 'Google Ads', 'Content Writing', 'Social Media', 'Email Marketing'],
-  'Video Editing': ['Premiere Pro', 'After Effects', 'Motion Graphics', 'Color Grading', 'DaVinci Resolve'],
-  'Cyber Security': ['Penetration Testing', 'Network Security', 'OWASP', 'Ethical Hacking', 'Security Auditing'],
+// Each cluster is a coherent freelancer specialisation. `categories` are the
+// canonical JOB_CATEGORIES (must match Backend/src/utils/constants.js) that a
+// freelancer of this cluster can post gigs/jobs in — this is what drives the
+// public /categories page coverage. Clusters together span EVERY category.
+const CLUSTERS = {
+  'Frontend Development': {
+    skills: ['React', 'Vue', 'Angular', 'TypeScript', 'Tailwind CSS', 'Next.js', 'HTML/CSS', 'JavaScript'],
+    titles: ['Senior Frontend Engineer', 'React Developer', 'UI Engineer'],
+    categories: ['Frontend Development', 'Web Development'],
+    templates: ['Build a React Dashboard for Analytics', 'Convert Figma Design to Responsive React', 'Frontend for SaaS Landing Page', 'Migrate jQuery App to Vue 3'],
+  },
+  'Backend Development': {
+    skills: ['Node.js', 'Express', 'Laravel', 'PHP', 'Python', 'Django', 'Java', 'Spring Boot', 'MongoDB', 'PostgreSQL', 'MySQL', 'REST APIs'],
+    titles: ['Backend Engineer', 'API Developer', 'Node.js Specialist'],
+    categories: ['Backend Development', 'Web Development'],
+    templates: ['Build a Laravel REST API', 'Node.js Backend for E-commerce', 'Design a Scalable MongoDB Schema', 'Payment Gateway Integration (Stripe)'],
+  },
+  'Full Stack Development': {
+    skills: ['React', 'Node.js', 'MongoDB', 'Express', 'TypeScript', 'Next.js', 'PostgreSQL', 'GraphQL'],
+    titles: ['Full Stack Developer', 'MERN Stack Engineer', 'Senior Full Stack Developer'],
+    categories: ['Full Stack Development', 'Web Development'],
+    templates: ['Full Stack MERN Booking Platform', 'Build a Multi-vendor Marketplace', 'SaaS MVP — Auth, Billing, Dashboard', 'Real-time Chat App with Socket.io'],
+  },
+  'Mobile Development': {
+    skills: ['Flutter', 'React Native', 'Kotlin', 'Swift', 'Dart', 'Firebase'],
+    titles: ['Mobile App Developer', 'Flutter Developer', 'React Native Engineer'],
+    categories: ['Mobile Development'],
+    templates: ['Flutter App for Food Delivery', 'React Native Fitness Tracker', 'Cross-platform E-commerce App', 'Mobile App UI + API Integration'],
+  },
+  'DevOps & Cloud': {
+    skills: ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform', 'Linux', 'Nginx'],
+    titles: ['DevOps Engineer', 'Cloud Architect', 'Site Reliability Engineer'],
+    categories: ['DevOps & Cloud'],
+    templates: ['Set up CI/CD Pipeline on AWS', 'Dockerize and Deploy Node App', 'Kubernetes Cluster Setup', 'Infrastructure as Code with Terraform'],
+  },
+  'AI & Machine Learning': {
+    skills: ['Python', 'TensorFlow', 'PyTorch', 'NLP', 'Computer Vision', 'Machine Learning', 'Deep Learning'],
+    titles: ['ML Engineer', 'AI Developer', 'Machine Learning Specialist'],
+    categories: ['AI & Machine Learning'],
+    templates: ['Build an AI Chatbot with OpenAI', 'Image Classification Model', 'NLP Sentiment Analysis Pipeline', 'Recommendation Engine'],
+  },
+  'Data Science': {
+    skills: ['Python', 'Pandas', 'SQL', 'Data Visualization', 'Power BI', 'Statistics', 'R'],
+    titles: ['Data Scientist', 'Data Analyst', 'BI Developer'],
+    categories: ['Data Science'],
+    templates: ['Sales Data Dashboard & Analysis', 'Customer Churn Prediction Model', 'Data Cleaning & ETL Pipeline', 'Power BI Reporting'],
+  },
+  'Blockchain & Game': {
+    skills: ['Solidity', 'Web3.js', 'Ethereum', 'Smart Contracts', 'Unity', 'C#', 'Unreal Engine'],
+    titles: ['Blockchain Developer', 'Smart Contract Engineer', 'Game Developer'],
+    categories: ['Blockchain', 'Game Development'],
+    templates: ['Build an NFT Minting DApp', 'Solidity Smart Contract & Audit', 'Unity 2D Mobile Game', 'Web3 Wallet Integration'],
+  },
+  'QA & Testing': {
+    skills: ['Selenium', 'Cypress', 'Jest', 'Manual Testing', 'Automation Testing', 'Postman'],
+    titles: ['QA Engineer', 'Automation Tester', 'SDET'],
+    categories: ['QA & Testing'],
+    templates: ['Automated Test Suite with Cypress', 'End-to-End QA for Web App', 'API Testing with Postman', 'Manual Test Plan & Bug Report'],
+  },
+  'Cyber Security': {
+    skills: ['Penetration Testing', 'Network Security', 'OWASP', 'Ethical Hacking', 'Security Auditing'],
+    titles: ['Security Engineer', 'Penetration Tester', 'Security Consultant'],
+    categories: ['Cybersecurity'],
+    templates: ['Penetration Test for Web App', 'Security Audit of API', 'Harden Server & Fix Vulnerabilities', 'Set up WAF & Monitoring'],
+  },
+  'Product & UX Design': {
+    skills: ['Figma', 'Adobe XD', 'Wireframing', 'Prototyping', 'User Research', 'Design Systems'],
+    titles: ['Product Designer', 'UI/UX Designer', 'Senior Product Designer'],
+    categories: ['UI Design', 'UX Design', 'Product Design'],
+    templates: ['Redesign Mobile Banking App UX', 'Design System for Web Product', 'Wireframes + Prototype for SaaS', 'UI Kit for Dashboard'],
+  },
+  'Graphic & Brand Design': {
+    skills: ['Logo Design', 'Brand Identity', 'Illustrator', 'Photoshop', 'Print Design', 'Illustration'],
+    titles: ['Brand Designer', 'Graphic Designer', 'Creative Designer'],
+    categories: ['Graphic Design', 'Logo Design', 'Brand Identity', 'Illustration'],
+    templates: ['Logo & Brand Identity for Startup', 'Social Media Design Pack', 'Product Packaging Design', 'Custom Illustration Set'],
+  },
+  'Motion & Animation': {
+    skills: ['After Effects', 'Motion Graphics', '2D Animation', '3D Animation', 'Blender', 'Cinema 4D'],
+    titles: ['Motion Designer', 'Animator', '3D Artist'],
+    categories: ['Motion Graphics', 'Animation', '3D Animation', 'Visual Effects (VFX)'],
+    templates: ['Animated Explainer Video', 'Logo Motion Reveal', '3D Product Animation', 'VFX Compositing for Short Film'],
+  },
+  'Video Production': {
+    skills: ['Premiere Pro', 'DaVinci Resolve', 'Color Grading', 'Video Editing', 'Final Cut Pro'],
+    titles: ['Video Editor', 'Colorist', 'Post-Production Specialist'],
+    categories: ['Video Editing', 'Videography', 'Cinematography', 'Color Grading'],
+    templates: ['Edit YouTube Videos (10 episodes)', 'Cinematic Wedding Film Edit', 'Product Explainer Video', 'Color Grade a Short Film'],
+  },
+  'Photography': {
+    skills: ['Photography', 'Photo Retouching', 'Lightroom', 'Drone Photography', 'Product Photography'],
+    titles: ['Photographer', 'Photo Retoucher', 'Drone Pilot'],
+    categories: ['Photography', 'Drone Photography'],
+    templates: ['Professional Product Photography', 'Photo Retouching (50 images)', 'Aerial Drone Photography', 'Real Estate Photo Editing'],
+  },
+  'Content Writing': {
+    skills: ['Copywriting', 'Content Writing', 'SEO Writing', 'Blogging', 'Ghostwriting', 'Proofreading'],
+    titles: ['Content Writer', 'Copywriter', 'SEO Writer'],
+    categories: ['Copywriting', 'Content Writing', 'Ghostwriting', 'Proofreading'],
+    templates: ['Write SEO Blog Articles (10x)', 'Website Copy for a SaaS', 'Ghostwrite an eBook', 'Proofread & Edit a Manuscript'],
+  },
+  'Technical & Script Writing': {
+    skills: ['Technical Writing', 'Documentation', 'Script Writing', 'Translation', 'Editing'],
+    titles: ['Technical Writer', 'Scriptwriter', 'Translator'],
+    categories: ['Technical Writing', 'Script Writing', 'Translation'],
+    templates: ['API Documentation & Guides', 'YouTube Video Script (series)', 'Translate Document (EN↔UR)', 'User Manual for a Product'],
+  },
+  'SEO & Search Marketing': {
+    skills: ['SEO', 'Google Ads', 'SEM', 'Keyword Research', 'PPC Advertising', 'Google Analytics'],
+    titles: ['SEO Specialist', 'SEM Expert', 'PPC Manager'],
+    categories: ['SEO', 'SEM', 'PPC Advertising'],
+    templates: ['SEO Optimization for Website', 'Google Ads Campaign Setup', 'Keyword Research & Strategy', 'PPC Campaign Management'],
+  },
+  'Social & Growth Marketing': {
+    skills: ['Social Media', 'Email Marketing', 'Content Strategy', 'Influencer Marketing', 'Branding'],
+    titles: ['Digital Marketer', 'Social Media Manager', 'Growth Marketer'],
+    categories: ['Social Media Marketing', 'Email Marketing', 'Affiliate Marketing', 'Influencer Marketing', 'Branding'],
+    templates: ['Social Media Marketing Plan', 'Email Marketing Funnel Setup', 'Influencer Outreach Campaign', 'Brand Strategy & Guidelines'],
+  },
+  'Business & Operations': {
+    skills: ['Project Management', 'Business Consulting', 'Market Research', 'Virtual Assistance', 'Data Entry'],
+    titles: ['Business Consultant', 'Project Manager', 'Virtual Assistant'],
+    categories: ['Project Management', 'Virtual Assistance', 'Business Consulting', 'Market Research', 'Customer Support', 'Recruitment', 'Data Entry'],
+    templates: ['Business Plan & Financial Model', 'Market Research Report', 'Virtual Assistant (ongoing)', 'Recruit & Screen Candidates'],
+  },
+  'Audio & Music': {
+    skills: ['Voice Over', 'Audio Editing', 'Music Production', 'Mixing & Mastering', 'Sound Design'],
+    titles: ['Voice Over Artist', 'Audio Engineer', 'Music Producer'],
+    categories: ['Voice Over', 'Audio Editing', 'Music Production', 'Mixing & Mastering', 'Podcast Production', 'Sound Design'],
+    templates: ['Professional Voice Over (EN/UR)', 'Mix & Master a Track', 'Podcast Editing (per episode)', 'Custom Background Music'],
+  },
+  'Architecture & Engineering': {
+    skills: ['AutoCAD', 'CAD Design', 'Interior Design', 'SolidWorks', '3D Modeling', 'Revit'],
+    titles: ['CAD Designer', 'Interior Designer', 'Mechanical Engineer'],
+    categories: ['CAD Design', 'Interior Design', 'Exterior Design', 'Structural Design', 'Mechanical Design'],
+    templates: ['2D/3D CAD Drawings', 'Interior Design & Render', 'Structural Analysis & Drawings', 'Mechanical Part Design (SolidWorks)'],
+  },
+  'Finance & Legal': {
+    skills: ['Accounting', 'Bookkeeping', 'Financial Analysis', 'QuickBooks', 'Tax Preparation', 'Excel'],
+    titles: ['Accountant', 'Financial Analyst', 'Bookkeeper'],
+    categories: ['Accounting', 'Bookkeeping', 'Financial Analysis', 'Tax Preparation', 'Legal Consulting'],
+    templates: ['Monthly Bookkeeping (QuickBooks)', 'Financial Model & Projections', 'Tax Return Preparation', 'Business Valuation Report'],
+  },
+  'WordPress & CMS': {
+    skills: ['WordPress', 'WooCommerce', 'Elementor', 'PHP', 'Shopify'],
+    titles: ['WordPress Developer', 'WooCommerce Expert', 'Web Developer'],
+    categories: ['Web Development'],
+    templates: ['WordPress Website for Agency', 'WooCommerce Store Setup', 'Speed Optimize WordPress Site', 'Custom Elementor Landing Page'],
+  },
 };
-const CLUSTER_NAMES = Object.keys(SKILL_CLUSTERS);
 
-const FREELANCER_TITLES = {
-  'Frontend Development': ['Senior Frontend Engineer', 'React Developer', 'UI Engineer'],
-  'Backend Development': ['Backend Engineer', 'API Developer', 'Node.js Specialist'],
-  'Full Stack Development': ['Full Stack Developer', 'MERN Stack Engineer', 'Senior Full Stack Developer'],
-  'Mobile Development': ['Mobile App Developer', 'Flutter Developer', 'React Native Engineer'],
-  'UI/UX Design': ['Product Designer', 'UI/UX Designer', 'Senior Product Designer'],
-  'Graphic Design': ['Brand Designer', 'Graphic Designer', 'Creative Designer'],
-  'DevOps & Cloud': ['DevOps Engineer', 'Cloud Architect', 'Site Reliability Engineer'],
-  'AI & Machine Learning': ['ML Engineer', 'AI Developer', 'Machine Learning Specialist'],
-  'Data Science': ['Data Scientist', 'Data Analyst', 'BI Developer'],
-  'WordPress': ['WordPress Developer', 'WooCommerce Expert', 'Web Developer'],
-  'Digital Marketing': ['SEO Specialist', 'Digital Marketer', 'Growth Marketer'],
-  'Video Editing': ['Video Editor', 'Motion Designer', 'Post-Production Specialist'],
-  'Cyber Security': ['Security Engineer', 'Penetration Tester', 'Security Consultant'],
+// Backward-compatible views used throughout the script.
+const SKILL_CLUSTERS = Object.fromEntries(Object.entries(CLUSTERS).map(([k, v]) => [k, v.skills]));
+const FREELANCER_TITLES = Object.fromEntries(Object.entries(CLUSTERS).map(([k, v]) => [k, v.titles]));
+const JOB_TEMPLATES = Object.fromEntries(Object.entries(CLUSTERS).map(([k, v]) => [k, v.templates]));
+const CLUSTER_NAMES = Object.keys(CLUSTERS);
+
+// Pick a canonical category for a cluster (rotates through its category list).
+const categoryForCluster = (cluster, i = 0) => {
+  const cats = CLUSTERS[cluster]?.categories || [cluster];
+  return cats[i % cats.length];
 };
 
-// Job title templates per cluster → realistic, category-consistent postings.
-const JOB_TEMPLATES = {
-  'Frontend Development': ['Build a React Dashboard for Analytics', 'Convert Figma Design to Responsive React', 'Frontend for SaaS Landing Page', 'Migrate jQuery App to Vue 3'],
-  'Backend Development': ['Build a Laravel REST API', 'Node.js Backend for E-commerce', 'Design a Scalable MongoDB Schema', 'Payment Gateway Integration (Stripe)'],
-  'Full Stack Development': ['Full Stack MERN Booking Platform', 'Build a Multi-vendor Marketplace', 'SaaS MVP — Auth, Billing, Dashboard', 'Real-time Chat App with Socket.io'],
-  'Mobile Development': ['Flutter App for Food Delivery', 'React Native Fitness Tracker', 'Cross-platform E-commerce App', 'Mobile App UI + API Integration'],
-  'UI/UX Design': ['Redesign Mobile Banking App UX', 'Design System for Web Product', 'Wireframes + Prototype for SaaS', 'UI Kit for Dashboard'],
-  'Graphic Design': ['Logo & Brand Identity for Startup', 'Social Media Design Pack', 'Product Packaging Design', 'Rebrand Company Visual Identity'],
-  'DevOps & Cloud': ['Set up CI/CD Pipeline on AWS', 'Dockerize and Deploy Node App', 'Kubernetes Cluster Setup', 'Infrastructure as Code with Terraform'],
-  'AI & Machine Learning': ['Build an AI Chatbot with OpenAI', 'Image Classification Model', 'NLP Sentiment Analysis Pipeline', 'Recommendation Engine'],
-  'Data Science': ['Sales Data Dashboard & Analysis', 'Customer Churn Prediction Model', 'Data Cleaning & ETL Pipeline', 'Power BI Reporting'],
-  'WordPress': ['WordPress Website for Agency', 'WooCommerce Store Setup', 'Speed Optimize WordPress Site', 'Custom Elementor Landing Page'],
-  'Digital Marketing': ['SEO Optimization for Website', 'Google Ads Campaign Setup', 'Content Strategy & Blog Writing', 'Social Media Marketing Plan'],
-  'Video Editing': ['Edit YouTube Videos (10 episodes)', 'Motion Graphics Intro/Outro', 'Product Explainer Video', 'Wedding Video Edit & Color Grade'],
-  'Cyber Security': ['Penetration Test for Web App', 'Security Audit of API', 'Harden Server & Fix Vulnerabilities', 'Set up WAF & Monitoring'],
-};
-
-const CATEGORY_FOR_CLUSTER = {
-  'Frontend Development': 'Frontend Development', 'Backend Development': 'Backend Development',
-  'Full Stack Development': 'Full Stack Development', 'Mobile Development': 'Mobile Development',
-  'UI/UX Design': 'UI Design', 'Graphic Design': 'Graphic Design', 'DevOps & Cloud': 'DevOps & Cloud',
-  'AI & Machine Learning': 'AI & Machine Learning', 'Data Science': 'Data Science',
-  'WordPress': 'Web Development', 'Digital Marketing': 'SEO', 'Video Editing': 'Video Editing',
-  'Cyber Security': 'Cybersecurity',
-};
+// Every canonical category → a cluster that can service it (for coverage pass).
+const CLUSTER_FOR_CATEGORY = {};
+Object.entries(CLUSTERS).forEach(([cluster, v]) => {
+  v.categories.forEach(cat => {
+    if (!CLUSTER_FOR_CATEGORY[cat]) CLUSTER_FOR_CATEGORY[cat] = cluster;
+  });
+});
 
 const COMPANIES = ['Nexus Labs', 'BrightPixel', 'CloudForge', 'Quantum Retail', 'Vertex Digital', 'Skyline Studios', 'Orbit Softworks', 'Apex Solutions', 'Lumen Tech', 'Pioneer Foods', 'GreenLeaf Organics', 'UrbanNest', 'DataStream Inc', 'Fintrust Group', 'MediCare Plus', 'EduSpark', 'TravelWise', 'Zenith Motors', 'Harbor Logistics', 'Pulse Media'];
 const INDUSTRIES = ['Technology', 'E-commerce', 'Healthcare', 'Finance', 'Education', 'Media & Entertainment', 'Real Estate', 'Travel', 'Food & Beverage', 'Automotive'];
@@ -199,6 +329,20 @@ const CLIENT_REVIEW_TEXT = {
   4: ['Good client with reasonable expectations. Smooth project.', 'Clear communication and fair feedback throughout.'],
   3: ['Okay to work with, though requirements changed a few times.', 'Payment was on time but the scope was a bit unclear at first.'],
 };
+
+// Freelancer success stories, shown on the public homepage (Testimonial model).
+const TESTIMONIAL_TEXT = [
+  'SkillKart completely changed how I freelance. In my first three months I landed enough long-term clients to quit my day job — the escrow system means I never chase payments anymore.',
+  'As a student, SkillKart gave me my first real portfolio. The skill verification badges helped clients trust me instantly, and I have now completed dozens of projects with a 5-star rating.',
+  'What I love most is the quality of clients. Briefs are clear, milestones are structured, and payments are always secure. I have built a full-time income entirely through this platform.',
+  'The AI matchmaking sent me projects that actually fit my skills, so I stopped wasting time on proposals that went nowhere. My conversion rate has never been higher.',
+  'I went from zero to a top-rated seller in under a year. The dashboard makes tracking contracts, deliveries, and earnings effortless. Highly recommend it to any freelancer starting out.',
+  'Secure escrow was a game-changer for me. I take on bigger projects now because I know the funds are held safely before I start. My earnings have grown month over month.',
+  'The community and support here are excellent. Disputes are handled fairly, communication tools are smooth, and I have built genuine long-term relationships with repeat clients.',
+  'I do design work and SkillKart gave me a steady stream of international clients. The gig packages let me productize my services and scale beyond hourly work.',
+  'Coming from a small city, I never thought I could work with clients worldwide. SkillKart made it possible — verified profile, secure payments, and real projects that pay well.',
+  'Best decision I made this year. The platform is fast, the fees are fair, and getting paid on time — every time — has let me finally freelance with confidence.',
+];
 
 module.exports.__pools = { SKILL_CLUSTERS, JOB_TEMPLATES }; // (exported for potential reuse/tests)
 
@@ -633,20 +777,20 @@ async function run() {
   // ---- 2. GIGS -------------------------------------------------------------
   step('Gigs');
   const gigs = [];
-  const totalGigs = CFG.extraGigs;
-  for (let i = 0; i < totalGigs; i++) {
-    const f = pick(activeFreelancers);
+  // Build one gig from a freelancer into a specific canonical category. `active`
+  // forces an active status (used by the coverage pass so counts are non-zero).
+  const buildGig = (f, category, i, active = false) => {
     const cluster = f.cluster;
     const skills = f.profile.skills.map(s => s.name);
     const base = money(3000, 15000, 500);
     const created = dateBetween(f.user.createdAt, NOW, true);
     const orders = f.tier === 'top' ? randInt(10, 60) : f.tier === 'experienced' ? randInt(3, 25) : randInt(0, 8);
-    gigs.push({
+    return {
       freelancerId: f.user._id,
       title: `I will ${pick(['build', 'design', 'develop', 'create'])} ${pick(JOB_TEMPLATES[cluster]).toLowerCase()}`,
-      shortDescription: `Professional ${cluster.toLowerCase()} service delivered fast with unlimited communication.`,
-      fullDescription: `I am a ${f.profile.title} with proven experience in ${cluster.toLowerCase()}. In this gig I will deliver high-quality, production-ready work tailored to your needs. What you get:\n\n• Clean, maintainable deliverables\n• Clear communication and regular updates\n• Fast turnaround and revisions until you are happy\n\nOrder now or message me to discuss your project!`,
-      category: CATEGORY_FOR_CLUSTER[cluster] || cluster,
+      shortDescription: `Professional ${category.toLowerCase()} service delivered fast with unlimited communication.`,
+      fullDescription: `I am a ${f.profile.title} with proven experience in ${category.toLowerCase()}. In this gig I will deliver high-quality, production-ready work tailored to your needs. What you get:\n\n• Clean, maintainable deliverables\n• Clear communication and regular updates\n• Fast turnaround and revisions until you are happy\n\nOrder now or message me to discuss your project!`,
+      category,
       subcategory: cluster,
       skills: sample(skills, Math.min(5, skills.length)),
       pricing: {
@@ -659,11 +803,38 @@ async function run() {
         { question: 'Do you offer revisions?', answer: 'Yes, revisions are included in every package until you are satisfied.' },
         { question: 'Will I get the source files?', answer: 'Absolutely — full source and documentation are delivered on completion.' },
       ],
-      status: chance(0.85) ? 'active' : pick(['paused', 'draft']),
+      status: active ? 'active' : (chance(0.85) ? 'active' : pick(['paused', 'draft'])),
       stats: { views: randInt(20, 3000), orders, rating: orders > 0 ? round2(rand(4.2, 5.0)) : 0, reviewsCount: Math.min(orders, randInt(0, orders)) },
       createdAt: created, updatedAt: dateBetween(created, NOW),
-    });
+    };
+  };
+
+  // Group freelancers by the categories their cluster can service, so we can
+  // always find a coherent freelancer for any category.
+  const freelancersForCategory = {};
+  for (const f of activeFreelancers) {
+    for (const cat of (CLUSTERS[f.cluster]?.categories || [])) {
+      (freelancersForCategory[cat] = freelancersForCategory[cat] || []).push(f);
+    }
   }
+
+  // Coverage pass first: guarantee EVERY canonical category has ≥1 active gig so
+  // the public /categories page never shows an empty category. Skip 'Other'.
+  let gi = 0;
+  for (const cat of JOB_CATEGORIES) {
+    if (cat === 'Other') continue;
+    const pool = freelancersForCategory[cat] || activeFreelancers;
+    gigs.push(buildGig(pick(pool), cat, gi++, true));
+  }
+
+  // Then fill the rest randomly for realistic, uneven distribution.
+  const remaining = Math.max(0, CFG.extraGigs - gigs.length);
+  for (let k = 0; k < remaining; k++) {
+    const f = pick(activeFreelancers);
+    const cats = CLUSTERS[f.cluster]?.categories || [f.cluster];
+    gigs.push(buildGig(f, pick(cats), gi++));
+  }
+
   await Gig.insertMany(gigs);
   bump('Gigs', gigs.length);
   bump('Services (Gigs)', gigs.length);
@@ -692,7 +863,7 @@ async function run() {
       clientId: c.user._id,
       budget: { min, max, type: chance(0.75) ? 'fixed' : 'hourly' },
       skills,
-      category: CATEGORY_FOR_CLUSTER[cluster] || cluster,
+      category: pick(CLUSTERS[cluster]?.categories || [cluster]),
       subcategory: cluster,
       experienceLevel: pick(['entry', 'intermediate', 'intermediate', 'expert']),
       duration: pick(['Less than 1 month', '1-3 months', '1-3 months', '3-6 months']),
@@ -1034,6 +1205,30 @@ async function run() {
   bump('Reviews', reviews.length);
   done('Reviews', reviews.length);
 
+  // ---- 6b. TESTIMONIALS ----------------------------------------------------
+  // Success stories submitted by strong freelancers, auto-approved for the demo.
+  step('Testimonials');
+  const testimonials = [];
+  const usedTexts = shuffle(TESTIMONIAL_TEXT);
+  const storyTellers = shuffle(
+    activeFreelancers.filter(f => ['top', 'experienced'].includes(f.tier) && (f.profile.rating || 0) >= 4)
+  ).slice(0, 24); // one testimonial per user (userId is unique)
+  storyTellers.forEach((f, idx) => {
+    const created = dateBetween(addDays(f.user.createdAt, 30), NOW, true);
+    testimonials.push({
+      userId: f.user._id,
+      name: `${f.user.firstName} ${f.user.lastName}`,
+      role: f.profile.title || 'Freelancer',
+      text: usedTexts[idx % usedTexts.length],
+      rating: chance(0.8) ? 5 : 4,
+      status: 'approved',
+      createdAt: created, updatedAt: created,
+    });
+  });
+  if (testimonials.length) await Testimonial.insertMany(testimonials);
+  bump('Testimonials', testimonials.length);
+  done('Testimonials', testimonials.length);
+
   // ---- 7. MESSAGES + CONVERSATIONS ----------------------------------------
   step('Conversations');
   await Conversation.insertMany(conversations);
@@ -1186,6 +1381,7 @@ function printSummary(ms) {
   line('Deliveries Created', 'Deliveries');
   line('Time Logs Created', 'TimeLogs');
   line('Reviews Created', 'Reviews');
+  line('Testimonials Created', 'Testimonials');
   line('Messages Created', 'Messages');
   line('Disputes Created', 'Disputes');
   line('Reports Created', 'Reports');

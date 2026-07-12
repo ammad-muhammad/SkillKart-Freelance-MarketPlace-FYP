@@ -206,6 +206,8 @@
 }
 
 .hero__avatar {
+  position: relative;
+  overflow: hidden;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -218,6 +220,19 @@
   color: white;
   margin-left: -8px;
   flex-shrink: 0;
+}
+
+/* Real profile photo overlays the initials fallback and clips to the circle. */
+.hero__avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero__avatar-initials {
+  line-height: 1;
 }
 
 .hero__trust-avatars .hero__avatar:first-child {

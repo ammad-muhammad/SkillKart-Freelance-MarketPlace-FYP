@@ -74,7 +74,15 @@ export default function BuddyWidget() {
         sessionStorage.setItem(GUEST_KEY, String(GUEST_LIMIT));
         setLimitReached(true);
       } else {
-        setMessages((prev) => [...prev, { role: 'assistant', text: "I'm having trouble right now — please try again in a moment." }]);
+        // AI down (503 / timeout / network) → clear, honest in-chat message.
+        // The global toast already surfaces "AI is out of service" as well.
+        const aiDown = err.response?.status === 503 || !err.response;
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          text: aiDown
+            ? "Buddy AI is temporarily out of service. Please try again in a little while."
+            : "I'm having trouble right now — please try again in a moment.",
+        }]);
       }
     } finally {
       setSending(false);

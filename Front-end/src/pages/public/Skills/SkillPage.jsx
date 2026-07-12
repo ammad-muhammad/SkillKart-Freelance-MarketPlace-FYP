@@ -458,7 +458,7 @@ export default function SkillPage() {
 
         {/* ═══════════════════ FREELANCERS ═══════════════════ */}
         {(flLoading || freelancers.length > 0) && (
-        <div className="mp-section mp-section--alt" style={{ paddingTop: 0 }}>
+        <div className="mp-section mp-section--alt">
           <div className="mp-container">
             <div className="mp-section-head">
               <div>
@@ -505,7 +505,7 @@ export default function SkillPage() {
 
         {/* ═══════════════════ TRENDING ═══════════════════ */}
         {trendingTags.length > 0 && (
-          <div className="mp-section" style={{ paddingTop: 0, paddingBottom: 80 }}>
+          <div className="mp-section" style={{ paddingBottom: 80 }}>
             <div className="mp-container">
               <div className="mp-section-head">
                 <div>

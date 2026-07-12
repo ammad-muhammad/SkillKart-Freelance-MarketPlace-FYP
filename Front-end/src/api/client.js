@@ -1,20 +1,46 @@
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { showSafeToast } from '../utils/safeToast';
 import { tokenManager } from '../utils/tokenManager';
 import { extractApiError } from '../utils/apiError';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
-// Global error-toast de-dup: avoid showing the same message twice when a form
-// also surfaces it. Tracks the last toasted message + timestamp.
-let lastToast = { msg: '', at: 0 };
+// Consistent, user-facing copy shown whenever AI is unavailable — devs recognize
+// this string and know the AI provider chain is down (rate-limited / timed out /
+// unreachable), not a random app bug.
+const AI_OUT_OF_SERVICE_MSG = 'AI is temporarily out of service. Please try again in a moment.';
+
+// Is this request an AI request? (any /ai/* or /matchmaking endpoint)
+const isAiRequest = (config) => {
+  const url = config?.url || '';
+  return /(^|\/)ai(\/|$)/.test(url) || url.includes('/matchmaking');
+};
+
+// Did this failure come from the AI subsystem? True for AI endpoints, and for
+// any 503 (our backend returns 503 when every AI provider is down), and for
+// timeouts on AI calls (the long-running provider chain can time out).
+const isAiFailure = (error) => {
+  const cfg = error?.config;
+  if (isAiRequest(cfg)) return true;
+  if (error?.response?.status === 503) return true;
+  return false;
+};
+
+const showToast = (message) => {
+  // Uses the dependency-free safeToast (see utils/safeToast.js). It de-dups
+  // identical messages internally and can never crash the app the way
+  // react-toastify@9 does when it renders under React 19.
+  showSafeToast(message, 'error');
+};
 const toastApiError = (error) => {
+  // AI failures always get the single, recognizable "out of service" message,
+  // regardless of the raw backend/timeout/network detail.
+  if (isAiFailure(error)) {
+    showToast(AI_OUT_OF_SERVICE_MSG);
+    return;
+  }
   const { message } = extractApiError(error);
-  if (!message) return;
-  const now = Date.now();
-  if (message === lastToast.msg && now - lastToast.at < 2000) return;
-  lastToast = { msg: message, at: now };
-  toast.error(message);
+  showToast(message);
 };
 
 // 🚀 Request Deduplication Layer

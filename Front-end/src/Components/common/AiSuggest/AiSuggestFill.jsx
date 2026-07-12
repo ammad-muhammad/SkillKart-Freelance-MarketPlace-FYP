@@ -88,7 +88,10 @@ export default function AiSuggestFill({
 
       setNote(applied.length ? `Filled ${applied.join(' & ')} — tweak as needed.` : 'No new suggestions to add.');
     } catch (err) {
-      setError(err.response?.data?.message || 'AI suggestions are unavailable right now.');
+      const aiDown = err.response?.status === 503 || !err.response;
+      setError(aiDown
+        ? 'AI is temporarily out of service. Please fill the fields manually.'
+        : (err.response?.data?.message || 'AI suggestions are unavailable right now.'));
     } finally {
       setLoading(false);
     }

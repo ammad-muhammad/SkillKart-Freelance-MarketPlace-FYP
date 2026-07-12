@@ -284,8 +284,18 @@ app.use((err, req, res, next) => {
 // =======================
 
 const { logFatal } = require('./middleware/requestLogger.middleware');
+const { isOperationalError } = require('./utils/apiError');
 
 process.on('unhandledRejection', (err) => {
+  // Operational errors (e.g. a floated AI "service unavailable" 503, a validation
+  // error, etc.) are expected and recoverable — log them but NEVER take the whole
+  // server down. Only genuinely unexpected (non-operational) rejections are fatal.
+  if (isOperationalError(err)) {
+    console.warn('Handled operational rejection (server stays up):', err.name, '-', err.message);
+    logFatal(err, 'operationalRejection');
+    return;
+  }
+
   console.error('UNHANDLED REJECTION! 💥 Shutting down...');
   console.error(err ? (err.name || 'Unknown Error') : 'No error object', err ? (err.message || err) : '');
   logFatal(err, 'unhandledRejection');

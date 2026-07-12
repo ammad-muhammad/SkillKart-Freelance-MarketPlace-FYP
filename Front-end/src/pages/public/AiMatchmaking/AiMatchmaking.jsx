@@ -8,7 +8,7 @@ import { matchmakingAPI } from '../../../api/matchmaking';
 import { aiAPI } from '../../../api/ai';
 import { ALL_SKILLS } from '../../../utils/mockData';
 import { JOB_CATEGORIES } from '../../../constants/jobCategories';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import './AiMatchmaking.css';
 
@@ -179,7 +179,10 @@ export default function AiMatchmaking() {
             if (s.budget && !budget) setBudget(String(s.budget));
             toast.success('Filled in category, skills & budget — tweak as needed ✨');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'AI auto-fill is unavailable right now.');
+            const aiDown = err.response?.status === 503 || !err.response;
+            toast.error(aiDown
+                ? 'AI is temporarily out of service. Please fill the fields manually.'
+                : (err.response?.data?.message || 'AI auto-fill is unavailable right now.'));
         } finally {
             setAutoFilling(false);
         }
@@ -221,9 +224,12 @@ export default function AiMatchmaking() {
         } catch (err) {
             if (!isMounted.current) return;
             setMatches([]);
+            const aiDown = err.response?.status === 503 || !err.response;
             setError(
-                err.response?.data?.message ||
-                'Could not generate matches right now. Please try again in a moment.'
+                aiDown
+                    ? 'AI matchmaking is temporarily out of service. Please try again shortly.'
+                    : (err.response?.data?.message ||
+                       'Could not generate matches right now. Please try again in a moment.')
             );
         } finally {
             if (isMounted.current) { setLoading(false); setHasRan(true); }

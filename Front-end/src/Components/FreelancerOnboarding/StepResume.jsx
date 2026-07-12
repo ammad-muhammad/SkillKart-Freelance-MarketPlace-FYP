@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Upload, X, CheckCircle2, AlertCircle, FileType, Zap, Check, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "react-toastify";
@@ -222,32 +223,44 @@ const StepResume = ({ formData, setFormData, errors }) => {
         </p>
       </div>
 
-      {/* AI Recommendation Modal */}
-      <AnimatePresence>
-        {showAiModal && formData.aiAnalysis && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+      {/* AI Recommendation Modal — rendered through a portal to <body> so it is
+          NOT trapped inside this step's framer-motion transform (a `position:
+          fixed` child of a transformed ancestor is positioned relative to that
+          ancestor, which left the overlay covering only the form column and
+          showed page edges on the sides). The portal makes it cover the true
+          viewport. */}
+      {createPortal(
+        <AnimatePresence>
+          {showAiModal && formData.aiAnalysis && (
+            <div
               style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
-                zIndex: 9998,
-              }}
-              onClick={() => setShowAiModal(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              style={{
-                position: 'fixed', top: '10%', left: '50%', x: '-50%', y: '-50%',
-                width: '90%', maxWidth: '500px', backgroundColor: '#fff',
-                borderRadius: '16px', zIndex: 9999, overflow: 'hidden',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                position: 'fixed', inset: 0, zIndex: 9998,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '1rem',
               }}
             >
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: 'absolute', inset: 0,
+                  backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+                }}
+                onClick={() => setShowAiModal(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                style={{
+                  position: 'relative',
+                  width: '100%', maxWidth: '500px', maxHeight: '90vh',
+                  backgroundColor: '#fff',
+                  borderRadius: '16px', overflow: 'hidden',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                }}
+              >
               <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(to right, #f8fafc, #ffffff)' }}>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Sparkles size={20} color="#f59e0b" /> CV Insights
@@ -313,10 +326,12 @@ const StepResume = ({ formData, setFormData, errors }) => {
                   <Check size={18} /> Apply CV Data
                 </button>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
     </motion.div>
   );

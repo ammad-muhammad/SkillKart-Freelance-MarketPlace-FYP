@@ -118,7 +118,10 @@ export default function CostEstimator() {
             }, 100);
         } catch (err) {
             console.error('Cost estimate request failed:', err);
-            setError("Couldn't generate an estimate right now — please try again.");
+            const aiDown = err.response?.status === 503 || !err.response;
+            setError(aiDown
+                ? "AI is temporarily out of service, so we couldn't generate an estimate. Please try again shortly."
+                : "Couldn't generate an estimate right now — please try again.");
         } finally {
             setLoading(false);
         }

@@ -3,6 +3,18 @@ const GroqProvider = require('./groq.provider');
 const ClaudeProvider = require('./claude.provider');
 const OllamaProvider = require('./ollama.provider');
 const AIProvider = require('./base.provider');
+const { ServiceUnavailableError } = require('../../utils/apiError');
+
+// Single, recognizable message used whenever every AI provider is down. The
+// frontend keys off the 503 status to show a consistent "AI is out of service"
+// toast, and devs can grep this string in logs.
+const AI_UNAVAILABLE_MESSAGE =
+  'AI is temporarily out of service (all providers failed or are rate-limited). Please try again shortly.';
+
+// Throw the canonical AI-down error. Kept as one place so status + wording never drift.
+const aiUnavailable = () => {
+  throw new ServiceUnavailableError(AI_UNAVAILABLE_MESSAGE);
+};
 
 class RouterAIProvider extends AIProvider {
   constructor() {
@@ -34,7 +46,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} ping failed:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async parseAndAnalyzeCV(text) {
@@ -46,7 +58,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for parseAndAnalyzeCV:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async generateSkillTest(skills, count = 50) {
@@ -58,7 +70,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for generateSkillTest:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async evaluateSkillTest(questionsAndAnswers) {
@@ -70,7 +82,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for evaluateSkillTest:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async validateSkill(input) {
@@ -82,7 +94,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for validateSkill:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async recommendIndustry(companyName, bio, techStack, website) {
@@ -94,7 +106,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for recommendIndustry:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async recommendJobCategory(title, description, skills) {
@@ -107,7 +119,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for recommendJobCategory:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async draftProposal(job, freelancer) {
@@ -120,7 +132,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for draftProposal:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async buddyChat(message, history) {
@@ -133,7 +145,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for buddyChat:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async estimateCost(project) {
@@ -146,7 +158,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for estimateCost:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async suggestBrief(description, title) {
@@ -159,7 +171,7 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for suggestBrief:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
   }
 
   async suggestTaxonomyNode(unrecognizedName, contextCategory) {
@@ -172,7 +184,24 @@ class RouterAIProvider extends AIProvider {
         console.warn(`[AI Router] ${provider.name} failed for suggestTaxonomyNode:`, e.message);
       }
     }
-    throw new Error('All AI providers are currently unavailable. Please try again later.');
+    aiUnavailable();
+  }
+
+  // Semantic skill expansion for search. Only some providers implement it; the
+  // base implementation throws, so a provider that hasn't overridden it just
+  // fails its turn and we fall through to the next one.
+  async expandSearchSkills(query) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.expandSearchSkills !== 'function') continue;
+        const result = await provider.instance.expandSearchSkills(query);
+        if (Array.isArray(result)) return result;
+        if (result && Array.isArray(result.skills)) return result.skills;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for expandSearchSkills:`, e.message);
+      }
+    }
+    aiUnavailable();
   }
 }
 

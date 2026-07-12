@@ -543,8 +543,23 @@ async function getTaxonomyTree() {
   const activeSkills = new Set();
   const normKey = (s) => String(s || '').trim().toLowerCase();
 
+  // Distinct skills actually sold under each category (from live gigs). Used as
+  // a fallback so a popular category with no taxonomy skill-children still shows
+  // a populated menu panel built from what freelancers really offer.
+  const gigSkillsByCategory = new Map();
   for (const g of gigs) {
-    if (g.category) activeCategories.add(normKey(g.category));
+    if (g.category) {
+      activeCategories.add(normKey(g.category));
+      const key = normKey(g.category);
+      if (!gigSkillsByCategory.has(key)) gigSkillsByCategory.set(key, new Map());
+      const bucket = gigSkillsByCategory.get(key);
+      if (Array.isArray(g.skills)) {
+        for (const s of g.skills) {
+          const disp = String(s || '').trim();
+          if (disp && !bucket.has(normKey(disp))) bucket.set(normKey(disp), disp);
+        }
+      }
+    }
     if (Array.isArray(g.skills)) {
       for (const s of g.skills) activeSkills.add(normKey(s));
     }
@@ -673,12 +688,17 @@ async function getTaxonomyTree() {
   // Sort descending
   rankedCategories.sort((a, b) => b.popularityScore - a.popularityScore);
 
-  // Take top 7 active categories
-  const top7Categories = rankedCategories.slice(0, 7).map(rc => rc.node);
+  // Take the top active categories (by popularity). Keep a generous slice so
+  // that after empty ones are dropped downstream, the menu still shows ≥6.
+  const top7Categories = rankedCategories.slice(0, 12).map(rc => rc.node);
 
   const seenNodeIds = new Set();
 
-  function buildTreeRecursively(parentNodeId) {
+  // `relaxLeaves` = show a category's skill children even if a specific skill
+  // isn't individually "active". Used for top categories that demonstrably have
+  // gigs/services, so their menu panel is never left empty. Sub-categories keep
+  // whatever leaves their parent was built with.
+  function buildTreeRecursively(parentNodeId, relaxLeaves = false) {
     const parentIdStr = String(parentNodeId);
     const children = parentMap.get(parentIdStr) || [];
 
@@ -692,7 +712,7 @@ async function getTaxonomyTree() {
     const result = [];
     for (const child of children) {
       const childIdStr = String(child._id);
-      
+
       if (seenNodeIds.has(childIdStr)) continue;
       if (child.hiddenInMenu) continue;
 
@@ -700,7 +720,7 @@ async function getTaxonomyTree() {
       const isLeaf = ['skill', 'technology', 'tool', 'concept'].includes(child.type);
 
       if (isLeaf) {
-        if (!activeSkills.has(normName)) continue;
+        if (!relaxLeaves && !activeSkills.has(normName)) continue;
         seenNodeIds.add(childIdStr);
         result.push({
           id: childIdStr,
@@ -712,7 +732,7 @@ async function getTaxonomyTree() {
           featured: child.featured
         });
       } else {
-        const childrenTree = buildTreeRecursively(child._id);
+        const childrenTree = buildTreeRecursively(child._id, relaxLeaves);
         const hasGigs = activeCategories.has(normName);
         const keepCategory = hasGigs || childrenTree.length > 0;
 
@@ -758,7 +778,25 @@ async function getTaxonomyTree() {
     });
 
     const categoriesTree = catsUnderInd.map(cat => {
-      const childrenTree = buildTreeRecursively(cat._id);
+      // Top categories relax the active-skill gate so their panel is populated.
+      let childrenTree = buildTreeRecursively(cat._id, true);
+
+      // Fallback: if the taxonomy graph has no skill-children for this popular
+      // category, build the panel from the skills actually sold on its gigs.
+      if (childrenTree.length === 0) {
+        const bucket = gigSkillsByCategory.get(normKey(cat.name));
+        if (bucket && bucket.size) {
+          childrenTree = [...bucket.values()].slice(0, 12).map(name => ({
+            id: `gig-skill:${slugify(name)}`,
+            name,
+            slug: slugify(name),
+            type: 'skill',
+            icon: undefined,
+            featured: false,
+          }));
+        }
+      }
+
       return {
         id: String(cat._id),
         name: cat.name,

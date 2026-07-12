@@ -110,9 +110,12 @@ export default function BuddyAI() {
                 setLimitReached(true);
             } else {
                 console.error('Buddy AI request failed:', err);
+                const aiDown = err.response?.status === 503 || !err.response;
                 setMessages(prev => [...prev, {
                     role: 'ai',
-                    text: "Sorry, I'm having trouble right now — please try again."
+                    text: aiDown
+                        ? "Buddy AI is temporarily out of service. Please try again in a little while."
+                        : "Sorry, I'm having trouble right now — please try again."
                 }]);
             }
         } finally {

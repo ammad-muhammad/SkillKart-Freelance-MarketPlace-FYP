@@ -141,8 +141,22 @@ const TagInput = ({
         setSuggestions(result.suggestions || []);
         setShowSuggestions(true);
       }
-    } catch {
-      setError("Validation failed. Please try again.");
+    } catch (err) {
+      // AI validator is down (503/timeout/network). Don't block the user — accept
+      // the raw input as a tag so they can keep working, and note that AI is off.
+      const aiDown = err?.response?.status === 503 || !err?.response;
+      if (aiDown) {
+        if (!currentTagNames.includes(trimmed.toLowerCase())) {
+          const next = maxTags === 1 ? [trimmed] : [...tags, trimmed];
+          onChange(next);
+        }
+        setInput('');
+        setShowSuggestions(false);
+        setSuggestions([]);
+        setError('AI check is temporarily off — added without verification.');
+      } else {
+        setError('Validation failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

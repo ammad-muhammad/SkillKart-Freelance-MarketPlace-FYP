@@ -157,11 +157,15 @@ export default function Navbar({ alwaysSticky = false }) {
           });
         });
 
-        // Categories A→Z (the left rail order).
-        categories.sort((a, b) => byName(a.title, b.title));
+        // Keep only the top 6 categories (most skills = most gigs/services),
+        // then present that rail alphabetically.
+        const topCategories = [...categories]
+          .sort((a, b) => b.skillCount - a.skillCount)
+          .slice(0, 6)
+          .sort((a, b) => byName(a.title, b.title));
 
         setNavItems(prev => prev.map(item =>
-          item.label === 'Find Work' ? { ...item, categories } : item
+          item.label === 'Find Work' ? { ...item, categories: topCategories } : item
         ));
         setMegaActiveCat(0);
       })
