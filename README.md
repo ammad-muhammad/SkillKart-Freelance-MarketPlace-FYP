@@ -215,6 +215,9 @@ All other seeded users share the password `Demo123!@#`.
 
 - [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md) — comprehensive platform guide (features, roles, lifecycle) for non-developers and developers alike.
 - [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) — end-to-end user flows and business-logic blueprint.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — step-by-step production deployment (backend → Railway/Render, frontend → Vercel).
+- [`docs/FYP_Final_Report.md`](docs/FYP_Final_Report.md) — Final Year Project report (submission-ready university document).
+- [`docs/FYP_Presentation.md`](docs/FYP_Presentation.md) — FYP defense presentation outline (slide-by-slide, 3 presenters).
 - **API reference** — Swagger UI at `http://localhost:5000/api/v1/docs` when the backend is running.
 
 ---
