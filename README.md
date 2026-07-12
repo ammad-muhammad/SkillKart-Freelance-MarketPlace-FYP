@@ -47,7 +47,7 @@ It supports both marketplace models:
 - **MongoDB** is the system of record for all marketplace data.
 - **Supabase** provides optional social OAuth; email/OTP auth is handled by the backend directly.
 - **Stripe** powers escrow and payouts, and can be fully bypassed with simulated payments via `STRIPE_DUMMY=true` for local development.
-- **AI features** (Buddy assistant, cost estimator, skill matching, CV analysis) route through a provider chain with automatic fallback — **Gemini → Groq → Claude → Ollama** (local). If every provider is down or rate-limited the API returns a clean `503` and the UI shows an "AI is temporarily out of service" notice instead of crashing.
+- **AI features** (Buddy assistant, cost estimator, skill matching, CV analysis) route through a provider chain with automatic fallback across **Gemini, Qwen, Groq, Claude, and Ollama** (local). The order is configurable via numbered env priorities (`AI_PRIORITY_*`, 0 = first). If every provider is down or rate-limited the API returns a clean `503` and the UI shows an "AI is temporarily out of service" notice instead of crashing.
 
 ## Tech Stack
 
@@ -59,7 +59,7 @@ It supports both marketplace models:
 | Auth      | JWT (access + refresh) with RBAC; Supabase OAuth (optional) |
 | Payments  | Stripe (with dummy/simulated mode) |
 | Realtime-ish | Polling-based in-app messaging |
-| AI        | Provider router with fallback — Gemini / Groq / Claude / Ollama (local) |
+| AI        | Provider router with env-ordered fallback — Gemini / Qwen / Groq / Claude / Ollama (local) |
 | Tooling   | ESLint, Prettier, Nodemon, Swagger (API docs) |
 
 ## Repository Layout
@@ -142,7 +142,8 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 | `STRIPE_SECRET_KEY`, `STRIPE_DUMMY` | Payments; set `STRIPE_DUMMY=true` to simulate |
 | `EMAIL_*` | SMTP for OTP / notification emails |
 | `CORS_ORIGIN`, `FRONTEND_URL` | Allowed origins |
-| `AI_PROVIDER` + `GEMINI_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI features |
+| `GEMINI_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI provider keys |
+| `AI_PRIORITY_*` | Fallback order (numbered, 0 = first; `-1` disables a provider) |
 | `SUPABASE_*` | Optional OAuth |
 
 **Frontend** (`Front-end/.env`) — reference in [`Front-end/.env.example`](Front-end/.env.example):

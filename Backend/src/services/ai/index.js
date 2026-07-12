@@ -2,6 +2,7 @@ const GeminiProvider = require('./gemini.provider');
 const GroqProvider = require('./groq.provider');
 const ClaudeProvider = require('./claude.provider');
 const OllamaProvider = require('./ollama.provider');
+const QwenProvider = require('./qwen.provider');
 const AIProvider = require('./base.provider');
 const { ServiceUnavailableError } = require('../../utils/apiError');
 
@@ -16,6 +17,42 @@ const aiUnavailable = () => {
   throw new ServiceUnavailableError(AI_UNAVAILABLE_MESSAGE);
 };
 
+/**
+ * ── Fallback order is env-driven by numbered priorities ──────────────────────
+ * Each provider reads `AI_PRIORITY_<NAME>` from the environment. Providers are
+ * tried in ASCENDING priority order (0 first, then 1, 2, …). A value of `-1`
+ * (or any negative number) removes that provider from the chain entirely — the
+ * clean way to disable one without deleting its keys.
+ *
+ * Example (.env):
+ *   AI_PRIORITY_GEMINI=0     # tried first
+ *   AI_PRIORITY_QWEN=1       # then Qwen
+ *   AI_PRIORITY_GROQ=2
+ *   AI_PRIORITY_CLAUDE=3
+ *   AI_PRIORITY_OLLAMA=4     # local fallback, last
+ *
+ * Unset priorities fall back to the DEFAULT_PRIORITY below, so the chain still
+ * works out of the box. Ties break by the default order (stable).
+ */
+const DEFAULT_PRIORITY = {
+  GEMINI: 0,
+  QWEN: 1,
+  GROQ: 2,
+  CLAUDE: 3,
+  OLLAMA: 4,
+};
+
+// Read a provider's priority: env override → default → large fallback. `-1`
+// (negative) disables the provider.
+const priorityOf = (name) => {
+  const raw = process.env[`AI_PRIORITY_${name}`];
+  if (raw != null && raw !== '') {
+    const n = Number(raw);
+    if (!Number.isNaN(n)) return n;
+  }
+  return DEFAULT_PRIORITY[name] != null ? DEFAULT_PRIORITY[name] : 99;
+};
+
 class RouterAIProvider extends AIProvider {
   constructor() {
     super();
@@ -23,17 +60,29 @@ class RouterAIProvider extends AIProvider {
     this.groq = new GroqProvider();
     this.claude = new ClaudeProvider();
     this.ollama = new OllamaProvider();
+    this.qwen = new QwenProvider();
 
-    // Ordered fallback chain: cloud first (Gemini -> Groq -> Claude), then a
-    // fully LOCAL Ollama provider last. Ollama needs no API key or quota, so it
-    // keeps core AI tools working when every cloud provider is rate-limited
-    // (e.g. Gemini free-tier 429). Set OLLAMA_DISABLED=1 to skip it.
-    this.providers = [
-      { name: 'Gemini', instance: this.gemini },
-      { name: 'Groq', instance: this.groq },
-      { name: 'Claude', instance: this.claude },
-      { name: 'Ollama', instance: this.ollama }
+    // Every candidate provider, keyed by its env NAME (used for AI_PRIORITY_*).
+    const candidates = [
+      { name: 'Gemini', envKey: 'GEMINI', instance: this.gemini },
+      { name: 'Qwen', envKey: 'QWEN', instance: this.qwen },
+      { name: 'Groq', envKey: 'GROQ', instance: this.groq },
+      { name: 'Claude', envKey: 'CLAUDE', instance: this.claude },
+      { name: 'Ollama', envKey: 'OLLAMA', instance: this.ollama },
     ];
+
+    // Build the ordered fallback chain from the numbered env priorities. Drop
+    // any provider whose priority is negative (explicitly disabled). Ollama also
+    // honours its legacy OLLAMA_DISABLED flag.
+    this.providers = candidates
+      .map((c) => ({ ...c, priority: priorityOf(c.envKey) }))
+      .filter((c) => c.priority >= 0)
+      .filter((c) => !(c.envKey === 'OLLAMA' && /^(1|true|yes)$/i.test(process.env.OLLAMA_DISABLED || '')))
+      .sort((a, b) => a.priority - b.priority);
+
+    console.log(
+      `[AI Router] Fallback order: ${this.providers.map((p) => `${p.name}(${p.priority})`).join(' → ') || '(none configured!)'}`
+    );
   }
 
   async ping() {
@@ -215,12 +264,13 @@ const getAIProvider = () => {
 };
 
 const checkAIHealth = async () => {
+  const router = getAIProvider();
+  const chain = (router.providers || []).map((p) => p.name).join(' → ') || 'none';
   try {
-    const provider = getAIProvider();
-    await provider.ping();
-    return { status: 'success', provider: 'Router (Gemini -> Groq -> Claude -> Ollama)' };
+    await router.ping();
+    return { status: 'success', provider: `Router (${chain})` };
   } catch (error) {
-    return { status: 'error', provider: 'Router', error: error.message };
+    return { status: 'error', provider: `Router (${chain})`, error: error.message };
   }
 };
 
