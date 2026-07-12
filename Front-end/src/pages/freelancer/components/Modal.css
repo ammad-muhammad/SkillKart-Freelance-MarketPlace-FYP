@@ -75,6 +75,17 @@
 /* Slim, on-brand scrollbar for the modal body */
 
 
+/* ── Mobile ──────────────────────────────────────────────────────
+   Tighter modal chrome + zero body padding so content gets full width. */
+@media (max-width: 640px) {
+  .fl-modal-overlay { padding: 0.5rem; }
+  .fl-modal { padding: 1.25rem 1.25rem 0 1.25rem; }
+  .fl-modal__body {
+    padding: 0;
+    margin-right: 0;
+  }
+}
+
 @keyframes fl-overlay-in {
   from { opacity: 0; }
   to   { opacity: 1; }

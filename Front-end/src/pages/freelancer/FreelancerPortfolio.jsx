@@ -308,7 +308,9 @@ const FreelancerPortfolio = () => {
         
         .fl-gig-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          /* min(100%, 320px) lets a column shrink to the available width when
+             320px won't fit — so the card never overflows a narrow container. */
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
           gap: 2rem;
         }
 
@@ -524,6 +526,19 @@ const FreelancerPortfolio = () => {
           justify-content: center;
           background: rgba(0, 0, 0, 0.02);
           color: var(--color-primary);
+        }
+
+        /* ── Mobile ──────────────────────────────────────────────
+           The Service Gigs section's 2.5rem padding left too little room for the
+           gig card inside on phones. Trim the padding (and the grid gap) so the
+           card fits comfortably. */
+        @media (max-width: 640px) {
+          .fl-service-gigs-section { padding: 1.25rem; border-radius: 20px; }
+          .fl-gig-grid { gap: 1.25rem; }
+          .fl-section-title { font-size: 1.15rem; }
+        }
+        @media (max-width: 400px) {
+          .fl-service-gigs-section { padding: 1rem; }
         }
       `}</style>
     </div>

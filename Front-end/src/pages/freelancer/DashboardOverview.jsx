@@ -613,6 +613,22 @@ const DashboardOverview = () => {
         .fl-verification-notice strong {
           text-transform: capitalize;
         }
+
+        /* ── Mobile: avatar + info stay a centered row; the Edit Profile button
+           wraps to its own centered line below (it can't fit beside them). ── */
+        @media (max-width: 640px) {
+          .fl-dashboard-hero__inner {
+            justify-content: center;
+            gap: 0.85rem 1rem;
+          }
+          .fl-dashboard-hero__avatar { width: 56px; height: 56px; font-size: 1.25rem; }
+          .fl-dashboard-hero__name { font-size: 1.05rem; line-height: 1.2; }
+          /* keep the info beside the avatar (don't let the name wrap per-word) */
+          .fl-dashboard-hero__info { flex: 1 1 200px; min-width: 180px; }
+          .fl-dashboard-hero__meta { justify-content: flex-start; }
+          /* button drops to a full-width centered line under the identity row */
+          .fl-dashboard-hero__inner > .fl-btn { flex: 1 0 100%; justify-content: center; }
+        }
       `}</style>
     </div>
   );

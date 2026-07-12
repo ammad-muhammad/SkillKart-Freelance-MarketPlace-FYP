@@ -2,9 +2,52 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import './Navbar.css';
 import { Link } from 'react-router-dom';
-import { MessageSquareCode, Calculator, HelpCircle, Search, FileEdit, Zap } from 'lucide-react';
+import {
+  MessageSquareCode, Calculator, HelpCircle, Search, FileEdit, Zap,
+  Code, Globe, Smartphone, Palette, PenTool, BrainCircuit, Database,
+  BarChart3, Megaphone, FileText, Video, Music, Camera, Cloud, Server,
+  ShieldCheck, Briefcase, DollarSign, Cpu, Layers, Wrench, LayoutGrid,
+} from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { skillsAPI } from '../../../api/skills';
+
+/**
+ * Map a taxonomy category to a proper lucide icon component.
+ * The API only supplies emoji, so we resolve a real icon by keyword —
+ * ordered most-specific first — falling back to a neutral grid icon.
+ */
+const CATEGORY_ICON_RULES = [
+  [/web|frontend|front-end|html|css/, Globe],
+  [/mobile|android|ios|app dev/, Smartphone],
+  [/\bai\b|machine learning|deep learning|\bml\b|neural/, BrainCircuit],
+  [/data sci|data analyt|analytics|big data/, BarChart3],
+  [/database|\bsql\b|mongo|postgres/, Database],
+  [/devops|cloud|aws|azure|kubernetes|docker/, Cloud],
+  [/backend|back-end|server|\bapi\b|node/, Server],
+  [/program|language|software|coding|develop/, Code],
+  [/ui|ux|product design|interface/, PenTool],
+  [/graphic|logo|brand|illustrat|design/, Palette],
+  [/seo|search engine/, Search],
+  [/market|advertis|social media|growth/, Megaphone],
+  [/writ|content|copy|blog|article|translat/, FileText],
+  [/video|film|motion|animation|editing/, Video],
+  [/photo|camera/, Camera],
+  [/audio|music|voice|sound|podcast/, Music],
+  [/security|cyber|pentest/, ShieldCheck],
+  [/finance|account|invest|legal|tax/, DollarSign],
+  [/business|consult|management|strategy/, Briefcase],
+  [/engineer|architecture|cad|hardware/, Cpu],
+  [/wordpress|cms|plugin|no-code/, Wrench],
+  [/blockchain|web3|crypto/, Layers],
+];
+
+const iconForCategory = (name = '') => {
+  const n = name.toLowerCase();
+  for (const [re, Icon] of CATEGORY_ICON_RULES) {
+    if (re.test(n)) return Icon;
+  }
+  return LayoutGrid;
+};
 
 // Base layout of static items
 const BASE_NAV_ITEMS = [
@@ -19,7 +62,7 @@ const BASE_NAV_ITEMS = [
   {
     label: 'Find Work',
     isMega: true,
-    sections: [], // Dynamic
+    categories: [], // Populated dynamically from the live skill taxonomy
   },
   {
     label: 'AI Tools',
@@ -43,6 +86,8 @@ export default function Navbar({ alwaysSticky = false }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const [megaActiveCat, setMegaActiveCat] = useState(0); // selected category in the Find Work mega menu
+  const [mobileCat, setMobileCat] = useState(null); // expanded category inside the mobile Find Work accordion
   const { isAuthenticated, logout, user } = useAuth();
   const lastScrollY = useRef(0);
 
@@ -52,65 +97,73 @@ export default function Navbar({ alwaysSticky = false }) {
     skillsAPI.getTaxonomyTree()
       .then(res => {
         const tree = res.data?.data?.tree || [];
-        const sections = [];
-        
-        // Convert the Live Skill Graph recursive hierarchy to nested mega menu structure
+
+        // Case-insensitive alphabetical comparator, reused at every level so the
+        // menu is deterministically sorted no matter what order the API returns.
+        const byName = (a, b) =>
+          (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' });
+
+        // Flatten the Industry → Category hierarchy into a single, dynamic list
+        // of categories. Each category owns its sub-category groups + skills.
+        const categories = [];
         tree.forEach(ind => {
           (ind.categories || []).forEach(cat => {
             const groups = [];
 
             (cat.children || []).forEach(child => {
-              const isLeaf = !child.children || child.children.length === 0; // if it has no nested children, it's a leaf skill
-              
+              const isLeaf = !child.children || child.children.length === 0;
+
               if (isLeaf) {
-                let generalGroup = groups.find(g => g.subtitle === "");
+                // A skill hanging directly off the category → "general" group.
+                let generalGroup = groups.find(g => g.subtitle === '');
                 if (!generalGroup) {
-                  generalGroup = { subtitle: "", slug: "", links: [] };
+                  generalGroup = { subtitle: '', slug: cat.slug, links: [] };
                   groups.push(generalGroup);
                 }
-                generalGroup.links.push({
-                  label: child.name,
-                  slug: child.slug,
-                  parentSlug: cat.slug
-                });
+                generalGroup.links.push({ label: child.name, slug: child.slug, parentSlug: cat.slug });
               } else {
-                const subGroup = {
+                // A sub-category with its own skills.
+                groups.push({
                   subtitle: child.name,
                   slug: child.slug,
-                  links: (child.children || []).map(gChild => ({
-                    label: gChild.name,
-                    slug: gChild.slug,
-                    parentSlug: child.slug
-                  }))
-                };
-                groups.push(subGroup);
+                  links: (child.children || [])
+                    .map(g => ({ label: g.name, slug: g.slug, parentSlug: child.slug }))
+                    .sort((a, b) => byName(a.label, b.label)),
+                });
               }
             });
 
-            sections.push({
+            // Sort links within every group; order groups with "general" first.
+            groups.forEach(g => g.links.sort((a, b) => byName(a.label, b.label)));
+            groups.sort((a, b) => {
+              if (!a.subtitle) return -1;
+              if (!b.subtitle) return 1;
+              return byName(a.subtitle, b.subtitle);
+            });
+
+            const skillCount = groups.reduce((n, g) => n + g.links.length, 0);
+
+            // Skip categories that have no skills to show — an empty panel is noise.
+            if (skillCount === 0) return;
+
+            categories.push({
               title: cat.name,
               categorySlug: cat.slug,
-              groups
+              Icon: iconForCategory(cat.name),
+              industry: ind.industry,
+              groups,
+              skillCount,
             });
           });
         });
 
-        // Push special search links at the end
-        sections.push({
-          isSpecial: true,
-          links: [
-            { label: 'Browse all projects',  href: '/browse-projects'         },
-            { label: 'AI Matchmaking',       href: '/ai-matchmaking'          },
-            { label: 'Explore skills',       href: '/categories'              },
-          ],
-        });
+        // Categories A→Z (the left rail order).
+        categories.sort((a, b) => byName(a.title, b.title));
 
-        setNavItems(prev => prev.map(item => {
-          if (item.label === 'Find Work') {
-            return { ...item, sections };
-          }
-          return item;
-        }));
+        setNavItems(prev => prev.map(item =>
+          item.label === 'Find Work' ? { ...item, categories } : item
+        ));
+        setMegaActiveCat(0);
       })
       .catch(err => {
         console.warn('Failed to load dynamic Navbar taxonomy:', err);
@@ -320,82 +373,107 @@ export default function Navbar({ alwaysSticky = false }) {
               onMouseLeave={handleMouseLeave}
             >
               <div className="container">
-                <div className="navbar__mega-inner">
-                  <div className="navbar__mega-grid">
-                    {item.sections.map((sec, sIdx) => (
-                      <div key={sIdx} className="navbar__mega-col">
+                {(() => {
+                  const cats = item.categories || [];
+                  if (cats.length === 0) return null;
+                  const active = cats[Math.min(megaActiveCat, cats.length - 1)] || cats[0];
+                  return (
+                    <div className="navbar__mega-inner">
+                      {/* ── Left rail: dynamic category list ── */}
+                      <aside className="navbar__mega-rail">
+                        <ul className="navbar__mega-catlist">
+                          {cats.map((cat, cIdx) => (
+                            <li key={cat.categorySlug || cIdx}>
+                              <button
+                                type="button"
+                                className={`navbar__mega-cat${cIdx === megaActiveCat ? ' navbar__mega-cat--active' : ''}`}
+                                onMouseEnter={() => setMegaActiveCat(cIdx)}
+                                onFocus={() => setMegaActiveCat(cIdx)}
+                              >
+                                <span className="navbar__mega-cat-icon" aria-hidden="true"><cat.Icon size={18} strokeWidth={1.8} /></span>
+                                <span className="navbar__mega-cat-label">{cat.title}</span>
+                                <svg className="navbar__mega-cat-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                  <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <Link to="/categories" className="navbar__mega-rail-all" onClick={() => setActiveDropdown(null)}>
+                          Explore all categories
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </Link>
+                      </aside>
 
-                        {/* Category heading → category page */}
-                        {sec.title && (
+                      {/* ── Right panel: selected category's sub-categories & skills ── */}
+                      <div className="navbar__mega-panel">
+                        <div className="navbar__mega-panel-head">
                           <Link
-                            to={sec.isSpecial ? '/categories' : `/skills/${sec.categorySlug}`}
-                            className="navbar__mega-title"
-                            style={{ textDecoration: 'none', cursor: 'pointer' }}
+                            to={`/skills/${active.categorySlug}`}
+                            className="navbar__mega-panel-title"
                             onClick={() => setActiveDropdown(null)}
                           >
-                            {sec.title}
+                            <span className="navbar__mega-panel-title-icon" aria-hidden="true"><active.Icon size={20} strokeWidth={1.8} /></span>
+                            {active.title}
                           </Link>
-                        )}
+                          <Link
+                            to={`/skills/${active.categorySlug}`}
+                            className="navbar__mega-panel-viewall"
+                            onClick={() => setActiveDropdown(null)}
+                          >
+                            View all
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </Link>
+                        </div>
 
-                        {sec.groups ? (
-                          <div className="navbar__mega-groups">
-                            {sec.groups.map((group, gIdx) => (
-                              <div key={gIdx} className="navbar__mega-group-wrapper" style={{ marginBottom: '1rem' }}>
-                                {group.subtitle && (
+                        <div className="navbar__mega-panel-cols">
+                          {active.groups.map((group, gIdx) => (
+                            <div key={group.slug || gIdx} className="navbar__mega-group">
+                              {group.subtitle
+                                ? (
                                   <Link
                                     to={`/skills/${group.slug}`}
                                     className="navbar__mega-subtitle"
-                                    style={{
-                                      display: 'block',
-                                      fontWeight: '600',
-                                      fontSize: '0.85rem',
-                                      color: 'rgba(255,255,255,0.7)',
-                                      marginBottom: '0.35rem',
-                                      textDecoration: 'none'
-                                    }}
                                     onClick={() => setActiveDropdown(null)}
                                   >
                                     {group.subtitle}
                                   </Link>
-                                )}
-                                <ul className="navbar__mega-links" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                  {group.links.map((link, lIdx) => (
-                                    <li key={lIdx} style={{ marginBottom: '0.2rem' }}>
-                                      <Link
-                                        to={`/skills/${link.parentSlug || sec.categorySlug}/${link.slug}`}
-                                        className="navbar__mega-link"
-                                        onClick={() => setActiveDropdown(null)}
-                                      >
-                                        {link.label}
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <ul className="navbar__mega-links">
-                            {sec.links && sec.links.map((link, lIdx) => (
-                              <li key={lIdx}>
-                                <Link
-                                  to={link.href}
-                                  className="navbar__mega-link navbar__mega-link--special"
-                                  onClick={() => setActiveDropdown(null)}
-                                >
-                                  <span>{link.label}</span>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                                  </svg>
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                                )
+                                : <span className="navbar__mega-subtitle navbar__mega-subtitle--general">Popular</span>}
+                              <ul className="navbar__mega-links">
+                                {group.links.map((link, lIdx) => (
+                                  <li key={link.slug || lIdx}>
+                                    <Link
+                                      to={`/skills/${link.parentSlug || active.categorySlug}/${link.slug}`}
+                                      className="navbar__mega-link"
+                                      onClick={() => setActiveDropdown(null)}
+                                    >
+                                      {link.label}
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Footer: quick search shortcuts */}
+                        <div className="navbar__mega-footer">
+                          <Link to="/browse-projects" className="navbar__mega-footer-link" onClick={() => setActiveDropdown(null)}>
+                            <Search size={16} /> Browse all projects
+                          </Link>
+                          <Link to="/ai-matchmaking" className="navbar__mega-footer-link" onClick={() => setActiveDropdown(null)}>
+                            <Zap size={16} /> AI Matchmaking
+                          </Link>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : null
@@ -443,64 +521,65 @@ export default function Navbar({ alwaysSticky = false }) {
                 </div>
               )}
 
-              {/* Mega menu sections (mobile) */}
+              {/* Mega menu — categories as a nested accordion (mobile) */}
               {mobileExpanded === idx && item.isMega && (
                 <div className="navbar__mobile-sub">
-                  {item.sections.map((sec, sIdx) => (
-                    <div key={sIdx} style={{ marginBottom: '0.75rem' }}>
-                      {/* Category header link */}
-                      {sec.title && (
-                        <Link
-                          to={sec.isSpecial ? '/categories' : `/skills/${sec.categorySlug}`}
-                          className="navbar__mobile-child"
-                          style={{ fontWeight: 700, color: '#0d9488', paddingTop: sIdx === 0 ? 4 : 14 }}
-                          onClick={closeMobile}
+                  {(item.categories || []).map((cat, cIdx) => {
+                    const open = mobileCat === cIdx;
+                    return (
+                      <div key={cat.categorySlug || cIdx} className="navbar__mobile-cat">
+                        <button
+                          type="button"
+                          className={`navbar__mobile-cat-btn${open ? ' navbar__mobile-cat-btn--open' : ''}`}
+                          onClick={() => setMobileCat(open ? null : cIdx)}
                         >
-                          {sec.title}
-                        </Link>
-                      )}
+                          <span className="navbar__mobile-cat-icon" aria-hidden="true"><cat.Icon size={18} strokeWidth={1.8} /></span>
+                          <span className="navbar__mobile-cat-name">{cat.title}</span>
+                          <svg
+                            className={`navbar__chevron${open ? ' navbar__chevron--rotated' : ''}`}
+                            width="14" height="14" viewBox="0 0 12 12" fill="none"
+                          >
+                            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
 
-                      {sec.groups ? (
-                        sec.groups.map((group, gIdx) => (
-                          <div key={gIdx} style={{ paddingLeft: 12, marginBottom: '0.5rem' }}>
-                            {group.subtitle && (
-                              <Link
-                                to={`/skills/${group.slug}`}
-                                className="navbar__mobile-child"
-                                style={{ fontWeight: 600, color: '#4b5563', fontSize: 13, paddingTop: 4 }}
-                                onClick={closeMobile}
-                              >
-                                {group.subtitle}
-                              </Link>
-                            )}
-                            {group.links.map((link, lIdx) => (
-                              <Link
-                                key={lIdx}
-                                to={`/skills/${link.parentSlug || sec.categorySlug}/${link.slug}`}
-                                className="navbar__mobile-child"
-                                style={{ paddingLeft: group.subtitle ? 24 : 12, fontSize: 12, opacity: 0.9 }}
-                                onClick={closeMobile}
-                              >
-                                {link.label}
-                              </Link>
+                        {open && (
+                          <div className="navbar__mobile-cat-body">
+                            <Link
+                              to={`/skills/${cat.categorySlug}`}
+                              className="navbar__mobile-child navbar__mobile-viewall"
+                              onClick={closeMobile}
+                            >
+                              View all {cat.title}
+                            </Link>
+                            {cat.groups.map((group, gIdx) => (
+                              <div key={group.slug || gIdx} className="navbar__mobile-grp">
+                                {group.subtitle && (
+                                  <Link
+                                    to={`/skills/${group.slug}`}
+                                    className="navbar__mobile-child navbar__mobile-grp-title"
+                                    onClick={closeMobile}
+                                  >
+                                    {group.subtitle}
+                                  </Link>
+                                )}
+                                {group.links.map((link, lIdx) => (
+                                  <Link
+                                    key={link.slug || lIdx}
+                                    to={`/skills/${link.parentSlug || cat.categorySlug}/${link.slug}`}
+                                    className="navbar__mobile-child navbar__mobile-skill"
+                                    onClick={closeMobile}
+                                  >
+                                    {link.label}
+                                  </Link>
+                                ))}
+                              </div>
                             ))}
                           </div>
-                        ))
-                      ) : (
-                        sec.links && sec.links.map((link, lIdx) => (
-                          <Link
-                            key={lIdx}
-                            to={link.href}
-                            className="navbar__mobile-child"
-                            style={{ paddingLeft: 12 }}
-                            onClick={closeMobile}
-                          >
-                            {link.label}
-                          </Link>
-                        ))
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -512,6 +591,7 @@ export default function Navbar({ alwaysSticky = false }) {
             )}
             {isAuthenticated ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                <Link to={dashboardLink} className="btn-secondary" style={{ justifyContent: 'center' }} onClick={closeMobile}>Dashboard</Link>
                 <button onClick={() => { logout(); closeMobile(); }} className="btn-primary" style={{ justifyContent: 'center' }}>Logout</button>
               </div>
             ) : (

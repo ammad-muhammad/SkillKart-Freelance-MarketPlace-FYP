@@ -213,4 +213,25 @@
     gap: 1rem;
     align-items: flex-start;
   }
+  /* Header: trim the heavy 2rem side padding, allow the user block + status to
+     wrap so nothing gets squeezed, and shrink the avatar a touch. */
+  .rp-card__header {
+    padding: 1rem 1.15rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .rp-user {
+    gap: 0.75rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .rp-user__avatar {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+  }
+  .rp-status {
+    flex-shrink: 0;
+  }
 }

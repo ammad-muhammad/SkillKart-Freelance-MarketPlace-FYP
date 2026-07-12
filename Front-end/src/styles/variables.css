@@ -222,7 +222,13 @@ button {
   }
   
   .section-title {
-    font-size: var(--fs-3xl);
+    font-size: 1.6rem;
+  }
+}
+/* Very small phones — keep section headings comfortable. */
+@media (max-width: 400px) {
+  .section-title {
+    font-size: 1.4rem;
   }
 }
 

@@ -1069,6 +1069,34 @@
 @media (max-width: 480px) {
   .mp-skills-grid { grid-template-columns: 1fr; }
   .mp-cat-header__stats { gap: 18px; }
-  .mp-filter-bar { flex-direction: column; align-items: flex-start; }
   .mp-filter-select { min-width: 100%; }
+}
+
+/* ── Mobile/tablet: clean stacked filter bar ──────────────────────
+   The row-with-wrap layout left the three dropdowns on ragged, uneven
+   lines. Stack them full-width and uniform, with the label as a header
+   and the results/clear on their own row. */
+@media (max-width: 640px) {
+  .mp-filter-bar {
+    flex-direction: column;
+    align-items: stretch;      /* children fill the full width */
+    gap: 10px;
+    padding: 14px;
+  }
+  /* Label + icon sit as a header line */
+  .mp-filter-bar > svg { display: none; }
+  .mp-filter-bar__label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+  .mp-filter-results {
+    align-self: flex-start;
+    margin-left: 0;
+  }
+  .mp-filter-clear {
+    justify-content: center;
+    width: 100%;
+  }
 }

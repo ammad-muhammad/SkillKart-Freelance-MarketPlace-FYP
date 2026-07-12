@@ -900,7 +900,8 @@
 
 @media (max-width: 767px) {
     .aim-hero {
-        padding: 2.5rem 0 2rem;
+        /* Keep clearance for the fixed navbar on mobile (see PostProject fix). */
+        padding: calc(var(--navbar-h) + 1.5rem) 0 0;
     }
 
     .aim-hero h1 {

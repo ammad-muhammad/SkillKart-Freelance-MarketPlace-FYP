@@ -229,6 +229,30 @@ const ClientDashboardOverview = () => {
           border-radius: 50%; animation: cl-spin 1s linear infinite;
         }
         @keyframes cl-spin { to { transform: rotate(360deg); } }
+
+        /* ── Mobile: avatar + info stay a centered row; the Edit Profile button
+           wraps to its own centered line below (it can't fit beside them). ── */
+        @media (max-width: 640px) {
+          .cl-dash-hero {
+            justify-content: center;
+            gap: 0.85rem 1rem;
+          }
+          .cl-dash-hero__avatar { width: 56px; height: 56px; font-size: 1.25rem; }
+          .cl-dash-hero__name { font-size: 1.05rem; line-height: 1.2; }
+          /* keep the info beside the avatar (don't let the name wrap per-word) */
+          .cl-dash-hero__info { flex: 1 1 200px; min-width: 180px; }
+          .cl-dash-hero__meta { justify-content: flex-start; }
+          /* button drops to a full-width centered line under the identity row */
+          .cl-dash-hero > .cl-btn { flex: 1 0 100%; justify-content: center; }
+
+          /* Recent projects rows: tighter padding + let the meta line wrap so the
+             status/budget don't get squeezed or clipped on phones. */
+          .cl-recent-proj { padding: 0.85rem 0.9rem; }
+          .cl-recent-proj__left { gap: 0.7rem; }
+          .cl-recent-proj__icon-wrapper { width: 38px; height: 38px; }
+          .cl-recent-proj__meta { flex-wrap: wrap; row-gap: 0.15rem; font-size: 0.72rem; }
+          .cl-recent-proj__right { gap: 0.5rem; }
+        }
       `}</style>
     </div>
   );

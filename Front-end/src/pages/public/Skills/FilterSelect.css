@@ -150,7 +150,13 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
+  /* Make the whole dropdown full-width so the three filters line up uniformly
+     instead of each sizing to its own label (ragged widths). */
+  .fsel {
+    width: 100%;
+    min-width: 0;
+  }
   .fsel__trigger {
     min-width: unset;
     width: 100%;

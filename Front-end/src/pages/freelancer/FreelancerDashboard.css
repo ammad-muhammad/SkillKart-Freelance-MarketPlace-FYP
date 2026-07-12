@@ -511,10 +511,34 @@
   .fl-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .fl-card { padding: 1.25rem; }
   .fl-page-title { font-size: 1.4rem; }
+  /* Page headers put actions (Withdraw / Connect Stripe, etc.) in a right-aligned
+     flex row via inline styles. Let them wrap under the title on tablets/phones
+     so buttons don't overflow the viewport. */
+  .fl-page-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .fl-page-header > div:last-child {
+    flex-wrap: wrap;
+  }
 }
 @media (max-width: 480px) {
-  .fl-stat-grid { grid-template-columns: 1fr 1fr; }
+  /* One stat card per row so big currency values (e.g. "Rs. 2,313.12") don't
+     wrap mid-number in a cramped half-width card. */
+  .fl-stat-grid { grid-template-columns: 1fr; }
   .fl-work-stats { grid-template-columns: 1fr; }
+  .fl-stat-card__value { font-size: 1.6rem; word-break: normal; overflow-wrap: anywhere; }
+  /* Header action buttons go full-width and stack for easy tapping. */
+  .fl-page-header > div:last-child {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .fl-page-header > div:last-child .fl-btn,
+  .fl-page-header > div:last-child > div {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Clickable stat cards (dashboard drill-down) */
@@ -800,4 +824,22 @@
 
 .fl-tag--alt:hover {
   background: rgba(4, 46, 76, 0.12);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Mobile typography — placed at end of file so it wins the cascade
+   over the earlier duplicate .fl-stat-card__value rule (2.2rem).
+   Scales down the largest type so big currency values and headings
+   fit comfortably on phones.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .fl-page-title      { font-size: 1.35rem; }
+  .fl-page-sub        { font-size: 0.85rem; }
+  .fl-section-title   { font-size: 1.1rem; }
+  .fl-stat-card__value { font-size: 1.7rem; overflow-wrap: anywhere; }
+  .fl-stat-card__label { font-size: 0.72rem; }
+}
+@media (max-width: 400px) {
+  .fl-page-title      { font-size: 1.25rem; }
+  .fl-stat-card__value { font-size: 1.5rem; }
 }

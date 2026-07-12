@@ -144,6 +144,16 @@
 }
 
 @media (max-width: 480px) {
-  .buddy-panel { bottom: 0; right: 0; left: 0; width: 100%; height: 80vh; max-height: 80vh; border-radius: 18px 18px 0 0; }
+  /* Full-screen chat on phones (not a floating popup / bottom sheet). */
+  .buddy-panel {
+    inset: 0;
+    top: 0; bottom: 0; left: 0; right: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    max-width: none;
+    border-radius: 0;
+  }
   .buddy-fab { bottom: 18px; right: 18px; }
 }

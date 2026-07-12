@@ -557,6 +557,21 @@
 }
 
 @media (max-width: 767px) {
+  /* The hero's radial gradient is near-white at the top-right, which washes out
+     the navbar + hero content on small screens. Lay a dark top-down scrim over
+     the background (below the content) so everything stays legible — mobile only. */
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 55%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(2,30,51,0.78) 0%, rgba(2,30,51,0.45) 40%, rgba(2,30,51,0) 100%);
+  }
+  /* keep the actual content above the scrim */
+  .hero__inner { position: relative; z-index: 10; }
+
   .hero__heading {
     font-size: var(--fs-3xl);
   }

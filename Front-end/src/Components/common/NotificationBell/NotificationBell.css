@@ -94,5 +94,12 @@
 .notif-bell__viewall:hover { background: #f1f5f9; }
 
 @media (max-width: 480px) {
-  .notif-bell { top: 12px; right: 14px; }
+  /* Move the bell to the bottom-left on phones so it doesn't collide with the
+     mobile header/hamburger up top. */
+  .notif-bell {
+    top: auto;
+    right: auto;
+    bottom: 18px;
+    left: 18px;
+  }
 }

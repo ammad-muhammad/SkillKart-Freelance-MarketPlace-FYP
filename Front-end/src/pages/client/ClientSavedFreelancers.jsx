@@ -97,7 +97,9 @@ const ClientSavedFreelancers = () => {
       <style>{`
         .cl-saved-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+          /* min(100%, 400px) lets the column shrink below 400px on narrow phones
+             so a 400px card can't push the page wider than the viewport. */
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
           gap: 1.5rem;
         }
         @media (min-width: 1024px) {

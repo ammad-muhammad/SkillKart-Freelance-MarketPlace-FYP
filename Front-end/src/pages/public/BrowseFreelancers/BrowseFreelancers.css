@@ -769,11 +769,16 @@
     .bf-sidebar {
         display: none;
     }
+
+    /* No bottom padding on the hero for tablet/mobile. */
+    .bf-hero {
+        padding-bottom: 0;
+    }
 }
 
 @media (max-width: 767px) {
     .bf-hero {
-        padding: calc(var(--navbar-h) + 2rem) 0 2rem;
+        padding: calc(var(--navbar-h) + 2rem) 0 0;
     }
 
     .bf-hero h1 {

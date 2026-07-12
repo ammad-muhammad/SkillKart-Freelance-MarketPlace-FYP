@@ -380,13 +380,18 @@
 
 @media (max-width: 768px) {
     .cats-hero {
-        padding: calc(var(--navbar-h) + 40px) 0 80px;
+        padding: calc(var(--navbar-h) + 40px) 0 0;
     }
     .cats-grid {
         grid-template-columns: 1fr;
     }
     .cats-hero__title {
         font-size: var(--fs-4xl);
+    }
+    /* Section headings are var(--fs-4xl) = 48px, far too large on phones. */
+    .section-title,
+    .cats-trending__info .section-title {
+        font-size: 1.5rem;
     }
     .cats-trending__box {
         flex-direction: column;
@@ -398,5 +403,19 @@
     }
     .cats-trending__visual {
         display: none;
+    }
+    /* min-width:0 lets the flex input shrink below its content width so the
+       placeholder isn't clipped by the button; trim the button padding too. */
+    .cats-hero__search {
+        padding: 6px 6px 6px 16px;
+        gap: 8px;
+    }
+    .cats-hero__search input {
+        min-width: 0;
+        font-size: var(--fs-sm);
+    }
+    .cats-hero__search button {
+        padding: 10px 18px;
+        flex-shrink: 0;
     }
 }

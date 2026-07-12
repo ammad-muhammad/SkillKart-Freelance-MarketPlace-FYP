@@ -48,7 +48,8 @@ const ClientMessages = () => {
       const res = await messagesAPI.getConversations();
       setError(null);
       setConversations(res.data.data);
-      if (!activeChat && res.data.data.length > 0) {
+      // Desktop only — mobile stays on the conversation list until a chat is tapped.
+      if (!activeChat && res.data.data.length > 0 && window.innerWidth > 768) {
         setActiveChat(res.data.data[0]);
       }
     } catch (err) {
@@ -122,7 +123,7 @@ const ClientMessages = () => {
         <p className="cl-page-sub">Chat with your freelancers and manage project communications.</p>
       </div>
 
-      <div className="cl-messages-layout animate-fade-in">
+      <div className={`cl-messages-layout animate-fade-in${activeChat ? ' cl-messages-layout--chat-open' : ''}`}>
         {/* Chat List */}
         <aside className="cl-chat-list">
           <div className="cl-chat-list__search">
@@ -189,6 +190,7 @@ const ClientMessages = () => {
 
                   return (
                     <>
+                      <button className="cl-chat-back" onClick={() => setActiveChat(null)} aria-label="Back to conversations">‹</button>
                       <div className="cl-chat-window__avatar">
                         {otherUser?.profilePicture ? (
                           <img src={otherUser.profilePicture} alt="" />
@@ -382,6 +384,23 @@ const ClientMessages = () => {
           border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: inherit;
         }
         .cl-msg--own .cl-msg__att-file { background: rgba(255,255,255,0.2); }
+
+        /* Mobile back button — hidden on desktop two-pane view. */
+        .cl-chat-back {
+          display: none;
+          background: none; border: none; cursor: pointer;
+          font-size: 1.75rem; line-height: 1; color: var(--color-primary);
+          padding: 0 0.25rem; margin-right: 0.25rem;
+        }
+        /* ── Mobile: single-pane messenger (list ↔ chat, toggled by --chat-open) ── */
+        @media (max-width: 768px) {
+          .cl-messages-layout { height: calc(100vh - 190px); min-height: 420px; }
+          .cl-chat-list { width: 100%; border-right: none; }
+          .cl-chat-window { display: none; }
+          .cl-chat-back { display: block; }
+          .cl-messages-layout--chat-open .cl-chat-list { display: none; }
+          .cl-messages-layout--chat-open .cl-chat-window { display: flex; }
+        }
       `}</style>
     </div>
   );

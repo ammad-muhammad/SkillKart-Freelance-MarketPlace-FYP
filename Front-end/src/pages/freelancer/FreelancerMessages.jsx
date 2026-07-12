@@ -47,7 +47,9 @@ const FreelancerMessages = () => {
       const res = await messagesAPI.getConversations();
       setError(null);
       setConversations(res.data.data);
-      if (!activeChat && res.data.data.length > 0) {
+      // Auto-open the first conversation on desktop only. On mobile the layout is
+      // single-pane, so we leave the user on the conversation LIST until they tap one.
+      if (!activeChat && res.data.data.length > 0 && window.innerWidth > 768) {
         setActiveChat(res.data.data[0]);
       }
     } catch (err) {
@@ -121,7 +123,7 @@ const FreelancerMessages = () => {
         <p className="fl-page-sub">Communicate with your clients and agencies.</p>
       </div>
 
-      <div className="fl-messages-layout animate-fade-in">
+      <div className={`fl-messages-layout animate-fade-in${activeChat ? ' fl-messages-layout--chat-open' : ''}`}>
         {/* Chat List */}
         <aside className="fl-chat-list">
           <div className="fl-chat-list__search">
@@ -188,6 +190,7 @@ const FreelancerMessages = () => {
                   
                   return (
                     <>
+                      <button className="fl-chat-back" onClick={() => setActiveChat(null)} aria-label="Back to conversations">‹</button>
                       <div className="fl-chat-window__avatar">
                         {otherUser?.profilePicture ? (
                           <img src={otherUser.profilePicture} alt="" />
@@ -381,6 +384,36 @@ const FreelancerMessages = () => {
           border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: inherit;
         }
         .fl-msg--own .fl-msg__att-file { background: rgba(255,255,255,0.2); }
+
+        /* Mobile back button — hidden on desktop (two-pane view). */
+        .fl-chat-back {
+          display: none;
+          background: none; border: none; cursor: pointer;
+          font-size: 1.75rem; line-height: 1; color: var(--color-primary);
+          padding: 0 0.25rem; margin-right: 0.25rem;
+        }
+
+        /* ── Mobile: single-pane messenger ──────────────────────────
+           The desktop layout is a fixed 320px list + flexible chat window. On
+           phones that squeezes the chat window off-screen. Instead show ONE pane
+           at a time: the conversation list by default, and the chat window
+           full-width once a chat is open (toggled by --chat-open + a back button). */
+        @media (max-width: 768px) {
+          .fl-messages-layout {
+            height: calc(100vh - 190px);
+            min-height: 420px;
+          }
+          .fl-chat-list {
+            width: 100%;
+            border-right: none;
+          }
+          .fl-chat-window { display: none; }
+          .fl-chat-back { display: block; }
+
+          /* When a chat is open, swap: hide the list, show the window full-width. */
+          .fl-messages-layout--chat-open .fl-chat-list { display: none; }
+          .fl-messages-layout--chat-open .fl-chat-window { display: flex; }
+        }
       `}</style>
     </div>
   );

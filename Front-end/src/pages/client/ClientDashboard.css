@@ -320,12 +320,22 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .cl-form-grid { grid-template-columns: 1fr; }
+  .cl-form-grid { grid-template-columns: 1fr !important; }
   .cl-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .cl-card { padding: 1.25rem; }
   .cl-page-title { font-size: 1.4rem; }
   .cl-btn { width: 100%; justify-content: center; }
   .cl-actions { flex-direction: column; }
+  /* Page headers that put an action button beside the title (inline flex
+     space-between) should wrap it below on phones so nothing overflows. */
+  .cl-page-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .cl-page-header > div:last-child {
+    flex-wrap: wrap;
+    width: 100%;
+  }
 }
 @media (max-width: 480px) {
   .cl-stat-grid { grid-template-columns: 1fr 1fr; }
@@ -454,4 +464,22 @@
   background: #f8fafc;
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Mobile typography — scales down the largest type (currency values,
+   headings) so they fit comfortably on phones. Placed at end of file
+   to win the cascade over earlier base rules.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .cl-page-title       { font-size: 1.35rem; }
+  .cl-page-sub         { font-size: 0.85rem; }
+  .cl-section-title    { font-size: 1.1rem; }
+  .cl-card__title      { font-size: 1.05rem; }
+  .cl-stat-card__value { font-size: 1.7rem; overflow-wrap: anywhere; }
+  .cl-stat-card__label { font-size: 0.72rem; }
+}
+@media (max-width: 400px) {
+  .cl-page-title       { font-size: 1.25rem; }
+  .cl-stat-card__value { font-size: 1.5rem; }
 }

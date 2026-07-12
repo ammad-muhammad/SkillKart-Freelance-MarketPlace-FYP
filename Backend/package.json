@@ -7,6 +7,8 @@
     "start": "nodemon src/server.js",
     "dev": "nodemon src/server.js",
     "setup:superadmin": "node scripts/setupSuperAdmin.js",
+    "seed:demo": "node scripts/seedDemoData.js",
+    "seed:demo:small": "node scripts/seedDemoData.js --small",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint src/**/*.js",
     "format": "prettier --write \"src/**/*.js\""

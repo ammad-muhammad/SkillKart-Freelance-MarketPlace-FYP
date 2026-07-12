@@ -571,7 +571,7 @@ const FreelancerProfile = () => {
                         <Trash2 size={12} /> Remove
                       </button>
                     </div>
-                    <div className="fl-form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="fl-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
                       <div className="fl-form-group">
                         <label className="fl-label">Language</label>
                         <TagInput 
@@ -855,6 +855,37 @@ const FreelancerProfile = () => {
           font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.4rem;
         }
         .fl-tags-display { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+        /* ── Mobile ──────────────────────────────────────────────
+           The hero is a flex row [avatar | info | Edit]. On phones the info
+           column gets crushed to near-zero width (title wrapped one letter per
+           line). Stack everything vertically and center it instead. */
+        @media (max-width: 640px) {
+          .fl-profile-hero {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+          }
+          .fl-profile-hero__avatar-wrap {
+            /* Center the avatar on the screen (override the inline marginLeft
+               and the desktop -4rem pull-up which looked off-centre on mobile). */
+            margin: 0 auto !important;
+            align-self: center;
+          }
+          .fl-profile-hero__info {
+            width: 100%;
+            flex: none;
+          }
+          .fl-profile-hero__meta {
+            justify-content: center;
+          }
+          .fl-profile-hero .fl-btn--primary {
+            width: 100%;
+            justify-content: center;
+          }
+          .fl-profile-hero__name { font-size: 1.6rem; line-height: 1.2; }
+        }
       `}</style>
     </div>
   );

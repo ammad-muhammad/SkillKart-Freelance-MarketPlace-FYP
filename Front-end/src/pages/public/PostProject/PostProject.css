@@ -763,7 +763,9 @@
 
 @media (max-width: 767px) {
     .pp-hero {
-        padding: 2.5rem 0 2rem;
+        /* Keep clearance for the fixed navbar (--navbar-h) so the hero tag
+           doesn't slide underneath it on mobile. */
+        padding: calc(var(--navbar-h) + 1.5rem) 0 0;
     }
 
     .pp-hero h1 {

@@ -261,4 +261,18 @@
     .showcase-padding {
         display: none;
     }
+
+    /* The member tag is rotated -90deg and pinned bottom-right; on a narrow
+       stacked card that rotation pushes it off-screen (cut off). Un-rotate it
+       into a normal horizontal pill so it stays fully visible. */
+    .showcase-member-tag {
+        transform: none;
+        transform-origin: center;
+        bottom: 12px;
+        right: 12px;
+        padding: 5px 12px;
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
+        border-radius: 6px;
+    }
 }

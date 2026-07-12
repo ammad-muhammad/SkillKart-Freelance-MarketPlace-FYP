@@ -1,16 +1,75 @@
-# React + Vite
+# SkillKart — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The SkillKart single-page app: a React 19 + Vite client for the marketplace, covering public browsing, freelancer and client dashboards, the contract lifecycle, messaging, and the admin panel.
 
-Currently, two official plugins are available:
+> Part of the [SkillKart monorepo](../README.md). For full-stack setup, start there.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
 
-## React Compiler
+- **React 19** with **Vite 7** (HMR, fast builds)
+- **React Router 7** for routing
+- **React Hook Form** for forms
+- **Axios** for the API layer
+- **Framer Motion** & **GSAP** for animation
+- **Chart.js** (`react-chartjs-2`) for dashboards
+- **Tailwind v4** + custom CSS
+- **lucide-react** for icons, **react-toastify** for notifications
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js ≥ 18, npm ≥ 9
+- The [backend API](../Backend/README.md) running (default `http://localhost:5000/api/v1`)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Setup
+
+```bash
+npm install
+cp .env.example .env    # set VITE_API_URL to your backend, e.g. http://localhost:5000/api/v1
+npm run dev
+```
+
+The dev server runs at **http://localhost:3001**.
+
+## Environment Variables
+
+See [`.env.example`](.env.example):
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_API_URL` | Backend API base URL (e.g. `http://localhost:5000/api/v1`) |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional Supabase client for social OAuth |
+
+> Vite only exposes variables prefixed with `VITE_` to the client.
+
+## Project Structure
+
+```
+src/
+├── pages/          Route pages, grouped by audience:
+│   ├── public/         landing, browse, categories, public profiles, AI tools
+│   ├── client/         client dashboard & workflows
+│   ├── freelancer/     freelancer dashboard & workflows
+│   ├── admin/          admin views
+│   ├── adminPanel/     isolated admin panel
+│   └── common/         shared authenticated pages
+├── Components/     Reusable UI components
+├── layouts/        Route layouts (shells, sidebars)
+├── context/        React Context providers (auth, ...)
+├── api/            Axios API clients
+├── hooks/          Custom React hooks
+├── routes/         Route configuration & guards
+├── styles/         Global styles
+├── constants/      App constants
+├── utils/          Helpers
+├── App.jsx         Root component
+└── main.jsx        Entry point
+```
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start the Vite dev server (port 3001) |
+| `npm run build` | Production build → `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Lint the source with ESLint |

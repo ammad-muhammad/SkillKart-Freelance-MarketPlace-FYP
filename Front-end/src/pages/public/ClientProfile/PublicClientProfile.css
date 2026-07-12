@@ -786,6 +786,8 @@
   }
   .pub-cl-avatar-wrapper {
     margin: -60px auto 0;
+    width: fit-content;      /* so margin:auto actually centers it on screen */
+    display: block;
   }
   .pub-cl-meta-tags {
     justify-content: center;

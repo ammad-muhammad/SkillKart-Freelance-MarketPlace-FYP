@@ -956,7 +956,37 @@ const ClientProfile = () => {
         .cl-profile-hero__name { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--color-primary); }
         .cl-profile-hero__company { color: var(--color-text-mid); font-size: 0.875rem; margin: 0.2rem 0; }
         .cl-profile-hero__meta { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.3rem; }
-        
+
+        /* ── Mobile ──────────────────────────────────────────────
+           The image row (avatar 80 + logo 80 + cover 160 + gaps) is wider than a
+           phone, so "Cover Photo" clipped. Tighten gaps, shrink the cover, and
+           center the hero so the name/company block reads cleanly. */
+        @media (max-width: 640px) {
+          .cl-profile-hero { flex-direction: column; align-items: center; text-align: center; }
+          /* Center the image row block on the screen. */
+          .cl-profile-hero__avatars { gap: 1rem; justify-content: center; align-self: center; margin: 0 auto; }
+          .cl-profile-hero__avatars > div { display: flex; flex-direction: column; align-items: center; }
+          .cl-profile-hero__info { width: 100%; flex: none; }
+          .cl-profile-hero__name { font-size: 1.6rem; line-height: 1.2; }
+          .cl-profile-hero__meta { justify-content: center; }
+          /* Cover box: cap to what fits a phone row alongside the two 80px tiles. */
+          .cl-logo-box[style*="160px"] { width: 120px !important; }
+          /* Header meta: center the company line and let it wrap on one flow
+             instead of splitting into two ragged columns. */
+          .cl-prof-header-meta > div:first-child {
+            flex-wrap: wrap;
+            justify-content: center;
+          }
+          .cl-prof-header-stats {
+            justify-content: center;
+          }
+          /* Force single-column form fields on mobile (a competing rule was
+             leaving the first form grid at 2 uneven columns). */
+          .cl-form-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
         .onboarding__slider {
           -webkit-appearance: none;
           width: 100%;
