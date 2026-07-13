@@ -4,7 +4,7 @@
   "description": "Complete freelance platform backend with multi-auth, RBAC, CMS, job posting, and proposals",
   "main": "src/server.js",
   "scripts": {
-    "start": "nodemon src/server.js",
+    "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "setup:superadmin": "node scripts/setupSuperAdmin.js",
     "seed:demo": "node scripts/seedDemoData.js",
@@ -30,7 +30,7 @@
   "author": "SkillKart-Fuuast-team",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=22.3.0",
     "npm": ">=9.0.0"
   },
   "dependencies": {
