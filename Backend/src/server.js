@@ -11,7 +11,7 @@ const app = require('./app');
 const config = require('./config');
 const connectDB = require('./config/database');
 const { connectRedis } = require('./config/redis');
-const { initSupabase } = require('./config/supabase');
+const { initSupabase } = require('./config/supabase'); 
 
 // Set port
 const PORT = config.port || 5000;
