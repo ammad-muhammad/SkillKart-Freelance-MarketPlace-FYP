@@ -10,8 +10,8 @@ export default defineConfig({
     tailwindcss()
   ],
   preview: {
-    host: '0.0.0.0',
-    port: process.env.PORT,
-    allowedHosts: true
+    allowedHosts: [
+      "positive-tenderness-production-b46b.up.railway.app"
+    ]
   }
 })
