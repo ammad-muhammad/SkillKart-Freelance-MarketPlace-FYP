@@ -9,7 +9,7 @@
  */
 
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || '';
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:8080';
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';
 
 const STRIPE_DUMMY = process.env.STRIPE_DUMMY === 'true';
 

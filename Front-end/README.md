@@ -28,7 +28,7 @@ cp .env.example .env    # set VITE_API_URL to your backend, e.g. http://localhos
 npm run dev
 ```
 
-The dev server runs at **http://localhost:8080**.
+The dev server runs at **http://localhost:3001**.
 
 ## Environment Variables
 
@@ -69,7 +69,7 @@ src/
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start the Vite dev server (port 8080) |
+| `npm run dev` | Start the Vite dev server (port 3001) |
 | `npm run build` | Production build → `dist/` |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Lint the source with ESLint |

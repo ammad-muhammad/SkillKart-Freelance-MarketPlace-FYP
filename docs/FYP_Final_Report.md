@@ -332,7 +332,7 @@ SkillKart follows a **decoupled client–server architecture**. A React single-p
 ```
    ┌────────────────────────┐        HTTPS / REST (JSON)        ┌────────────────────────┐
    │   React 19 SPA (Vite)  │  ──────────────────────────────► │   Express REST API      │
-   │   Frontend (port 8080) │   /api/v1/*                       │   Backend (port 5000)   │
+   │   Frontend (port 3001) │   /api/v1/*                       │   Backend (port 5000)   │
    │                        │  ◄──────────────────────────────  │                         │
    └────────────────────────┘                                   └──────────┬─────────────┘
                                                                             │

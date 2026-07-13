@@ -8,10 +8,5 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss()
-  ],
-  preview: {
-    allowedHosts: [
-      "positive-tenderness-production-b46b.up.railway.app"
-    ]
-  }
+  ]
 })
