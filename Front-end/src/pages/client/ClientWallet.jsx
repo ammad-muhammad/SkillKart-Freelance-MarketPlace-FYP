@@ -6,6 +6,20 @@ import { Wallet, DollarSign, ArrowUpRight, CheckCircle2, Clock } from 'lucide-re
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './ClientDashboard.css';
 
+// Human-readable labels for raw payment status enums (never show "deposit_pending").
+const STATUS_LABELS = {
+  deposit_pending: 'Awaiting deposit',
+  deposit_paid: 'In escrow',
+  released: 'Released',
+  refunded: 'Refunded',
+  pending: 'Pending',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+};
+const statusLabel = (s) =>
+  STATUS_LABELS[s] || String(s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 export default function ClientWallet() {
   const { profile, loading: profileLoading } = useClient();
   const navigate = useNavigate();
@@ -182,7 +196,7 @@ export default function ClientWallet() {
                             <Clock size={14} /> Escrow Active (50%)
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)' }}>{payment.status}</span>
+                          <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(payment.status)}</span>
                         )}
                       </td>
                     </tr>

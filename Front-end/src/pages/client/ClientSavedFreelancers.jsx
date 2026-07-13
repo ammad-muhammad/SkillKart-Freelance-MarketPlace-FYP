@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
-import { BookmarkMinus, MapPin, Star } from 'lucide-react';
+import { Bookmark, BookmarkMinus, MapPin, Star } from 'lucide-react';
 import './ClientDashboard.css';
 
 const ClientSavedFreelancers = () => {

@@ -7,6 +7,22 @@ import { toast } from 'react-toastify';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
 
+// Human-readable labels for raw payment/withdrawal status enums, so the wallet
+// never shows machine values like "deposit_pending".
+const STATUS_LABELS = {
+  deposit_pending: 'Awaiting deposit',
+  deposit_paid: 'In escrow',
+  released: 'Released',
+  refunded: 'Refunded',
+  pending: 'Pending',
+  processing: 'Processing',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+};
+const statusLabel = (s) =>
+  STATUS_LABELS[s] || String(s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 export default function FreelancerWallet() {
   const { profile, loading: profileLoading, refreshProfile } = useFreelancer();
   const [payments, setPayments] = useState([]);
@@ -215,7 +231,7 @@ export default function FreelancerWallet() {
                               <Clock size={14} /> Processing
                             </span>
                           ) : (
-                            <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)' }}>{tx.status}</span>
+                            <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(tx.status)}</span>
                           )
                         ) : (
                           tx.status === 'released' ? (
@@ -227,7 +243,7 @@ export default function FreelancerWallet() {
                               <Clock size={14} /> Escrow (50%)
                             </span>
                           ) : (
-                            <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)' }}>{tx.status}</span>
+                            <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(tx.status)}</span>
                           )
                         )}
                       </td>

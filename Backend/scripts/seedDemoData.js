@@ -594,6 +594,9 @@ function makeFreelancer(i, spec = {}) {
       portfolioReviewed: chance(0.4),
     },
     verificationStatus: verified ? 'verified' : (chance(0.4) ? 'pending' : 'unverified'),
+    // Login OTP / 2FA. `twoFactorEnabled !== false` means ON, so we only set it
+    // when a spec explicitly disables it (used for the demo accounts below).
+    securitySettings: { twoFactorEnabled: spec.twoFactorEnabled !== false },
     createdAt, updatedAt: dateBetween(createdAt, NOW),
   });
 
@@ -654,6 +657,8 @@ function makeClient(i, spec = {}) {
     totalProjectsPosted: 0, // updated after jobs are created
     totalSpent,
     walletBalance: round2(money(0, 40000, 500)),
+    // Login OTP / 2FA — ON unless a spec explicitly disables it (demo accounts).
+    securitySettings: { twoFactorEnabled: spec.twoFactorEnabled !== false },
     createdAt, updatedAt: dateBetween(createdAt, NOW),
   });
 
@@ -730,7 +735,7 @@ async function run() {
 
   // Fixed demo accounts (exact spec).
   freelancers.push(makeFreelancer(0, {
-    email: 'test.freelancer0@skillkart.com', password: 'Pass123!@#',
+    email: 'test.freelancer0@skillkart.com', password: 'Pass123!@#', twoFactorEnabled: false,
     firstName: 'Hassan', lastName: 'Raza', username: 'hassanraza_pro',
     cluster: 'Full Stack Development', tier: 'top', verified: true, isEmailVerified: true,
     identityVerified: true, isBlocked: false, completedProjects: 41, rating: 4.9,
@@ -739,20 +744,20 @@ async function run() {
     bio: 'Senior Full Stack Engineer (MERN) with 8+ years building production SaaS. 40+ projects delivered, 100% on-time. I specialize in scalable architectures, clean APIs, and pixel-perfect UIs.',
   }));
   freelancers.push(makeFreelancer(1, {
-    email: 'test.freelancer1@skillkart.com', password: 'Pass123!@#',
+    email: 'test.freelancer1@skillkart.com', password: 'Pass123!@#', twoFactorEnabled: false,
     firstName: 'Ayesha', lastName: 'Khan', username: 'ayeshakhan_dev',
     cluster: 'Frontend Development', tier: 'experienced', verified: true, isEmailVerified: true,
     completedProjects: 18, rating: 4.6, hourlyRate: 3800,
     title: 'React Developer', createdAt: dateBetween(addDays(YEAR_AGO, 40), addDays(YEAR_AGO, 120)),
   }));
   clients.push(makeClient(0, {
-    email: 'test.client0@skillkart.com', password: 'Pass123!@#',
+    email: 'test.client0@skillkart.com', password: 'Pass123!@#', twoFactorEnabled: false,
     firstName: 'Bilal', lastName: 'Ahmed', username: 'bilalahmed_hire',
     companyType: 'SME', companyName: 'Vertex Digital', verified: true, isEmailVerified: true,
     isBlocked: false, totalSpent: 1450000, createdAt: dateBetween(YEAR_AGO, addDays(YEAR_AGO, 25)),
   }));
   clients.push(makeClient(1, {
-    email: 'test.client1@skillkart.com', password: 'Pass123!@#',
+    email: 'test.client1@skillkart.com', password: 'Pass123!@#', twoFactorEnabled: false,
     firstName: 'Sara', lastName: 'Malik', username: 'saramalik_biz',
     companyType: 'Startup', companyName: 'BrightPixel', verified: true, isEmailVerified: true,
     totalSpent: 420000, createdAt: dateBetween(addDays(YEAR_AGO, 60), addDays(YEAR_AGO, 150)),

@@ -184,6 +184,21 @@ npm --prefix Backend run seed:demo:small    # small dataset for a quick smoke ru
 
 All other seeded users share the password `Demo123!@#`.
 
+**Admin dashboard** — the admin panel has its own isolated login at **`/admin-panel/login`** (e.g. `http://localhost:3001/admin-panel/login`).
+
+Admin credentials are **not shipped** — set your own in `Backend/.env`:
+
+```bash
+# 1. Pick an admin email
+ADMIN_EMAIL=admin@yourdomain.com
+
+# 2. Generate a bcrypt hash of your chosen password and put it in ADMIN_PASSWORD_HASH
+node -e "console.log(require('bcryptjs').hashSync('YourStrongPassword', 12))"
+# → ADMIN_PASSWORD_HASH=<the hash it prints>
+```
+
+> The admin password is stored only as a **bcrypt hash** (`ADMIN_PASSWORD_HASH`), never in plaintext. Use a strong, unique password.
+
 ## Available Scripts
 
 **Root**

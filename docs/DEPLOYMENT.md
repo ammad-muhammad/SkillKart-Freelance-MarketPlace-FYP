@@ -222,8 +222,20 @@ If you later add a custom domain on Vercel, update these to the custom domain an
 - [ ] Register / log in from the frontend — no CORS error in the browser console
 - [ ] Deep features work: browse gigs, post a job (confirms DB writes)
 - [ ] `setup:superadmin` was run → SuperAdmin login works
+- [ ] Admin panel reachable at `https://your-app.vercel.app/admin-panel/login` and login succeeds
 - [ ] If using Stripe: webhook shows deliveries in the Stripe dashboard
 - [ ] AI tools show results **or** degrade gracefully to "AI is temporarily out of service" (never a crash)
+
+> **Admin dashboard access.** The admin panel has an isolated login at **`/admin-panel/login`**. Credentials are not shipped — **set your own** in the backend environment:
+>
+> - `ADMIN_EMAIL` — your chosen admin email.
+> - `ADMIN_PASSWORD_HASH` — the **bcrypt hash** of your chosen password (never the plaintext). Generate it with:
+>   ```bash
+>   node -e "console.log(require('bcryptjs').hashSync('YourStrongPassword', 12))"
+>   ```
+> - `ADMIN_JWT_SECRET` — a secret that is completely different from `JWT_SECRET`.
+>
+> ⚠️ Use a **strong, unique** admin password and never commit it.
 
 ---
 

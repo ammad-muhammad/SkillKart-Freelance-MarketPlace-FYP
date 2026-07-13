@@ -79,7 +79,7 @@ npm run seed:demo -- --keep  # append instead of clearing
 npm run seed:demo:small      # smaller dataset
 ```
 
-Demo logins are documented in the [root README](../README.md#seeding-demo-data).
+Demo logins (including the **admin dashboard** at `/admin-panel/login`) are documented in the [root README](../README.md#seeding-demo-data). The admin credentials come from `ADMIN_EMAIL` in `.env` — change them for any real deployment.
 
 ## API Documentation
 
