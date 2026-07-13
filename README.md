@@ -32,7 +32,7 @@ It supports both marketplace models:
 ┌──────────────────────┐        HTTPS / REST         ┌──────────────────────┐
 │   Front-end (Vite)   │  ───────────────────────►   │   Backend (Express)  │
 │   React 19 SPA       │   /api/v1/*                 │   REST API + JWT     │
-│   localhost:3001     │  ◄───────────────────────   │   localhost:5000     │
+│   localhost:8080     │  ◄───────────────────────   │   localhost:5000     │
 └──────────────────────┘                             └──────────┬───────────┘
                                                                 │
                                     ┌───────────────────────────┼───────────────────────┐
@@ -123,7 +123,7 @@ npm --prefix Backend run seed:demo
 npm start
 ```
 
-- Frontend → http://localhost:3001
+- Frontend → http://localhost:8080
 - Backend API → http://localhost:5000/api/v1
 - API health check → http://localhost:5000/health
 - Swagger API docs → http://localhost:5000/api/v1/docs
@@ -159,7 +159,7 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 |---------|------|
 | `npm start` (root) | Backend + Frontend concurrently |
 | `npm --prefix Backend run dev` | Backend only (nodemon, port 5000) |
-| `npm --prefix Front-end run dev` | Frontend only (Vite, port 3001) |
+| `npm --prefix Front-end run dev` | Frontend only (Vite, port 8080) |
 | `npm --prefix Front-end run build` | Production build → `Front-end/dist/` |
 
 ## Seeding Demo Data
@@ -184,7 +184,7 @@ npm --prefix Backend run seed:demo:small    # small dataset for a quick smoke ru
 
 All other seeded users share the password `Demo123!@#`.
 
-**Admin dashboard** — the admin panel has its own isolated login at **`/admin-panel/login`** (e.g. `http://localhost:3001/admin-panel/login`).
+**Admin dashboard** — the admin panel has its own isolated login at **`/admin-panel/login`** (e.g. `http://localhost:8080/admin-panel/login`).
 
 Admin credentials are **not shipped** — set your own in `Backend/.env`:
 
@@ -221,7 +221,7 @@ node -e "console.log(require('bcryptjs').hashSync('YourStrongPassword', 12))"
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start Vite dev server (port 3001) |
+| `npm run dev` | Start Vite dev server (port 8080) |
 | `npm run build` | Production build |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | Lint source |

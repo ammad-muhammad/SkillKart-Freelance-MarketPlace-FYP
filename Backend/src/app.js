@@ -36,7 +36,7 @@ const corsOptions = {
       config.cors.origin,
       config.frontend.url,
       'http://localhost:3000',
-      'http://localhost:3001'
+      'http://localhost:8080'
     ];
     
     // Allow requests with no origin (like mobile apps or curl requests)

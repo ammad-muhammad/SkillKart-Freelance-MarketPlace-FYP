@@ -158,7 +158,7 @@
 **Content — architecture diagram:**
 ```
    React 19 SPA (Vite)  ──HTTPS/REST──►  Express API (/api/v1)
-   localhost:3001                         localhost:5000
+   localhost:8080                         localhost:5000
         │                                       │
    JWT in memory + refresh          ┌───────────┼───────────┐
    (obfuscated storage)             │           │           │

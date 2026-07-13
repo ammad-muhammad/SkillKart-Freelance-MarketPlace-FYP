@@ -15,7 +15,7 @@ function App() {
     if (logged.current) return;
     logged.current = true;
 
-    log('💻 Frontend running on port 3001');
+    log('💻 Frontend running on port 8080');
     logStatus({ debugMode: true, hotReloadWorking: true });
   }, []);
 

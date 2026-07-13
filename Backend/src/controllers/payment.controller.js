@@ -343,7 +343,7 @@ const checkoutWalletDeposit = asyncHandler(async (req, res) => {
     throw new BadRequestError('Invalid deposit amount');
   }
 
-  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';
+  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:8080';
   
   const session = await createCheckoutSession({
     jobId: 'wallet', // Special ID for wallet
@@ -427,7 +427,7 @@ const connectStripeAccount = asyncHandler(async (req, res) => {
   }
 
   // Determine return URL based on env
-  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';
+  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:8080';
   const returnUrl = `${CLIENT_URL}/freelancer/wallet/stripe-callback`;
   const refreshUrl = `${CLIENT_URL}/freelancer/wallet`;
 
