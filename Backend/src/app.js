@@ -33,15 +33,17 @@ app.use(helmet({
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      config.cors.origin,
-      config.frontend.url,
-      'http://localhost:3000',
-      'http://localhost:3001'
+      ...new Set([
+        ...(config.cors.origin || "").split(","),
+        ...(config.frontend.url || "").split(","),
+        "http://localhost:3000",
+        "http://localhost:3001",
+      ].map(origin => origin.trim()))
     ];
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -224,8 +226,8 @@ app.use((err, req, res, next) => {
   if (err.name === 'ValidationError') {
     // If it's a Mongoose error, it has an 'errors' object where values have 'message'
     // If it's our Custom ValidationError, it has an 'errors' array of objects with 'field' and 'message'
-    const formattedErrors = Array.isArray(err.errors) 
-      ? err.errors 
+    const formattedErrors = Array.isArray(err.errors)
+      ? err.errors
       : Object.values(err.errors).map(e => ({ field: e.path, message: e.message }));
 
     return res.status(400).json({
