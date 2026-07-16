@@ -85,6 +85,108 @@ Demo logins (including the **admin dashboard** at `/admin-panel/login`) are docu
 
 Interactive Swagger docs are served at `/api/v1/docs` while the server is running.
 
+## Email Providers
+
+SkillKart sends transactional email (OTP, welcome, security alerts, contact/newsletter) through a **multi-provider system**. The active provider is chosen with a single env var — no code changes required.
+
+### Architecture
+
+```
+Controllers/Services  →  email.service.js (frozen public API)
+                             │
+                             ├─ templates/renderer.js  → pure (subject, html, text)
+                             ├─ EMAIL_ENABLED / EMAIL_SANDBOX checks
+                             ├─ retry.util.js  → exponential backoff on transient errors
+                             ├─ email.factory.js → provider singleton (from registry)
+                             │      └─ providers/{smtp,resend}.provider.js
+                             ├─ email.metrics.js → in-memory counters
+                             └─ EmailLog (Mongo audit trail)
+```
+
+The public API in `services/email.service.js` (`sendEmail`, `sendOTPEmail`, `sendWelcomeEmail`, `sendPasswordResetEmail`, `sendLoginAlertEmail`, `sendPasswordChangeAlertEmail`) is unchanged — callers never know which provider is active.
+
+### Supported providers
+
+| Provider | `EMAIL_PROVIDER` | Best for |
+|----------|------------------|----------|
+| SMTP (Nodemailer) | `smtp` | Local dev, Gmail app-passwords, Mailtrap, custom SMTP |
+| Resend | `resend` | Production & hosts that block SMTP ports (e.g. Railway) |
+
+### Switching providers
+
+```env
+EMAIL_PROVIDER=smtp     # or: resend
+```
+
+Everything else is provider-specific config (below). Restart the server to apply.
+
+### SMTP setup
+
+```env
+EMAIL_PROVIDER=smtp
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password      # Gmail → Account → Security → App Passwords
+SMTP_FROM_EMAIL=your-email@gmail.com
+SMTP_FROM_NAME=SkillKart
+```
+
+Legacy `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_SECURE` / `EMAIL_USER` / `EMAIL_PASSWORD` / `EMAIL_FROM` / `EMAIL_FROM_NAME` are still honoured as fallbacks (a deprecation warning is printed at startup). Prefer the `SMTP_*` names.
+
+### Resend setup
+
+1. Create an API key at <https://resend.com/api-keys>.
+2. Verify a sending domain at <https://resend.com/domains> and set `RESEND_FROM_EMAIL` to an address on that domain.
+3. For quick testing without a domain, use the built-in `onboarding@resend.dev` sender — but note Resend **only delivers those to your own Resend account email**; other recipients return a `403 validation_error`.
+
+```env
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+RESEND_FROM_NAME=SkillKart
+# RESEND_REPLY_TO=support@yourdomain.com
+```
+
+### Feature flags & sandbox mode
+
+| Var | Effect |
+|-----|--------|
+| `EMAIL_ENABLED=false` | Log every send but skip actual delivery (an EmailLog row with `status: 'skipped'` is still written). |
+| `EMAIL_SANDBOX=true` | Redirect **all** outgoing mail to `EMAIL_SANDBOX_RECIPIENT`; the real recipient is preserved in the log's `originalRecipient`. |
+| `EMAIL_SANDBOX_RECIPIENT` | Required when sandbox is on. |
+
+### Railway deployment
+
+Railway (and several other PaaS hosts) **block outbound SMTP ports (25/465/587)**, so Gmail/SMTP silently fails there. Use **Resend** in production:
+
+```env
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=...
+RESEND_FROM_EMAIL=noreply@yourverifieddomain.com
+```
+
+### Adding a new provider (3 steps)
+
+1. Create `src/services/email/providers/<name>.provider.js` extending `EmailProvider` and implement `send()` + `verify()`.
+2. Register it in `src/services/email/email.registry.js`: `registerProvider('<name>', require('./providers/<name>.provider'))`.
+3. Add its config to `email.config.js` (reader + validation) and set `EMAIL_PROVIDER=<name>`.
+
+No controller, service, or template changes are needed.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `Missing RESEND_API_KEY` / `Missing SMTP_HOST` at startup | Set the named variable for the selected provider. |
+| `Invalid EMAIL_PROVIDER "x"` | Value must be one of `smtp`, `resend`. |
+| Resend `403 You can only send testing emails to your own email address` | You're using `onboarding@resend.dev`. Verify a domain and switch `RESEND_FROM_EMAIL`. |
+| Resend `verify() failed: This API key is restricted to only send emails` | Harmless — a send-only key can't list domains; sending still works (treated as verified). |
+| SMTP timeouts on Railway/Render | Outbound SMTP is blocked; switch to `EMAIL_PROVIDER=resend`. |
+| Emails not arriving but logs say "sent" | Check spam; verify the `from` domain's SPF/DKIM (Resend domain dashboard). |
+| Transient 429/5xx | Retried automatically with exponential backoff (up to 3 attempts). |
+
 ## Notes
 
 - Never commit `.env`. Only `.env.example` is tracked; `secure/` and logs are gitignored.

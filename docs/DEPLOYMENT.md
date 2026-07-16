@@ -258,7 +258,9 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `FRONTEND_URL` | ✅ | Same as `CORS_ORIGIN` |
 | `STRIPE_DUMMY` | ✅ | `true` to simulate payments, else `false` |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | ⬤ | needed only if `STRIPE_DUMMY=false` |
-| `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USER` / `EMAIL_PASS` / `EMAIL_FROM` | ⬤ | SMTP — needed for OTP emails |
+| `EMAIL_PROVIDER` | ✅ | `smtp` or `resend`. **On Railway, use `resend`** — outbound SMTP ports are blocked (see note below). |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | ⬤ | Required when `EMAIL_PROVIDER=resend`. `RESEND_FROM_EMAIL` must be on a verified domain. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` | ⬤ | Required when `EMAIL_PROVIDER=smtp` (legacy `EMAIL_*` names still work as fallbacks). |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` | ⬤ | social OAuth only |
 | `REDIS_URL` | ❌ | optional cache; leave blank / `ENABLE_REDIS_CACHE=false` |
 | `GEMINI_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys |
@@ -266,6 +268,8 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `AI_PRIORITY_GEMINI` … `AI_PRIORITY_OLLAMA` | ❌ | fallback order (0 = first; `-1` disables) |
 
 ✅ required · ⬤ conditionally required · ❌ optional
+
+> **Email on Railway/Render — use Resend, not SMTP.** Railway (and most PaaS hosts) block outbound SMTP ports (25/465/587), so Gmail/SMTP delivery silently fails in production. Set `EMAIL_PROVIDER=resend` with a `RESEND_API_KEY` and a `RESEND_FROM_EMAIL` on a domain you've verified at <https://resend.com/domains>. SkillKart's email layer is provider-agnostic — switching is just the env var, no code change. Locally you can keep `EMAIL_PROVIDER=smtp`.
 
 ### Frontend (Vercel)
 
@@ -294,7 +298,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | Refreshing a route (e.g. `/dashboard`) → 404 on Vercel | Missing `Front-end/vercel.json` SPA rewrite (see [step 6](#6-deploy-the-frontend--vercel)). |
 | Frontend calls `localhost:5000` in production | `VITE_API_URL` wasn't set at build time, or you changed it without redeploying (Vite bakes env vars into the build). |
 | SuperAdmin login fails after a redeploy | Ephemeral filesystem wiped `secure/`. Re-run `npm run setup:superadmin`, or attach a persistent volume. |
-| OTP emails never arrive | SMTP (`EMAIL_*`) not configured, or the provider blocks the host. Use an app-password (Gmail) or a transactional provider. |
+| OTP emails never arrive | On Railway/Render, SMTP ports are blocked — set `EMAIL_PROVIDER=resend` with `RESEND_API_KEY` + a verified `RESEND_FROM_EMAIL`. For local SMTP, use a Gmail app-password. Check the startup log line `✅ Email Provider: …` and the `EmailLog` collection for `status: 'failed'` rows. |
 | AI tools always say "out of service" | No valid AI key set, or all keys invalid/rate-limited. Add a `GEMINI_API_KEY` or `GROQ_API_KEY`. This is expected, non-fatal behavior — the app never crashes on an AI outage. |
 | Render service slow to respond | Free instances sleep after inactivity and cold-start (~30s). Upgrade or use a keep-alive ping. |
 

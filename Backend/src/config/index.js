@@ -56,7 +56,7 @@ const config = {
     callbackUrl: process.env.GITHUB_CALLBACK_URL
   },
 
-  // Email
+  // Email (legacy block — kept for backward compatibility, do not remove)
   email: {
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT || 587,
@@ -64,6 +64,33 @@ const config = {
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD,
     from: process.env.EMAIL_FROM
+  },
+
+  // Email Provider (new multi-provider system)
+  emailProvider: process.env.EMAIL_PROVIDER || 'smtp',
+
+  // Email Feature Flags
+  emailEnabled: process.env.EMAIL_ENABLED !== 'false',
+  emailSandbox: process.env.EMAIL_SANDBOX === 'true',
+  emailSandboxRecipient: process.env.EMAIL_SANDBOX_RECIPIENT || '',
+
+  // Resend
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.RESEND_FROM_EMAIL,
+    fromName: process.env.RESEND_FROM_NAME || 'SkillKart',
+    replyTo: process.env.RESEND_REPLY_TO || ''
+  },
+
+  // SMTP (with backward-compat fallbacks to legacy EMAIL_* vars)
+  smtp: {
+    host: process.env.SMTP_HOST || process.env.EMAIL_HOST,
+    port: process.env.SMTP_PORT || process.env.EMAIL_PORT || 587,
+    secure: (process.env.SMTP_SECURE || process.env.EMAIL_SECURE) === 'true',
+    user: process.env.SMTP_USER || process.env.EMAIL_USER,
+    password: process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD,
+    fromEmail: process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM,
+    fromName: process.env.SMTP_FROM_NAME || process.env.EMAIL_FROM_NAME || 'SkillKart'
   },
 
   // OTP
