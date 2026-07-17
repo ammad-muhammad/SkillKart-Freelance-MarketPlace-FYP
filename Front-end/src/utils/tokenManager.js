@@ -45,6 +45,12 @@ class TokenManager {
     }
 
     if (refreshToken) {
+      // Refresh token goes in localStorage so a full-page reload (or a Vercel
+      // deep-link reload) does NOT destroy the session. sessionStorage is wiped
+      // on reload/tab-close, which was bouncing users back to /login after OTP.
+      // On reload, checkAuth() mints a fresh access token from this.
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      // Keep a sessionStorage copy too for backward compat with any reader.
       sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
 
@@ -61,7 +67,9 @@ class TokenManager {
   }
 
   getRefreshToken() {
-    return sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    // Prefer the durable localStorage copy (survives reloads); fall back to the
+    // sessionStorage copy for any session written before this change.
+    return localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY);
   }
 
   clearTokens() {
