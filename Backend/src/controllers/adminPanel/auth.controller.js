@@ -12,6 +12,33 @@ const adminOtpStore = new Map();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Cookie attributes for `admin_token`.
+ *
+ * The admin panel (Vercel) and this API (Railway) are different sites, so the
+ * cookie must be SameSite=None to be sent at all — and browsers only accept
+ * SameSite=None together with Secure. Locally both sides are localhost, which is
+ * same-site, so we use Lax over plain http instead.
+ *
+ * Gated on the actual request protocol rather than NODE_ENV: the deployed env
+ * runs with NODE_ENV=development, and tying cookie behaviour to it silently
+ * breaks admin login. Requires `app.set('trust proxy', 1)` so req.secure sees
+ * through the platform's TLS-terminating proxy.
+ *
+ * Must be used for BOTH res.cookie and res.clearCookie — a clearCookie whose
+ * attributes don't match the original will not delete it.
+ */
+const adminCookieOptions = (req, extra = {}) => {
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  return {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: isHttps ? 'none' : 'lax',
+    path: '/',
+    ...extra
+  };
+};
+
 const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -256,15 +283,7 @@ const verifyOtp = async (req, res) => {
     await seedDefaultSettings();
 
     // Set HTTP-only cookie
-    const cookieOptions = {
-      httpOnly: true,
-      secure:   config.env === 'production',
-      sameSite: 'strict',
-      maxAge:   sessionTimeoutMs,
-      path:     '/'
-    };
-
-    res.cookie('admin_token', token, cookieOptions);
+    res.cookie('admin_token', token, adminCookieOptions(req, { maxAge: sessionTimeoutMs }));
 
     auditLogAuth(email, ip, ua, {
       action: 'login',
@@ -312,7 +331,7 @@ const logout = async (req, res) => {
       severity: 'info'
     });
 
-    res.clearCookie('admin_token', { path: '/', httpOnly: true, sameSite: 'strict' });
+    res.clearCookie('admin_token', adminCookieOptions(req));
 
     return res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
