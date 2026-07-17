@@ -35,12 +35,8 @@ const config = {
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
   },
 
-  // OAuth - Google
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackUrl: process.env.GOOGLE_CALLBACK_URL
-  },
+  // Note: Google sign-in is handled by Supabase Auth, not here. The GOOGLE_* vars
+  // belong to the Gmail email provider — see config.email.gmail below.
 
   // OAuth - LinkedIn
   linkedin: {
@@ -57,13 +53,40 @@ const config = {
   },
 
   // Email
+  // SMTP_* are the canonical names; the older EMAIL_* names are still honoured as
+  // fallbacks so existing .env files and Railway deploys keep working untouched.
   email: {
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT || 587,
-    secure: process.env.EMAIL_SECURE === 'true',
-    user: process.env.EMAIL_USER,
-    password: process.env.EMAIL_PASSWORD,
-    from: process.env.EMAIL_FROM
+    provider: (process.env.EMAIL_PROVIDER || 'smtp').trim().toLowerCase(),
+    enabled: process.env.EMAIL_ENABLED !== 'false',
+    sandbox: process.env.EMAIL_SANDBOX === 'true',
+    sandboxRecipient: process.env.EMAIL_SANDBOX_RECIPIENT,
+
+    smtp: {
+      host: process.env.SMTP_HOST || process.env.EMAIL_HOST,
+      port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT, 10) || 587,
+      secure: (process.env.SMTP_SECURE || process.env.EMAIL_SECURE) === 'true',
+      user: process.env.SMTP_USER || process.env.EMAIL_USER,
+      password: process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD,
+      fromEmail: process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM,
+      fromName: process.env.SMTP_FROM_NAME || 'SkillKart'
+    },
+
+    gmail: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/oauth2callback',
+      user: process.env.GOOGLE_EMAIL,
+      fromName: process.env.SMTP_FROM_NAME || 'SkillKart'
+    },
+
+    // Legacy flat accessors. Kept because existing call sites read config.email.from.
+    host: process.env.SMTP_HOST || process.env.EMAIL_HOST,
+    port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT, 10) || 587,
+    secure: (process.env.SMTP_SECURE || process.env.EMAIL_SECURE) === 'true',
+    user: process.env.SMTP_USER || process.env.EMAIL_USER,
+    password: process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD,
+    from: process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM
   },
 
   // OTP

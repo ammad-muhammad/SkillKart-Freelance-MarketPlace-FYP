@@ -58,6 +58,19 @@ const startServer = async () => {
       console.log('⚠️  Proceeding without AI features');
     }
 
+    // Initialize Email Provider
+    console.log('📧 Initializing Email Provider...');
+    const { initEmail, labelFor } = require('./config/email');
+    const emailHealth = await initEmail();
+    if (emailHealth.status === 'success') {
+      console.log(`✅ Email Provider: ${labelFor(emailHealth.provider)}`);
+    } else if (emailHealth.status === 'degraded') {
+      console.log(`⚠️  Email Provider: ${labelFor(emailHealth.provider)} — ${emailHealth.error}`);
+    } else {
+      console.log(`⚠️  Email Provider failed to initialize: ${emailHealth.error}`);
+      console.log('⚠️  Proceeding without email delivery');
+    }
+
     // Initialize cron jobs
     console.log('⏰ Initializing cron jobs...');
     try {

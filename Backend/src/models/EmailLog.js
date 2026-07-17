@@ -13,11 +13,22 @@ const emailLogSchema = new mongoose.Schema({
   template: {
     type: String
   },
+  provider: {
+    type: String,
+    enum: ['smtp', 'gmail'],
+    index: true
+  },
   status: {
     type: String,
     enum: ['sent', 'failed', 'queued'],
     default: 'sent',
     index: true
+  },
+  durationMs: {
+    type: Number
+  },
+  attempts: {
+    type: Number
   },
   errorMessage: {
     type: String

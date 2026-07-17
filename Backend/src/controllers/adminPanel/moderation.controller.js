@@ -400,9 +400,10 @@ const getSystemLogs = async (req, res) => {
 
 const getEmailLogs = async (req, res) => {
   try {
-    const { status, page = 1, limit = 50 } = req.query;
+    const { status, provider, page = 1, limit = 50 } = req.query;
     const filter = {};
     if (status) filter.status = status;
+    if (provider) filter.provider = provider;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [logs, total] = await Promise.all([
