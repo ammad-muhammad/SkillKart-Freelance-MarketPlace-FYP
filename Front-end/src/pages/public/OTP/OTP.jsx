@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { ShieldCheck, ArrowRight, RotateCcw, AlertCircle, CheckCircle } from "lucide-react";
 import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
+import { log } from "../../../utils/logger";
 import "../../../Components/common/Hero/Hero.css";
 
 const OTP = () => {
@@ -130,13 +131,12 @@ const OTP = () => {
         try {
             // PASSWORD RESET FLOW
             if (isPasswordReset) {
-                console.log("🔄 Password Reset Flow");
-                console.log("Email:", resetEmail);
-                console.log("OTP:", otpComplete);
-                console.log("New Password:", resetPassword);
+                log("🔄 Password Reset Flow");
+                log("Email:", resetEmail);
+                log("OTP:", otpComplete);
 
                 const response = await authAPI.resetPassword(resetEmail, otpComplete, resetPassword);
-                console.log("✅ Password reset successful:", response.data);
+                log("✅ Password reset successful:", response.data);
 
                 setSuccess("Password reset successfully!");
 
@@ -149,13 +149,13 @@ const OTP = () => {
             }
             // REGISTRATION/LOGIN FLOW
             else {
-                console.log("🔐 Registration/Login Flow");
-                console.log("Verifying OTP:", otpComplete, "for email:", userEmail);
-                console.log("Registration Type:", registrationType);
+                log("🔐 Registration/Login Flow");
+                log("Verifying OTP:", otpComplete, "for email:", userEmail);
+                log("Registration Type:", registrationType);
 
                 const purpose = registrationType === 'login' ? 'login' : 'email_verification';
                 const response = await verifyOtp(userEmail, otpComplete, purpose);
-                console.log("✅ OTP verification successful:", response.data);
+                log("✅ OTP verification successful:", response.data);
 
                 setSuccess("Verification successful!");
 
@@ -219,8 +219,8 @@ const OTP = () => {
             if (isPasswordReset) purpose = 'password_reset';
             else if (registrationType === 'login') purpose = 'login';
 
-            console.log("📧 Resending OTP to:", emailForResend);
-            console.log("Purpose:", purpose);
+            log("📧 Resending OTP to:", emailForResend);
+            log("Purpose:", purpose);
 
             await authAPI.resendOTP(emailForResend, purpose);
 

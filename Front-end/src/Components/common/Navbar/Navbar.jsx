@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { skillsAPI } from '../../../api/skills';
+import { warn } from "../../../utils/logger";
 
 /**
  * Map a taxonomy category to a proper lucide icon component.
@@ -170,7 +171,7 @@ export default function Navbar({ alwaysSticky = false }) {
         setMegaActiveCat(0);
       })
       .catch(err => {
-        console.warn('Failed to load dynamic Navbar taxonomy:', err);
+        warn('Failed to load dynamic Navbar taxonomy:', err);
       });
   }, []);
 

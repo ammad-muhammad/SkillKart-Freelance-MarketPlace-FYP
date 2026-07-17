@@ -177,21 +177,39 @@ SkillKart does not rely on direct peer-to-peer transfers. It utilizes an Escrow 
 | **Withdrawal Requested** | Freelancer | Confirm payout request was received. |
 | **Withdrawal Completed** | Freelancer | Confirm payout hit their bank/external account. |
 
+### Email Delivery
+
+The table above covers **in-app** notifications. Separately, the platform sends transactional **email**: OTP verification codes, login and password-change security alerts, and contact/newsletter relays.
+
+Email goes through a provider abstraction selected by `EMAIL_PROVIDER`:
+
+| Provider | Value | Transport | Use |
+| :--- | :--- | :--- | :--- |
+| **Google Gmail API** | `gmail` | HTTPS (OAuth2 refresh token) | Production. Required on Railway, which blocks outbound SMTP ports. |
+| **SMTP** | `smtp` | SMTP (Nodemailer) | Local development; automatic fallback if Gmail credentials are missing or fail startup verification. |
+
+Controllers never know which provider is active — they call `email.service.js` and a factory resolves the transport. Transient failures (network, timeout, 429, 5xx) retry with exponential backoff; permanent ones (bad credentials, invalid recipient) fail immediately rather than burning quota. Every attempt is written to `EmailLog` and surfaced in **Admin → Monitoring → Email**.
+
+> The Gmail provider authenticates as a **dedicated platform mailbox** using its own refresh token. This is unrelated to Supabase's Google sign-in: that authenticates *users*, whereas transactional mail is sent *as the platform* to recipients who may never have signed in with Google.
+
 ---
 
 ## 9. Folder Structure
 
-- **`Frontend/`**: Contains the React.js application.
+- **`Front-end/`**: Contains the React.js application.
+  - `public/`: Served verbatim from the site root — `robots.txt`, `site.webmanifest`, favicons, and the Open Graph share image.
   - `src/pages/`: Page-level components organized by persona (`client`, `freelancer`, `public`).
-  - `src/components/`: Reusable UI elements (buttons, modals, headers).
-  - `src/utils/`: Helper functions (API interceptors, file uploaders).
+  - `src/Components/`: Reusable UI elements (buttons, modals, headers).
+  - `src/utils/`: Helper functions (API interceptors, file uploaders, reCAPTCHA token minting, environment-gated logger).
 - **`Backend/`**: Contains the Express.js API.
   - `src/controllers/`: The brains of the operation. Contains all business logic and database queries.
   - `src/models/`: Mongoose schemas defining the structure of the database.
   - `src/routes/`: Express routers mapping URLs to controllers.
-  - `src/middleware/`: Request interceptors (Auth checking, Rate Limiting, File Upload constraints).
-  - `src/services/`: Reusable backend logic (Stripe, Email/SMTP, Notifications).
+  - `src/middleware/`: Request interceptors (Auth checking, Rate Limiting, reCAPTCHA verification, File Upload constraints).
+  - `src/services/`: Reusable backend logic (Stripe, Notifications, reCAPTCHA, sitemap generation).
+    - `src/services/email/`: Pluggable email providers (Gmail API / SMTP), templates, retry, and metrics. Selected by `EMAIL_PROVIDER`; adding a provider means one new file plus one registry line.
   - `src/utils/`: Standardized error handlers and API response formatters.
+  - `scripts/`: Operational tooling — demo seeding, SuperAdmin setup, and one-time Gmail refresh-token generation.
 
 ---
 
@@ -230,6 +248,7 @@ SkillKart employs enterprise-grade security protocols:
 - **Payments:** Idempotency checks. The database strictly tracks `processedSessions` to prevent replay attacks where a user submits the same Stripe receipt multiple times to artificially inflate their wallet.
 - **Webhooks:** Stripe signatures are cryptographically verified using `express.raw` bodies.
 - **Rate Limiting:** Auth endpoints are aggressively throttled (5 requests per 15 minutes) to prevent brute-force and credential stuffing.
+- **Bot Mitigation:** Google reCAPTCHA v3 (invisible, score-based) guards login, registration, and the public contact/newsletter forms. Each endpoint declares its own *action* name which the server verifies, so a token minted on the contact form can't be replayed against login. Configured via `RECAPTCHA_SECRET_KEY`; when unset, verification is skipped rather than blocking — a captcha outage must never take down login.
 
 ---
 
@@ -240,10 +259,12 @@ SkillKart employs enterprise-grade security protocols:
 - Secure Stripe Checkout integration.
 - Protected File Uploads via Cloudinary.
 - Strict Rate Limiting and Payload Security.
-- Robust OTP Email Verification.
+- Robust OTP Email Verification, delivered via a pluggable provider (Gmail API in production, SMTP locally).
+- Bot mitigation on login, registration, and public forms via Google reCAPTCHA v3.
+- Search-engine discoverability: a database-driven dynamic sitemap, crawl policy, PWA manifest, and social share cards.
+- Admin Panel UI with monitoring views (API, error, and email logs).
 
 **What intentionally does NOT exist yet:**
-- **No Admin Panel UI:** Moderation, KYC approvals, and Withdrawals must be handled via DB manipulation by developers.
 - **Manual Withdrawals:** Payouts are not automated via Stripe Connect.
 - **Manual Dispute Handling:** Clients cannot programmatically freeze a contract if work is poor; they must contact support.
 - **Polling-based Messaging:** Chat relies on REST requests rather than true WebSockets (Socket.io).
@@ -282,11 +303,15 @@ SkillKart employs enterprise-grade security protocols:
 
 Before deploying SkillKart to Production, the following must be verified:
 
-- [ ] **SMTP Verified:** Ensure Gmail App Passwords (or SendGrid) are active. If SMTP fails, OTPs fail, and registration freezes.
+- [ ] **Email Verified:** Confirm the startup log reads `✅ Email Provider: Gmail API` (or `SMTP`). If email fails, OTPs fail and registration freezes. **On Railway, SMTP ports (465/587) are blocked — `EMAIL_PROVIDER=gmail` is required there.** Gmail needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL`; generate the refresh token once with `npm run gmail:token`.
+- [ ] **reCAPTCHA Configured:** Set `RECAPTCHA_SECRET_KEY` (backend) and `VITE_RECAPTCHA_SITE_KEY` (frontend). Add every live domain to the key in the [reCAPTCHA admin console](https://www.google.com/recaptcha/admin) — an unlisted domain is silently rejected. Without keys, bot protection is simply off.
 - [ ] **Stripe Configured:** Swap from test keys to live keys. Update the `WEBHOOK_SECRET`.
 - [ ] **Cloudinary Configured:** Verify upload limits and storage capacity.
 - [ ] **Environment Variables:** Ensure all `.env` files contain production secrets (e.g., `NODE_ENV=production`).
 - [ ] **Domain & SSL:** Ensure CORS origins (`FRONTEND_URL`) match the exact live HTTPS domain.
+- [ ] **Deploy Order — Backend First:** The frontend proxies `/sitemap.xml` through to the backend, so deploying Vercel before Railway leaves that URL returning a 404 until the backend catches up. Harmless and self-correcting, but don't submit the sitemap to Google in that window.
+- [ ] **SEO Canonical Domain:** Set `PUBLIC_SITE_URL` to the domain to be indexed — not `FRONTEND_URL`, which is a CSV of allowed CORS origins whose first entry may be the wrong host. Then verify `curl -sI https://<frontend>/sitemap.xml` returns **`application/xml`** — `text/html` means the SPA answered instead and the rewrite order in `vercel.json` is wrong. Submit to Google Search Console only after that check passes.
+- [ ] **Admin Login on the Live Site:** Complete an OTP login and confirm you reach the dashboard rather than bouncing back to the login page. This exercises the cross-site `admin_token` cookie, which cannot fail locally (same-origin) and so is only ever provable in deployment.
 - [ ] **Database Backups:** Configure daily automated snapshots in MongoDB Atlas.
 - [ ] **Admin SOPs:** Since there is no Admin UI, developers must have Standard Operating Procedures (SOPs) ready for manual DB refund/withdrawal execution.
 - [ ] **Monitoring & Logging:** Hook up external error tracking (e.g., Sentry) to catch unhandled exceptions.

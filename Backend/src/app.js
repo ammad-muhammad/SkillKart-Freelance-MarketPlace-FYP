@@ -125,6 +125,32 @@ app.get('/', (req, res) => {
   });
 });
 
+// =======================
+// SEO — served from the host root, not /api/v1: crawlers only ever look at
+// /sitemap.xml and /robots.txt. The SPA's robots.txt (on Vercel) points here.
+// =======================
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const { generateSitemap } = require('./services/sitemap.service');
+    const { xml } = await generateSitemap(req.query.refresh === 'true');
+    res.header('Content-Type', 'application/xml; charset=utf-8');
+    res.header('Cache-Control', 'public, max-age=3600');
+    return res.status(200).send(xml);
+  } catch (error) {
+    console.error('[sitemap] generation failed:', error.message);
+    return res.status(500).send('<!-- sitemap unavailable -->');
+  }
+});
+
+// The API host itself must never be indexed — only the SPA's pages should be.
+app.get('/robots.txt', (req, res) => {
+  const { apiRobots } = require('./services/sitemap.service');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol;
+  res.header('Content-Type', 'text/plain; charset=utf-8');
+  return res.status(200).send(apiRobots(`${proto}://${req.get('host')}`));
+});
+
 // Swagger Documentation
 app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(specs));
 

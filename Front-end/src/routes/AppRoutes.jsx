@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation } from "react-router-dom"
 import ProtectedRoute from '../hooks/ProtectedRoute';
 import { ClientProvider } from '../context/ClientContext';
 import { FreelancerProvider } from '../context/FreelancerContext';
@@ -103,7 +103,24 @@ import CategoryPage from "../pages/public/Skills/CategoryPage";
 import SkillPage from "../pages/public/Skills/SkillPage";
 
 // Fallback
-const NotFound = () => <h1>404 – Page Not Found</h1>;
+import NotFound from "../pages/public/NotFound/NotFound";
+
+/**
+ * Sends unknown routes to /404 so the address bar reflects the error, while
+ * passing the attempted path along in history state so the page can show what
+ * was actually requested (the redirect would otherwise discard it).
+ * `replace` keeps the bad URL out of history, so Back doesn't bounce here again.
+ */
+const RedirectTo404 = () => {
+  const location = useLocation();
+  return (
+    <Navigate
+      to="/404"
+      replace
+      state={{ from: `${location.pathname}${location.search}` }}
+    />
+  );
+};
 
 const AppRoutes = () => {
   return (
@@ -286,7 +303,9 @@ const AppRoutes = () => {
           </Route>
 
           <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
-          <Route path="*" element={<NotFound />} />
+          {/* 404 — directly linkable, and where unknown routes land */}
+          <Route path="/404" element={<NotFound />} />
+          <Route path="*" element={<RedirectTo404 />} />
         </Routes>
       </FreelancerProvider>
     </ClientProvider>

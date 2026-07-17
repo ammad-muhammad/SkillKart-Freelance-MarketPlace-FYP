@@ -6,6 +6,7 @@ const jobController = require('../controllers/job.controller');
 const publicStatsController = require('../controllers/publicStats.controller');
 const testimonialController = require('../controllers/testimonial.controller');
 const clientController = require('../controllers/client.controller');
+const { verifyRecaptcha } = require('../middleware/recaptcha.middleware');
 
 /**
  * Public routes - No authentication required
@@ -72,8 +73,8 @@ router.get('/testimonials', testimonialController.getPublicTestimonials);
 
 // Contact form submission (rate-limited to deter spam)
 const { strictLimiter } = require('../middleware/rateLimit.middleware');
-router.post('/contact', strictLimiter, publicStatsController.submitContact);
-router.post('/newsletter', strictLimiter, publicStatsController.submitNewsletter);
+router.post('/contact', strictLimiter, verifyRecaptcha('contact'), publicStatsController.submitContact);
+router.post('/newsletter', strictLimiter, verifyRecaptcha('newsletter'), publicStatsController.submitNewsletter);
 
 /**
  * @swagger

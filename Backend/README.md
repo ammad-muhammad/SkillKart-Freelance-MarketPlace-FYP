@@ -226,6 +226,81 @@ Set on Railway: `EMAIL_PROVIDER=gmail`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRE
 | SMTP connects locally, times out on Railway | Some hosts block outbound `465`/`587`. Switch to `EMAIL_PROVIDER=gmail` (HTTPS). |
 | OTP emails never arrive | Check **Admin → Monitoring → Email** for the row: `failed` shows the provider error; no row at all means the send was never attempted. |
 
+## SEO — sitemap & robots
+
+The SPA is served from Vercel, but the content crawlers should index (jobs, gigs,
+freelancer profiles, categories) lives in Mongo here. So the sitemap is generated
+by the API and the frontend's `robots.txt` points crawlers at it — a new job is
+discoverable without a frontend redeploy.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /sitemap.xml` | Live sitemap. Static pages + open jobs + active gigs + public freelancers + categories. Cached 1h; `?refresh=true` forces a rebuild. |
+| `GET /robots.txt` | For the **API host** — `Disallow: /` (the API must never be indexed) plus a `Sitemap:` pointer. The *site's* robots.txt is `Front-end/public/robots.txt`. |
+
+Both are mounted at the host root, not under `/api/v1`: crawlers only ever look
+at `/sitemap.xml` and `/robots.txt`.
+
+URLs are built from **`PUBLIC_SITE_URL`**, not `FRONTEND_URL`. The latter is a CSV
+of allowed CORS origins whose first entry is an arbitrary allowed domain — using it
+would advertise the wrong canonical host to Google.
+
+```bash
+PUBLIC_SITE_URL=https://skillkart-fuuast.vercel.app
+```
+
+Only public content is listed. Auth flows, dashboards, the admin panel and
+transactional pages are excluded here *and* disallowed in the frontend robots.txt.
+Each collection is queried independently — one failing source degrades that
+section rather than emptying the sitemap. Implementation: `src/services/sitemap.service.js`.
+
+## Google reCAPTCHA v3
+
+Score-based bot mitigation on abuse-prone endpoints. v3 is invisible (no
+checkbox) — it scores each session 0.0 (bot) → 1.0 (human) and we pick a threshold.
+
+**Protected routes** — each with a distinct action name:
+
+| Route | Action |
+|-------|--------|
+| `POST /api/v1/auth/login` | `login` |
+| `POST /api/v1/auth/register/user` | `register` |
+| `POST /api/v1/public/contact` | `contact` |
+| `POST /api/v1/public/newsletter` | `newsletter` |
+
+The client sends a token in the `x-recaptcha-token` header (added automatically by
+the frontend's axios interceptor — see `Front-end/src/utils/recaptcha.js`). Tokens
+are **single-use and expire in ~2 minutes**, so one is minted per submit.
+
+### Settings
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `RECAPTCHA_SECRET_KEY` | — | Server-side secret. **Blank = verification disabled.** |
+| `RECAPTCHA_MIN_SCORE` | `0.5` | Below this the request is rejected. Raise to be stricter. |
+| `RECAPTCHA_TIMEOUT_MS` | `5000` | Google verification timeout. |
+
+The public site key goes in `Front-end/.env` as `VITE_RECAPTCHA_SITE_KEY`. Get both
+at [google.com/recaptcha/admin](https://www.google.com/recaptcha/admin) — choose
+**reCAPTCHA v3** and add your domains (include `localhost` for dev).
+
+### Fail-open by design
+
+Verification is skipped — the request proceeds — when the secret is unset **or**
+Google is unreachable. A captcha outage or a missing key must never lock every user
+out of login. The trade-off is deliberate: without keys you get no bot protection,
+so set them in production. `req.recaptcha.score` is exposed to handlers that want to
+add friction (e.g. force OTP on a low score) without hard-blocking.
+
+Both sides degrade the same way: no site key → no script loads, no token sent, and
+the server skips verification.
+
+### Action mismatch
+
+Google returns `success: true` for a valid token minted for a *different* action, so
+the middleware checks `action` explicitly — otherwise a token from the public
+contact form could be replayed against login.
+
 ## API Documentation
 
 Interactive Swagger docs are served at `/api/v1/docs` while the server is running.

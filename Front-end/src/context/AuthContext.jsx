@@ -5,6 +5,7 @@ import { authAPI } from '../api/auth';
 import { tokenManager } from '../utils/tokenManager';
 import { normalizeAuthUser } from '../utils/user';
 import { toast } from 'react-toastify';
+import { log } from "../utils/logger";
 
 export const AuthContext = createContext();
 
@@ -93,7 +94,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const handleOnline = async () => {
-    console.log('Connection restored');
+    log('Connection restored');
     const now = Date.now();
     if (tokenManager.hasValidToken() && (now - lastCheckedAuth.current > AUTH_CHECK_THROTTLE)) {
       try {
@@ -106,7 +107,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const handleOffline = () => {
-    console.log('Connection lost - working offline');
+    log('Connection lost - working offline');
     toast.warning('You are offline. Some features may not work.');
   };
 

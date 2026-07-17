@@ -2,6 +2,8 @@ import axios from 'axios';
 import { showSafeToast } from '../utils/safeToast';
 import { tokenManager } from '../utils/tokenManager';
 import { extractApiError } from '../utils/apiError';
+import { log } from "../utils/logger";
+import { getRecaptchaToken } from "../utils/recaptcha";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
@@ -63,12 +65,41 @@ const getRequestKey = (config) => {
   return `${method}:${url}:${params}`;
 };
 
+/**
+ * Endpoints gated by reCAPTCHA v3, mapped to the action the backend expects.
+ * Keys are matched against the request path; the action name MUST match the
+ * server's verifyRecaptcha(action) or the token is rejected as a replay.
+ */
+const RECAPTCHA_ACTIONS = {
+  '/auth/login': 'login',
+  '/auth/register/user': 'register',
+  '/public/contact': 'contact',
+  '/public/newsletter': 'newsletter'
+};
+
+const recaptchaActionFor = (config) => {
+  if ((config.method || 'get').toLowerCase() !== 'post') return null;
+  const url = config.url || '';
+  const match = Object.keys(RECAPTCHA_ACTIONS).find((path) => url.includes(path));
+  return match ? RECAPTCHA_ACTIONS[match] : null;
+};
+
 axiosInstance.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = tokenManager.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Mint a fresh captcha token per protected submit — v3 tokens are single-use
+    // and expire in ~2min, so they can't be cached. Resolves to null (and the
+    // backend fails open) if reCAPTCHA is unconfigured or blocked.
+    const action = recaptchaActionFor(config);
+    if (action) {
+      const captcha = await getRecaptchaToken(action);
+      if (captcha) config.headers['x-recaptcha-token'] = captcha;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -176,7 +207,7 @@ const client = (configOrUrl, config = {}) => {
     const key = getRequestKey(finalConfig);
     
     if (pendingRequests.has(key)) {
-      if (import.meta.env.DEV) console.log(`[API Client] Deduplicating in-flight request: ${finalConfig.url}`);
+      if (import.meta.env.DEV) log(`[API Client] Deduplicating in-flight request: ${finalConfig.url}`);
       return pendingRequests.get(key);
     }
 

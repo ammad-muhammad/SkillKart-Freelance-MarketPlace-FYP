@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { toast } from 'react-toastify';
+import { log } from "../../../utils/logger";
 
 const AuthConsent = () => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const AuthConsent = () => {
 
     const processOAuthCallback = async () => {
       try {
-        console.log('🔐 Processing OAuth callback...');
+        log('🔐 Processing OAuth callback...');
 
         // Extract tokens from URL hash
         const hash = window.location.hash.substring(1);
@@ -48,7 +49,7 @@ const AuthConsent = () => {
           return;
         }
 
-        console.log('✅ Tokens received from Supabase');
+        log('✅ Tokens received from Supabase');
 
         // ✅ Mark as processed BEFORE making API call
         hasProcessed.current = true;
@@ -59,13 +60,13 @@ const AuthConsent = () => {
         // Send to backend
         const response = await handleSupabaseOAuth(accessToken, refreshToken);
 
-        console.log('✅ Authentication successful. User:', response?.data?.user);
+        log('✅ Authentication successful. User:', response?.data?.user);
         
         const user = response?.data?.user;
         const userRole = user?.role;
         const isOnboardingCompleted = user?.isOnBoardingCompleted;
 
-        console.log(`🧭 Redirecting: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
+        log(`🧭 Redirecting: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
 
         // Navigate to the right destination. Always use `replace: true` so the
         // OAuth callback screen is removed from history (prevents the back

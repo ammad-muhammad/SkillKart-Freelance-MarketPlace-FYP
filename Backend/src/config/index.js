@@ -89,6 +89,15 @@ const config = {
     from: process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM
   },
 
+  // Google reCAPTCHA v3
+  recaptcha: {
+    secretKey: process.env.RECAPTCHA_SECRET_KEY,
+    // v3 scores 0.0 (bot) → 1.0 (human). 0.5 is Google's suggested default;
+    // raise to be stricter, lower if legitimate users get blocked.
+    minScore: parseFloat(process.env.RECAPTCHA_MIN_SCORE) || 0.5,
+    timeoutMs: parseInt(process.env.RECAPTCHA_TIMEOUT_MS, 10) || 5000
+  },
+
   // OTP
   otp: {
     expiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES) || 10,
@@ -104,7 +113,13 @@ const config = {
 
   // Frontend
   frontend: {
-    url: process.env.FRONTEND_URL || 'http://localhost:3000'
+    url: process.env.FRONTEND_URL || 'http://localhost:3000',
+    // Canonical public origin for SEO (sitemap, robots). Deliberately separate
+    // from FRONTEND_URL, which is a CSV of allowed CORS origins — the first
+    // entry there is not necessarily the domain the site should be indexed as.
+    publicUrl:
+      process.env.PUBLIC_SITE_URL ||
+      String(process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim()
   },
 
   // SuperAdmin

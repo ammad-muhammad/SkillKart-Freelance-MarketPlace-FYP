@@ -254,10 +254,16 @@ User/Contract ──► Report ──► AdminAuditLog
 | Auth | JWT (access + refresh), bcrypt, OTP; optional Supabase OAuth |
 | Payments | Stripe (with a dummy/simulated mode for development) |
 | AI | Provider router — Gemini, Qwen, Groq, Claude, Ollama |
-| Security | Helmet, express-rate-limit, express-validator, express-mongo-sanitize |
+| Email | Provider abstraction — **Google Gmail API** (production) / SMTP via Nodemailer (local) |
+| Security | Helmet, express-rate-limit, express-validator, express-mongo-sanitize, **Google reCAPTCHA v3** |
+| SEO / PWA | Dynamic XML sitemap, robots.txt, Web App Manifest, Open Graph cards |
 | Tooling | ESLint, Prettier, Nodemon, Swagger, Winston |
 
 **Key discussion points:** Every choice was deliberate — Vite for fast builds, Mongoose for schema discipline over MongoDB's flexibility, Stripe for payments with a dummy mode so we can demo without live money.
+
+**Likely question — "Why the Gmail API instead of just SMTP?"** Two reasons. First, practical: our host (Railway) blocks outbound SMTP ports, so SMTP simply cannot deliver in production. Second, architectural: rather than hard-code either one, email sits behind a **provider registry** — `EMAIL_PROVIDER` selects the transport, and adding a future provider (SES, SendGrid) means one new file plus one registry line, with zero changes to controllers or business logic. SMTP remains the automatic fallback.
+
+**Likely question — "Doesn't Supabase already give you Google access?"** No, and this is a common misconception worth stating precisely: Supabase's Google OAuth authenticates *end users*. Sending mail via the Gmail API requires the `gmail.send` scope on a mailbox we own, sending *as the platform* — to recipients who may never have used Google sign-in, at moments when no user session exists at all (e.g. a password-reset OTP). They are different concerns with different credentials, and we deliberately kept the email layer decoupled from authentication entirely.
 
 ---
 
@@ -284,11 +290,18 @@ User/Contract ──► Report ──► AdminAuditLog
 - **Password hashing** (bcrypt) + **OTP** verification.
 - **JWT + RBAC** with strict role separation (marketplace vs. admin).
 - **Rate limiting** (global + stricter on auth endpoints).
+- **Google reCAPTCHA v3** — invisible, score-based bot mitigation on login, registration, and public forms.
 - **Input validation** (express-validator) + **NoSQL-injection sanitization** (express-mongo-sanitize).
 - **Helmet** security headers, **CORS** allow-list.
 - **Audit logs** for every sensitive admin action; error & API logging.
 
-**Key discussion points:** Security is layered end-to-end: transport (CORS/Helmet), authentication (JWT/OTP), authorization (RBAC), input (validation/sanitization), abuse (rate limiting), and accountability (audit logs).
+**Key discussion points:** Security is layered end-to-end: transport (CORS/Helmet), authentication (JWT/OTP), authorization (RBAC), input (validation/sanitization), abuse (rate limiting + reCAPTCHA), and accountability (audit logs).
+
+**Speaker notes — reCAPTCHA v3 specifics, if asked:**
+- **Why v3, not v2?** v3 is invisible: no checkbox, no image grid. It returns a **0.0–1.0 score** instead of a pass/fail, which we compare against a configurable threshold (0.5). We chose it because friction at signup directly costs conversions on a student-facing marketplace.
+- **Why keep rate limiting too?** They defend different axes: rate limiting bounds request *volume*, reCAPTCHA scores request *legitimacy*. A slow, patient bot defeats rate limiting alone; a determined human defeats reCAPTCHA alone. Layering covers both.
+- **Replay protection:** each endpoint declares a distinct *action* name. Google reports a token minted for a *different* action as otherwise valid, so we verify the action explicitly — without that check, a token harvested from the public contact form could be replayed against login.
+- **Deliberate trade-off (good defense answer):** verification **fails open** — if Google is unreachable or keys are unset, the request proceeds. We consciously chose availability over security at this one bounded point: a third-party bot-detection outage must never render our own login inoperable. Rate limiting still bounds the residual risk.
 
 ---
 
@@ -332,8 +345,10 @@ User/Contract ──► Report ──► AdminAuditLog
 - **Wallet, Escrow Payments & Withdrawals** · **Messaging** · **Notifications**
 - **Reviews & Ratings** · **Search & Categories** · **Disputes**
 - **AI Tools** · **Admin Panel & Analytics**
+- **Transactional Email** (OTP, security alerts — Gmail API / SMTP, with retry + delivery logging)
+- **Discoverability** (dynamic sitemap, robots policy, installable PWA, social share cards)
 
-**Speaker notes:** Hand off to Student 3 — "Now [Student 3] will walk you through the workflow and give a live demo."
+**Speaker notes:** The last two are the "invisible" modules — nobody clicks them, but without email nobody can even register, and without SEO nobody finds the platform at all. Hand off to Student 3 — "Now [Student 3] will walk you through the workflow and give a live demo."
 
 ---
 
@@ -453,8 +468,12 @@ Register → Onboard (verify) → Post Job / Publish Gig
 - **Stale auth after role change** → forced a fresh auth refetch (bypassing a throttle) to prevent wrong redirects.
 - **Modal/overlay CSS bug** (fixed element trapped in a transformed ancestor) → solved with React Portals.
 - **Toast library incompatible with React 19** → built a dependency-free, crash-proof toast utility.
+- **Email died in production, worked locally** → the host blocks outbound SMTP ports; refactored to a provider abstraction and an HTTPS-based Gmail API transport.
+- **Admin login looped after deploy** → cross-site cookie (`SameSite=Strict` withheld it between Vercel and Railway); fixed with `SameSite=None; Secure` + `trust proxy`.
 
 **Speaker notes:** These are real bugs we hit and fixed — each taught us something about CSS containing blocks, React 19 changes, auth race conditions, and designing for third-party failure.
+
+**The last two share a theme worth drawing out if asked:** both worked perfectly on localhost and failed only once deployed, because both depend on properties that don't exist in local development — SMTP egress rules, and the browser's same-site vs. cross-site distinction. On one machine, frontend and backend are both `localhost`, so *every* request is same-site and the cookie bug is invisible. **A passing local test is not evidence of correctness for behaviour defined by the deployment topology.** That insight changed how we validate: we now gate the cookie on the actual request protocol rather than an `NODE_ENV` label, because an environment label is a claim about the environment, not a measurement of it.
 
 ---
 

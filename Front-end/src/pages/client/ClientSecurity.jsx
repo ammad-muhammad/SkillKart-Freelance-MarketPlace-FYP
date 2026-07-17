@@ -7,6 +7,7 @@ import { authAPI } from '../../api/auth';
 import { validatePassword } from '../../utils/validation';
 import Modal from '../freelancer/components/Modal';
 import './ClientDashboard.css';
+import { log } from "../../utils/logger";
 
 const strengthLabel = (score) => {
   if (score <= 1) return { text: 'Weak', color: '#ef4444' };
@@ -188,7 +189,7 @@ const ClientSecurity = () => {
 
   const toggleSecurity = async (key, value) => {
     // 1. Log payload
-    console.log(`[Security Toggle] Payload for ${key}:`, value);
+    log(`[Security Toggle] Payload for ${key}:`, value);
 
     setUpdating(prev => ({ ...prev, [key]: true }));
 
@@ -214,7 +215,7 @@ const ClientSecurity = () => {
       const res = await updateProfile('securitySettings', { [key]: value }, true, true);
       
       // 2. Log API response
-      console.log(`[Security Toggle] API response for ${key}:`, res);
+      log(`[Security Toggle] API response for ${key}:`, res);
 
       if (res && res.success) {
         showToast('Security settings updated successfully.');
@@ -248,7 +249,7 @@ const ClientSecurity = () => {
   };
 
   // 3. Log rendered state
-  console.log('[ClientSecurity] Rendered state:', {
+  log('[ClientSecurity] Rendered state:', {
     twoFactor,
     loginAlerts,
     passwordAlerts

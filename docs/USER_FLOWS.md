@@ -139,10 +139,11 @@ Work & Delivery Lifecycle
 ## 7. Authentication & Security Flow
 
 - **Registration:** Passwords hashed via Bcrypt (12 rounds).
-- **OTP Verification:** 6-digit codes stored temporarily.
+- **Bot Screening:** Login, registration, and the public contact/newsletter forms are screened by Google reCAPTCHA v3 before any handler runs. It is invisible — legitimate users see no challenge and no extra step in the flows above.
+- **OTP Verification:** 6-digit codes stored temporarily, delivered by email (Gmail API in production, SMTP locally).
 - **Login:** Returns stateless JWTs.
 - **Two-Factor Authentication (2FA):** Optional. If enabled, Login requires a secondary OTP sent to the verified email.
-- **Refresh Token Flow:** Access token expires (e.g., 15m). Frontend silently hits `/auth/refresh` with HTTP-only Refresh Token.
+- **Refresh Token Flow:** Access token expires (e.g., 15m). The frontend silently hits `/auth/refresh` with the stored refresh token to mint a new one. Marketplace tokens are held in browser storage and sent as `Authorization: Bearer` headers; the **admin panel** is separate, using an HTTP-only `admin_token` cookie (`SameSite=None; Secure` in production, since the SPA and API are on different domains).
 - **Password Updates:** Fully supported via `changePassword` endpoints.
 - **File Uploads:** Memory buffer whitelisting strictly prevents payload manipulation before syncing to Cloudinary.
 

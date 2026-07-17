@@ -1,0 +1,35 @@
+# SkillKart — https://skillkart-fuuast.vercel.app
+# Public marketing/marketplace pages are crawlable; anything behind auth,
+# transactional, or user-specific is not.
+
+User-agent: *
+Allow: /
+
+# Auth & account flows — no crawl value, and never a useful search result.
+Disallow: /login
+Disallow: /register
+Disallow: /registration
+Disallow: /forgot-password
+Disallow: /otp-verification
+Disallow: /auth/
+Disallow: /role
+Disallow: /onboarding
+Disallow: /client/onboarding
+Disallow: /freelancer/onboarding
+
+# Authenticated dashboards.
+Disallow: /client/
+Disallow: /freelancer/
+
+# Admin panel — must never be indexed.
+Disallow: /admin
+Disallow: /admin-panel/
+
+# Transactional / error pages.
+Disallow: /payment/
+Disallow: /unauthorized
+Disallow: /404
+
+# Generated live from the database by the API and proxied onto this domain by
+# vercel.json, so the canonical sitemap URL is same-origin with the pages it lists.
+Sitemap: https://skillkart-fuuast.vercel.app/sitemap.xml

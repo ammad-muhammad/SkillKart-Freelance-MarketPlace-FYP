@@ -140,8 +140,11 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | Token signing secrets, 32+ chars (**required**) |
 | `PORT` | API port (default `5000`) |
 | `STRIPE_SECRET_KEY`, `STRIPE_DUMMY` | Payments; set `STRIPE_DUMMY=true` to simulate |
-| `EMAIL_*` | SMTP for OTP / notification emails |
-| `CORS_ORIGIN`, `FRONTEND_URL` | Allowed origins |
+| `EMAIL_PROVIDER` | `smtp` (default) or `gmail` — see [Backend README → Email](Backend/README.md#email) |
+| `SMTP_*` / `GOOGLE_*` | Credentials for the selected email provider (OTP, alerts) |
+| `CORS_ORIGIN`, `FRONTEND_URL` | Allowed origins (CSV) |
+| `PUBLIC_SITE_URL` | Canonical public origin for the sitemap/SEO |
+| `RECAPTCHA_SECRET_KEY` | Optional reCAPTCHA v3 secret; blank = disabled |
 | `GEMINI_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI provider keys |
 | `AI_PRIORITY_*` | Fallback order (numbered, 0 = first; `-1` disables a provider) |
 | `SUPABASE_*` | Optional OAuth |
@@ -152,6 +155,11 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 |----------|---------|
 | `VITE_API_URL` | Backend API base URL (e.g. `http://localhost:5000/api/v1`) |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional Supabase client |
+| `VITE_RECAPTCHA_SITE_KEY` | Optional reCAPTCHA v3 public site key; blank = disabled |
+| `VITE_ENVIRONMENT` | `production` forces console silence in a dev-mode build |
+
+> `VITE_`-prefixed vars ship in the client bundle and are publicly readable — never
+> put a secret in one.
 
 ## Running the Apps
 

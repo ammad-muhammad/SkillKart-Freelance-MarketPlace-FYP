@@ -6,6 +6,7 @@ import { validatePassword } from '../../utils/validation';
 import { Key, Save, Shield, Bell, Lock, AlertCircle } from 'lucide-react';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
+import { log } from "../../utils/logger";
 
 const FreelancerSecurity = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
@@ -123,7 +124,7 @@ const FreelancerSecurity = () => {
 
   const toggleSecurity = async (key, value) => {
     // 1. Log payload
-    console.log(`[Security Toggle] Payload for ${key}:`, value);
+    log(`[Security Toggle] Payload for ${key}:`, value);
 
     setUpdating(prev => ({ ...prev, [key]: true }));
 
@@ -149,7 +150,7 @@ const FreelancerSecurity = () => {
       const res = await updateProfile('securitySettings', { [key]: value }, true, true);
       
       // 2. Log API response
-      console.log(`[Security Toggle] API response for ${key}:`, res);
+      log(`[Security Toggle] API response for ${key}:`, res);
 
       if (res && res.success) {
         showToast('Security settings updated successfully.');

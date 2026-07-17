@@ -6,6 +6,7 @@ import { proposalsAPI } from '../api/proposals';
 import { useAuth } from '../hooks/useAuth';
 import { getUserId } from '../utils/user';
 import { tokenManager } from '../utils/tokenManager';
+import { log } from "../utils/logger";
 
 const FreelancerContext = createContext(null);
 
@@ -168,8 +169,8 @@ export const FreelancerProvider = ({ children }) => {
         stripeAccountId: dbProfile.stripeAccountId || ''
       };
 
-      console.log("[FreelancerContext] Gigs Response:", gigsRes.data);
-      console.log("[FreelancerContext] Proposals Response:", propRes.data);
+      log("[FreelancerContext] Gigs Response:", gigsRes.data);
+      log("[FreelancerContext] Proposals Response:", propRes.data);
 
       setProfile(transformedProfile);
       setGigs(gigsRes.data.data || []);

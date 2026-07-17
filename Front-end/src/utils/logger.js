@@ -1,14 +1,43 @@
 import axios from 'axios';
 
-// Check if we are in development. Use Vite's built-in DEV boolean (true during
-// `vite dev`, false in production builds) rather than a custom env var that
-// may be unset/misspelled.
-const isDev = import.meta.env.DEV;
+// Primary signal is Vite's built-in DEV boolean (true during `vite dev`, false in
+// production builds) rather than a custom env var that may be unset/misspelled.
+// VITE_ENVIRONMENT=production is honoured as an explicit force-silence override,
+// so a prod-like build can be muted without changing the build mode.
+const forceProd = String(import.meta.env.VITE_ENVIRONMENT).toLowerCase() === 'production';
+const isDev = import.meta.env.DEV && !forceProd;
 
-// Generic log function
+/**
+ * Dev-only logging. Errors are intentionally NOT gated — they must always surface,
+ * in every environment, so real failures stay diagnosable in production.
+ *
+ * Use these instead of bare console.* in app code:
+ *   log/info/debug → silent in production
+ *   warn           → silent in production
+ *   error          → always printed
+ */
 export const log = (...args) => {
   if (isDev) console.log(...args);
 };
+
+export const info = (...args) => {
+  if (isDev) console.info(...args);
+};
+
+export const debug = (...args) => {
+  if (isDev) console.debug(...args);
+};
+
+export const warn = (...args) => {
+  if (isDev) console.warn(...args);
+};
+
+// Always logged, in every environment.
+export const error = (...args) => {
+  console.error(...args);
+};
+
+export const isDevMode = isDev;
 
 // Check backend health
 export const checkBackend = async (backendUrl = import.meta.env.VITE_API_URL.replace('/api/v1','')) => {

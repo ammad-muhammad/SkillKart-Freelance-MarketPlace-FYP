@@ -497,8 +497,28 @@ This section explains each major technology and the rationale for its selection.
 - **JSON Web Tokens (JWT)** — stateless access/refresh tokens.
 - **bcrypt** — one-way password hashing.
 - **OTP (one-time passwords)** — email-delivered two-factor authentication.
-- **Supabase** *(optional)* — social OAuth provider.
+- **Supabase** *(optional)* — social OAuth provider. Note that Supabase owns *user* authentication only; it is deliberately decoupled from the platform's outbound email (see §11.5).
+- **Google reCAPTCHA v3** — invisible, score-based bot mitigation on login, registration, and the public contact/newsletter forms. Unlike v1/v2 it presents no challenge to the user; it returns a 0.0–1.0 confidence score which the server compares against a configurable threshold (default 0.5).
 - **Helmet, express-rate-limit, express-validator, express-mongo-sanitize** — HTTP-header hardening, abuse prevention, input validation, and NoSQL-injection sanitization.
+
+### 11.5 Email Delivery
+
+Transactional email (OTP codes, security alerts, contact-form relays) is sent through a **pluggable provider architecture**, selected at runtime by a single `EMAIL_PROVIDER` environment variable:
+
+- **Google Gmail API** (`googleapis`) — the primary provider in deployment. Sends over HTTPS using OAuth2 credentials belonging to a dedicated platform mailbox, authenticated by a long-lived refresh token. The application performs no OAuth authorization flow at runtime; it exchanges the stored refresh token for short-lived access tokens.
+- **SMTP** (`nodemailer`) — the default provider for local development, and the automatic fallback when Gmail credentials are absent or fail verification at startup.
+
+Two engineering constraints drove this design:
+
+1. **Cloud hosts commonly block outbound SMTP ports** (465/587). The deployment target, Railway, is one of them — so an HTTPS-based transport is a functional requirement in production, not a preference.
+2. **Gmail's `gmail.send` scope cannot be satisfied by the existing Supabase Google sign-in.** Supabase authenticates *end users*; `gmail.send` would send mail *as the signed-in user*. Transactional mail originates from a platform address and is delivered to recipients who may never have used Google sign-in, with no user session in scope at send time. The two concerns are therefore kept fully separate: authentication is an external dependency the email layer never touches.
+
+### 11.6 Discoverability (SEO & PWA)
+
+- **Dynamic XML sitemap** — generated server-side from live database content (open jobs, active gigs, public freelancer profiles, skill categories) rather than a static file, so newly published content becomes crawlable without a redeploy.
+- **robots.txt** — restricts crawlers to public marketing and marketplace pages; authentication flows, dashboards, the admin panel, and transactional pages are excluded.
+- **Web App Manifest** — declares the platform as an installable Progressive Web App with brand theming, maskable icons, and application shortcuts.
+- **Open Graph & Twitter Card metadata** — controls link-preview rendering when pages are shared on social platforms and messaging apps.
 
 ### 11.5 Payments
 
@@ -577,6 +597,12 @@ Dashboards visualize platform activity — users, jobs, gigs, contracts, revenue
 
 ### 12.18 Settings
 Users manage account settings, notification preferences, and security options (e.g., toggling two-factor authentication); administrators manage platform-wide settings such as fees and feature flags.
+
+### 12.19 Transactional Email
+The platform sends OTP verification codes, login and password-change security alerts, and contact-form relays. Delivery runs through a provider abstraction (Gmail API in deployment, SMTP locally — see §11.5), with automatic retry on transient failures, and every send attempt recorded to an `EmailLog` collection surfaced in the admin panel's monitoring view.
+
+### 12.20 Discoverability
+Public marketplace content is exposed to search engines through a database-driven XML sitemap and a crawl policy that excludes all authenticated and transactional routes. The platform is installable as a Progressive Web App, and shared links render branded preview cards on social and messaging platforms.
 
 <div style="page-break-after: always;"></div>
 
@@ -681,6 +707,9 @@ Security in SkillKart is layered across transport, authentication, authorization
 
 ### 15.5 Abuse Prevention
 - **Rate limiting** is applied globally and more strictly on authentication endpoints, mitigating brute-force and abuse.
+- **Google reCAPTCHA v3** guards login, registration, and the public contact and newsletter forms. Each protected endpoint declares a distinct *action* name, and the server validates that the submitted token was minted for that same action — without this check a token obtained from a public form could be replayed against the login endpoint, since Google reports such a token as otherwise valid.
+- **Defence in depth:** reCAPTCHA sits alongside rate limiting rather than replacing it. Rate limiting bounds request volume; reCAPTCHA scores request *legitimacy*. Each covers the other's blind spot — a low-volume scripted attack, and a high-volume human one respectively.
+- **Fail-open policy:** if reCAPTCHA is unconfigured or Google is unreachable, verification is skipped and the request proceeds. This is a deliberate availability-over-security trade-off at a single, bounded point: an outage at a third-party bot-detection service must not render the platform's own login inoperable. The residual risk is loss of bot mitigation during such an outage, which rate limiting continues to bound.
 
 ### 15.6 Accountability & Monitoring
 - **Audit logs** record sensitive admin actions.
@@ -836,6 +865,18 @@ Several substantive technical challenges were encountered and solved during deve
 ### 19.6 Realistic, Interconnected Test Data
 **Challenge:** Meaningful testing and demonstration required large volumes of coherent, interrelated data.
 **Solution:** We built a **production-grade seeder** that generates a fully interconnected dataset with referential integrity, using batch inserts for performance and covering every category so the platform looks and behaves like a mature marketplace.
+
+### 19.7 Email Delivery Blocked by the Hosting Platform
+**Challenge:** Registration is gated behind an emailed OTP, so email is not an auxiliary feature — if it fails, nobody can create an account. Our SMTP implementation worked flawlessly in local development and then silently failed once deployed. The cause was environmental rather than logical: cloud platforms (including Railway, our host) commonly **block outbound SMTP ports (465/587)** to prevent their infrastructure being used for spam. No amount of debugging the application code would have surfaced this.
+**Solution:** We refactored email behind a **provider abstraction** selected by a single environment variable, and implemented the **Gmail API** as an HTTPS-based transport that is unaffected by SMTP port blocking. Rather than simply swapping one hard-coded provider for another, the registry-and-factory design means adding a future provider requires one new file and one registry entry, with no change to any controller. SMTP is retained as the local-development default and as an automatic fallback.
+
+A subtle correctness issue emerged here. It is tempting to assume that because the platform already integrates Google sign-in (via Supabase), it therefore has Google credentials capable of sending email. It does not, and the distinction is instructive: **Supabase's OAuth authenticates end users, whereas sending mail requires authorisation over a mailbox the platform itself owns.** Transactional mail is sent *as the platform*, frequently to recipients who have never used Google sign-in, and at moments when no user session exists at all (a password-reset OTP being the clearest example). We therefore kept the two concerns fully decoupled: the email layer consumes credentials for a dedicated platform mailbox and never touches user authentication state.
+
+### 19.8 Cross-Site Cookies Between Separately Hosted Apps
+**Challenge:** The admin panel authenticated correctly on a local machine but, once deployed, looped endlessly: after a successful OTP verification the dashboard immediately redirected back to the login screen, reporting a missing token. The session cookie was being issued and accepted by the browser, yet never returned on the following request.
+**Solution:** The frontend (Vercel) and API (Railway) are served from **different domains**, making every API call cross-site. The cookie's `SameSite=Strict` attribute — correct on a single-origin deployment — instructs the browser to withhold it on precisely those requests. Locally both apps run on `localhost`, which is same-site, so the defect was invisible in development. The fix required `SameSite=None` together with `Secure` (browsers reject the former without the latter), and additionally `trust proxy` on Express: the platform terminates TLS at its proxy and forwards plain HTTP, so the application otherwise believes the connection is insecure and declines to mark the cookie `Secure`.
+
+The wider lesson is that **a locally-passing test is not evidence of correctness for behaviour that only manifests across origins.** We also gated the fix on the *request protocol* rather than `NODE_ENV`, since tying security behaviour to an environment label breaks the moment the deployed environment is not labelled exactly as expected.
 
 <div style="page-break-after: always;"></div>
 

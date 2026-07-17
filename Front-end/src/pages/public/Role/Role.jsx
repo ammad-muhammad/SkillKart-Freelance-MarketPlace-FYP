@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Briefcase, Code, ArrowLeft, AlertC
 import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth'
 import "../../../Components/common/Hero/Hero.css";
+import { log } from "../../../utils/logger";
 
 const Role = () => {
     const navigate = useNavigate();
@@ -33,7 +34,7 @@ const Role = () => {
                 const userRole = user?.role;
                 const isOnboardingCompleted = user?.isOnBoardingCompleted;
                 
-                console.log(`🧭 Role redirect: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
+                log(`🧭 Role redirect: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
                 
                 if (userRole === 'client') {
                     isOnboardingCompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')

@@ -5,6 +5,7 @@ import { jobsAPI } from '../api/jobs';
 import { useAuth } from '../hooks/useAuth';
 import { getUserId } from '../utils/user';
 import { tokenManager } from '../utils/tokenManager';
+import { log } from "../utils/logger";
 
 const ClientContext = createContext(null);
 
@@ -183,7 +184,7 @@ export const ClientProvider = ({ children }) => {
         verificationStatus: dbProfile?.verificationStatus || 'unverified'
       };
 
-      console.log("Fetched client profile:", transformedProfile);
+      log("Fetched client profile:", transformedProfile);
       setProfile(transformedProfile);
 
       // 3. Fetch Client's Projects using ownership-restricted API
