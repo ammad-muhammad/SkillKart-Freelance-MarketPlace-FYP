@@ -47,29 +47,6 @@ const startServer = async () => {
       console.log('⚠️  Supabase initialization failed, auth will use local only');
     }
 
-    // Initialize Email Provider
-    console.log('📧 Initializing Email Provider...');
-    try {
-      const { initializeEmailProvider } = require('./services/email/email.factory');
-      const emailInfo = await initializeEmailProvider();
-      const label = emailInfo.provider === 'smtp'
-        ? `SMTP (from: ${emailInfo.from})`
-        : `${emailInfo.provider.charAt(0).toUpperCase() + emailInfo.provider.slice(1)} (from: ${emailInfo.from})`;
-      console.log(`✅ Email Provider: ${label}`);
-      if (emailInfo.verified === false && emailInfo.enabled) {
-        console.log(`⚠️  Email Provider verify() did not pass: ${emailInfo.verifyError || 'unknown'}`);
-      }
-      if (emailInfo.sandbox) {
-        console.log(`⚠️  Email Sandbox Mode: ON → all emails redirect to ${emailInfo.sandboxRecipient}`);
-      }
-      if (!emailInfo.enabled) {
-        console.log(`⚠️  Email Delivery: DISABLED (EMAIL_ENABLED=false)`);
-      }
-    } catch (error) {
-      console.error(`❌ Email Provider initialization failed: ${error.message}`);
-      console.error('⚠️  Email functionality will not work');
-    }
-
     // Check AI Service Health
     console.log('🧠 Verifying AI Service connection...');
     const { checkAIHealth } = require('./services/ai');

@@ -15,7 +15,7 @@ const emailLogSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['sent', 'failed', 'queued', 'skipped'],
+    enum: ['sent', 'failed', 'queued'],
     default: 'sent',
     index: true
   },
@@ -29,37 +29,6 @@ const emailLogSchema = new mongoose.Schema({
   },
   triggeredBy: {
     type: String // userId or 'system' or 'admin'
-  },
-
-  // ── Multi-provider observability fields (all optional, non-breaking) ──
-  provider: {
-    type: String // 'smtp' | 'resend' | ...
-  },
-  duration: {
-    type: Number // milliseconds spent delivering
-  },
-  retryCount: {
-    type: Number,
-    default: 0
-  },
-  requestId: {
-    type: String // provider-specific request id (Resend returns one)
-  },
-  messageId: {
-    type: String // provider-specific message id
-  },
-  errorCode: {
-    type: String // error classification code / status
-  },
-  metadata: {
-    type: mongoose.Schema.Types.Mixed // context: userId, feature, source, ...
-  },
-  originalRecipient: {
-    type: String // the real recipient when sandbox mode redirected delivery
-  },
-  sandbox: {
-    type: Boolean,
-    default: false
   }
 }, {
   timestamps: true

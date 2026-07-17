@@ -140,8 +140,7 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | Token signing secrets, 32+ chars (**required**) |
 | `PORT` | API port (default `5000`) |
 | `STRIPE_SECRET_KEY`, `STRIPE_DUMMY` | Payments; set `STRIPE_DUMMY=true` to simulate |
-| `EMAIL_PROVIDER` | Email provider: `smtp` or `resend` (multi-provider system) |
-| `SMTP_*` / `RESEND_*` | Provider-specific config for OTP / notification emails (see `Backend/.env.example`) |
+| `EMAIL_*` | SMTP for OTP / notification emails |
 | `CORS_ORIGIN`, `FRONTEND_URL` | Allowed origins |
 | `GEMINI_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI provider keys |
 | `AI_PRIORITY_*` | Fallback order (numbered, 0 = first; `-1` disables a provider) |

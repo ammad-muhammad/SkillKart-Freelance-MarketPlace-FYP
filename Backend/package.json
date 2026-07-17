@@ -64,7 +64,6 @@
     "nodemailer": "^6.9.7",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.19.1",
-    "resend": "^6.17.2",
     "skillkart-root": "file:..",
     "stripe": "^22.2.1",
     "supertest": "^7.2.2",
