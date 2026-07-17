@@ -458,3 +458,101 @@
     justify-content: center;
   }
 }
+
+@media (max-width: 400px) {
+  .about {
+    padding: var(--space-12) 0;
+  }
+
+  .about__header-row {
+    margin-bottom: var(--space-10);
+    gap: var(--space-6);
+  }
+
+  .about__visual-box {
+    max-width: 280px;
+  }
+
+  .about__floating-badge {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .badge-icon {
+    font-size: 1.2rem;
+    width: 32px;
+    height: 32px;
+  }
+
+  .badge-text span {
+    font-size: 0.65rem;
+  }
+
+  .badge-text p {
+    font-size: 0.75rem;
+  }
+
+  .about__cards {
+    gap: var(--space-4);
+  }
+
+  .about__card {
+    padding: var(--space-6);
+    gap: var(--space-3);
+  }
+
+  .about__card-icon {
+    font-size: 1.6rem;
+    width: 44px;
+    height: 44px;
+  }
+
+  .about__card-tag {
+    font-size: 0.6rem;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .about__card-title {
+    font-size: 1.125rem;
+  }
+
+  .about__card-desc {
+    font-size: 0.8rem;
+  }
+
+  .about__card-bullets {
+    gap: var(--space-1);
+  }
+
+  .about__card-bullets li {
+    font-size: 0.8rem;
+    gap: var(--space-1);
+  }
+
+  .about__bullet-check {
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
+  }
+
+  .about__card-link {
+    font-size: 0.75rem;
+  }
+
+  .about__numbers {
+    grid-template-columns: 1fr;
+    padding: var(--space-6);
+    gap: var(--space-4);
+  }
+
+  .about__number-item:not(:last-child)::after {
+    display: none;
+  }
+
+  .about__number-val {
+    font-size: 2rem;
+  }
+
+  .about__number-lbl {
+    font-size: 0.75rem;
+  }
+}

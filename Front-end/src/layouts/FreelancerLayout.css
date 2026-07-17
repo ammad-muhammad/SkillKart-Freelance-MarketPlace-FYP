@@ -29,3 +29,9 @@
     padding: 4.5rem 1rem 1rem;
   }
 }
+
+@media (max-width: 400px) {
+  .fl-main {
+    padding: 4.5rem 0.75rem 1rem;
+  }
+}

@@ -929,3 +929,75 @@ a.navbar__mega-subtitle:hover {
     padding: var(--space-4);
   }
 }
+
+/* Ultra-compact for very small mobile: 370-400px */
+@media (max-width: 400px) {
+  .navbar__logo-text {
+    font-size: 1.1rem;
+  }
+
+  .navbar__hamburger {
+    padding: var(--space-1);
+    gap: 3px;
+  }
+
+  .navbar__hamburger span {
+    width: 20px;
+    height: 2px;
+  }
+
+  .navbar__mobile-header {
+    padding: var(--space-3) var(--space-3);
+    height: var(--navbar-h);
+  }
+
+  .navbar__mobile-close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .navbar__mobile-inner {
+    padding: var(--space-3) var(--space-3) var(--space-8);
+    gap: var(--space-1);
+  }
+
+  .navbar__mobile-parent {
+    padding: var(--space-3) 0;
+    font-size: 0.95rem;
+    gap: var(--space-2);
+  }
+
+  .navbar__mobile-sub {
+    padding-bottom: var(--space-2);
+    gap: 0;
+  }
+
+  .navbar__mobile-child {
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+  }
+
+  .navbar__mobile-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+
+  .navbar__mobile-cat-btn {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+  }
+
+  .navbar__mobile-cat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+
+  .navbar__mobile-actions {
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+}

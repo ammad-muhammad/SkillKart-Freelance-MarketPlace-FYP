@@ -26,3 +26,9 @@
     padding: 5rem 1rem 1.25rem;
   }
 }
+
+@media (max-width: 400px) {
+  .cl-main {
+    padding: 5rem 0.75rem 1rem;
+  }
+}

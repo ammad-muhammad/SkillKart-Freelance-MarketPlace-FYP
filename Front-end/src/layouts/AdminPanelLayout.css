@@ -969,3 +969,23 @@
   .admin-layout .ap-grid-4,
   .admin-layout .ap-grid-5 { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 400px) {
+  .admin-layout .ap-sidebar-width { --ap-sidebar-width: 0; }
+  .admin-layout .ap-main-content { margin-left: 0; }
+  .admin-layout .ap-page-wrapper { padding: 16px 12px; }
+  .admin-layout .ap-header { padding: 0 16px; }
+  .admin-layout .ap-page-title { font-size: 0.9rem; }
+  .admin-layout .ap-card { padding: 16px 20px; }
+  .admin-layout .ap-card-title { font-size: 0.85rem; }
+  .admin-layout .ap-stat-card { padding: 16px; gap: 10px; }
+  .admin-layout .ap-stat-icon-wrap { width: 36px; height: 36px; font-size: 1.1rem; }
+  .admin-layout .ap-stat-value { font-size: 1.5rem; }
+  .admin-layout .ap-modal { padding: 20px; }
+  .admin-layout .ap-modal-title { font-size: 1rem; }
+  .admin-layout .ap-page-header-left h1 { font-size: 1.1rem; }
+  .admin-layout .ap-table { font-size: 0.8rem; }
+  .admin-layout .ap-table thead th { padding: 10px 12px; font-size: 0.65rem; }
+  .admin-layout .ap-table tbody td { padding: 10px 12px; }
+  .admin-layout .ap-btn { padding: 7px 14px; font-size: 0.8rem; gap: 5px; }
+}
