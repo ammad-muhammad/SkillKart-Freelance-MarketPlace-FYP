@@ -9,7 +9,16 @@ class GeminiProvider extends AIProvider {
     this.ai = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY || ''
     });
-    this.model = 'gemini-2.5-flash';
+    // Two cost tiers, both defaulting to the cheapest model actually available
+    // on this key: gemini-2.5-flash-lite and gemini-2.5-pro 404 ("no longer
+    // available to new users") and gemini-2.5-flash 429s on quota, so the
+    // 2.5 line is a dead end for new projects — gemini-3.1-flash-lite is the
+    // cheapest Gemini 3.x model confirmed working. `model` (heavy tier) is a
+    // separate env override so quality-sensitive tasks (CV analysis, skill
+    // test gen/grading, Buddy chat) can be bumped later without touching code
+    // — just set GEMINI_MODEL_HEAVY (e.g. to gemini-3.5-flash-lite).
+    this.liteModel = process.env.GEMINI_MODEL_LITE || 'gemini-3.1-flash-lite';
+    this.model = process.env.GEMINI_MODEL_HEAVY || 'gemini-3.1-flash-lite';
   }
 
   async ping() {
@@ -224,7 +233,7 @@ Output ONLY valid JSON.
 
     try {
       const response = await this.ai.models.generateContent({
-        model: this.model,
+        model: this.liteModel,
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
@@ -259,7 +268,7 @@ Output ONLY a JSON array of strings:
 
     try {
       const response = await this.ai.models.generateContent({
-        model: this.model,
+        model: this.liteModel,
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
@@ -309,7 +318,7 @@ Output ONLY valid JSON in this exact format. Do not include markdown code blocks
 
     try {
       const response = await this.ai.models.generateContent({
-        model: this.model,
+        model: this.liteModel,
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
@@ -348,7 +357,7 @@ Output ONLY valid JSON:
 
     try {
       const response = await this.ai.models.generateContent({
-        model: this.model,
+        model: this.liteModel,
         contents: prompt,
         config: { responseMimeType: 'application/json' }
       });
@@ -461,7 +470,7 @@ Output ONLY valid JSON:
 `;
 
     const response = await this.ai.models.generateContent({
-      model: this.model,
+      model: this.liteModel,
       contents: prompt,
       config: { responseMimeType: 'application/json' },
     });
@@ -553,7 +562,7 @@ Output ONLY valid JSON matching this exact structure:
 `;
 
     const response = await this.ai.models.generateContent({
-      model: this.model,
+      model: this.liteModel,
       contents: prompt,
       config: { responseMimeType: 'application/json' },
     });
