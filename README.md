@@ -47,7 +47,7 @@ It supports both marketplace models:
 - **MongoDB** is the system of record for all marketplace data.
 - **Supabase** provides optional social OAuth; email/OTP auth is handled by the backend directly.
 - **Stripe** powers escrow and payouts, and can be fully bypassed with simulated payments via `STRIPE_DUMMY=true` for local development.
-- **AI features** (Buddy assistant, cost estimator, skill matching, CV analysis) route through a provider chain with automatic fallback across **Gemini, Qwen, Groq, Claude, and Ollama** (local). The order is configurable via numbered env priorities (`AI_PRIORITY_*`, 0 = first). If every provider is down or rate-limited the API returns a clean `503` and the UI shows an "AI is temporarily out of service" notice instead of crashing.
+- **AI features** (Buddy assistant, cost estimator, skill matching, CV analysis) route through a provider chain with automatic fallback across **Gemini, DeepSeek, Qwen, Groq, Claude, and Ollama** (local). Gemini and DeepSeek implement the full AI method set; the rest cover the core 6. The order is configurable via numbered env priorities (`AI_PRIORITY_*`, 0 = first). If every provider is down or rate-limited the API returns a clean `503` and the UI shows an "AI is temporarily out of service" notice instead of crashing.
 
 ## Tech Stack
 
@@ -59,7 +59,7 @@ It supports both marketplace models:
 | Auth      | JWT (access + refresh) with RBAC; Supabase OAuth (optional) |
 | Payments  | Stripe (with dummy/simulated mode) |
 | Realtime-ish | Polling-based in-app messaging |
-| AI        | Provider router with env-ordered fallback — Gemini / Qwen / Groq / Claude / Ollama (local) |
+| AI        | Provider router with env-ordered fallback — Gemini / DeepSeek / Qwen / Groq / Claude / Ollama (local) |
 | Tooling   | ESLint, Prettier, Nodemon, Swagger (API docs) |
 
 ## Repository Layout
@@ -98,7 +98,7 @@ It supports both marketplace models:
 - **MongoDB** — a connection string (local `mongodb://localhost:27017/...` or MongoDB Atlas)
 - *(Optional)* Stripe test keys — or leave `STRIPE_DUMMY=true` to simulate payments
 - *(Optional)* Supabase project — for social OAuth
-- *(Optional)* An AI provider key (Gemini / Groq / Anthropic) — for AI features
+- *(Optional)* An AI provider key (Gemini / DeepSeek / Groq / Anthropic) — for AI features
 
 ## Quick Start
 
@@ -145,7 +145,7 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 | `CORS_ORIGIN`, `FRONTEND_URL` | Allowed origins (CSV) |
 | `PUBLIC_SITE_URL` | Canonical public origin for the sitemap/SEO |
 | `RECAPTCHA_SECRET_KEY` | Optional reCAPTCHA v3 secret; blank = disabled |
-| `GEMINI_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI provider keys |
+| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI provider keys |
 | `AI_PRIORITY_*` | Fallback order (numbered, 0 = first; `-1` disables a provider) |
 | `SUPABASE_*` | Optional OAuth |
 

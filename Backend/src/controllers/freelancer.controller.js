@@ -491,10 +491,10 @@ const uploadAvatar = asyncHandler(async (req, res) => {
 const toggleSavedJob = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { jobId } = req.params;
-  
-  const profile = await FreelancerProfile.findOne({ userId });
-  if (!profile) throw new NotFoundError('Profile not found');
-  
+
+  let profile = await FreelancerProfile.findOne({ userId });
+  if (!profile) profile = await FreelancerProfile.create({ userId });
+
   const index = profile.savedJobs.findIndex(id => String(id) === String(jobId));
   if (index === -1) {
     profile.savedJobs.push(jobId);
@@ -514,13 +514,13 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
  */
 const getSavedJobs = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const profile = await FreelancerProfile.findOne({ userId }).populate({
+  let profile = await FreelancerProfile.findOne({ userId }).populate({
     path: 'savedJobs',
     populate: { path: 'clientId', select: 'firstName lastName profilePicture' }
   });
-  
-  if (!profile) throw new NotFoundError('Profile not found');
-  
+
+  if (!profile) profile = await FreelancerProfile.create({ userId });
+
   sendSuccess(res, { data: { savedJobs: profile.savedJobs } });
 });
 

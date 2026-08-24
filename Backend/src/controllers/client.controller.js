@@ -511,10 +511,10 @@ const uploadCoverImage = asyncHandler(async (req, res) => {
 const toggleSavedFreelancer = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { freelancerId } = req.body;
-  
-  const profile = await ClientProfile.findOne({ userId });
-  if (!profile) throw new NotFoundError('Profile not found');
-  
+
+  let profile = await ClientProfile.findOne({ userId });
+  if (!profile) profile = await ClientProfile.create({ userId });
+
   const index = profile.savedFreelancers.indexOf(freelancerId);
   if (index > -1) {
     profile.savedFreelancers.splice(index, 1);
@@ -535,15 +535,15 @@ const toggleSavedFreelancer = asyncHandler(async (req, res) => {
  */
 const getSavedFreelancers = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  
-  const profile = await ClientProfile.findOne({ userId })
+
+  let profile = await ClientProfile.findOne({ userId })
     .populate({
       path: 'savedFreelancers',
       select: 'firstName lastName email profilePicture rating'
     });
-    
-  if (!profile) throw new NotFoundError('Profile not found');
-  
+
+  if (!profile) profile = await ClientProfile.create({ userId });
+
   const FreelancerProfile = require('../models/FreelancerProfile');
   const userIds = profile.savedFreelancers.map(u => u._id);
   const profiles = await FreelancerProfile.find({ userId: { $in: userIds } }).lean();

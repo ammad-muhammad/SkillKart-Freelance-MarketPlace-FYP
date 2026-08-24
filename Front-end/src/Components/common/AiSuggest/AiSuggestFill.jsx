@@ -7,9 +7,9 @@ import './AiSuggestFill.css';
  * Reusable "✨ AI suggest & fill" button for gig / project forms.
  *
  * Reads a free-text title + description, calls the real AI brief endpoint
- * (Gemini→Groq→Claude router) and fills the form's category + skills via the
- * callbacks the parent passes. Mirrors the onboarding suggest pattern so every
- * create/edit form behaves the same way.
+ * (Gemini→DeepSeek→Qwen→Groq→Claude router) and fills the form's category +
+ * skills via the callbacks the parent passes. Mirrors the onboarding suggest
+ * pattern so every create/edit form behaves the same way.
  *
  * Props:
  *  - getContext: () => ({ title, description, skills }) — current form values.

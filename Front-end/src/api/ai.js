@@ -6,7 +6,7 @@ import client from './client';
 const AI_TIMEOUT = 120000;
 
 /**
- * Public AI tools backed by the real Gemini→Groq→Claude→Ollama provider router.
+ * Public AI tools backed by the real Gemini→DeepSeek→Qwen→Groq→Claude→Ollama provider router.
  */
 export const aiAPI = {
   // Conversational Buddy assistant. history: [{ role:'user'|'assistant', content }]

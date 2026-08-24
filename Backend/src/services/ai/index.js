@@ -1,4 +1,5 @@
 const GeminiProvider = require('./gemini.provider');
+const DeepSeekProvider = require('./deepseek.provider');
 const GroqProvider = require('./groq.provider');
 const ClaudeProvider = require('./claude.provider');
 const OllamaProvider = require('./ollama.provider');
@@ -26,20 +27,22 @@ const aiUnavailable = () => {
  *
  * Example (.env):
  *   AI_PRIORITY_GEMINI=0     # tried first
- *   AI_PRIORITY_QWEN=1       # then Qwen
- *   AI_PRIORITY_GROQ=2
- *   AI_PRIORITY_CLAUDE=3
- *   AI_PRIORITY_OLLAMA=4     # local fallback, last
+ *   AI_PRIORITY_DEEPSEEK=1   # then DeepSeek (full feature parity with Gemini)
+ *   AI_PRIORITY_QWEN=2
+ *   AI_PRIORITY_GROQ=3
+ *   AI_PRIORITY_CLAUDE=4
+ *   AI_PRIORITY_OLLAMA=5     # local fallback, last
  *
  * Unset priorities fall back to the DEFAULT_PRIORITY below, so the chain still
  * works out of the box. Ties break by the default order (stable).
  */
 const DEFAULT_PRIORITY = {
   GEMINI: 0,
-  QWEN: 1,
-  GROQ: 2,
-  CLAUDE: 3,
-  OLLAMA: 4,
+  DEEPSEEK: 1,
+  QWEN: 2,
+  GROQ: 3,
+  CLAUDE: 4,
+  OLLAMA: 5,
 };
 
 // Read a provider's priority: env override → default → large fallback. `-1`
@@ -57,6 +60,7 @@ class RouterAIProvider extends AIProvider {
   constructor() {
     super();
     this.gemini = new GeminiProvider();
+    this.deepseek = new DeepSeekProvider();
     this.groq = new GroqProvider();
     this.claude = new ClaudeProvider();
     this.ollama = new OllamaProvider();
@@ -65,6 +69,7 @@ class RouterAIProvider extends AIProvider {
     // Every candidate provider, keyed by its env NAME (used for AI_PRIORITY_*).
     const candidates = [
       { name: 'Gemini', envKey: 'GEMINI', instance: this.gemini },
+      { name: 'DeepSeek', envKey: 'DEEPSEEK', instance: this.deepseek },
       { name: 'Qwen', envKey: 'QWEN', instance: this.qwen },
       { name: 'Groq', envKey: 'GROQ', instance: this.groq },
       { name: 'Claude', envKey: 'CLAUDE', instance: this.claude },

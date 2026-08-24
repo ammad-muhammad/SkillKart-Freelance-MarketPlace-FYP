@@ -163,8 +163,9 @@
    JWT in memory + refresh          ┌───────────┼───────────┐
    (obfuscated storage)             │           │           │
                                  MongoDB     Stripe      AI Router
-                              (source of    (escrow /   (Gemini→Qwen→
-                                truth)       payouts)    Groq→Claude→Ollama)
+                              (source of    (escrow /   (Gemini→DeepSeek→
+                                truth)       payouts)   Qwen→Groq→Claude→
+                                                             Ollama)
                                                              │
                                                       Supabase (optional OAuth)
 ```
@@ -253,7 +254,7 @@ User/Contract ──► Report ──► AdminAuditLog
 | Database | MongoDB (Atlas) |
 | Auth | JWT (access + refresh), bcrypt, OTP; optional Supabase OAuth |
 | Payments | Stripe (with a dummy/simulated mode for development) |
-| AI | Provider router — Gemini, Qwen, Groq, Claude, Ollama |
+| AI | Provider router — Gemini, DeepSeek, Qwen, Groq, Claude, Ollama |
 | Email | Provider abstraction — **Google Gmail API** (production) / SMTP via Nodemailer (local) |
 | Security | Helmet, express-rate-limit, express-validator, express-mongo-sanitize, **Google reCAPTCHA v3** |
 | SEO / PWA | Dynamic XML sitemap, robots.txt, Web App Manifest, Open Graph cards |
@@ -309,7 +310,7 @@ User/Contract ──► Report ──► AdminAuditLog
 **Presenter: Student 2**
 
 **Content:**
-- A **provider router** with automatic fallback: **Gemini → Qwen → Groq → Claude → Ollama (local)**.
+- A **provider router** with automatic fallback: **Gemini → DeepSeek → Qwen → Groq → Claude → Ollama (local)**.
 - Order is **env-driven** by numbered priorities (`AI_PRIORITY_*`); any provider can be reordered or disabled.
 - **Resilient by design:** if every provider fails, the API returns a clean `503` and the UI shows *"AI is temporarily out of service"* — the app **never crashes** on an AI outage.
 
