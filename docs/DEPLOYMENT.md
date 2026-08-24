@@ -37,7 +37,7 @@ You need accounts for:
 | [Vercel](https://vercel.com) | Frontend host | ✅ |
 | [Stripe](https://stripe.com) | Payments (optional — can run in dummy mode) | ✅ test mode |
 | [Supabase](https://supabase.com) | Social OAuth (optional) | ✅ |
-| An AI key (Gemini / Qwen / Groq / Anthropic) | AI features (optional) | ✅ (Gemini/Groq) |
+| An AI key (Gemini / DeepSeek / Qwen / Groq / Anthropic) | AI features (optional) | ✅ (Gemini/Groq) |
 
 Push the repo to GitHub — all three platforms deploy from a Git repo.
 
@@ -317,7 +317,8 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL` | ⬤ | only if `EMAIL_PROVIDER=gmail`. Generate the token locally (`npm run gmail:token`) and paste the same value here — it is not machine-bound, and `GOOGLE_REDIRECT_URI` is not needed in production. **Railway blocks outbound SMTP (465/587)**, so Gmail is the working transport there — but a Testing-mode consent screen expires refresh tokens after **7 days**, and the SMTP fallback cannot save you on Railway. See [Backend README → Email](../Backend/README.md#email). Not related to Supabase Google sign-in |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` | ⬤ | social OAuth only |
 | `REDIS_URL` | ❌ | optional cache; leave blank / `ENABLE_REDIS_CACHE=false` |
-| `GEMINI_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys |
+| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys. Gemini and DeepSeek implement the full AI feature set; the rest cover only the core 6 methods |
+| `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL_LITE` / `DEEPSEEK_MODEL_HEAVY` / `DEEPSEEK_THINKING` | ❌ | DeepSeek endpoint + model tiers (default `deepseek-v4-flash`, thinking disabled). `deepseek-chat`/`deepseek-reasoner` were retired 2026-07-24 |
 | `QWEN_BASE_URL` / `QWEN_MODEL` | ❌ | Qwen endpoint + model (defaults provided) |
 | `AI_PRIORITY_GEMINI` … `AI_PRIORITY_OLLAMA` | ❌ | fallback order (0 = first; `-1` disables) |
 | `PUBLIC_SITE_URL` | ⬤ | Canonical public origin for the sitemap, e.g. `https://skillkart-fuuast.vercel.app`. **Not** `FRONTEND_URL` — that's a CSV of CORS origins whose first entry may be the wrong domain to advertise to Google. Defaults to the first `FRONTEND_URL` entry if unset |
@@ -376,7 +377,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | Frontend calls `localhost:5000` in production | `VITE_API_URL` wasn't set at build time, or you changed it without redeploying (Vite bakes env vars into the build). |
 | SuperAdmin login fails after a redeploy | Ephemeral filesystem wiped `secure/`. Re-run `npm run setup:superadmin`, or attach a persistent volume. |
 | OTP emails never arrive | Check the startup log for `✅ Email Provider: …` and **Admin → Monitoring → Email** for the failure reason. Gmail SMTP needs an **app password**, not the account password. If the host blocks outbound `465`/`587`, switch to `EMAIL_PROVIDER=gmail` (sends over HTTPS). Full table: [Backend README → Email](../Backend/README.md#troubleshooting). |
-| AI tools always say "out of service" | No valid AI key set, or all keys invalid/rate-limited. Add a `GEMINI_API_KEY` or `GROQ_API_KEY`. This is expected, non-fatal behavior — the app never crashes on an AI outage. |
+| AI tools always say "out of service" | No valid AI key set, or all keys invalid/rate-limited. Add a `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, or `GROQ_API_KEY`. This is expected, non-fatal behavior — the app never crashes on an AI outage. |
 | Render service slow to respond | Free instances sleep after inactivity and cold-start (~30s). Upgrade or use a keep-alive ping. |
 | **Admin OTP login bounces back to `/admin-panel/login`** ("missing token"), but works locally | The `admin_token` cookie is cross-site (Vercel → Railway) and needs `SameSite=None; Secure`. Requires `app.set('trust proxy', 1)` — without it Express sees the proxy's plain HTTP and never marks the cookie `Secure`, so the browser drops it. Both are in the code; if it recurs, confirm they survived a revert. |
 | **Logged in, then a refresh kicks you to `/login`** | The refresh token isn't persisting. It must be written to `localStorage` (not `sessionStorage`, which a full reload wipes) in `Front-end/src/utils/tokenManager.js`. Also confirm `vercel.json` exists — without the SPA rewrite, deep links 404 and force the reload that triggers this. |

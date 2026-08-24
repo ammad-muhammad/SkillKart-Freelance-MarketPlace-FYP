@@ -21,6 +21,11 @@ const FreelancerMessages = () => {
   const [uploading, setUploading] = useState(false);
   const chatFeedRef = useRef(null);
   const fileRef = useRef(null);
+  // Tracks whether the user is currently pinned to the bottom of the feed.
+  // The poll below refreshes `messages` every 3s even when nothing changed,
+  // so auto-scrolling unconditionally would yank the user back down every
+  // time they scroll up to read older messages.
+  const isNearBottomRef = useRef(true);
 
   useEffect(() => {
     fetchConversations();
@@ -30,6 +35,7 @@ const FreelancerMessages = () => {
 
   useEffect(() => {
     if (activeChat) {
+      isNearBottomRef.current = true; // opening a chat always starts pinned to the latest message
       fetchMessages(activeChat._id);
       const interval = setInterval(() => fetchMessages(activeChat._id), 3000);
       return () => clearInterval(interval);
@@ -37,10 +43,16 @@ const FreelancerMessages = () => {
   }, [activeChat]);
 
   useEffect(() => {
-    if (chatFeedRef.current) {
+    if (chatFeedRef.current && isNearBottomRef.current) {
       chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleFeedScroll = () => {
+    const el = chatFeedRef.current;
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
 
   const fetchConversations = async () => {
     try {
@@ -211,7 +223,7 @@ const FreelancerMessages = () => {
               </header>
 
               {/* Messages Feed */}
-              <div className="fl-chat-feed" ref={chatFeedRef}>
+              <div className="fl-chat-feed" ref={chatFeedRef} onScroll={handleFeedScroll}>
                 {messages.map(msg => (
                   <div key={msg._id} className={`fl-msg${msg.sender._id === user._id ? ' fl-msg--own' : ''}`}>
                     <div className="fl-msg__bubble">

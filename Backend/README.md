@@ -14,7 +14,7 @@ Express + MongoDB REST API powering the SkillKart marketplace: authentication, R
 - **Reviews & disputes** — two-way reviews and an admin-mediated dispute workflow.
 - **Skill verification** — skill taxonomy, matching, and test attempts.
 - **Admin panel API** — isolated auth and endpoints under an admin prefix.
-- **AI services** — Buddy assistant, cost estimation, skill matching, and CV analysis via a provider router with automatic fallback across **Gemini, Qwen, Groq, Claude, and Ollama** (local). The chain order is env-driven by numbered priorities (`AI_PRIORITY_<NAME>`, 0 = first; `-1` disables a provider). When all providers fail it returns a clean `503` ("AI temporarily out of service") rather than a 500 — the app never crashes on an AI outage.
+- **AI services** — Buddy assistant, cost estimation, skill matching, and CV analysis via a provider router with automatic fallback across **Gemini, DeepSeek, Qwen, Groq, Claude, and Ollama** (local). Gemini and DeepSeek implement the full method set; Qwen/Groq/Claude cover the core 6 (CV parsing, skill tests, validation, industry recommendation) and the router falls through per-method for the rest. The chain order is env-driven by numbered priorities (`AI_PRIORITY_<NAME>`, 0 = first; `-1` disables a provider). When all providers fail it returns a clean `503` ("AI temporarily out of service") rather than a 500 — the app never crashes on an AI outage.
 - **Hardening** — Helmet, rate limiting, request validation, sanitization, structured logging (Winston), Swagger API docs, and an `unhandledRejection` guard that keeps operational errors from taking down the server.
 
 ## Prerequisites

@@ -110,7 +110,7 @@ The freelance economy has become a significant part of the global digital workfo
 
 **SkillKart** is an AI-powered, dual-sided freelance marketplace built to address these problems in a single, coherent platform. It combines the two dominant freelancing models — pre-packaged **Gigs** (Fiverr-style) and custom **Jobs with Proposals** (Upwork-style) — and augments them with an integrated artificial-intelligence layer, a secure escrow-based payment system, multi-factor verification, and a comprehensive administrative panel.
 
-The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 37 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, CV analysis, and freelancer matchmaking — are delivered through a resilient provider router that automatically fails over across Gemini, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage. Payments are handled through a Stripe-backed escrow workflow with wallets and withdrawals, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
+The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 37 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, CV analysis, and freelancer matchmaking — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage. Payments are handled through a Stripe-backed escrow workflow with wallets and withdrawals, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
 
 The completed system delivers the full engagement lifecycle — from registration and verification, through job posting and proposals, to escrow-secured contracts, delivery, reviews, and dispute resolution — under the supervision of a dedicated 16-module admin panel. All project objectives were achieved and demonstrated on realistic, seeded data. This report documents the motivation, design, implementation, testing, and results of the SkillKart project.
 
@@ -340,11 +340,12 @@ SkillKart follows a **decoupled client–server architecture**. A React single-p
                                    │                       │                │                            │
                             ┌──────▼──────┐        ┌────────▼───────┐  ┌─────▼──────┐            ┌────────▼────────┐
                             │   MongoDB   │        │     Stripe      │  │  AI Router │            │    Supabase     │
-                            │ (Mongoose,  │        │  (escrow /      │  │  (Gemini → │            │  (optional      │
-                            │  37 models) │        │   payouts)      │  │  Qwen →    │            │  social OAuth)  │
-                            │             │        │                 │  │  Groq →    │            │                 │
-                            └─────────────┘        └─────────────────┘  │  Claude →  │            └─────────────────┘
-                                                                        │  Ollama)   │
+                            │ (Mongoose,  │        │  (escrow /      │  │ (Gemini →  │            │  (optional      │
+                            │  37 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
+                            │             │        │                 │  │ Qwen →     │            │                 │
+                            └─────────────┘        └─────────────────┘  │ Groq →     │            └─────────────────┘
+                                                                        │ Claude →   │
+                                                                        │ Ollama)    │
                                                                         └────────────┘
 ```
 
@@ -383,7 +384,7 @@ The admin panel is served under an isolated route namespace (`/admin-panel/*`) w
 
 ### 9.7 AI Integration Subsystem
 
-AI features are delivered through a **provider router** that presents a uniform interface to the rest of the application while, internally, attempting a prioritized chain of providers (Gemini → Qwen → Groq → Claude → Ollama). The order is configurable via environment variables, and the subsystem is designed to fail gracefully (Section 13).
+AI features are delivered through a **provider router** that presents a uniform interface to the rest of the application while, internally, attempting a prioritized chain of providers (Gemini → DeepSeek → Qwen → Groq → Claude → Ollama). Gemini and DeepSeek implement the full method set (CV parsing, skill tests, Buddy chat, cost estimation, proposal drafting, taxonomy suggestions); Qwen, Groq, and Claude cover the core extraction/classification methods. The order is configurable via environment variables, and the subsystem is designed to fail gracefully (Section 13).
 
 <div style="page-break-after: always;"></div>
 
@@ -526,7 +527,7 @@ Two engineering constraints drove this design:
 
 ### 11.6 Artificial Intelligence
 
-- **AI Provider Router** — an in-house abstraction over multiple providers: **Google Gemini**, **Alibaba Qwen**, **Groq**, **Anthropic Claude**, and **Ollama** (local). Each provider is wrapped in a common interface; the router selects and fails over according to configurable priorities.
+- **AI Provider Router** — an in-house abstraction over multiple providers: **Google Gemini**, **DeepSeek**, **Alibaba Qwen**, **Groq**, **Anthropic Claude**, and **Ollama** (local). Each provider is wrapped in a common interface; the router selects and fails over according to configurable priorities.
 
 ### 11.7 Tooling & Operations
 
@@ -630,7 +631,7 @@ Each AI capability is implemented as a method on a provider that constructs a ta
 
 ### 13.3 Provider Architecture and Token/Usage Handling
 
-AI calls are routed through a **provider router** that presents a single interface to the application. Internally, it maintains a **prioritized fallback chain** — by default **Gemini → Qwen → Groq → Claude → Ollama (local)** — and tries each provider in order until one succeeds. The order is fully **configurable via environment variables** using numbered priorities (`AI_PRIORITY_<PROVIDER>`, where `0` is tried first and `-1` disables a provider). This design directly addresses the reality that free-tier AI services are **rate-limited and unreliable**: when one provider exhausts its quota (token/usage limits) or is unavailable, the router automatically falls back to the next, with a local Ollama model as the final, quota-free safety net.
+AI calls are routed through a **provider router** that presents a single interface to the application. Internally, it maintains a **prioritized fallback chain** — by default **Gemini → DeepSeek → Qwen → Groq → Claude → Ollama (local)** — and tries each provider in order until one succeeds. The order is fully **configurable via environment variables** using numbered priorities (`AI_PRIORITY_<PROVIDER>`, where `0` is tried first and `-1` disables a provider). This design directly addresses the reality that free-tier AI services are **rate-limited and unreliable**: when one provider exhausts its quota (token/usage limits) or is unavailable, the router automatically falls back to the next, with a local Ollama model as the final, quota-free safety net.
 
 ### 13.4 Resilience
 
@@ -825,7 +826,7 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 | API route groups | 23 |
 | Controllers | 23 |
 | Service modules | 20+ |
-| AI providers integrated | 5 (Gemini, Qwen, Groq, Claude, Ollama) |
+| AI providers integrated | 6 (Gemini, DeepSeek, Qwen, Groq, Claude, Ollama) |
 | Admin panel modules | 16+ |
 
 ### 18.3 Outcome
@@ -844,7 +845,7 @@ Several substantive technical challenges were encountered and solved during deve
 
 ### 19.1 Unreliable Free-Tier AI Providers
 **Challenge:** Free-tier AI APIs are heavily rate-limited and intermittently unavailable, which would make AI features unreliable and could crash dependent flows.
-**Solution:** We built a **multi-provider router** with a prioritized, environment-configurable fallback chain (Gemini → Qwen → Groq → Claude → Ollama), including a quota-free **local** model as the final safety net, and made every AI failure return a controlled `503` with graceful UI degradation.
+**Solution:** We built a **multi-provider router** with a prioritized, environment-configurable fallback chain (Gemini → DeepSeek → Qwen → Groq → Claude → Ollama), including a quota-free **local** model as the final safety net, and made every AI failure return a controlled `503` with graceful UI degradation.
 
 ### 19.2 Correct Escrow and Contract State
 **Challenge:** Money movement and engagement state must be exactly correct and auditable.
@@ -941,6 +942,8 @@ Beyond the deliverable, the project was a substantial learning experience in bui
 
 [13] Freelancer Technology Pty Ltd., "Freelancer.com." [Online]. Available: https://www.freelancer.com/
 
+[14] DeepSeek, "DeepSeek API Documentation." [Online]. Available: https://api-docs.deepseek.com/
+
 *[Add any additional papers, articles, or documentation you consulted, formatted in the required style.]*
 
 <div style="page-break-after: always;"></div>
@@ -990,7 +993,7 @@ Skill-Kart----Micro-Freelance-Platform/
 │       ├── models/          Mongoose schemas (37)
 │       ├── routes/          API route definitions (23)
 │       ├── services/        Business logic (payments, AI, matching, ...)
-│       │   └── ai/          Provider router + Gemini/Qwen/Groq/Claude/Ollama
+│       │   └── ai/          Provider router + Gemini/DeepSeek/Qwen/Groq/Claude/Ollama
 │       ├── validators/      Request validation schemas
 │       ├── webhooks/        Stripe / Supabase webhooks
 │       ├── scripts/         Seed data, SuperAdmin setup
