@@ -258,7 +258,15 @@ export const FreelancerProvider = ({ children }) => {
         timezone: personalInfo.location,
         education: personalInfo.education || [],
         certifications: personalInfo.certifications || [],
-        portfolio: currentProfile.portfolio || [],
+        // NOT `portfolio` (the rich portfolio-projects array) — that's managed
+        // entirely through its own add/update/delete endpoints (see
+        // addPortfolioItem/updatePortfolioItem below), never through this
+        // generic profile save. Resending it here just re-validates old,
+        // already-stored data on every unrelated profile save (e.g. bio/rate
+        // changes) and needlessly fails the whole save if any existing item's
+        // `url` isn't accepted by the backend's isURL() check. Omitting it is
+        // safe: the backend does `profile.set(updates)`, which never wipes
+        // fields absent from the payload.
         portfolioLinks: currentProfile.portfolioLinks || []
       };
 

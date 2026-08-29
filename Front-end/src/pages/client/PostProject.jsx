@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { jobsAPI } from '../../api/jobs';
 import { uploadJobAttachment, validateFile } from '../../utils/uploadHelper';
-import { JOB_CATEGORIES } from '../../constants/jobCategories';
+import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import Stepper from '../freelancer/components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
@@ -80,6 +80,8 @@ const PostProject = () => {
   const [saving, setSaving] = useState(false);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
   const [categorySuggestions, setCategorySuggestions] = useState([]);
+  const [suggestingSubcategory, setSuggestingSubcategory] = useState(false);
+  const [subcategorySuggestions, setSubcategorySuggestions] = useState([]);
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState(() => ({
@@ -207,6 +209,34 @@ const PostProject = () => {
       showToast(err.response?.data?.message || 'Could not suggest category', 'error');
     } finally {
       setSuggestingCategory(false);
+    }
+  };
+
+  const suggestSubcategory = async () => {
+    const description = [form.summary, form.fullDescription].filter(Boolean).join('\n');
+    if (!form.title.trim() && !description.trim() && !form.skills.length) {
+      showToast('Add a title, summary, or skills before requesting a suggestion.', 'error');
+      return;
+    }
+
+    setSuggestingSubcategory(true);
+    try {
+      const res = await jobsAPI.recommendSubcategory({
+        title: form.title,
+        description,
+        skills: form.skills,
+        category: form.category
+      });
+      const { subcategory, suggestions } = res.data?.data || {};
+      if (subcategory) {
+        updateForm({ subcategory });
+      }
+      setSubcategorySuggestions(suggestions || []);
+      showToast('Subcategory suggestion applied. You can change it if needed.');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not suggest subcategory', 'error');
+    } finally {
+      setSuggestingSubcategory(false);
     }
   };
 
@@ -351,6 +381,7 @@ const PostProject = () => {
         title: form.title.trim(),
         description,
         category: form.category,
+        subcategory: form.subcategory.trim(),
         skills: form.skills,
         experienceLevel: form.experienceLevel.toLowerCase(),
         budget: {
@@ -444,13 +475,39 @@ const PostProject = () => {
               </div>
               <div className="cl-form-group">
                 <label className="cl-label">Subcategory</label>
-                <input
-                  type="text"
-                  className="cl-input"
-                  placeholder="e.g. Frontend Development"
-                  value={form.subcategory}
-                  onChange={(e) => updateForm({ subcategory: e.target.value })}
+                <TagInput
+                  tags={form.subcategory ? [form.subcategory] : []}
+                  onChange={(tags) => updateForm({ subcategory: tags[0] || '' })}
+                  options={GIG_SUBCATEGORIES[form.category] || []}
+                  maxTags={1}
+                  placeholder="Type or select subcategory…"
+                  showHint={false}
                 />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className={`cl-btn cl-btn--ghost cl-btn--sm${suggestingSubcategory ? ' cl-btn--loading' : ''}`}
+                    onClick={suggestSubcategory}
+                    disabled={suggestingSubcategory || saving}
+                  >
+                    {suggestingSubcategory ? 'Analyzing…' : <><Sparkles size={14} style={{ marginRight: '6px' }} /> Suggest subcategory (AI)</>}
+                  </button>
+                </div>
+                {subcategorySuggestions.length > 0 && (
+                  <div className="cl-category-suggestions">
+                    <span className="cl-label" style={{ marginBottom: '0.35rem', display: 'block' }}>Suggested:</span>
+                    {subcategorySuggestions.map((sub) => (
+                      <button
+                        key={sub}
+                        type="button"
+                        className={`cl-btn cl-btn--sm ${form.subcategory === sub ? 'cl-btn--primary' : 'cl-btn--ghost'}`}
+                        onClick={() => updateForm({ subcategory: sub })}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="cl-form-group full">
                 <label className="cl-label">Required Skills (press Enter) *</label>
@@ -516,7 +573,7 @@ const PostProject = () => {
             </a>
             <div className="cl-form-grid">
               <div className="cl-form-group">
-                <label className="cl-label">Minimum Budget ($)</label>
+                <label className="cl-label">Minimum Budget (PKR)</label>
                 <input
                   type="number"
                   className={`cl-input${errors.budgetMin ? ' cl-input--error' : ''}`}
@@ -529,7 +586,7 @@ const PostProject = () => {
                 <FieldError message={errors.budgetMin} />
               </div>
               <div className="cl-form-group">
-                <label className="cl-label">Maximum Budget ($)</label>
+                <label className="cl-label">Maximum Budget (PKR)</label>
                 <input
                   type="number"
                   className={`cl-input${errors.budgetMax ? ' cl-input--error' : ''}`}
@@ -770,7 +827,7 @@ const PostProject = () => {
                 </div>
                 <div className="cl-review-item">
                   <span className="cl-review-label">Budget</span>
-                  <span className="cl-review-value">Rs. {form.budget.min} – ${form.budget.max}</span>
+                  <span className="cl-review-value">Rs. {form.budget.min} – Rs. {form.budget.max}</span>
                 </div>
                 <div className="cl-review-item">
                   <span className="cl-review-label">Duration</span>

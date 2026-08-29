@@ -406,6 +406,43 @@ Output ONLY valid JSON:
   }
 
   /**
+   * Suggest a free-text subcategory refinement (e.g. "Frontend Development"
+   * under "Web Development"). Unlike category there's no fixed taxonomy to
+   * pick from, so this is short free text rather than a list lookup.
+   */
+  async recommendJobSubcategory(title, description, skills = [], category = '') {
+    this._assertConfigured();
+    const skillsText = Array.isArray(skills) ? skills.join(', ') : '';
+
+    const prompt = `
+You are a project classification assistant for SkillKart.
+Suggest a short, specific subcategory that refines the given category — a more
+precise niche within it (e.g. category "Web Development" → subcategory
+"Frontend Development" or "WordPress Development"). Keep each suggestion to
+2-4 words, title case, no punctuation.
+
+Project Title: "${title || 'N/A'}"
+Description: "${description || 'N/A'}"
+Skills: "${skillsText || 'N/A'}"
+Category: "${category || 'N/A'}"
+
+Output ONLY valid JSON:
+{
+  "subcategory": "Best subcategory",
+  "suggestions": ["Subcategory 1", "Subcategory 2", "Subcategory 3"]
+}
+`;
+
+    try {
+      const raw = await this._chat(this.liteModel, [{ role: 'user', content: prompt }], { json: true });
+      return this._parseJson(raw);
+    } catch (error) {
+      console.error('DeepSeek recommendJobSubcategory Error:', error.message);
+      throw new Error('Failed to recommend job subcategory with DeepSeek');
+    }
+  }
+
+  /**
    * Draft a freelancer proposal cover letter for a job, using the freelancer's
    * own profile so it's personalised and honest (no invented experience).
    * @param {object} job - { title, description, skills, budget, category }

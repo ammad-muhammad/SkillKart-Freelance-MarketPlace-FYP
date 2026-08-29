@@ -21,9 +21,12 @@ export const proposalsAPI = {
   updateProposal: (id, proposalData) => 
     client.put(`/proposals/${id}`, proposalData),
 
-  // Accept proposal (Client only)
-  acceptProposal: (id, message) => 
-    client.post(`/proposals/${id}/accept`, { message }),
+  // Accept proposal (Client only). `milestones`, if provided, is an array of
+  // { title, amount } that must sum exactly to the proposal's price — the
+  // server locks 100% of milestone 1 in escrow immediately as part of this
+  // call. Omit it for the default single "Full Project" milestone.
+  acceptProposal: (id, message, milestones) =>
+    client.post(`/proposals/${id}/accept`, { message, ...(milestones ? { milestones } : {}) }),
 
   // Reject proposal (Client only)
   rejectProposal: (id, reason) => 

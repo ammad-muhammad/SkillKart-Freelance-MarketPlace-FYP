@@ -23,6 +23,7 @@ const TYPES = {
   REVIEW_SUBMITTED: 'review_submitted',
   JOB_CANCELLED: 'job_cancelled',
   CONTRACT_DISPUTED: 'contract_disputed',
+  MILESTONE_AUTO_RELEASED: 'milestone_auto_released',
 };
 
 /**
@@ -106,7 +107,7 @@ const onRevisionRequested = (freelancerId, { job }) => notify(freelancerId, {
 const onPaymentReleased = (freelancerId, { job, amount }) => notify(freelancerId, {
   type: TYPES.PAYMENT_RELEASED,
   title: 'You got paid! 🎉',
-  message: `Payment of $${amount} (net of fee) was released for "${job?.title || 'a project'}".`,
+  message: `Payment of PKR ${amount} (net of fee) was released for "${job?.title || 'a project'}".`,
   link: '/freelancer/work',
   jobId: job?._id,
 });
@@ -171,6 +172,16 @@ const onProjectCompleted = (freelancerId, { job }) => notify(freelancerId, {
   jobId: job?._id,
 });
 
+// To the client: they didn't review a submitted milestone within the
+// escrow_release_days window, so it was released to the freelancer automatically.
+const onMilestoneAutoReleased = (clientId, { job, milestone }) => notify(clientId, {
+  type: TYPES.MILESTONE_AUTO_RELEASED,
+  title: 'Milestone auto-released ⏱️',
+  message: `You didn't review "${milestone?.title || 'a milestone'}" on "${job?.title || 'a project'}" in time, so its escrow was automatically released to the freelancer.`,
+  link: '/client/projects',
+  jobId: job?._id,
+});
+
 const onContractStatusChanged = (userId, { contractId, status }) => notify(userId, {
   type: 'contract_status_changed',
   title: 'Contract Update',
@@ -198,4 +209,5 @@ module.exports = {
   onJobCancelled,
   onContractDisputed,
   onContractStatusChanged,
+  onMilestoneAutoReleased,
 };

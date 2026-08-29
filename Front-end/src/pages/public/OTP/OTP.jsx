@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { gsap } from "gsap";
-import { ShieldCheck, ArrowRight, RotateCcw, AlertCircle, CheckCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck, ArrowRight, ArrowLeft, RotateCcw, AlertCircle, CheckCircle } from "lucide-react";
 import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
 import { log } from "../../../utils/logger";
-import "../../../Components/common/Hero/Hero.css";
+import AuthBackground from "../AuthBackground";
+import "../Auth.css";
 
 const OTP = () => {
     const { verifyOtp } = useAuth();
@@ -18,16 +19,9 @@ const OTP = () => {
     const [success, setSuccess] = useState("");
     const inputRefs = useRef([]);
 
-    const sectionRef = useRef(null);
-    const tagRef = useRef(null);
-    const headingRef = useRef(null);
-    const formRef = useRef(null);
-    const visualRef = useRef(null);
-    const bgRef = useRef(null);
-
     // Get email from sessionStorage (registration/login flow)
     const userEmail = sessionStorage.getItem('OTPEmail') || 'user@example.com';
-    const registrationType = sessionStorage.getItem('registrationType') || 'login'; // 'registration' or 'login'
+    const registrationType = sessionStorage.getItem('registrationType') || 'login';
 
     // Get password reset data from sessionStorage (password reset flow)
     const tempForgotData = JSON.parse(sessionStorage.getItem('tempForgotData') || 'null');
@@ -45,35 +39,11 @@ const OTP = () => {
     }, [timer]);
 
     useEffect(() => {
-        const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.4 });
-        tl.fromTo(bgRef.current, { opacity: 0 }, { opacity: 1, duration: 1.2, ease: 'power2.inOut' })
-            .fromTo(tagRef.current, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, '-=0.6')
-            .fromTo(headingRef.current?.querySelectorAll('.hero__word'), { y: 60, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.7, ease: 'power4.out' }, '-=0.2')
-            .fromTo(formRef.current, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, '-=0.3')
-            .fromTo(visualRef.current, { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }, '-=1.2');
-
-        const orbs = sectionRef.current?.querySelectorAll('.hero__orb');
-        const onMouseMove = (e) => {
-            const { innerWidth: W, innerHeight: H } = window;
-            const xPct = (e.clientX / W - 0.5) * 2;
-            const yPct = (e.clientY / H - 0.5) * 2;
-            orbs?.forEach((orb, i) => {
-                const depth = (i + 1) * 12;
-                gsap.to(orb, { x: xPct * depth, y: yPct * depth, duration: 1.2, ease: 'power2.out' });
-            });
-        };
-        window.addEventListener('mousemove', onMouseMove);
-        return () => window.removeEventListener('mousemove', onMouseMove);
-    }, []);
-
-    useEffect(() => {
         // Focus first input on mount
         if (inputRefs.current[0]) {
             inputRefs.current[0].focus();
         }
     }, []);
-
-    const headingWords = ['Secure', 'Verification,', 'Protecting', 'Your', 'Account.'];
 
     const otpComplete = otp.join('');
     const isOtpValid = otpComplete.length === 6;
@@ -141,9 +111,7 @@ const OTP = () => {
                 setSuccess("Password reset successfully!");
 
                 setTimeout(() => {
-                    // Clear sessionStorage
                     sessionStorage.removeItem('tempForgotData');
-
                     navigate('/login');
                 }, 1500);
             }
@@ -160,16 +128,13 @@ const OTP = () => {
                 setSuccess("Verification successful!");
 
                 setTimeout(() => {
-                    // Get role BEFORE clearing
                     const role = sessionStorage.getItem('userRole');
 
                     if (registrationType === 'registration') {
-                        // Clear OTP data
                         sessionStorage.removeItem('OTPEmail');
                         sessionStorage.removeItem('registrationType');
                         sessionStorage.removeItem('userRole');
 
-                        // Redirect to onboarding based on role
                         if (role === 'client') {
                             navigate('/client/onboarding');
                         } else if (role === 'freelancer') {
@@ -178,19 +143,17 @@ const OTP = () => {
                             navigate('/404');
                         }
                     } else {
-                        // Login flow - redirect to dashboard
                         const userRole = response?.data?.user?.role;
-                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted
+                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted;
 
-                        // Clear OTP data
                         sessionStorage.removeItem('OTPEmail');
                         sessionStorage.removeItem('registrationType');
                         sessionStorage.removeItem('userRole');
 
                         if (userRole === 'client') {
-                            isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding')
+                            isOnboardingcompleted ? navigate('/client/dashboard') : navigate('/client/onboarding');
                         } else if (userRole === 'freelancer') {
-                            isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding')
+                            isOnboardingcompleted ? navigate('/freelancer/dashboard') : navigate('/freelancer/onboarding');
                         } else {
                             navigate('/404');
                         }
@@ -220,7 +183,6 @@ const OTP = () => {
             else if (registrationType === 'login') purpose = 'login';
 
             log("📧 Resending OTP to:", emailForResend);
-            log("Purpose:", purpose);
 
             await authAPI.resendOTP(emailForResend, purpose);
 
@@ -229,12 +191,10 @@ const OTP = () => {
             setCanResend(false);
             setOtp(["", "", "", "", "", ""]);
 
-            // Clear success message after 2 seconds
             setTimeout(() => {
                 setSuccess("");
             }, 2000);
 
-            // Focus first input
             if (inputRefs.current[0]) {
                 inputRefs.current[0].focus();
             }
@@ -259,244 +219,327 @@ const OTP = () => {
     };
 
     return (
-        <section ref={sectionRef} className="hero">
-            <div ref={bgRef} className="hero__bg">
-                <div className="hero__orb hero__orb--1" />
-                <div className="hero__orb hero__orb--2" />
-                <div className="hero__orb hero__orb--3" />
-                <div className="hero__grid-overlay" />
-            </div>
+        <div style={{
+            minHeight: '100vh',
+            width: '100%',
+            backgroundColor: '#020b14',
+            backgroundImage: 'radial-gradient(circle at 50% 35%, rgba(10, 74, 115, 0.4) 0%, rgba(4, 46, 76, 0.5) 45%, #020b14 90%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px 16px',
+            position: 'relative',
+            fontFamily: "'Lato', sans-serif",
+            color: 'white',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+        }}>
+            {/* Top Left Navigation */}
+            <Link to="/" className="back-home-btn" style={{
+                position: 'fixed',
+                top: '24px',
+                left: '24px',
+                zIndex: 100,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 18px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '999px',
+                color: 'white',
+                textDecoration: 'none',
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                transition: 'all 0.25s ease'
+            }}>
+                <ArrowLeft size={18} />
+                <span>Back to Home</span>
+            </Link>
 
-            <div className="container hero__inner">
-                <div className="hero__copy">
-                    <div ref={tagRef} className="section-tag hero__tag" style={{ color: '#e3e5e8ff', borderColor: 'rgba(14, 14, 14, 0.35)', background: 'rgba(160, 168, 179, 0.1)' }}>
-                        <span>🛡️</span> Verification Stage
+            <AuthBackground />
+
+            {/* Centered OTP Card Container */}
+            <main style={{
+                width: '100%',
+                maxWidth: '460px',
+                margin: 'auto',
+                position: 'relative',
+                zIndex: 10
+            }}>
+                <motion.div
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                        background: 'rgba(4, 46, 76, 0.35)',
+                        backdropFilter: 'blur(30px)',
+                        WebkitBackdropFilter: 'blur(30px)',
+                        border: '1.5px solid rgba(183, 201, 226, 0.22)',
+                        borderRadius: '28px',
+                        padding: '40px 32px',
+                        boxShadow: '0 30px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(4, 46, 76, 0.4)',
+                        textAlign: 'center',
+                        boxSizing: 'border-box'
+                    }}
+                >
+                    {/* Top Icon Badge & Header */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
+                        <div style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '20px',
+                            background: 'linear-gradient(135deg, rgba(183, 201, 226, 0.2), rgba(4, 46, 76, 0.6))',
+                            border: '1.5px solid rgba(183, 201, 226, 0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#B7C9E2',
+                            boxShadow: '0 8px 24px rgba(4, 46, 76, 0.5)',
+                            marginBottom: '16px'
+                        }}>
+                            <ShieldCheck size={32} />
+                        </div>
+
+                        <h1 style={{
+                            fontFamily: "'Roboto Slab', serif",
+                            fontSize: '1.75rem',
+                            fontWeight: 800,
+                            color: '#ffffff',
+                            margin: '0 0 8px 0',
+                            lineHeight: 1.2
+                        }}>
+                            Security Verification
+                        </h1>
+
+                        <p style={{
+                            fontSize: '0.9rem',
+                            color: 'rgba(255, 255, 255, 0.68)',
+                            margin: '0 0 10px 0',
+                            fontWeight: 500
+                        }}>
+                            We've sent a 6-digit security code to
+                        </p>
+
+                        <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(183, 201, 226, 0.12)',
+                            border: '1px solid rgba(183, 201, 226, 0.28)',
+                            padding: '6px 16px',
+                            borderRadius: '999px',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            fontSize: '0.88rem',
+                            wordBreak: 'break-all'
+                        }}>
+                            <span>{isPasswordReset ? resetEmail : userEmail}</span>
+                        </div>
                     </div>
 
-                    <h1 ref={headingRef} className="hero__heading">
-                        {headingWords.map((w, i) => (
-                            <span key={i} className="hero__word">
-                                {w}{i === 2 ? ' ' : ' '}
-                            </span>
-                        ))}
-                    </h1>
-
-                    <p className="hero__sub" style={{ marginBottom: '25px', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
-                        We've sent a 6-digit security code to <span style={{ color: 'white', fontWeight: '800' }}>{isPasswordReset ? resetEmail : userEmail}</span>
-                    </p>
-
-                    <div ref={formRef} className="hero__auth-container" style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '24px',
-                        padding: '45px 35px',
-                        backdropFilter: 'blur(12px)',
-                        maxWidth: '420px',
-                        width: '100%',
-                        textAlign: 'center'
-                    }}>
-                        {/* Error Alert */}
+                    {/* Alerts */}
+                    <AnimatePresence mode="wait">
                         {error && (
-                            <div style={{
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                borderRadius: '12px',
-                                padding: '12px 15px',
-                                marginBottom: '20px',
-                                display: 'flex',
-                                gap: '10px',
-                                alignItems: 'flex-start'
-                            }}>
-                                <AlertCircle size={18} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
-                                <p style={{ color: '#fca5a5', fontSize: '13px', margin: 0, fontWeight: '500' }}>
-                                    {error}
-                                </p>
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                style={{
+                                    background: 'rgba(239, 68, 68, 0.12)',
+                                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                                    borderRadius: '14px',
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    color: '#fca5a5',
+                                    fontSize: '0.85rem',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <AlertCircle size={18} style={{ flexShrink: 0, color: '#ef4444' }} />
+                                <span>{error}</span>
+                            </motion.div>
                         )}
-
-                        {/* Success Alert */}
                         {success && (
-                            <div style={{
-                                background: 'rgba(34, 197, 94, 0.1)',
-                                border: '1px solid rgba(34, 197, 94, 0.3)',
-                                borderRadius: '12px',
-                                padding: '12px 15px',
-                                marginBottom: '20px',
-                                display: 'flex',
-                                gap: '10px',
-                                alignItems: 'flex-start'
-                            }}>
-                                <CheckCircle size={18} style={{ color: '#22c55e', flexShrink: 0, marginTop: '2px' }} />
-                                <p style={{ color: '#86efac', fontSize: '13px', margin: 0, fontWeight: '500' }}>
-                                    {success}
-                                </p>
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                style={{
+                                    background: 'rgba(34, 197, 94, 0.12)',
+                                    border: '1px solid rgba(34, 197, 94, 0.35)',
+                                    borderRadius: '14px',
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    color: '#86efac',
+                                    fontSize: '0.85rem',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <CheckCircle size={18} style={{ flexShrink: 0, color: '#22c55e' }} />
+                                <span>{success}</span>
+                            </motion.div>
                         )}
+                    </AnimatePresence>
 
-                        {/* OTP Input Fields */}
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
-                            {otp.map((digit, index) => (
-                                <input
-                                    key={index}
-                                    ref={el => inputRefs.current[index] = el}
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={1}
-                                    value={digit}
-                                    onChange={e => handleChange(index, e.target.value)}
-                                    onKeyDown={e => handleKeyDown(index, e)}
-                                    onPaste={handlePaste}
-                                    disabled={loading}
-                                    style={{
-                                        width: '55px',
-                                        height: '65px',
-                                        textAlign: 'center',
-                                        fontSize: '28px',
-                                        fontWeight: '900',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '16px',
-                                        color: 'white',
-                                        outline: 'none',
-                                        transition: 'all 0.3s',
-                                        opacity: loading ? 0.6 : 1,
-                                        cursor: loading ? 'not-allowed' : 'text'
-                                    }}
-                                />
-                            ))}
-                        </div>
+                    {/* 6 Digit OTP Input Boxes */}
+                    <div style={{
+                        display: 'flex',
+                        justify: 'center',
+                        gap: '10px',
+                        marginBottom: '24px'
+                    }}>
+                        {otp.map((digit, index) => (
+                            <input
+                                key={index}
+                                ref={el => inputRefs.current[index] = el}
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={1}
+                                value={digit}
+                                onChange={e => handleChange(index, e.target.value)}
+                                onKeyDown={e => handleKeyDown(index, e)}
+                                onPaste={handlePaste}
+                                disabled={loading}
+                                style={{
+                                    width: '52px',
+                                    height: '60px',
+                                    textAlign: 'center',
+                                    fontSize: '1.65rem',
+                                    fontWeight: '900',
+                                    fontFamily: 'inherit',
+                                    color: '#ffffff',
+                                    backgroundColor: digit ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                                    border: digit ? '1.5px solid #B7C9E2' : '1.5px solid rgba(255, 255, 255, 0.16)',
+                                    borderRadius: '14px',
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                    transition: 'all 0.2s ease',
+                                    opacity: loading ? 0.5 : 1,
+                                    cursor: loading ? 'not-allowed' : 'text',
+                                    boxShadow: digit ? '0 0 12px rgba(183, 201, 226, 0.25)' : 'none'
+                                }}
+                                onFocus={e => {
+                                    e.target.style.borderColor = '#B7C9E2';
+                                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.12)';
+                                    e.target.style.boxShadow = '0 0 16px rgba(183, 201, 226, 0.35)';
+                                }}
+                                onBlur={e => {
+                                    if (!digit) {
+                                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.16)';
+                                        e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                        e.target.style.boxShadow = 'none';
+                                    }
+                                }}
+                            />
+                        ))}
+                    </div>
 
-                        {/* Verify Button */}
-                        <button
-                            type="button"
-                            onClick={handleVerify}
-                            disabled={!isOtpValid || loading}
-                            className="hero__btn-main"
-                            style={{
-                                width: '100%',
-                                justifyContent: 'center',
-                                border: 'none',
-                                cursor: isOtpValid && !loading ? 'pointer' : 'not-allowed',
-                                padding: '16px',
-                                opacity: isOtpValid && !loading ? 1 : 0.4,
-                                display: 'flex',
-                                gap: '8px',
-                                alignItems: 'center',
-                                marginBottom: '20px'
-                            }}
-                        >
-                            {loading ? (
-                                <>
-                                    <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>
-                                        <ShieldCheck size={18} />
-                                    </div>
-                                    Verifying...
-                                </>
-                            ) : (
-                                <>
-                                    Verify Now <ArrowRight size={18} />
-                                </>
-                            )}
-                        </button>
+                    {/* Primary Verify Button */}
+                    <button
+                        type="button"
+                        onClick={handleVerify}
+                        disabled={!isOtpValid || loading}
+                        style={{
+                            width: '100%',
+                            padding: '14px 20px',
+                            background: isOtpValid && !loading
+                                ? 'linear-gradient(135deg, #1a6fa8 0%, #042E4C 100%)'
+                                : 'rgba(255, 255, 255, 0.08)',
+                            color: isOtpValid && !loading ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                            border: isOtpValid && !loading ? '1px solid rgba(183, 201, 226, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '14px',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            fontFamily: 'inherit',
+                            cursor: isOtpValid && !loading ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            boxShadow: isOtpValid && !loading ? '0 8px 24px rgba(4, 46, 76, 0.5)' : 'none',
+                            transition: 'all 0.25s ease',
+                            marginBottom: '20px'
+                        }}
+                    >
+                        {loading ? (
+                            <>
+                                <div className="animate-spin" style={{ width: 18, height: 18 }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="12" cy="12" r="10" opacity="0.3" />
+                                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" />
+                                    </svg>
+                                </div>
+                                Verifying Code...
+                            </>
+                        ) : (
+                            <>
+                                Verify Now <ArrowRight size={18} />
+                            </>
+                        )}
+                    </button>
 
-                        {/* Resend & Timer */}
-                        <div style={{ marginTop: '25px' }}>
-                            {canResend ? (
-                                <button
-                                    type="button"
-                                    onClick={handleResend}
-                                    disabled={loading}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: 'white',
-                                        fontWeight: '800',
-                                        cursor: loading ? 'not-allowed' : 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        margin: '0 auto',
-                                        fontSize: '14px',
-                                        opacity: loading ? 0.6 : 1
-                                    }}
-                                >
-                                    <RotateCcw size={16} /> Resend OTP Code
-                                </button>
-                            ) : (
-                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', fontWeight: '600' }}>
-                                    Resend code in <span style={{ color: 'white', fontWeight: '900' }}>{timer}s</span>
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Back Button */}
-                        <p style={{ marginTop: '20px', color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '600' }}>
-                            {isPasswordReset ? 'Wrong email?' : 'Wrong email?'} <button
-                                onClick={handleBackClick}
+                    {/* Resend & Timer */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        {canResend ? (
+                            <button
+                                type="button"
+                                onClick={handleResend}
+                                disabled={loading}
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: 'white',
-                                    fontWeight: '800',
-                                    cursor: 'pointer',
-                                    textDecoration: 'underline'
+                                    color: '#B7C9E2',
+                                    fontWeight: '700',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '0.88rem',
+                                    opacity: loading ? 0.6 : 1,
+                                    transition: 'all 0.2s ease'
                                 }}
                             >
-                                Go back
+                                <RotateCcw size={15} /> Resend OTP Code
                             </button>
-                        </p>
+                        ) : (
+                            <p style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.84rem', margin: 0, fontWeight: 500 }}>
+                                Resend code in <strong style={{ color: '#ffffff', fontWeight: 800 }}>{timer}s</strong>
+                            </p>
+                        )}
+
+                        {/* Back Link */}
+                        <button
+                            onClick={handleBackClick}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'rgba(255, 255, 255, 0.45)',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginTop: '4px',
+                                transition: 'color 0.2s ease'
+                            }}
+                            onMouseEnter={e => e.target.style.color = '#ffffff'}
+                            onMouseLeave={e => e.target.style.color = 'rgba(255, 255, 255, 0.45)'}
+                        >
+                            <ArrowLeft size={14} /> Wrong email? Change address
+                        </button>
                     </div>
-                </div>
-
-                {/* Right Side Visual */}
-                <div ref={visualRef} className="hero__visual">
-                    <div className="hero__dashboard">
-                        <div className="hero__dashboard-header">
-                            <div className="hero__dashboard-dots">
-                                <span style={{ background: "#ff5f57" }} />
-                                <span style={{ background: "#febc2e" }} />
-                                <span style={{ background: "#28c840" }} />
-                            </div>
-                            <span className="hero__dashboard-title">Security Lab</span>
-                        </div>
-                        <div className="hero__dashboard-body">
-                            <div className="hero__db-profile">
-                                <div className="hero__db-avatar">🛡️</div>
-                                <div>
-                                    <div className="hero__db-name">MFA Verification</div>
-                                    <div className="hero__db-role">Level 2 Authorization</div>
-                                </div>
-                            </div>
-                            <div className="hero__db-ai">
-                                <div className="hero__db-ai-icon">💡</div>
-                                <div>
-                                    <div className="hero__db-ai-title">Buddy AI Check</div>
-                                    <div className="hero__db-ai-text">
-                                        This extra layer of security helps prevent unauthorized access to your account and data.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="hero__wave">
-                <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                    <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
-                </svg>
-            </div>
-
-            <style>
-                {`
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                `}
-            </style>
-        </section>
+                </motion.div>
+            </main>
+        </div>
     );
 };
 
-export default OTP;
+export default OTP;

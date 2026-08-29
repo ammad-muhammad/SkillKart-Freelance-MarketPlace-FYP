@@ -13,6 +13,7 @@ const {
   searchJobsValidation,
   closeJobValidation,
   recommendCategoryValidation,
+  recommendSubcategoryValidation,
   reviewJobValidation
 } = require('../validators/job.validator');
 
@@ -76,6 +77,14 @@ router.post('/ai/recommend-category',
   recommendCategoryValidation,
   validate,
   jobController.recommendCategory
+);
+
+router.post('/ai/recommend-subcategory',
+  authenticate,
+  requireRole('client'),
+  recommendSubcategoryValidation,
+  validate,
+  jobController.recommendSubcategory
 );
 
 // Upload attachment (before /:id)

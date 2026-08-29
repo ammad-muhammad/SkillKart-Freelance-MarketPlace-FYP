@@ -19,6 +19,7 @@ import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
 import TagInput from "../../../Components/common/TagInput/TagInput";
 import IndustryInput from "../../../Components/common/IndustryInput/IndustryInput";
+import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import "./ClientOnboarding.css";
 
 
@@ -31,6 +32,7 @@ const ClientOnboarding = () => {
     const [draftData, setDraftData] = useState(null);
     const [aiSuggestions, setAiSuggestions] = useState([]);
     const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
+    const [cropTarget, setCropTarget] = useState(null); // { file, field } while the crop modal is open
     const { refreshAuth, user } = useAuth();
     const { fetchProfile } = useClient();
 
@@ -203,17 +205,23 @@ const ClientOnboarding = () => {
 
     const handleImageUpload = (e, field) => {
         const file = e.target.files[0];
-        if (file) {
-            if (!file.type.startsWith('image/')) {
-                toast.error("Please upload an image file");
-                return;
-            }
-            setFormData(prev => ({
-                ...prev,
-                [field]: file,
-                [`${field}Url`]: URL.createObjectURL(file)
-            }));
+        e.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error("Please upload an image file");
+            return;
         }
+        setCropTarget({ file, field });
+    };
+
+    const handleCropConfirm = (finalFile) => {
+        const field = cropTarget?.field;
+        setCropTarget(null);
+        setFormData(prev => ({
+            ...prev,
+            [field]: finalFile,
+            [`${field}Url`]: URL.createObjectURL(finalFile)
+        }));
     };
 
     const toggleMultiSelect = (field, item) => {
@@ -380,6 +388,12 @@ const ClientOnboarding = () => {
     ];
 
     const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
+    const proficiencyOptions = useMemo(() => [
+        { value: 'basic', label: 'Basic' },
+        { value: 'conversational', label: 'Conversational' },
+        { value: 'fluent', label: 'Fluent' },
+        { value: 'native', label: 'Native' }
+    ], []);
 
     const CustomControl = ({ children, ...props }) => {
         const iconStyle = { marginLeft: '12px', opacity: 0.7, fontSize: '1rem' };
@@ -820,21 +834,19 @@ const ClientOnboarding = () => {
                             </div>
                             <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
                                 <label className="onboarding__label" style={{ fontSize: '12px', marginBottom: '4px' }}>Proficiency</label>
-                                <select 
-                                    className="onboarding__input" 
-                                    value={lang.proficiency || 'fluent'} 
-                                    onChange={(e) => {
+                                <Select
+                                    options={proficiencyOptions}
+                                    value={proficiencyOptions.find(o => o.value.toLowerCase() === (lang.proficiency || 'fluent').toLowerCase()) || proficiencyOptions[2]}
+                                    onChange={(selected) => {
                                         const newList = [...formData.languages];
-                                        newList[idx].proficiency = e.target.value;
+                                        newList[idx].proficiency = selected?.value || 'fluent';
                                         setFormData(p => ({ ...p, languages: newList }));
                                     }}
-                                    style={{ backgroundColor: '#fff' }}
-                                >
-                                    <option value="basic">Basic</option>
-                                    <option value="conversational">Conversational</option>
-                                    <option value="fluent">Fluent</option>
-                                    <option value="native">Native</option>
-                                </select>
+                                    placeholder="Select proficiency"
+                                    styles={customStyles}
+                                    classNamePrefix="skillkart-select"
+                                    menuPortalTarget={document.body}
+                                />
                             </div>
                             <button
                                 type="button"
@@ -1203,6 +1215,15 @@ const ClientOnboarding = () => {
                     </form>
                 </div>
             </div>
+
+            <ImageCropModal
+                file={cropTarget?.file || null}
+                aspect={1}
+                cropShape={cropTarget?.field === 'companyPic' ? 'rect' : 'round'}
+                title={cropTarget?.field === 'companyPic' ? 'Adjust Company Logo' : 'Adjust Profile Photo'}
+                onCancel={() => setCropTarget(null)}
+                onConfirm={handleCropConfirm}
+            />
         </section>
     );
 };

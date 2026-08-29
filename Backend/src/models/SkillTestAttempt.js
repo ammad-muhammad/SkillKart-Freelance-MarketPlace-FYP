@@ -18,7 +18,19 @@ const skillTestAttemptSchema = new mongoose.Schema({
   totalScore: { type: Number },
   passed: { type: Boolean },
   status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
-  completedAt: { type: Date, default: Date.now }
+  completedAt: { type: Date, default: Date.now },
+
+  // Proctoring audit trail — browser-integrity (tab/window/fullscreen) and
+  // camera/face (no-face, multiple-faces, looking-away) violations logged
+  // client-side during the attempt. Recorded for review only; does not
+  // affect scoring (a serious violation aborts the attempt client-side
+  // before it ever reaches submission).
+  violations: [{
+    type: { type: String, enum: ['tab_switch', 'window_blur', 'fullscreen_exit', 'no_face', 'multiple_faces', 'looking_away', 'other'] },
+    source: { type: String, enum: ['browser', 'camera'] },
+    reason: String,
+    at: Date
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('SkillTestAttempt', skillTestAttemptSchema);

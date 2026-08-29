@@ -298,7 +298,9 @@ export default function PublicClientProfile() {
                           <div style={{ padding: '1.5rem', background: '#fff', borderRadius: '1rem', border: '1px solid rgba(0,0,0,0.05)', height: '100%', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)' }}>
                             <h4 style={{ margin: '0 0 10px', fontSize: '1.1rem', color: '#0f172a' }}>{job.title}</h4>
                             <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>
-                              {job.budget?.type === 'fixed' ? `Fixed: Rs. ${job.budget.fixedAmount}` : `Hourly: Rs. ${job.budget.minRate} - ${job.budget.maxRate}/hr`}
+                              {job.budget?.type === 'fixed'
+                                ? `Fixed: Rs. ${job.budget.min} - ${job.budget.max}`
+                                : `Hourly: Rs. ${job.budget?.min} - ${job.budget?.max}/hr`}
                             </p>
                           </div>
                         </Link>

@@ -2,6 +2,7 @@ const Contract = require('../models/Contract');
 const ContractHistory = require('../models/ContractHistory');
 const Job = require('../models/Job');
 const Payment = require('../models/Payment');
+const Milestone = require('../models/Milestone');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
@@ -30,7 +31,16 @@ const getContract = asyncHandler(async (req, res) => {
     throw new ForbiddenError('You do not have access to this contract');
   }
 
-  sendSuccess(res, { data: { contract } });
+  let milestones = [];
+  if (contract.type === 'fixed') {
+    const Milestone = require('../models/Milestone');
+    const rawMilestones = await Milestone.find({ contractId: contract._id }).sort({ order: 1 }).lean();
+    const milestonePayments = await Payment.find({ milestoneId: { $in: rawMilestones.map((m) => m._id) } }).lean();
+    const paymentByMilestone = new Map(milestonePayments.map((p) => [String(p.milestoneId), p]));
+    milestones = rawMilestones.map((m) => ({ ...m, payment: paymentByMilestone.get(String(m._id)) || null }));
+  }
+
+  sendSuccess(res, { data: { contract, milestones } });
 });
 
 /**
@@ -153,15 +163,34 @@ const getMyContracts = asyncHandler(async (req, res) => {
     .sort({ updatedAt: -1 })
     .lean();
 
-  // Attach each contract's payment record
-  const payments = await Payment.find({ contractId: { $in: contracts.map((c) => c._id) } })
-    .select('contractId status depositAmount finalAmount totalAmount platformFee freelancerPayout')
-    .lean();
-  const payByContract = new Map(payments.map((p) => [String(p.contractId), p]));
+  const contractIds = contracts.map((c) => c._id);
+
+  // Fixed-price contracts have ONE Payment per milestone (not one per
+  // contract) — fetch milestones + their own escrow Payment together, and
+  // key the legacy flat `payment` field off the CURRENT milestone specifically
+  // (picking "any" Payment for the contract, as this used to, is ambiguous
+  // and wrong once a contract has more than one milestone).
+  const Milestone = require('../models/Milestone');
+  const [payments, milestonesRaw] = await Promise.all([
+    Payment.find({ contractId: { $in: contractIds } })
+      .select('contractId milestoneId status depositAmount finalAmount totalAmount platformFee freelancerPayout')
+      .lean(),
+    Milestone.find({ contractId: { $in: contractIds } }).sort({ order: 1 }).lean()
+  ]);
+
+  const paymentByMilestone = new Map(payments.filter((p) => p.milestoneId).map((p) => [String(p.milestoneId), p]));
+  const legacyPayByContract = new Map(payments.filter((p) => !p.milestoneId).map((p) => [String(p.contractId), p]));
+
+  const milestonesByContract = new Map();
+  for (const m of milestonesRaw) {
+    const key = String(m.contractId);
+    if (!milestonesByContract.has(key)) milestonesByContract.set(key, []);
+    milestonesByContract.get(key).push({ ...m, payment: paymentByMilestone.get(String(m._id)) || null });
+  }
 
   const TimeLog = require('../models/TimeLog');
   const recentLogs = await TimeLog.aggregate([
-    { $match: { contractId: { $in: contracts.map((c) => c._id) } } },
+    { $match: { contractId: { $in: contractIds } } },
     { $sort: { endTime: -1 } },
     { $group: { _id: "$contractId", lastLog: { $first: "$$ROOT" }, totalDuration: { $sum: "$duration" } } }
   ]);
@@ -169,11 +198,17 @@ const getMyContracts = asyncHandler(async (req, res) => {
 
   const items = contracts.map((c) => {
     const logs = logsByContract.get(String(c._id)) || {};
+    const milestones = milestonesByContract.get(String(c._id)) || [];
+    const currentMilestone = milestones.find((m) => m.order === c.currentMilestoneOrder) || null;
     return {
       ...c,
-      payment: payByContract.get(String(c._id)) || null,
+      milestones,
+      currentMilestone,
+      payment: currentMilestone?.payment || legacyPayByContract.get(String(c._id)) || null,
       endRequest: c.endRequest || null,
-      dispute: c.dispute || null,
+      // Fixed-price disputes live on the current milestone, not the contract
+      // (see raiseDispute below) — hourly still uses contract.dispute.
+      dispute: (c.type === 'fixed' ? currentMilestone?.dispute : c.dispute) || null,
       lastTimeLog: logs.lastLog || null,
       totalDuration: logs.totalDuration || 0
     };
@@ -348,7 +383,10 @@ const respondEndContract = asyncHandler(async (req, res) => {
 });
 
 /**
- * Raise a Dispute for Hourly Contract
+ * Raise a Dispute — hourly contracts dispute at the contract level (as
+ * before); fixed-price contracts dispute the CURRENT milestone (the one
+ * being submitted/reviewed), freezing just that milestone's escrow rather
+ * than the whole contract.
  */
 const raiseDispute = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -357,10 +395,6 @@ const raiseDispute = asyncHandler(async (req, res) => {
   const contract = await Contract.findById(id);
   if (!contract) throw new NotFoundError('Contract not found');
 
-  if (contract.type !== 'hourly') {
-    throw new BadRequestError('This action is only for hourly contracts');
-  }
-
   const isClient = String(contract.clientId) === String(req.user._id);
   const isFreelancer = String(contract.freelancerId) === String(req.user._id);
 
@@ -368,6 +402,47 @@ const raiseDispute = asyncHandler(async (req, res) => {
     throw new ForbiddenError('You do not have permission to dispute this contract');
   }
 
+  if (contract.type === 'fixed') {
+    const milestone = await Milestone.findOne({ contractId: contract._id, order: contract.currentMilestoneOrder });
+    if (!milestone) throw new NotFoundError('No milestone found for this contract');
+    if (!['submitted', 'in_revision'].includes(milestone.status)) {
+      throw new BadRequestError(`Cannot dispute a milestone that is ${milestone.status} — there must be delivered work under review to dispute.`);
+    }
+    if (milestone.dispute?.status === 'pending') {
+      throw new BadRequestError('This milestone already has a pending dispute');
+    }
+
+    milestone.status = 'disputed';
+    // Clear reviewDeadline so the auto-release cron (which only scans
+    // status:'submitted') can never touch a disputed milestone.
+    milestone.reviewDeadline = undefined;
+    milestone.dispute = {
+      raisedBy: req.user._id,
+      reason,
+      description,
+      status: 'pending',
+      raisedAt: new Date()
+    };
+    await milestone.save();
+
+    contract.status = 'under_review';
+    await contract.save();
+
+    await ContractHistory.create({
+      contractId: contract._id,
+      action: 'milestone_disputed',
+      performedBy: req.user._id,
+      notes: `Dispute raised on milestone ${milestone.order}: ${reason}`,
+      newValue: { milestoneId: milestone._id, order: milestone.order }
+    });
+
+    const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
+    notifications.onContractDisputed(notifyUserId, { contractId: contract._id, actorName: req.user.firstName, reason });
+
+    return sendSuccess(res, { message: 'Dispute raised successfully', data: { contract, milestone } });
+  }
+
+  // Hourly contracts — unchanged, contract-level dispute.
   const lockedStatuses = ['completed', 'cancelled', 'pending_cancellation', 'under_review'];
   if (lockedStatuses.includes(contract.status)) {
     throw new BadRequestError(`Cannot dispute a contract that is ${contract.status}`);

@@ -8,6 +8,10 @@ import { useEffect, useRef, useCallback } from 'react';
  *   - blurring the window           (window blur — alt-tab, clicking elsewhere)
  *   - leaving fullscreen           (fullscreenchange with no fullscreen element)
  *   - opening dev tools / context menu / copy-cut (best-effort deterrents)
+ *   - a 1s polling watchdog on document.hidden/document.hasFocus() as a
+ *     backup for window-management interactions that don't reliably fire the
+ *     events above in every OS/browser (e.g. snapping the window aside and
+ *     focusing a different app)
  *
  * Policy: the FIRST violation calls `onWarn` (a single warning). The SECOND
  * violation calls `onAbort` — the caller then discards the attempt and starts a
@@ -95,6 +99,29 @@ export default function useAntiCheat({ active, attemptId = 0, onWarn, onAbort })
       document.removeEventListener('cut', onCopyCut);
       document.removeEventListener('keydown', onKeyDown);
     };
+  }, [active, handleViolation]);
+
+  // Backup watchdog, separate from the event listeners above. Some OS/browser
+  // window-management interactions (snapping the window aside, then focusing
+  // a different app) don't reliably fire `blur`/`visibilitychange` in every
+  // environment — polling document.hasFocus()/document.hidden directly closes
+  // that gap. Edge-triggered (flips a local flag) so one continued absence is
+  // still only counted once, not once per poll tick.
+  useEffect(() => {
+    if (!active) return undefined;
+    let wasAway = false;
+
+    const poll = setInterval(() => {
+      const away = document.hidden || !document.hasFocus();
+      if (away && !wasAway) {
+        wasAway = true;
+        handleViolation('You switched away from the test window.');
+      } else if (!away) {
+        wasAway = false;
+      }
+    }, 1000);
+
+    return () => clearInterval(poll);
   }, [active, handleViolation]);
 
   // Reset strikes only when a NEW attempt starts (attemptId changes) and the

@@ -1,7 +1,7 @@
 import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { contractsAPI } from '../../api/contracts';
 import { useAuth } from '../../hooks/useAuth';
@@ -188,10 +188,16 @@ export default function FreelancerWork() {
             
             const isFixed = c.type === 'fixed';
             const isHourly = c.type === 'hourly';
-            
-            const canDeliver = ['active', 'in-progress', 'in_revision'].includes(c.status);
-            const waitingDeposit = isFixed && ['active', 'in-progress'].includes(c.status) && (!c.payment || c.payment.status === 'deposit_pending');
-            
+
+            const currentMilestone = c.currentMilestone;
+            const statusOk = ['active', 'in-progress', 'in_revision'].includes(c.status);
+            // Fixed-price: the freelancer can only submit once the CURRENT milestone's
+            // escrow is actually funded — mirrors the backend guard in submitDelivery.
+            const canDeliver = isFixed
+              ? statusOk && ['funded', 'in_revision'].includes(currentMilestone?.status)
+              : statusOk;
+            const waitingDeposit = isFixed && statusOk && !['funded', 'in_revision'].includes(currentMilestone?.status) && currentMilestone?.status !== 'disputed';
+
             const timerActive = isHourly && c.timer?.isActive;
 
             return (
@@ -220,7 +226,7 @@ export default function FreelancerWork() {
                 </div>
 
                 {/* Pending Banners */}
-                {isHourly && c.dispute && c.dispute.status === 'pending' && (
+                {c.dispute && c.dispute.status === 'pending' && (
                   <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                     <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <AlertTriangle size={18} style={{ marginRight: '8px' }} /> Contract under Dispute
@@ -287,6 +293,36 @@ export default function FreelancerWork() {
                   </div>
                 )}
 
+                {isFixed && Array.isArray(c.milestones) && c.milestones.length > 0 && (
+                  <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--color-text-mid)' }}>
+                      <Layers size={14} /> Escrow Milestones ({c.milestones.filter(m => m.status === 'released').length}/{c.milestones.length} released)
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {c.milestones.map((m) => {
+                        const bg = m.status === 'released' ? '#dcfce7'
+                          : m.status === 'disputed' ? '#fee2e2'
+                          : m._id === currentMilestone?._id ? '#dbeafe'
+                          : '#f1f5f9';
+                        const fg = m.status === 'released' ? '#166534'
+                          : m.status === 'disputed' ? '#b91c1c'
+                          : m._id === currentMilestone?._id ? '#1d4ed8'
+                          : '#475569';
+                        return (
+                          <span key={m._id} style={{ background: bg, color: fg, padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.78rem' }}>
+                            {m.order}. {m.title} — Rs. {m.amount} ({m.status.replace('_', ' ')})
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {currentMilestone?.status === 'funded' && (
+                      <p style={{ margin: '0.5rem 0 0', color: '#16a34a', fontWeight: 600 }}>
+                        <CheckCircle2 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Escrow Funded 100% — safe to work on Milestone {currentMilestone.order}!
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {c.revisionNote && c.status === 'in_revision' && (
                   <div className="fl-contract__revision"><RefreshCw size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Revision requested: {c.revisionNote}</div>
                 )}
@@ -299,7 +335,11 @@ export default function FreelancerWork() {
                     </Link>
                   )}
                   {waitingDeposit && (
-                    <span className="fl-contract__hint"><Clock size={14} /> Waiting for client to fund the deposit</span>
+                    <span className="fl-contract__hint">
+                      <Clock size={14} /> {currentMilestone?.status === 'disputed'
+                        ? 'This milestone is under dispute'
+                        : `Waiting for client to fund ${isFixed && c.milestones?.length > 1 ? `Milestone ${currentMilestone?.order || ''}` : 'the escrow'}`}
+                    </span>
                   )}
                   {canDeliver && (
                     <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => { setDeliverFor(c); setDelivery({ message: '', links: '' }); }}>
@@ -317,26 +357,29 @@ export default function FreelancerWork() {
                           <Play size={14} /> Start Timer
                         </button>
                       )}
-                      
+
                       {c.endRequest?.status !== 'pending' && c.dispute?.status !== 'pending' && (
-                        <>
-                          <button 
-                            className="fl-btn fl-btn--sm fl-btn--ghost" 
-                            style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            onClick={() => setEndRequestModal({ contractId: c._id })}
-                          >
-                            <StopCircle size={14} /> End Contract
-                          </button>
-                          <button 
-                            className="fl-btn fl-btn--sm fl-btn--ghost" 
-                            style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            onClick={() => setDisputeModal({ contractId: c._id })}
-                          >
-                            <AlertTriangle size={14} /> Dispute
-                          </button>
-                        </>
+                        <button
+                          className="fl-btn fl-btn--sm fl-btn--ghost"
+                          style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => setEndRequestModal({ contractId: c._id })}
+                        >
+                          <StopCircle size={14} /> End Contract
+                        </button>
                       )}
                     </>
+                  )}
+                  {c.dispute?.status !== 'pending' && (
+                    (isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && c.endRequest?.status !== 'pending') ||
+                    (isFixed && ['delivered', 'in_revision'].includes(c.status))
+                  ) && (
+                    <button
+                      className="fl-btn fl-btn--sm fl-btn--ghost"
+                      style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => setDisputeModal({ contractId: c._id })}
+                    >
+                      <AlertTriangle size={14} /> Dispute
+                    </button>
                   )}
                 </div>
               </div>

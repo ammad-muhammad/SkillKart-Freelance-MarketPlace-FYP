@@ -386,3 +386,188 @@
     .ai-card { padding: 1.5rem; }
     .ai-btn-primary { width: 100%; }
 }
+
+/* ================================================
+   ESTIMATE PRINT DOCUMENT (A4 "Save as PDF")
+   Hidden on screen; becomes the only visible content
+   when printing / saving as PDF via window.print().
+   ================================================ */
+.estimate-print-doc {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: A4;
+        margin: 16mm 14mm;
+    }
+
+    html, body {
+        background: #fff !important;
+        height: auto !important;
+    }
+
+    /* Hide every OTHER direct child of the page root (Navbar, hero, all
+       sections, Footer) with display:none — NOT visibility:hidden, which
+       would keep their layout height and pad the print-out with blank
+       pages. .estimate-print-doc is itself a direct child of .ai-page, so
+       this is the only rule needed to isolate it. */
+    .ai-page > *:not(.estimate-print-doc) {
+        display: none !important;
+    }
+
+    .estimate-print-doc {
+        display: block !important;
+        width: 100%;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #1a202c;
+    }
+
+    .print-doc__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 3px solid #042E4C;
+        padding-bottom: 14px;
+        margin-bottom: 22px;
+    }
+
+    .print-doc__brand {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .print-doc__logo {
+        font-size: 24px;
+        font-weight: 800;
+        color: #042E4C;
+        letter-spacing: 0.5px;
+    }
+
+    .print-doc__tagline {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 2px;
+    }
+
+    .print-doc__meta {
+        text-align: right;
+        font-size: 11px;
+        color: #4a5568;
+        line-height: 1.7;
+    }
+
+    .print-doc__meta strong {
+        color: #042E4C;
+    }
+
+    .print-doc__title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #042E4C;
+        margin: 0 0 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .print-doc__details {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 24px;
+        font-size: 12px;
+    }
+
+    .print-doc__details th {
+        text-align: left;
+        width: 190px;
+        padding: 8px 12px;
+        background: #f1f5f9;
+        color: #042E4C;
+        font-weight: 700;
+        border: 1px solid #e2e8f0;
+    }
+
+    .print-doc__details td {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .print-doc__range {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f0f9ff;
+        border: 1.5px solid #042E4C;
+        border-radius: 6px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+    }
+
+    .print-doc__range-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #042E4C;
+    }
+
+    .print-doc__range-value {
+        font-size: 20px;
+        font-weight: 800;
+        color: #059669;
+    }
+
+    .print-doc__section-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #042E4C;
+        margin: 0 0 10px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 6px;
+    }
+
+    .print-doc__breakdown {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 24px;
+        font-size: 12px;
+        page-break-inside: avoid;
+    }
+
+    .print-doc__breakdown th {
+        text-align: left;
+        padding: 8px 12px;
+        background: #042E4C;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .print-doc__breakdown td {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .print-doc__breakdown tr:nth-child(even) td {
+        background: #f8fafc;
+    }
+
+    .print-doc__rationale {
+        font-size: 12px;
+        line-height: 1.7;
+        color: #374151;
+        margin-bottom: 28px;
+    }
+
+    .print-doc__footer {
+        margin-top: 36px;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 14px;
+        font-size: 10px;
+        color: #94a3b8;
+        line-height: 1.6;
+    }
+
+    .print-doc__footer-brand {
+        font-weight: 700;
+        color: #042E4C;
+        margin-top: 4px;
+    }
+}

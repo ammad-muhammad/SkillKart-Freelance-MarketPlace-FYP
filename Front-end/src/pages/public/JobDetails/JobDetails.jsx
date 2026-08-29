@@ -6,13 +6,68 @@ import { proposalsAPI } from '../../../api/proposals';
 import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
-import { 
-  Clock, DollarSign, Tag, Briefcase, ChevronLeft, 
-  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark
+import {
+  Clock, DollarSign, Tag, Briefcase, ChevronLeft,
+  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText
 } from 'lucide-react';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { toast } from 'react-toastify';
 import './JobDetails.css';
+
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif'];
+
+// Per-extension accent color for the generic icon block (files we can't
+// generate a real visual preview for — docx, txt, zip, etc.).
+const FILE_COLORS = {
+  pdf: '#dc2626',
+  doc: '#2563eb', docx: '#2563eb',
+  txt: '#64748b',
+  xls: '#16a34a', xlsx: '#16a34a', csv: '#16a34a',
+  ppt: '#ea580c', pptx: '#ea580c',
+  zip: '#7c3aed', rar: '#7c3aed', '7z': '#7c3aed',
+};
+
+const getFileExt = (url = '') => {
+  const clean = url.split('?')[0].split('#')[0];
+  const last = clean.split('/').pop() || '';
+  const dot = last.lastIndexOf('.');
+  return dot > -1 ? last.slice(dot + 1).toLowerCase() : '';
+};
+
+// Cloudinary renders a PDF's first page as a JPG when the PDF was uploaded as
+// an `image` resource (see Backend/src/services/upload.service.js) — inserting
+// a transformation segment right after `/image/upload/` asks for that page-1
+// thumbnail instead of the raw file. Older PDFs stored as a `raw` resource
+// (pre-fix) have no `/image/upload/` segment, so this returns null for them
+// and the card falls back to the generic icon below.
+const pdfThumbUrl = (url) =>
+  url.includes('/image/upload/')
+    ? url.replace('/image/upload/', '/image/upload/w_300,h_360,c_fill,pg_1,f_jpg,q_auto/')
+    : null;
+
+function AttachmentCard({ url, index }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const ext = getFileExt(url);
+  const isImage = IMAGE_EXTS.includes(ext);
+  const pdfThumb = ext === 'pdf' ? pdfThumbUrl(url) : null;
+  const thumbSrc = isImage ? url : pdfThumb;
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="jd-attachment">
+      <div className="jd-attachment__thumb">
+        {thumbSrc && !thumbFailed ? (
+          <img src={thumbSrc} alt="" loading="lazy" onError={() => setThumbFailed(true)} />
+        ) : (
+          <div className="jd-attachment__icon" style={{ '--file-color': FILE_COLORS[ext] || '#64748b' }}>
+            <FileText size={28} />
+            <span>{ext ? ext.toUpperCase() : 'FILE'}</span>
+          </div>
+        )}
+      </div>
+      <span className="jd-attachment__label">Attachment {index + 1}</span>
+    </a>
+  );
+}
 
 export default function JobDetails() {
   const { id } = useParams();
@@ -188,6 +243,7 @@ export default function JobDetails() {
   if (loading) return <Loader text="Loading project details..." fullScreen={true} />;
   if (!job) return <div className="jd-error">Project not found.</div>;
 
+  const isClient = user?.role === 'client';
   const isFreelancer = user?.role === 'freelancer';
   const hasApplied = job.proposals?.some(p => p.freelancerId?._id === user?._id);
   const isSaved = Array.isArray(savedProjects) && savedProjects.some(sj => (sj._id || sj) === job._id);
@@ -233,7 +289,7 @@ export default function JobDetails() {
                 <h1 className="jd-title">{job.title}</h1>
                 <div className="jd-meta">
                   <div className="jd-meta__item">
-                    <DollarSign size={18} />
+                    <Tag size={18} />
                     <span>
                       {job.budget?.type === 'fixed' 
                         ? (job.budget?.min === job.budget?.max ? `Rs. ${job.budget?.min} Fixed` : `Rs. ${job.budget?.min} - Rs. ${job.budget?.max} Fixed`)
@@ -269,9 +325,7 @@ export default function JobDetails() {
                     <h2 className="jd-section-title">Attachments</h2>
                     <div className="jd-attachments">
                       {job.attachments.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="jd-attachment">
-                          📎 Attachment {i + 1}
-                        </a>
+                        <AttachmentCard key={i} url={url} index={i} />
                       ))}
                     </div>
                   </>
@@ -311,25 +365,42 @@ export default function JobDetails() {
               </div>
 
               <div className="jd-sidebar__card jd-apply">
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                  <button 
-                    className={`jd-apply__btn ${hasApplied && job.status === 'open' ? 'jd-apply__btn--applied' : ''}`}
-                    onClick={hasApplied ? undefined : handleApplyClick}
-                    disabled={job.status !== 'open' || hasApplied}
-                    style={{ flex: 1 }}
-                  >
-                    {job.status !== 'open' ? (
-                      'Closed'
-                    ) : hasApplied ? (
-                      <><CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied</>
-                    ) : (
-                      'Apply Now'
-                    )}
-                  </button>
-                </div>
-                <p className="jd-apply__note">
-                  {job.proposals?.length || 0} proposals already submitted.
-                </p>
+                {isClient ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <Link 
+                      to={`/client/projects/${job._id || id}/proposals`} 
+                      className="jd-apply__btn" 
+                      style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                    >
+                      <Send size={16} /> View Proposals ({job.proposals?.length || 0})
+                    </Link>
+                    <p className="jd-apply__note" style={{ textAlign: 'center', margin: 0 }}>
+                      {job.proposals?.length || 0} proposal{job.proposals?.length === 1 ? '' : 's'} received for this project.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <button 
+                        className={`jd-apply__btn ${hasApplied && job.status === 'open' ? 'jd-apply__btn--applied' : ''}`}
+                        onClick={hasApplied ? undefined : handleApplyClick}
+                        disabled={job.status !== 'open' || hasApplied}
+                        style={{ flex: 1 }}
+                      >
+                        {job.status !== 'open' ? (
+                          'Closed'
+                        ) : hasApplied ? (
+                          <><CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied</>
+                        ) : (
+                          'Apply Now'
+                        )}
+                      </button>
+                    </div>
+                    <p className="jd-apply__note">
+                      {job.proposals?.length || 0} proposals already submitted.
+                    </p>
+                  </>
+                )}
               </div>
             </aside>
           </div>
@@ -348,7 +419,7 @@ export default function JobDetails() {
               {job?.budget?.type === 'hourly' ? (
                 <>
                   <div className="jd-form-group">
-                    <label>Hourly Rate ($/hr)</label>
+                    <label>Hourly Rate (Rs./hr)</label>
                     <div className="jd-input-icon">
                       <DollarSign size={16} />
                       <input 
@@ -380,7 +451,7 @@ export default function JobDetails() {
               ) : (
                 <>
                   <div className="jd-form-group">
-                    <label>Fixed Price ($)</label>
+                    <label>Fixed Price (PKR)</label>
                     <div className="jd-input-icon">
                       <DollarSign size={16} />
                       <input 

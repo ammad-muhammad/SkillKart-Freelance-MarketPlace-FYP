@@ -358,6 +358,27 @@ const recommendCategoryValidation = [
     .isArray().withMessage('Skills must be an array')
 ];
 
+const recommendSubcategoryValidation = [
+  body('title')
+    .optional()
+    .trim()
+    .isLength({ max: 200 }).withMessage('Title too long'),
+
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 5000 }).withMessage('Description too long'),
+
+  body('skills')
+    .optional()
+    .isArray().withMessage('Skills must be an array'),
+
+  body('category')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Category too long')
+];
+
 // Close job validation
 const closeJobValidation = [
   param('id')
@@ -435,5 +456,6 @@ module.exports = {
   hireFreelancerValidation,
   rateFreelancerValidation,
   recommendCategoryValidation,
+  recommendSubcategoryValidation,
   reviewJobValidation
 };

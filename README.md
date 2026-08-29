@@ -1,6 +1,6 @@
 # SkillKart — Micro-Freelance Marketplace
 
-A dual-sided freelance marketplace built on the MERN stack. SkillKart connects **clients** who need work done with **freelancers** who deliver it, backed by an escrow payment model, a full contract lifecycle (proposal → contract → delivery → review), in-app messaging, skill verification, an admin panel, and AI-assisted tooling.
+A dual-sided freelance marketplace built on the MERN stack. SkillKart connects **clients** who need work done with **freelancers** who deliver it, backed by a wallet-native escrow payment model — 100% of a fixed-price job's budget locks the instant a proposal is accepted (optionally split into sequential, on-demand-funded milestones for larger projects), with a 7-day auto-release safety net and admin-mediated disputes scoped to the specific milestone in question. A full contract lifecycle (proposal → contract → delivery → review), in-app messaging, skill verification, an admin panel, and AI-assisted tooling round out the platform.
 
 It supports both marketplace models:
 
@@ -46,7 +46,7 @@ It supports both marketplace models:
 
 - **MongoDB** is the system of record for all marketplace data.
 - **Supabase** provides optional social OAuth; email/OTP auth is handled by the backend directly.
-- **Stripe** powers escrow and payouts, and can be fully bypassed with simulated payments via `STRIPE_DUMMY=true` for local development.
+- **Stripe** powers wallet top-ups and the legacy deposit/final escrow flow (still used by hourly contracts and Gig orders), and can be fully bypassed with simulated payments via `STRIPE_DUMMY=true` for local development. Fixed-price job escrow (the 100%-lock, milestone-based flow) is **wallet-native** — funded from the client's internal wallet balance directly, no Stripe Checkout involved.
 - **AI features** (Buddy assistant, cost estimator, skill matching, CV analysis) route through a provider chain with automatic fallback across **Gemini, DeepSeek, Qwen, Groq, Claude, and Ollama** (local). Gemini and DeepSeek implement the full AI method set; the rest cover the core 6. The order is configurable via numbered env priorities (`AI_PRIORITY_*`, 0 = first). If every provider is down or rate-limited the API returns a clean `503` and the UI shows an "AI is temporarily out of service" notice instead of crashing.
 
 ## Tech Stack

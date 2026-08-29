@@ -11,9 +11,7 @@ const TagInput = ({
   showHint = true,
   maxTags = null,
   hintText = null,
-  // Skill-validation function used in AI mode. Defaults to the authenticated
-  // skillsAPI.validate; pass aiAPI.validateSkill for public/no-auth contexts
-  // (e.g. the free Cost Estimator usable while logged out).
+  allowCustom = true,
   validateFn = null,
 }) => {
   // Stable identity so the suggestion effect doesn't re-fire every render.
@@ -106,10 +104,11 @@ const TagInput = ({
     }
 
     if (isStatic) {
-      // In static mode, only allow items from the list
       const matched = options.find(opt => opt.toLowerCase() === trimmed.toLowerCase());
-      if (matched) {
-        onChange([...tags, matched]);
+      const finalVal = matched || (allowCustom !== false ? trimmed : null);
+      if (finalVal) {
+        const next = maxTags === 1 ? [finalVal] : [...tags, finalVal];
+        onChange(next);
         setInput('');
         setShowSuggestions(false);
         setError(null);

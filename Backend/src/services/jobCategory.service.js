@@ -56,8 +56,42 @@ const recommendJobCategory = async (title = '', description = '', skills = []) =
   }
 };
 
+// Unlike category, subcategory has no fixed taxonomy to validate against — it's
+// a free-text refinement (e.g. "Frontend Development" under "Web Development"),
+// so we just trust the AI's short strings rather than sanitizing against a list.
+const cleanSubcategory = (value) => {
+  if (!value || typeof value !== 'string') return '';
+  return value.trim().replace(/\s+/g, ' ').slice(0, 60);
+};
+
+const recommendJobSubcategory = async (title = '', description = '', skills = [], category = '') => {
+  try {
+    const ai = getAIProvider();
+    if (typeof ai.recommendJobSubcategory !== 'function') {
+      return { subcategory: '', suggestions: [] };
+    }
+
+    const result = await ai.recommendJobSubcategory(title, description, skills, category);
+    const subcategory = cleanSubcategory(result?.subcategory);
+    const suggestions = (result?.suggestions || [])
+      .map(cleanSubcategory)
+      .filter(Boolean)
+      .filter((s, i, arr) => arr.indexOf(s) === i);
+
+    if (subcategory && !suggestions.includes(subcategory)) {
+      suggestions.unshift(subcategory);
+    }
+
+    return { subcategory, suggestions: suggestions.slice(0, 3) };
+  } catch (error) {
+    console.warn('recommendJobSubcategory fallback:', error.message);
+    return { subcategory: '', suggestions: [] };
+  }
+};
+
 module.exports = {
   JOB_CATEGORIES,
   sanitizeCategory,
-  recommendJobCategory
+  recommendJobCategory,
+  recommendJobSubcategory
 };

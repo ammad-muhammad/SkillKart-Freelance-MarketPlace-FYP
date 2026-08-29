@@ -11,7 +11,7 @@ import { log } from "../../utils/logger";
 const FreelancerSecurity = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
   const { user } = useContext(AuthContext);
-  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
+  const isSupabaseUser = !!user?.supabaseId || (user?.authProvider && user?.authProvider !== 'email');
   const sec = profile?.securitySettings || {};
 
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });

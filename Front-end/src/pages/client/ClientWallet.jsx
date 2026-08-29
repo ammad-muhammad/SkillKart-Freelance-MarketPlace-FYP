@@ -184,7 +184,7 @@ export default function ClientWallet() {
                         {payment.type === 'wallet_deposit' ? 'Self' : (payment.freelancerId ? `${payment.freelancerId.firstName} ${payment.freelancerId.lastName}` : 'N/A')}
                       </td>
                       <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: payment.type === 'wallet_deposit' ? '#10b981' : '#ef4444' }}>
-                        {payment.type === 'wallet_deposit' ? '+' : '-'}${payment.totalAmount?.toLocaleString()}
+                        {payment.type === 'wallet_deposit' ? '+' : '-'}Rs. {payment.totalAmount?.toLocaleString()}
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {payment.status === 'released' ? (

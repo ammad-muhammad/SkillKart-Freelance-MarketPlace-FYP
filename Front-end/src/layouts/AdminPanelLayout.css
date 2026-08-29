@@ -7,42 +7,42 @@
 
 /* ─── CSS Variables ─────────────────────────────────────────── */
 .admin-layout {
-  /* Color palette */
-  --ap-bg-primary:    #0a0f1e;
-  --ap-bg-secondary:  #0d1530;
-  --ap-bg-card:       #111827;
-  --ap-bg-elevated:   #1a2235;
-  --ap-bg-hover:      #1e2d4a;
-  --ap-sidebar-bg:    #080d1a;
+  /* Color palette - Modern High-End Light Theme */
+  --ap-bg-primary:    #f8fafc;
+  --ap-bg-secondary:  #ffffff;
+  --ap-bg-card:       #ffffff;
+  --ap-bg-elevated:   #f1f5f9;
+  --ap-bg-hover:      #e2e8f0;
+  --ap-sidebar-bg:    #ffffff;
   --ap-sidebar-width: 260px;
 
   /* Brand */
-  --ap-blue:          #3b82f6;
-  --ap-blue-dark:     #2563eb;
-  --ap-blue-light:    #60a5fa;
-  --ap-blue-glow:     rgba(59,130,246,0.15);
-  --ap-purple:        #8b5cf6;
-  --ap-teal:          #14b8a6;
-  --ap-green:         #22c55e;
-  --ap-yellow:        #f59e0b;
-  --ap-orange:        #f97316;
-  --ap-red:           #ef4444;
+  --ap-blue:          #2563eb;
+  --ap-blue-dark:     #1d4ed8;
+  --ap-blue-light:    #3b82f6;
+  --ap-blue-glow:     rgba(37,99,235,0.08);
+  --ap-purple:        #7c3aed;
+  --ap-teal:          #0d9488;
+  --ap-green:         #16a34a;
+  --ap-yellow:        #d97706;
+  --ap-orange:        #ea580c;
+  --ap-red:           #dc2626;
 
   /* Text */
-  --ap-text-primary:  #f1f5f9;
-  --ap-text-secondary:#94a3b8;
-  --ap-text-muted:    #475569;
-  --ap-text-link:     #60a5fa;
+  --ap-text-primary:  #0f172a;
+  --ap-text-secondary:#334155;
+  --ap-text-muted:    #64748b;
+  --ap-text-link:     #2563eb;
 
   /* Borders */
-  --ap-border:        rgba(255,255,255,0.06);
-  --ap-border-active: rgba(59,130,246,0.4);
+  --ap-border:        #e2e8f0;
+  --ap-border-active: #2563eb;
 
   /* Shadows */
-  --ap-shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
-  --ap-shadow-md:     0 4px 16px rgba(0,0,0,0.5);
-  --ap-shadow-lg:     0 8px 32px rgba(0,0,0,0.6);
-  --ap-shadow-blue:   0 4px 20px rgba(59,130,246,0.25);
+  --ap-shadow-sm:     0 1px 3px rgba(0,0,0,0.05);
+  --ap-shadow-md:     0 4px 12px rgba(15,23,42,0.06);
+  --ap-shadow-lg:     0 10px 30px rgba(15,23,42,0.1);
+  --ap-shadow-blue:   0 4px 20px rgba(37,99,235,0.15);
 
   /* Radii */
   --ap-radius-sm:     6px;
@@ -262,7 +262,7 @@
   position: sticky;
   top: 0;
   height: 64px;
-  background: rgba(13,21,48,0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--ap-border);
@@ -941,9 +941,15 @@
   border-radius: var(--ap-radius-sm);
   white-space: nowrap;
   border: 1px solid var(--ap-border);
-  box-shadow: var(--ap-shadow-sm);
+  box-shadow: var(--ap-shadow-md);
   z-index: 999;
   pointer-events: none;
+}
+
+/* Header tooltips open downwards so they are never cut off by top of window */
+.admin-layout .ap-header [data-tip]:hover::after {
+  bottom: auto;
+  top: calc(100% + 8px);
 }
 
 /* ─── Animations ─────────────────────────────────────────────── */

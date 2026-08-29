@@ -318,27 +318,36 @@ body {
 }
 
 .onboarding__tag {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #fff;
+  border: 1px solid #e2e8f0;
   padding: 10px 24px;
   border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  color: #475569;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .onboarding__tag:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(26, 111, 168, 0.06);
+  border-color: var(--onboard-accent-primary);
+  color: var(--onboard-accent-primary);
 }
 
 .onboarding__tag--active {
   background: var(--onboard-accent-primary);
   border-color: var(--onboard-accent-primary);
-  color: #042E4C;
+  color: #ffffff !important;
   font-weight: 700;
-  box-shadow: 0 8px 16px rgba(183, 201, 226, 0.25);
+  box-shadow: 0 8px 16px rgba(26, 111, 168, 0.2);
+}
+
+.onboarding__tag--active:hover {
+  background: #042E4C;
+  border-color: #042E4C;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(4, 46, 76, 0.3);
 }
 
 /* 9️⃣ Navigation Buttons */

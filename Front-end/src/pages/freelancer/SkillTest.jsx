@@ -1,13 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, ChevronRight, CheckCircle2, AlertCircle, Award, ShieldAlert, Eye, Maximize2, Ban } from 'lucide-react';
+import { Brain, ChevronRight, CheckCircle2, AlertCircle, Award, ShieldAlert, Eye, Maximize2, Ban, Camera, CameraOff, Clock } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { skillTestAPI } from '../../api/skillTest';
 import { useFreelancer } from '../../context/FreelancerContext';
 import useAntiCheat from './useAntiCheat';
+import useFaceProctor from './useFaceProctor';
 import './SkillTest.css';
+
+// useAntiCheat always uses one of these exact reason strings per violation
+// type — map them back to a type for the violation log sent to the backend.
+const BROWSER_VIOLATION_TYPE = {
+  'You switched away from the test tab.': 'tab_switch',
+  'The test window lost focus.': 'window_blur',
+  'You exited full-screen mode.': 'fullscreen_exit',
+  // Polling-based backup check (see useAntiCheat's watchdog effect) — same
+  // underlying signal as a blur/visibility event, just caught a different way.
+  'You switched away from the test window.': 'window_blur',
+};
+
+// Same idea for useFaceProctor's fixed per-type reason strings.
+const CAMERA_VIOLATION_TYPE = {
+  'Your face was not visible on camera.': 'no_face',
+  'Multiple faces were detected in the camera.': 'multiple_faces',
+  'You appeared to look away from the screen.': 'looking_away',
+};
+
+const PER_QUESTION_SECONDS = 20;
+
+// The actual question count is only known once the AI generates the test
+// (after "Start Test" is clicked), but the rules screen must show an
+// upfront time estimate — mirrors the counts in skillTest.controller.js's
+// generateTest (20 for a single-skill test, 50 for the baseline mixed test).
+const estimateQuestionCount = (specificSkill) => (specificSkill ? 20 : 50);
+
+const formatDuration = (totalSeconds) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (!minutes) return `${seconds} sec`;
+  if (!seconds) return `${minutes} min`;
+  return `${minutes} min ${seconds} sec`;
+};
 
 // Test flow phases:
 //   'rules'   — proctoring rules shown; freelancer must accept to begin
@@ -23,6 +58,11 @@ const SkillTest = () => {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  // Which option INDEX is selected per question — kept separate from
+  // `answers` (which stores the option TEXT for submission) because the AI
+  // can generate MCQs with duplicate/near-duplicate option text; matching
+  // "selected" by text would then highlight every option with that text.
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -30,25 +70,77 @@ const SkillTest = () => {
   const [warning, setWarning] = useState(null);   // 1st-violation warning text
   const [abortReason, setAbortReason] = useState('');
   const [attemptId, setAttemptId] = useState(0);  // bumped each (re)start → resets strikes
+  const [timeLeft, setTimeLeft] = useState(PER_QUESTION_SECONDS);
+
+  const rulesVideoRef = useRef(null);
+  const testVideoRef = useRef(null);
+  const violationLog = useRef([]); // merged browser + camera violations, sent on submit
+
+  const logViolation = (source, type, reason) => {
+    violationLog.current.push({ source, type, reason, at: Date.now() });
+  };
 
   // Anti-cheat is armed only while actually taking the test.
   const { requestFullscreen, exitFullscreen } = useAntiCheat({
     active: phase === 'testing' && !result,
     attemptId,
     onWarn: (reason) => {
+      logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
       setWarning(reason);
       toast.warn('Final warning: leaving the test again will cancel it.');
     },
     onAbort: (reason) => {
+      logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
       setAbortReason(reason);
       setPhase('aborted');
       exitFullscreen();
+      stopCamera();
       // Discard the in-progress attempt entirely.
       setQuestions([]);
       setAnswers({});
+      setSelectedOptionIndex({});
       setCurrentIndex(0);
     },
   });
+
+  // Camera/face proctoring is a separate, more lenient guard — only armed
+  // during the locked-down testing phase, using whichever <video> element is
+  // currently mounted (rules-screen preview vs in-test thumbnail).
+  const { modelsReady, cameraError, startCamera, stopCamera } = useFaceProctor({
+    active: phase === 'testing' && !result,
+    attemptId,
+    videoRef: phase === 'testing' ? testVideoRef : rulesVideoRef,
+    onWarn: (reason) => {
+      logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
+      setWarning(reason);
+      toast.warn('Camera warning: repeated issues will cancel the test.');
+    },
+    onAbort: (reason) => {
+      logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
+      setAbortReason(reason);
+      setPhase('aborted');
+      exitFullscreen();
+      stopCamera();
+      setQuestions([]);
+      setAnswers({});
+      setSelectedOptionIndex({});
+      setCurrentIndex(0);
+    },
+  });
+
+  // Request the webcam as soon as the rules screen is shown, so the freelancer
+  // can confirm they're in frame before committing to "Start Test". Camera
+  // access is now REQUIRED — "Start Test" stays disabled while `cameraError`
+  // is set (see the rules-screen JSX below), with a "Retry Camera" button
+  // that just re-calls startCamera() once they've granted permission.
+  // The rules-preview and in-test thumbnail are different <video> elements
+  // (separate conditional render branches below), so the stream is re-grabbed
+  // and re-attached whenever the phase switches — startTest() stops the old
+  // one first, and the browser doesn't re-prompt once permission is granted.
+  useEffect(() => {
+    if (phase === 'rules' || phase === 'testing') startCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   const fetchTest = async (skill = null, force = false) => {
     try {
@@ -62,6 +154,7 @@ const SkillTest = () => {
       setSkills(sList);
       setCurrentIndex(0);
       setAnswers({});
+      setSelectedOptionIndex({});
       return qList.length > 0;
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to load skill test. Please check your connection.';
@@ -72,17 +165,19 @@ const SkillTest = () => {
     }
   };
 
-  // Begin (or restart) the test: pull FRESH questions, enter fullscreen, arm guard.
+  // Begin (or restart) the test: enter fullscreen, pull FRESH questions, arm guard.
   const startTest = async () => {
     setWarning(null);
     setAbortReason('');
     setResult(null);
-    // force=true so a restart never reuses the previous question set.
-    const ok = await fetchTest(specificSkill, true);
-    if (!ok) {
-      toast.error('Could not generate a test right now. Please try again.');
-      return;
-    }
+    violationLog.current = [];
+
+    // MUST happen first, synchronously within this click's user-activation
+    // window. Browsers silently reject document.requestFullscreen() once an
+    // `await` has yielded control back to the event loop — awaiting the test
+    // generation call (a network round-trip) BEFORE requesting fullscreen was
+    // exactly that bug: fullscreen would near-always fail, invisibly, and the
+    // test would silently fall back to running without it.
     const fs = await requestFullscreen();
     if (!fs) {
       // Fullscreen was blocked — the test still runs locked-down (overlay) and
@@ -90,35 +185,40 @@ const SkillTest = () => {
       // "full-screen" promise on the rules screen isn't silently broken.
       toast.info('Full-screen could not be enabled, but the test is still proctored. Avoid switching tabs or windows.');
     }
+
+    // force=true so a restart never reuses the previous question set.
+    const ok = await fetchTest(specificSkill, true);
+    if (!ok) {
+      toast.error('Could not generate a test right now. Please try again.');
+      return;
+    }
+    // Drop the rules-preview camera stream — a fresh one attaches to the
+    // in-test thumbnail once the 'testing' phase mounts (see effect above).
+    stopCamera();
     // New attempt → reset strike counter (via attemptId) before arming.
     setAttemptId((n) => n + 1);
     setPhase('testing');
   };
 
-  const handleAnswerChange = (val) => {
+  const handleAnswerChange = (val, idx = null) => {
     setAnswers(prev => ({ ...prev, [currentIndex]: val }));
+    if (idx !== null) setSelectedOptionIndex(prev => ({ ...prev, [currentIndex]: idx }));
   };
 
   const handleNext = () => {
     if (currentIndex < questions.length - 1) setCurrentIndex(currentIndex + 1);
   };
 
-  const handlePrev = () => {
-    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-  };
+  // Backward navigation is intentionally not supported — each question locks
+  // once you move past it (manually or via the 20s timer running out).
 
   const handleSubmit = async () => {
-    const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
-    if (answeredCount < questions.length) {
-      toast.warn(`Please answer all ${questions.length} questions. You've answered ${answeredCount}.`);
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const res = await skillTestAPI.submitTest(answers);
+      const res = await skillTestAPI.submitTest(answers, violationLog.current);
       setResult(res.data.data);
       exitFullscreen();
+      stopCamera();
       await refreshProfile();
       toast.success('Test evaluated successfully!');
     } catch (error) {
@@ -128,6 +228,43 @@ const SkillTest = () => {
       setSubmitting(false);
     }
   };
+
+  // Always points at the latest handleSubmit closure (fresh answers/violation
+  // log), so the timer below can safely call it from an interval that may
+  // have been set up several questions ago.
+  const handleSubmitRef = useRef(() => {});
+  useEffect(() => { handleSubmitRef.current = handleSubmit; });
+
+  // Per-question 20s countdown: whether answered or not, time running out
+  // advances to the next question — or, on the last question, submits the
+  // whole test automatically. Resets on every question/attempt change; there
+  // is no way back to a question once its timer has moved on.
+  useEffect(() => {
+    if (phase !== 'testing' || !questions.length || result || submitting) return undefined;
+
+    setTimeLeft(PER_QUESTION_SECONDS);
+    let fired = false;
+
+    const interval = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          if (!fired) {
+            fired = true;
+            clearInterval(interval);
+            if (currentIndex < questions.length - 1) {
+              setCurrentIndex((i) => i + 1);
+            } else {
+              handleSubmitRef.current();
+            }
+          }
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentIndex, phase, attemptId, questions.length, result, submitting]);
 
   // Make sure we never leave the browser stuck in fullscreen on unmount.
   useEffect(() => () => exitFullscreen(), [exitFullscreen]);
@@ -198,7 +335,12 @@ const SkillTest = () => {
               has been <strong>cancelled</strong>. To keep verification fair, you'll start over from question 1
               with a brand-new set of questions.
             </p>
-            <button onClick={startTest} disabled={loading} className="st-btn-retry">
+            {cameraError && (
+              <p className="st-result-desc" style={{ color: '#b91c1c', fontWeight: 600 }}>
+                Camera required — please allow camera access or use a device with a working camera before restarting.
+              </p>
+            )}
+            <button onClick={startTest} disabled={loading || !!cameraError} className="st-btn-retry">
               {loading ? 'Generating new test…' : 'Restart Test from Scratch'}
             </button>
             <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
@@ -224,16 +366,50 @@ const SkillTest = () => {
               </div>
             </div>
 
+            <div className="st-total-time">
+              <Clock size={18} />
+              <span>
+                Total test time: <strong>~{formatDuration(estimateQuestionCount(specificSkill) * PER_QUESTION_SECONDS)}</strong>
+                {' '}({estimateQuestionCount(specificSkill)} questions × {PER_QUESTION_SECONDS}s each)
+              </span>
+            </div>
+
             <ul className="st-rules-list">
               <li><Maximize2 size={18} /><span>The test runs in <strong>full-screen</strong>. Other menus are hidden — only the test is shown.</span></li>
               <li><Eye size={18} /><span><strong>Do not switch tabs, minimize, or leave the window.</strong> The first time you do, you get one warning.</span></li>
               <li><Ban size={18} /><span>A <strong>second</strong> violation (or exiting full-screen) <strong>cancels the test</strong> for cheating — you restart from question 1 with new questions.</span></li>
+              <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. Keep your face visible and alone in frame — repeated issues (no face, another person, looking away) will also cancel the test.</span></li>
+              <li><Clock size={18} /><span>Each question has a <strong>{PER_QUESTION_SECONDS}-second timer</strong>. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
               <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
-              <li><CheckCircle2 size={18} /><span>Answer <strong>every</strong> question. You need <strong>80%</strong> to be verified as an Expert for the skill.</span></li>
+              <li><CheckCircle2 size={18} /><span>You need <strong>80%</strong> overall to be verified as an Expert for the skill.</span></li>
             </ul>
 
+            <div className="st-camera-preview">
+              <video ref={rulesVideoRef} className="st-camera-preview__video" autoPlay playsInline muted />
+              {cameraError ? (
+                <div className="st-camera-preview__overlay">
+                  <CameraOff size={20} />
+                  <span>Camera required — please allow camera access or use a device with a working camera.</span>
+                </div>
+              ) : (
+                <div className="st-camera-preview__label">
+                  <Camera size={14} /> {modelsReady ? 'Camera preview' : 'Loading proctoring…'}
+                </div>
+              )}
+            </div>
+
+            {cameraError && (
+              <div className="st-camera-blocked">
+                <AlertCircle size={16} />
+                <span>{cameraError} Allow camera access in your browser (or switch to a device with a camera), then retry.</span>
+                <button type="button" onClick={startCamera} className="st-btn-ghost-sm">
+                  Retry Camera
+                </button>
+              </div>
+            )}
+
             <div className="st-rules-actions">
-              <button onClick={startTest} disabled={loading} className="st-btn-submit">
+              <button onClick={startTest} disabled={loading || !!cameraError} className="st-btn-submit">
                 {loading ? 'Preparing your test…' : 'I Understand — Start Test'}
               </button>
               <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
@@ -262,6 +438,9 @@ const SkillTest = () => {
 
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
+  const hasAnswer = currentQuestion.type === 'mcq'
+    ? selectedOptionIndex[currentIndex] !== undefined
+    : Boolean((answers[currentIndex] || '').trim());
 
   /* ───────────────── LOCKED-DOWN TEST ─────────────────
      Portaled to <body> so the fixed full-viewport overlay can never be clipped
@@ -285,6 +464,14 @@ const SkillTest = () => {
           </div>
         </div>
         <div className="st-header-right">
+          <div className="st-camera-thumb" title={cameraError || 'Webcam proctoring active'}>
+            <video ref={testVideoRef} autoPlay playsInline muted />
+            {cameraError && <CameraOff size={14} className="st-camera-thumb__off" />}
+          </div>
+          <div className={`st-timer st-question-timer${timeLeft <= 5 ? ' st-question-timer--danger' : ''}`}>
+            <Clock size={18} />
+            <span>0:{String(timeLeft).padStart(2, '0')}</span>
+          </div>
           <div className="st-timer st-proctor">
             <Eye size={18} />
             <span>Proctoring Active</span>
@@ -310,13 +497,13 @@ const SkillTest = () => {
               {currentQuestion.type === 'mcq' && currentQuestion.options ? (
                 <div className="st-mcq-options">
                   {currentQuestion.options.map((opt, idx) => (
-                    <label key={idx} className={`st-mcq-option ${answers[currentIndex] === opt ? 'selected' : ''}`}>
+                    <label key={idx} className={`st-mcq-option ${selectedOptionIndex[currentIndex] === idx ? 'selected' : ''}`}>
                       <input
                         type="radio"
                         name={`question-${currentIndex}`}
                         value={opt}
-                        checked={answers[currentIndex] === opt}
-                        onChange={(e) => handleAnswerChange(e.target.value)}
+                        checked={selectedOptionIndex[currentIndex] === idx}
+                        onChange={() => handleAnswerChange(opt, idx)}
                       />
                       <span>{opt}</span>
                     </label>
@@ -339,10 +526,6 @@ const SkillTest = () => {
         </AnimatePresence>
 
         <div className="st-footer">
-          <button onClick={handlePrev} disabled={currentIndex === 0} className="st-btn-prev">
-            Previous
-          </button>
-
           <div className="st-nav-info">
             {Object.keys(answers).filter(k => answers[k]?.trim()).length} / {questions.length} Answered
           </div>
@@ -352,7 +535,7 @@ const SkillTest = () => {
               {submitting ? 'AI Ranking Profile...' : 'Complete Verification'}
             </button>
           ) : (
-            <button onClick={handleNext} className="st-btn-next">
+            <button onClick={handleNext} disabled={!hasAnswer} className="st-btn-next">
               Next Question <ChevronRight size={18} />
             </button>
           )}

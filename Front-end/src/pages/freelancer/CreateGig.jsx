@@ -6,6 +6,8 @@ import { FileText, DollarSign, AlignLeft, Image as ImageIcon, Rocket, Save, Chec
 import Stepper from './components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
+import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import { validateFile } from '../../utils/uploadHelper';
 import { aiAPI } from '../../api/ai';
 import './FreelancerDashboard.css';
 import './CreateGig.css';
@@ -97,7 +99,7 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
       <span className="fl-pricing-tier__label">{label}</span>
     </div>
     <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
-      <label className="fl-label">Price ($)</label>
+      <label className="fl-label">Price (PKR)</label>
       <input
         type="number"
         className="fl-input"
@@ -221,25 +223,59 @@ const Step3 = ({ gig, set }) => {
 const Step4 = ({ gig, set }) => {
   const bannerRef = useRef(null);
   const imagesRef = useRef(null);
+  const [bannerCropFile, setBannerCropFile] = useState(null);
+  const [imageQueue, setImageQueue] = useState([]); // remaining raw files awaiting their crop turn
+  const [croppedImages, setCroppedImages] = useState([]); // results collected so far this batch
 
-  const handleBanner = async (e) => {
+  const handleBanner = (e) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
+    const check = validateFile(file);
+    if (!check.valid) {
+      console.error(check.error);
+      return;
+    }
+    setBannerCropFile(file);
+  };
+
+  const handleBannerCropConfirm = async (finalFile) => {
+    setBannerCropFile(null);
     try {
       const { uploadBanner } = await import('../../utils/uploadHelper');
-      const url = await uploadBanner(file);
+      const url = await uploadBanner(finalFile);
       set('media', { ...gig.media, banner: url });
     } catch (error) {
       console.error('Banner upload failed:', error);
     }
   };
 
-  const handleImages = async (e) => {
-    const files = Array.from(e.target.files);
+  const handleImages = (e) => {
+    const files = Array.from(e.target.files).filter((f) => validateFile(f).valid);
+    e.target.value = '';
+    if (!files.length) return;
+    setImageQueue(files);
+    setCroppedImages([]);
+  };
+
+  // Walks the multi-file queue one crop at a time — `result` is the
+  // cropped/original File on confirm, or null if that one image was
+  // skipped (Cancel). Once the queue empties, uploads whatever was collected.
+  const handleImageQueueAdvance = async (result) => {
+    const remaining = imageQueue.slice(1);
+    const collected = result ? [...croppedImages, result] : croppedImages;
+    setImageQueue(remaining);
+
+    if (remaining.length > 0) {
+      setCroppedImages(collected);
+      return;
+    }
+
+    setCroppedImages([]);
+    if (collected.length === 0) return;
     try {
       const { uploadPortfolioImage } = await import('../../utils/uploadHelper');
-      const uploadPromises = files.map(file => uploadPortfolioImage(file));
-      const urls = await Promise.all(uploadPromises);
+      const urls = await Promise.all(collected.map((file) => uploadPortfolioImage(file)));
       set('media', { ...gig.media, images: [...gig.media.images, ...urls].slice(0, 5) });
     } catch (error) {
       console.error('Images upload failed:', error);
@@ -346,6 +382,24 @@ const Step4 = ({ gig, set }) => {
           </div>
         ))}
       </div>
+
+      <ImageCropModal
+        file={bannerCropFile}
+        aspect={16 / 9}
+        cropShape="rect"
+        title="Adjust Gig Banner"
+        onCancel={() => setBannerCropFile(null)}
+        onConfirm={handleBannerCropConfirm}
+      />
+
+      <ImageCropModal
+        file={imageQueue[0] || null}
+        aspect={16 / 9}
+        cropShape="rect"
+        title={imageQueue.length > 1 ? `Adjust Image (${croppedImages.length + 1} of ${croppedImages.length + imageQueue.length})` : 'Adjust Portfolio Image'}
+        onCancel={() => handleImageQueueAdvance(null)}
+        onConfirm={handleImageQueueAdvance}
+      />
     </div>
   );
 };

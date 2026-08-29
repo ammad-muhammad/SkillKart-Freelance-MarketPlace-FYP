@@ -9,7 +9,7 @@ Express + MongoDB REST API powering the SkillKart marketplace: authentication, R
 - **Authentication** — email/password + OTP, JWT access & refresh tokens, optional Supabase social OAuth.
 - **RBAC** — role-based access control (guest, freelancer, client, admin roles) with an encrypted SuperAdmin.
 - **Marketplace** — jobs, gigs, proposals, and a strict contract lifecycle (proposal → contract → delivery → review) modelled as state machines.
-- **Payments** — Stripe-backed escrow with a simulated/dummy mode for local development; wallet balances, payouts, and withdrawals.
+- **Payments** — fixed-price jobs lock 100% escrow from the client's wallet at hire (optionally split into sequential milestones, 7-day auto-release, per-milestone disputes — see [Escrow & Milestone Payments](#escrow--milestone-payments) below); hourly contracts and Gig orders use the original Stripe-backed deposit/final flow with a simulated/dummy mode for local development. Wallet balances, payouts, and withdrawals throughout.
 - **Messaging** — conversation-based in-app messaging tied to contracts.
 - **Reviews & disputes** — two-way reviews and an admin-mediated dispute workflow.
 - **Skill verification** — skill taxonomy, matching, and test attempts.
@@ -225,6 +225,54 @@ Set on Railway: `EMAIL_PROVIDER=gmail`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRE
 | SMTP `EAUTH` / `Username and Password not accepted` | Gmail needs an **app password** (2FA required), not the account password. |
 | SMTP connects locally, times out on Railway | Some hosts block outbound `465`/`587`. Switch to `EMAIL_PROVIDER=gmail` (HTTPS). |
 | OTP emails never arrive | Check **Admin → Monitoring → Email** for the row: `failed` shows the provider error; no row at all means the send was never attempted. |
+
+## Escrow & Milestone Payments
+
+Fixed-price **custom jobs** lock escrow from the client's **wallet balance** — no Stripe
+redirect, no webhook wait. Hourly contracts and **Gig orders** are unchanged and still use
+the original Stripe Checkout deposit/final flow (`payment.controller.js`'s `startDeposit`/
+`startFinal`).
+
+### How it works
+
+```
+Proposal accepted → 100% of milestone 1 debited from client wallet (before any writes)
+                  → Milestone(s) + Contract + Payment created
+                  → Freelancer may submit ONLY once the current milestone is `funded`
+                  → Client approves → escrow releases → next milestone unlocks for funding
+                                     (or contract/job complete, if that was the last one)
+                  → Client silent 7+ days after submission → auto-release (cron, hourly)
+                  → Either party can dispute the CURRENT milestone → admin resolves
+```
+
+- **One milestone by default** — accepting a proposal without a `milestones` array creates a single implicit "Full Project" milestone covering the whole price. Splitting into several (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000") is opt-in at accept time; amounts must sum exactly to the proposal price.
+- **Sequential, not all-upfront** — only milestone 1 auto-funds. Milestone 2+ is funded on demand via `POST /payments/milestones/:id/fund` once the client is ready, so capital isn't parked for work that hasn't started.
+- **No Mongo transactions** — none exist anywhere in this codebase. Correctness in `acceptProposal` comes from strict ordering: validate + debit the wallet **before** creating any `Contract`/`Milestone`/`Payment` records, so a failed/insufficient-balance request leaves nothing half-created.
+- **Post-project wallet gate** — `job.controller.js` blocks posting a job (or publishing a draft) unless the client's wallet balance already covers `budget.min`.
+
+### Models
+
+| Model | Role |
+|-------|------|
+| `Milestone` | Top-level collection (not embedded in `Contract`) — `order`, `amount`, `status` (`pending_funding → funded → submitted → approved/in_revision/disputed → released/refunded`), `reviewDeadline`, own `dispute` sub-document. Top-level so the auto-release cron and admin dispute list can query across all milestones cheaply. |
+| `Payment` | One row **per milestone** for fixed-price jobs (`milestoneId` set) — a contract can have several. Legacy hourly/Gig rows have no `milestoneId`. Never assume one `Payment` per `Contract`. |
+| `Contract` | `milestoneMode` (bool) + `currentMilestoneOrder` (int) added; everything else unchanged. |
+
+### Disputes are per-milestone, not per-contract
+
+For fixed-price jobs, `raiseDispute` targets the **current milestone** — `contract.dispute` stays untouched; the milestone gets its own `dispute` sub-document instead. Hourly contracts are unchanged (still `contract.dispute`). Any code reading a fixed-price contract's dispute state must branch on `contract.type` and read the milestone's dispute for `'fixed'` — this was a real bug fixed in `getMyProjects`/`getMyContracts` and is easy to reintroduce in a new endpoint.
+
+Admin resolution (`adminPanel/disputes.controller.js`) offers the same 5 actions for both paths — release to freelancer, refund client, split by percentage, resume, or reject — but a fixed-price resolution only ever settles the **one** disputed milestone and returns the contract to `active` (or completes it, if that was the last milestone). It never itself ends the whole contract; admins use the separate, pre-existing `forceComplete`/`cancelContract` tools for that.
+
+### Auto-release
+
+`cron.service.js` runs hourly, scanning `Milestone.find({status:'submitted', reviewDeadline:{$lte: now}})` and releasing each via the same `approveMilestone()` used by the manual approve path (`services/milestone.service.js` — the single place that moves milestone escrow money, shared by both call sites so release logic never drifts). The window is `SystemSettings.escrow_release_days` (admin-configurable, default **7**). A milestone under an active dispute is excluded (only `submitted` status is scanned; `disputed` is a separate status).
+
+### Settings
+
+| Variable / Setting | Default | Purpose |
+|---------------------|---------|---------|
+| `SystemSettings.escrow_release_days` (DB-configurable, not an env var) | `7` | Days after work submission before an unreviewed milestone auto-releases. |
 
 ## SEO — sitemap & robots
 

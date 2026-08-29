@@ -90,9 +90,9 @@ SystemSettings.DEFAULT_SETTINGS = [
   },
   {
     key: 'escrow_release_days',
-    value: 3,
+    value: 7,
     category: 'general',
-    description: 'Days after contract completion before escrow auto-releases',
+    description: 'Days after a freelancer submits work before its escrow auto-releases if the client hasn\'t responded',
     valueType: 'number'
   }
 ];

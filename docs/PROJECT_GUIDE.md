@@ -55,7 +55,7 @@ The platform operates on a linear, logical flow from discovery to payout:
 5. **Searching:** Client searches for talent, or Freelancer searches for open jobs.
 6. **Applying:** Freelancer submits a Proposal to an open job.
 7. **Hiring:** Client reviews proposals and accepts one. The job becomes `in-progress`.
-8. **Payments (Escrow):** Client pays the initial deposit via Stripe Checkout. Funds are securely held.
+8. **Payments (Escrow):** For fixed-price jobs, 100% of the agreed price is locked from the client's wallet **automatically** the instant the proposal is accepted (optionally split into sequential milestones, funded one at a time). Hourly contracts and Gig orders keep the original Stripe Checkout deposit. Either way, funds are securely held until release.
 9. **Messaging:** Both parties communicate via the in-app chat to finalize requirements.
 10. **Delivery:** Freelancer submits the final work (links/files).
 11. **Approval:** Client reviews and approves the delivery. Escrow is released to the freelancer's wallet.
@@ -91,7 +91,7 @@ The platform operates on a linear, logical flow from discovery to payout:
 4. **Editing Jobs:** Can edit jobs only if they are still `open`.
 5. **Reviewing Proposals:** Views applications. Backend strictly enforces IDOR (clients can only view proposals for their own jobs).
 6. **Hiring:** Clicks accept on a proposal. Backend updates `Proposal` to `accepted`, sets `Job.hiredFreelancer`, and marks all other proposals as `rejected`.
-7. **Escrow Funding:** Clicks "Pay Deposit". Backend generates a Stripe Session. Upon successful payment, Stripe fires a webhook to update `Payment.status = deposit_paid`.
+7. **Escrow Funding:** For a fixed-price hire, the backend debits the client's wallet for 100% of the price (or, if split into milestones, the first milestone's amount) the moment the proposal is accepted — no separate "pay deposit" click. Later milestones (if any) are funded on demand once the client clicks "Fund Milestone N". (Hourly/Gig hires still generate a Stripe Session and update `Payment.status = deposit_paid` via webhook on success.)
 8. **Messaging:** Chats with the hired freelancer.
 9. **Reviewing Work:** Receives `delivered` status notification.
 10. **Approving Work:** Clicks approve. Backend triggers `payment.controller.js` to release funds from Escrow into the freelancer's wallet and marks `Job` as `completed`.
@@ -124,13 +124,26 @@ stateDiagram-v2
     pending --> withdrawn : Freelancer Withdraws
 ```
 
-### Escrow / Payments
+### Escrow / Payments (legacy — hourly contracts & Gig orders)
 ```mermaid
 stateDiagram-v2
     [*] --> pending_deposit : Client initiates payment
     pending_deposit --> deposit_paid : Stripe Webhook (Success)
     deposit_paid --> released : Client Approves Delivery
     deposit_paid --> refunded : Job Cancelled
+```
+
+### Milestone Escrow (fixed-price custom Jobs)
+```mermaid
+stateDiagram-v2
+    [*] --> pending_funding
+    pending_funding --> funded : Client funds (wallet debit — instant for milestone 1, on-demand for later ones)
+    funded --> submitted : Freelancer delivers
+    submitted --> in_revision : Client requests changes
+    submitted --> disputed : Either party disputes
+    submitted --> released : Client approves OR 7-day auto-release
+    disputed --> released : Admin resolves
+    disputed --> refunded : Admin resolves
 ```
 
 ### Withdrawals
@@ -148,10 +161,12 @@ stateDiagram-v2
 SkillKart does not rely on direct peer-to-peer transfers. It utilizes an Escrow model.
 
 - **Wallet:** An internal database ledger (`walletBalance`). It represents funds currently held by the platform on behalf of the user.
-- **Stripe Checkout:** The external payment gateway. Used exclusively by clients to bring real fiat currency into the platform.
-- **Escrow:** When a client pays a deposit via Stripe, the `Payment` document acts as Escrow. The funds sit in SkillKart's master Stripe account.
-- **Deposits:** Client pays → Stripe Webhook catches event → Updates DB `Payment` status.
-- **Releases:** Client approves work → Backend calculates platform fee → Net amount is added to the Freelancer's `walletBalance`.
+- **Stripe Checkout:** The external payment gateway. Used to top up a wallet, and for the legacy deposit/final flow still used by Gig orders and hourly contracts.
+- **Post-Project Gate:** A client cannot post a job (or publish a draft) unless their wallet balance already covers its minimum budget — proof of funds before commitment.
+- **Fixed-Price Escrow (Milestones):** Accepting a proposal debits the client's **wallet** (not Stripe) for 100% of the agreed price — or, if the client splits it into sequential milestones, just the first one. Later milestones are funded on demand, one at a time, once the client is ready to start that phase. A freelancer can only submit a delivery once the current milestone is `funded`.
+- **Auto-Release:** If the client doesn't review a submitted milestone within a configurable window (default 7 days), it releases to the freelancer automatically.
+- **Releases:** Client approves work (or auto-release fires) → Backend calculates platform fee → Net amount is added to the Freelancer's `walletBalance`. If it was the last milestone, the contract/job complete; otherwise the contract advances to the next milestone.
+- **Milestone Disputes:** Either party can dispute the current milestone specifically (not the whole contract) while it's under review; an admin resolves it (release / refund / split / resume / reject) without freezing the rest of a multi-milestone project.
 - **Refunds:** If a job is cancelled, the `Payment` is marked `refunded`, and the funds are added back to the Client's `walletBalance` (or refunded via Stripe if integrated).
 - **Withdrawals:** Freelancer requests payout. The internal `walletBalance` is immediately deducted to prevent double-spending, and a `Withdrawal` record is queued for Admin processing.
 
@@ -219,7 +234,8 @@ Controllers never know which provider is active — they call `email.service.js`
 - **ClientProfile / FreelancerProfile:** Extensions of the User model. Stores specific onboarding data (skills, company size, wallet balance). Linked 1:1 to User.
 - **Job:** The core marketplace entity. Tracks title, budget, status, and the `hiredFreelancer`.
 - **Proposal:** A freelancer's bid on a Job. Linked to `Job` and `User`.
-- **Payment:** The Escrow record. Tracks deposit amounts, final amounts, and Stripe Session IDs. Linked to `Job`.
+- **Milestone:** (fixed-price Jobs) One funded phase of a project — order, title, amount, status (`pending_funding` → `funded` → `submitted` → `released`/`refunded`), review deadline for auto-release, and its own dispute record. A simple hire with no split still gets one implicit milestone.
+- **Payment:** The Escrow record. Tracks deposit amounts, final amounts, Stripe Session IDs, and (for fixed-price jobs) a link to the specific `Milestone` it funds — one Payment per Milestone. Linked to `Job`.
 - **Message:** Chat records. Linked to `sender` and `receiver`.
 - **Review:** Feedback records. Linked to `jobId`, `reviewer`, and `reviewee`.
 - **Withdrawal:** Payout request logs. Linked to `User`.
@@ -255,18 +271,20 @@ SkillKart employs enterprise-grade security protocols:
 ## 13. Current MVP Scope
 
 **What IS implemented:**
-- Full E2E Job and Escrow lifecycles.
-- Secure Stripe Checkout integration.
+- Full E2E Job and Escrow lifecycles, including **100% escrow lock at hire**, optional **multi-milestone** splitting with sequential funding, and **7-day auto-release** on client inactivity.
+- A **post-project wallet-balance gate** — a job can't be posted (or a draft published) unless the client's wallet already covers its minimum budget.
+- **Fixed-price milestone disputes** — either party can freeze the current milestone specifically, and an admin resolves it (release/refund/split/resume/reject) without touching the rest of a multi-phase project.
+- Secure Stripe Checkout integration (wallet top-ups; legacy deposit/final flow for Gig orders & hourly contracts).
 - Protected File Uploads via Cloudinary.
 - Strict Rate Limiting and Payload Security.
 - Robust OTP Email Verification, delivered via a pluggable provider (Gmail API in production, SMTP locally).
 - Bot mitigation on login, registration, and public forms via Google reCAPTCHA v3.
 - Search-engine discoverability: a database-driven dynamic sitemap, crawl policy, PWA manifest, and social share cards.
-- Admin Panel UI with monitoring views (API, error, and email logs).
+- Admin Panel UI with monitoring views (API, error, and email logs) and dispute resolution.
 
 **What intentionally does NOT exist yet:**
 - **Manual Withdrawals:** Payouts are not automated via Stripe Connect.
-- **Manual Dispute Handling:** Clients cannot programmatically freeze a contract if work is poor; they must contact support.
+- **Gig Order Disputes:** Milestone-style disputing exists for custom Jobs and hourly contracts, but not yet for Gig orders.
 - **Polling-based Messaging:** Chat relies on REST requests rather than true WebSockets (Socket.io).
 
 ---
@@ -279,9 +297,8 @@ SkillKart employs enterprise-grade security protocols:
 3. Automate Withdrawals via Stripe Connect.
 
 **Phase 3:**
-1. Implement formal Dispute Resolution UI state machines.
-2. Add Multi-Milestone Contracts (currently 1:1 Job-to-Contract).
-3. Migrate MongoDB standard search to MongoDB Atlas Search (Lucene) for scalability.
+1. Extend milestone-style dispute resolution to Gig orders (currently custom Jobs and hourly contracts only).
+2. Migrate MongoDB standard search to MongoDB Atlas Search (Lucene) for scalability.
 
 **Enterprise / Nice-to-Have:**
 1. Mobile Application (React Native).
@@ -313,5 +330,5 @@ Before deploying SkillKart to Production, the following must be verified:
 - [ ] **SEO Canonical Domain:** Set `PUBLIC_SITE_URL` to the domain to be indexed — not `FRONTEND_URL`, which is a CSV of allowed CORS origins whose first entry may be the wrong host. Then verify `curl -sI https://<frontend>/sitemap.xml` returns **`application/xml`** — `text/html` means the SPA answered instead and the rewrite order in `vercel.json` is wrong. Submit to Google Search Console only after that check passes.
 - [ ] **Admin Login on the Live Site:** Complete an OTP login and confirm you reach the dashboard rather than bouncing back to the login page. This exercises the cross-site `admin_token` cookie, which cannot fail locally (same-origin) and so is only ever provable in deployment.
 - [ ] **Database Backups:** Configure daily automated snapshots in MongoDB Atlas.
-- [ ] **Admin SOPs:** Since there is no Admin UI, developers must have Standard Operating Procedures (SOPs) ready for manual DB refund/withdrawal execution.
+- [ ] **Admin SOPs:** Withdrawals are still processed manually (no Stripe Connect automation yet) — have Standard Operating Procedures (SOPs) ready. Disputes (both hourly-contract and fixed-price-milestone) already have a full Admin Panel resolution UI (release/refund/split/resume/reject), so no manual DB work is needed for those.
 - [ ] **Monitoring & Logging:** Hook up external error tracking (e.g., Sentry) to catch unhandled exceptions.

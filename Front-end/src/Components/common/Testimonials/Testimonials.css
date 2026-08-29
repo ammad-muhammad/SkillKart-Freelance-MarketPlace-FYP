@@ -3,7 +3,7 @@
    ============================================ */
 
 .testimonials {
-  padding: var(--space-24) 0;
+  padding: var(--space-8) 0 var(--space-20);
   background: var(--color-bg);
 }
 
@@ -230,7 +230,7 @@
 
 @media (max-width: 767px) {
   .testimonials {
-    padding: var(--space-16) 0;
+    padding: var(--space-6) 0 var(--space-12);
   }
 
   .testimonials__grid {
