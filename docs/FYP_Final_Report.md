@@ -341,7 +341,7 @@ SkillKart follows a **decoupled client–server architecture**. A React single-p
                             ┌──────▼──────┐        ┌────────▼───────┐  ┌─────▼──────┐            ┌────────▼────────┐
                             │   MongoDB   │        │     Stripe      │  │  AI Router │            │    Supabase     │
                             │ (Mongoose,  │        │  (escrow /      │  │ (Gemini →  │            │  (optional      │
-                            │  37 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
+                            │  38 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
                             │             │        │                 │  │ Qwen →     │            │                 │
                             └─────────────┘        └─────────────────┘  │ Groq →     │            └─────────────────┘
                                                                         │ Claude →   │
@@ -832,7 +832,7 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 | Frontend source files | 128 |
 | Lines of code (backend) | ~28,000 |
 | Lines of code (frontend) | ~42,000 |
-| Data models (collections) | 37 |
+| Data models (collections) | 38 |
 | API route groups | 23 |
 | Controllers | 23 |
 | Service modules | 20+ |
@@ -1061,7 +1061,7 @@ The 38 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gi
 |--------|-------|
 | Total source files | 280+ |
 | Total lines of code | ~70,000 |
-| Data models | 37 |
+| Data models | 38 |
 | API route groups | 23 |
 | Controllers | 23 |
 | Service modules | 20+ |
