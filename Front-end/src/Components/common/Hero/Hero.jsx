@@ -12,6 +12,27 @@ const STAT_DEFS = [
   { key: 'completedJobs', label: 'Projects Completed', Icon: CheckCircle2, fmt: (n) => `${n.toLocaleString()}+` },
 ];
 
+// Proper unbiased Fisher-Yates shuffle. `array.sort(() => Math.random() - 0.5)`
+// is a well-known anti-pattern — most engines' sort implementations leave
+// elements disproportionately close to their original position, so the
+// "random" picks end up repeating the same few faces far more than chance.
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+// Compact PKR amount for the small dashboard stat card, e.g. 1684652 -> "1.7M".
+const formatCompactAmount = (n) => {
+  const v = Number(n) || 0;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}k`;
+  return `${Math.round(v)}`;
+};
+
 /* ── Animated skill pills (decorative category labels) ── */
 const SKILL_PILLS = [
   'React Developer', 'UI/UX Design', 'AI Engineer',
@@ -35,6 +56,7 @@ export default function Hero() {
   const [stats, setStats] = useState([]);
   const [trustCount, setTrustCount] = useState(null); // real user count, or null
   const [topFreelancers, setTopFreelancers] = useState([]); // real top-rated freelancers for trust avatars
+  const [showcaseFreelancer, setShowcaseFreelancer] = useState(null); // real freelancer for the dashboard mock-up
 
   useEffect(() => {
     let active = true;
@@ -66,8 +88,19 @@ export default function Hero() {
         const list = res?.data?.data?.freelancers || [];
         const withAvatar = list.filter(f => f?.avatar); // prefer real photos
         const pool = withAvatar.length >= 4 ? withAvatar : list;
-        const four = [...pool].sort(() => Math.random() - 0.5).slice(0, 4);
+        const four = shuffle(pool).slice(0, 4);
         setTopFreelancers(four);
+
+        // Dashboard mock-up: showcase a random *proven* freelancer each load —
+        // "good" means a real track record (completed projects, strong
+        // rating), not just whoever happens to be highest-rated with 0
+        // projects yet. Falls back to a looser bar only if nobody qualifies.
+        const proven = list.filter(f => (f.completedProjects || 0) > 0 && (f.rating || 0) >= 4.5);
+        const decent = list.filter(f => (f.completedProjects || 0) > 0);
+        const showcasePool = proven.length ? proven : (decent.length ? decent : list);
+        if (showcasePool.length) {
+          setShowcaseFreelancer(showcasePool[Math.floor(Math.random() * showcasePool.length)]);
+        }
       })
       .catch(() => { if (active) setTopFreelancers([]); });
 
@@ -241,59 +274,70 @@ export default function Hero() {
               <span className="hero__dashboard-title">SkillKart Dashboard</span>
             </div>
             <div className="hero__dashboard-body">
-              {/* Profile row */}
-              <div className="hero__db-profile">
-                <div className="hero__db-avatar">SA</div>
-                <div>
-                  <div className="hero__db-name">Sarah Ahmed</div>
-                  <div className="hero__db-role">UI/UX Designer · ⭐ 4.9</div>
-                </div>
-                <div className="hero__db-badge">Verified ✓</div>
-              </div>
-
-              {/* Stats mini row */}
-              <div className="hero__db-stats">
-                {[
-                  { label: 'Projects', value: '28' },
-                  { label: 'Earnings', value: 'Rs. 4.2k' },
-                  { label: 'Reviews', value: '47' },
-                ].map(s => (
-                  <div key={s.label} className="hero__db-stat">
-                    <strong>{s.value}</strong>
-                    <span>{s.label}</span>
+              {/* Profile row — a real freelancer, picked as the top-rated
+                  pool member with the most completed projects (no fabricated
+                  fallback: the whole row is skipped until real data loads). */}
+              {showcaseFreelancer && (
+                <div className="hero__db-profile">
+                  <div className="hero__db-avatar">
+                    {showcaseFreelancer.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <div className="hero__db-name">{showcaseFreelancer.name}</div>
+                    <div className="hero__db-role">
+                      {showcaseFreelancer.role || 'Freelancer'}
+                      {showcaseFreelancer.rating > 0 && ` · ⭐ ${Number(showcaseFreelancer.rating).toFixed(1)}`}
+                    </div>
+                  </div>
+                  <div className="hero__db-badge">Verified ✓</div>
+                </div>
+              )}
 
-              {/* AI insight card */}
+              {/* Stats mini row — real completed projects / earnings / reviews */}
+              {showcaseFreelancer && (
+                <div className="hero__db-stats">
+                  {[
+                    { label: 'Projects', value: `${showcaseFreelancer.completedProjects || 0}` },
+                    { label: 'Earnings', value: `Rs. ${formatCompactAmount(showcaseFreelancer.totalEarnings)}` },
+                    { label: 'Reviews', value: `${showcaseFreelancer.reviewCount || 0}` },
+                  ].map(s => (
+                    <div key={s.label} className="hero__db-stat">
+                      <strong>{s.value}</strong>
+                      <span>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* AI insight card (illustrative — Buddy AI's real per-user
+                  guidance lives inside the actual dashboard, not this
+                  marketing preview) */}
               <div className="hero__db-ai">
                 <div className="hero__db-ai-icon"><Bot size={20} /></div>
                 <div>
                   <div className="hero__db-ai-title">Buddy AI Insight</div>
                   <div className="hero__db-ai-text">
-                    Add Figma skills to boost your profile by 34% and unlock 12 new opportunities.
+                    Get personalized skill recommendations and unlock new opportunities as you grow.
                   </div>
                 </div>
               </div>
 
-              {/* Progress bars */}
+              {/* Progress bars — real verified skill-test scores */}
+              {showcaseFreelancer?.testedSkills?.length > 0 && (
               <div className="hero__db-skills">
-                {[
-                  { name: 'UI Design', pct: 92 },
-                  { name: 'Prototyping', pct: 78 },
-                  { name: 'User Research', pct: 65 },
-                ].map(s => (
+                {showcaseFreelancer.testedSkills.map(s => (
                   <div key={s.name} className="hero__db-skill-row">
                     <div className="hero__db-skill-header">
                       <span>{s.name}</span>
-                      <span>{s.pct}%</span>
+                      <span>{Math.round(s.score)}%</span>
                     </div>
                     <div className="hero__db-bar">
-                      <div className="hero__db-bar-fill" style={{ width: `${s.pct}%` }} />
+                      <div className="hero__db-bar-fill" style={{ width: `${Math.round(s.score)}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
 

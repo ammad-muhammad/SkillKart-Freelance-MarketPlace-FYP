@@ -224,12 +224,19 @@ export default function AiMatchmaking() {
         } catch (err) {
             if (!isMounted.current) return;
             setMatches([]);
-            const aiDown = err.response?.status === 503 || !err.response;
+            // Matching itself is a deterministic scoring engine, not an AI-provider
+            // call — a 503 here would mean the backend itself is down, and a
+            // missing response means the request never reached it (server
+            // restarting, connectivity issue), not that "AI" specifically is down.
+            const serverDown = err.response?.status === 503;
+            const noResponse = !err.response;
             setError(
-                aiDown
-                    ? 'AI matchmaking is temporarily out of service. Please try again shortly.'
-                    : (err.response?.data?.message ||
-                       'Could not generate matches right now. Please try again in a moment.')
+                serverDown
+                    ? 'The matching service is temporarily unavailable. Please try again shortly.'
+                    : noResponse
+                        ? 'Could not reach the server. Please check your connection and try again.'
+                        : (err.response?.data?.message ||
+                           'Could not generate matches right now. Please try again in a moment.')
             );
         } finally {
             if (isMounted.current) { setLoading(false); setHasRan(true); }

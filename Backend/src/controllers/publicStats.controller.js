@@ -4,6 +4,7 @@ const User = require('../models/User');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const ContactMessage = require('../models/ContactMessage');
 const NewsletterSubscriber = require('../models/NewsletterSubscriber');
+const Review = require('../models/Review');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError } = require('../utils/apiError');
@@ -288,22 +289,35 @@ const getTopFreelancers = asyncHandler(async (req, res) => {
     .sort({ rating: -1, completedProjects: -1 })
     .limit(limit);
 
-  const freelancers = profiles
-    .filter((p) => p.userId)
-    .map((p) => {
-      const u = p.userId;
-      return {
-        id: String(u._id),
-        name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Freelancer',
-        role: p.title,
-        avatar: u.profilePicture || null,
-        rating: p.rating || u.rating || 0,
-        completedProjects: p.completedProjects || 0,
-        totalEarnings: p.totalEarnings || 0,
-        skills: (p.skills || []).map((s) => (typeof s === 'object' ? s.name : s)).filter(Boolean).slice(0, 4),
-        bio: p.bio || '',
-      };
-    });
+  const filtered = profiles.filter((p) => p.userId);
+  const reviewCounts = await Review.aggregate([
+    { $match: { revieweeId: { $in: filtered.map((p) => p.userId._id) } } },
+    { $group: { _id: '$revieweeId', count: { $sum: 1 } } },
+  ]);
+  const reviewCountByUser = new Map(reviewCounts.map((r) => [String(r._id), r.count]));
+
+  const freelancers = filtered.map((p) => {
+    const u = p.userId;
+    // Only real, verified skill-test scores — no fabricated proficiency %.
+    const testedSkills = (p.skills || [])
+      .filter((s) => typeof s === 'object' && s.isVerified && Number(s.verificationScore) > 0)
+      .map((s) => ({ name: s.name, score: Number(s.verificationScore) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    return {
+      id: String(u._id),
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Freelancer',
+      role: p.title,
+      avatar: u.profilePicture || null,
+      rating: p.rating || u.rating || 0,
+      completedProjects: p.completedProjects || 0,
+      totalEarnings: p.totalEarnings || 0,
+      reviewCount: reviewCountByUser.get(String(u._id)) || 0,
+      skills: (p.skills || []).map((s) => (typeof s === 'object' ? s.name : s)).filter(Boolean).slice(0, 4),
+      testedSkills,
+      bio: p.bio || '',
+    };
+  });
 
   sendSuccess(res, { message: 'Top freelancers', data: { freelancers } });
 });
