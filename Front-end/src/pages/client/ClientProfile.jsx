@@ -19,6 +19,32 @@ const MAX_BIO = 600;
 const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const COMPANY_TYPES = ['Individual', 'Startup', 'SME', 'Enterprise'];
+const COMPANY_TYPE_OPTIONS = COMPANY_TYPES.map(t => ({ value: t, label: t }));
+
+const HIRING_EXP_OPTIONS = [
+  { value: 'Yes', label: 'Fresh Client (First time hiring)' },
+  { value: 'No', label: 'Experienced (I have hired before)' }
+];
+
+const PROFICIENCY_SELECT_OPTIONS = [
+  { value: 'basic', label: 'Basic' },
+  { value: 'conversational', label: 'Conversational' },
+  { value: 'fluent', label: 'Fluent' },
+  { value: 'native', label: 'Native' }
+];
+
+const ENGAGEMENT_OPTIONS = [
+  { value: 'One-time Project', label: 'One-time Project' },
+  { value: 'Monthly Retainer', label: 'Monthly Retainer' },
+  { value: 'Full-time Dedicated', label: 'Full-time Dedicated' },
+  { value: 'Part-time Support', label: 'Part-time Support' }
+];
+
+const URGENCY_OPTIONS = [
+  { value: 'Immediate', label: 'ASAP / Immediate' },
+  { value: 'Exploring', label: 'Exploring / Planning' },
+  { value: 'Flexible', label: 'Flexible / Slower' }
+];
 
 const INDUSTRY_OPTIONS = [
   { value: 'Accounting & Finance', label: 'Accounting & Finance' },
@@ -122,6 +148,20 @@ const ClientProfile = () => {
       boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
       zIndex: 9999
     }),
+    menuList: (base) => ({
+      ...base,
+      padding: "4px",
+      maxHeight: "220px",
+      scrollbarWidth: "none",
+      msOverflowStyle: "none",
+      "&::-webkit-scrollbar": {
+        display: "none"
+      }
+    }),
+    menuPortal: (base) => ({
+      ...base,
+      zIndex: 9999
+    }),
     option: (base, state) => ({
       ...base,
       background: state.isSelected
@@ -132,7 +172,7 @@ const ClientProfile = () => {
       color: state.isSelected ? "#fff" : "#334155",
       cursor: "pointer",
       borderRadius: "8px",
-      margin: "2px 4px",
+      margin: "2px 0",
       padding: "8px 12px",
       transition: "all 0.15s ease",
       fontWeight: state.isSelected ? "700" : "500"
@@ -505,27 +545,26 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label">Organization Type*</label>
             {editing ? (
-              <select
-                className="cl-input"
-                value={form.companyType || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
+              <Select
+                options={COMPANY_TYPE_OPTIONS}
+                value={COMPANY_TYPE_OPTIONS.find(o => o.value === form.companyType) || null}
+                onChange={(val) => {
+                  const selected = val ? val.value : '';
                   setForm(p => ({
                     ...p,
-                    companyType: val,
-                    companyName: val === 'Individual' ? '' : p.companyName,
-                    companyLogo: val === 'Individual' ? '' : p.companyLogo,
-                    website: val === 'Individual' ? '' : p.website,
-                    role: val === 'Individual' ? '' : p.role,
-                    industry: val === 'Individual' ? '' : p.industry,
+                    companyType: selected,
+                    companyName: selected === 'Individual' ? '' : p.companyName,
+                    companyLogo: selected === 'Individual' ? '' : p.companyLogo,
+                    website: selected === 'Individual' ? '' : p.website,
+                    role: selected === 'Individual' ? '' : p.role,
+                    industry: selected === 'Individual' ? '' : p.industry,
                   }));
                 }}
-              >
-                <option value="">Select...</option>
-                {COMPANY_TYPES.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+                styles={customSelectStyles}
+                placeholder="Select Organization Type"
+                classNamePrefix="skillkart-select"
+                menuPortalTarget={document.body}
+              />
             ) : (
               <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
                 {profile?.personalInfo?.companyType || 'N/A'}
@@ -627,6 +666,7 @@ const ClientProfile = () => {
                 classNamePrefix="skillkart-select"
                 isSearchable={true}
                 maxMenuHeight={220}
+                menuPortalTarget={document.body}
               />
             ) : (
               <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
@@ -648,6 +688,7 @@ const ClientProfile = () => {
                 classNamePrefix="skillkart-select"
                 isSearchable={true}
                 maxMenuHeight={220}
+                menuPortalTarget={document.body}
               />
             ) : (
               <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
@@ -692,15 +733,15 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label">Hiring Experience*</label>
             {editing ? (
-              <select
-                className="cl-input"
-                value={form.isNewToHiring || ''}
-                onChange={(e) => setForm(p => ({ ...p, isNewToHiring: e.target.value }))}
-              >
-                <option value="">Select...</option>
-                <option value="Yes">Fresh Client (First time hiring)</option>
-                <option value="No">Experienced (I have hired before)</option>
-              </select>
+              <Select
+                options={HIRING_EXP_OPTIONS}
+                value={HIRING_EXP_OPTIONS.find(o => o.value === form.isNewToHiring) || null}
+                onChange={(val) => setForm(p => ({ ...p, isNewToHiring: val ? val.value : '' }))}
+                styles={customSelectStyles}
+                placeholder="Select Hiring Experience"
+                classNamePrefix="skillkart-select"
+                menuPortalTarget={document.body}
+              />
             ) : (
               <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
                 {profile?.personalInfo?.isNewToHiring === 'Yes' ? 'Fresh Client (First time hiring)' : profile?.personalInfo?.isNewToHiring === 'No' ? 'Experienced (I have hired before)' : 'N/A'}
@@ -787,25 +828,26 @@ const ClientProfile = () => {
                     placeholder="Select language"
                     styles={customSelectStyles}
                     classNamePrefix="skillkart-select"
+                    menuPortalTarget={document.body}
                   />
                 ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? lang : (lang?.language || 'Unknown')}</div>}
               </div>
               <div className="cl-form-group" style={{ marginBottom: 0 }}>
                 <label className="cl-label">Proficiency</label>
                 {editing ? (
-                  <select 
-                    className="cl-input" 
-                    value={lang.proficiency}
-                    onChange={(e) => {
+                  <Select
+                    options={PROFICIENCY_SELECT_OPTIONS}
+                    value={PROFICIENCY_SELECT_OPTIONS.find(o => o.value.toLowerCase() === (lang.proficiency || 'fluent').toLowerCase()) || PROFICIENCY_SELECT_OPTIONS[2]}
+                    onChange={(selected) => {
                       const newList = [...languages];
-                      newList[idx].proficiency = e.target.value;
+                      newList[idx].proficiency = selected?.value || 'fluent';
                       setLanguages(newList);
                     }}
-                  >
-                    {PROFICIENCY_OPTIONS.map(opt => (
-                      <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
-                    ))}
-                  </select>
+                    placeholder="Select proficiency"
+                    styles={customSelectStyles}
+                    classNamePrefix="skillkart-select"
+                    menuPortalTarget={document.body}
+                  />
                 ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? 'fluent' : (lang?.proficiency || 'fluent')}</div>}
               </div>
               {editing && (
@@ -853,6 +895,7 @@ const ClientProfile = () => {
                 onChange={(opt) => setBudgetRange({ min: opt ? opt.min : 0, max: opt ? opt.max : 0 })}
                 styles={customSelectStyles}
                 placeholder="Select Budget Allocation"
+                menuPortalTarget={document.body}
               />
             ) : (
               <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{getBudgetLabel(profile?.preferences?.budgetRange)}</div>
@@ -863,17 +906,15 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label">Engagement Type</label>
             {editing ? (
-              <select
-                className="cl-input"
-                value={hiringFrequency}
-                onChange={(e) => setHiringFrequency(e.target.value)}
-              >
-                <option value="">Select Engagement Type...</option>
-                <option value="One-time Project">One-time Project</option>
-                <option value="Monthly Retainer">Monthly Retainer</option>
-                <option value="Full-time Dedicated">Full-time Dedicated</option>
-                <option value="Part-time Support">Part-time Support</option>
-              </select>
+              <Select
+                options={ENGAGEMENT_OPTIONS}
+                value={ENGAGEMENT_OPTIONS.find(o => o.value === hiringFrequency) || null}
+                onChange={(val) => setHiringFrequency(val ? val.value : '')}
+                styles={customSelectStyles}
+                placeholder="Select Engagement Type..."
+                classNamePrefix="skillkart-select"
+                menuPortalTarget={document.body}
+              />
             ) : (
               <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{profile?.preferences?.hiringFrequency || 'N/A'}</div>
             )}
@@ -919,16 +960,15 @@ const ClientProfile = () => {
         <div className="cl-form-group" style={{ marginBottom: '1.5rem' }}>
           <label className="cl-label">Project Urgency</label>
           {editing ? (
-            <select
-              className="cl-input"
-              value={urgency}
-              onChange={(e) => setUrgency(e.target.value)}
-            >
-              <option value="">Select Urgency...</option>
-              <option value="Immediate">ASAP / Immediate</option>
-              <option value="Exploring">Exploring / Planning</option>
-              <option value="Flexible">Flexible / Slower</option>
-            </select>
+            <Select
+              options={URGENCY_OPTIONS}
+              value={URGENCY_OPTIONS.find(o => o.value === urgency) || null}
+              onChange={(val) => setUrgency(val ? val.value : '')}
+              styles={customSelectStyles}
+              placeholder="Select Urgency..."
+              classNamePrefix="skillkart-select"
+              menuPortalTarget={document.body}
+            />
           ) : (
             <div className="cl-tag" style={{ marginTop: '4px', alignSelf: 'flex-start' }}>{profile?.preferences?.urgency || 'N/A'}</div>
           )}

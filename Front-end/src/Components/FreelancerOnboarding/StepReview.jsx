@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import {
   User, Tag, Globe, FolderOpen, GraduationCap, Award, FileText,
-  Edit2, CheckCircle2, DollarSign, Clock
+  Edit2, CheckCircle2, Clock
 } from "lucide-react";
 
 const Section = ({ icon: Icon, title, onEdit, children }) => (
@@ -86,7 +86,7 @@ const StepReview = ({ formData, onEditStep }) => {
           </div>
           <div className="fob-review-field">
             <span className="fob-review-field-label">
-              <DollarSign size={12} /> Hourly Rate
+              <Tag size={12} /> Hourly Rate
             </span>
             <span className="fob-review-field-value">
               {formData.hourlyRate ? `Rs. ${formData.hourlyRate}/hr` : <em className="fob-review-empty">Not set</em>}

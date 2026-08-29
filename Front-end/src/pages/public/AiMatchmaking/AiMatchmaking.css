@@ -158,34 +158,44 @@
 /* ── Main Layout ── */
 .aim-layout {
     display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 1.5rem;
+    grid-template-columns: 390px 1fr;
+    gap: 1.75rem;
     padding: 2rem 0 4rem;
     align-items: start;
 }
 
-/* ── Input Panel ── */
+/* ── Input Panel (Fixed / Sticky Sidebar) ── */
 .aim-input-panel {
+    position: -webkit-sticky;
     position: sticky;
-    top: calc(var(--navbar-h) + 1rem);
+    top: calc(var(--navbar-h) + 1.25rem);
+    align-self: start;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+    gap: 0.85rem;
+    z-index: 20;
+}
+
+.aim-fields-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
 }
 
 .aim-card {
     background: #fff;
     border-radius: var(--radius-xl);
-    box-shadow: 0 2px 20px rgba(4, 46, 76, 0.07);
-    padding: 1.5rem;
+    box-shadow: 0 2px 16px rgba(4, 46, 76, 0.06);
+    border: 1px solid #edf1f7;
+    padding: 1.15rem 1.25rem;
 }
 
 .aim-card__title {
     font-family: var(--font-heading);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--color-primary);
-    margin-bottom: 1.1rem;
+    margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -195,8 +205,8 @@
 .aim-field {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    margin-bottom: 1rem;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
 }
 
 .aim-field:last-child {
@@ -204,7 +214,7 @@
 }
 
 .aim-label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--color-primary);
 }
@@ -212,10 +222,10 @@
 .aim-input,
 .aim-textarea,
 .aim-select {
-    padding: 0.65rem 0.85rem;
+    padding: 0.55rem 0.75rem;
     border: 1.5px solid #dde3ec;
     border-radius: var(--radius-md);
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     color: var(--color-primary);
     font-family: var(--font-body);
     background: #fff;
@@ -232,9 +242,9 @@
 }
 
 .aim-textarea {
-    resize: vertical;
-    min-height: 100px;
-    line-height: 1.6;
+    resize: none;
+    min-height: 68px;
+    line-height: 1.5;
 }
 
 /* tag input */
@@ -895,6 +905,13 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1rem;
+        max-height: none;
+        overflow-y: visible;
+        padding-right: 0;
+    }
+
+    .aim-input-panel .aim-match-btn {
+        grid-column: 1 / -1;
     }
 }
 

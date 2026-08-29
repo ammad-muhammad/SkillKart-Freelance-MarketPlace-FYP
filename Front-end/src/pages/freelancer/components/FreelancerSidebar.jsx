@@ -107,6 +107,7 @@ const FreelancerSidebar = () => {
               <NavLink
                 key={item.to}
                 to={to}
+                end={item.to === '/freelancer/gigs' || item.to === '/freelancer/dashboard' || item.to === '/freelancer/profile'}
                 className={({ isActive }) =>
                   `fl-sidebar__link${isActive ? ' fl-sidebar__link--active' : ''}`
                 }

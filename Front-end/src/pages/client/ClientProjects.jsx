@@ -8,7 +8,7 @@ import { jobsAPI } from '../../api/jobs';
 import { paymentsAPI } from '../../api/payments';
 import { contractsAPI } from '../../api/contracts';
 import { deliveriesAPI } from '../../api/deliveries';
-import { JOB_CATEGORIES } from '../../constants/jobCategories';
+import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import Modal from '../freelancer/components/Modal';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
@@ -665,12 +665,13 @@ const ClientProjects = () => {
 
                 <div className="cl-form-group">
                   <label className="cl-label">Subcategory</label>
-                  <input
-                    className="cl-input"
-                    placeholder="e.g. Frontend Development"
-                    value={editingProject.subcategory}
-                    onChange={e => setField({ subcategory: e.target.value })}
-                    style={{ background: '#f8fafc' }}
+                  <TagInput
+                    tags={editingProject.subcategory ? [editingProject.subcategory] : []}
+                    onChange={tags => setField({ subcategory: tags[0] || '' })}
+                    options={GIG_SUBCATEGORIES[editingProject.category] || []}
+                    maxTags={1}
+                    placeholder="Type or select subcategory…"
+                    showHint={false}
                   />
                 </div>
 
@@ -713,23 +714,21 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Min Budget (Rs.) *</label>
+                  <label className="cl-label">Min Budget (PKR) *</label>
                   <input
                     type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.min}
                     onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
-                    style={{ background: '#f8fafc' }}
                   />
                   {editErrors.budgetMin && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMin}</span>}
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Max Budget (Rs.) *</label>
+                  <label className="cl-label">Max Budget (PKR) *</label>
                   <input
                     type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.max}
                     onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
-                    style={{ background: '#f8fafc' }}
                   />
                   {editErrors.budgetMax && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMax}</span>}
                 </div>
@@ -741,7 +740,6 @@ const ClientProjects = () => {
                     placeholder="e.g. 1-3 months"
                     value={editingProject.duration}
                     onChange={e => setField({ duration: e.target.value })}
-                    style={{ background: '#f8fafc' }}
                   />
                 </div>
 
@@ -751,7 +749,6 @@ const ClientProjects = () => {
                     type="date" className={`cl-input${editErrors.deadline ? ' cl-input--error' : ''}`}
                     value={editingProject.deadline}
                     onChange={e => { setField({ deadline: e.target.value }); clearEditError('deadline'); }}
-                    style={{ background: '#f8fafc' }}
                   />
                   {editErrors.deadline && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.deadline}</span>}
                 </div>

@@ -243,6 +243,7 @@ export default function JobDetails() {
   if (loading) return <Loader text="Loading project details..." fullScreen={true} />;
   if (!job) return <div className="jd-error">Project not found.</div>;
 
+  const isClient = user?.role === 'client';
   const isFreelancer = user?.role === 'freelancer';
   const hasApplied = job.proposals?.some(p => p.freelancerId?._id === user?._id);
   const isSaved = Array.isArray(savedProjects) && savedProjects.some(sj => (sj._id || sj) === job._id);
@@ -288,7 +289,7 @@ export default function JobDetails() {
                 <h1 className="jd-title">{job.title}</h1>
                 <div className="jd-meta">
                   <div className="jd-meta__item">
-                    <DollarSign size={18} />
+                    <Tag size={18} />
                     <span>
                       {job.budget?.type === 'fixed' 
                         ? (job.budget?.min === job.budget?.max ? `Rs. ${job.budget?.min} Fixed` : `Rs. ${job.budget?.min} - Rs. ${job.budget?.max} Fixed`)
@@ -364,25 +365,42 @@ export default function JobDetails() {
               </div>
 
               <div className="jd-sidebar__card jd-apply">
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                  <button 
-                    className={`jd-apply__btn ${hasApplied && job.status === 'open' ? 'jd-apply__btn--applied' : ''}`}
-                    onClick={hasApplied ? undefined : handleApplyClick}
-                    disabled={job.status !== 'open' || hasApplied}
-                    style={{ flex: 1 }}
-                  >
-                    {job.status !== 'open' ? (
-                      'Closed'
-                    ) : hasApplied ? (
-                      <><CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied</>
-                    ) : (
-                      'Apply Now'
-                    )}
-                  </button>
-                </div>
-                <p className="jd-apply__note">
-                  {job.proposals?.length || 0} proposals already submitted.
-                </p>
+                {isClient ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <Link 
+                      to={`/client/projects/${job._id || id}/proposals`} 
+                      className="jd-apply__btn" 
+                      style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                    >
+                      <Send size={16} /> View Proposals ({job.proposals?.length || 0})
+                    </Link>
+                    <p className="jd-apply__note" style={{ textAlign: 'center', margin: 0 }}>
+                      {job.proposals?.length || 0} proposal{job.proposals?.length === 1 ? '' : 's'} received for this project.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <button 
+                        className={`jd-apply__btn ${hasApplied && job.status === 'open' ? 'jd-apply__btn--applied' : ''}`}
+                        onClick={hasApplied ? undefined : handleApplyClick}
+                        disabled={job.status !== 'open' || hasApplied}
+                        style={{ flex: 1 }}
+                      >
+                        {job.status !== 'open' ? (
+                          'Closed'
+                        ) : hasApplied ? (
+                          <><CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied</>
+                        ) : (
+                          'Apply Now'
+                        )}
+                      </button>
+                    </div>
+                    <p className="jd-apply__note">
+                      {job.proposals?.length || 0} proposals already submitted.
+                    </p>
+                  </>
+                )}
               </div>
             </aside>
           </div>
@@ -433,7 +451,7 @@ export default function JobDetails() {
               ) : (
                 <>
                   <div className="jd-form-group">
-                    <label>Fixed Price (Rs.)</label>
+                    <label>Fixed Price (PKR)</label>
                     <div className="jd-input-icon">
                       <DollarSign size={16} />
                       <input 

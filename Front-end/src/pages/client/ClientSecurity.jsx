@@ -28,7 +28,7 @@ const getStrength = (pwd) => {
 const ClientSecurity = () => {
   const { profile, updateProfile, showToast } = useClient();
   const { user, logout } = useContext(AuthContext);
-  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
+  const isSupabaseUser = !!user?.supabaseId || (user?.authProvider && user?.authProvider !== 'email');
   const [loggingOutAll, setLoggingOutAll] = useState(false);
 
   // Revoke all sessions server-side (bumps tokenVersion), then sign out here.

@@ -206,7 +206,24 @@ const FreelancerProfile = () => {
         >
           {editing && (
             <div style={{ position: 'absolute', bottom: '1rem', right: '1rem' }}>
-              <button className="fl-btn fl-btn--outline" style={{ background: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => coverRef.current?.click()}>
+              <button 
+                className="fl-btn" 
+                style={{ 
+                  background: '#ffffff', 
+                  color: '#042E4C', 
+                  border: '1px solid rgba(4,46,76,0.2)',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.4rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }} 
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#042E4C'; e.currentTarget.style.color = '#ffffff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#042E4C'; }}
+                onClick={() => coverRef.current?.click()}
+              >
                 <Camera size={14} /> Change Cover
               </button>
               <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCoverChange} />
@@ -554,78 +571,36 @@ const FreelancerProfile = () => {
             )}
           </div>
           <div className="fl-form-group fl-form-group--full">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <label className="fl-label">Languages You Speak*</label>
-              {editing && (
-                <button 
-                  type="button" 
-                  className="fl-btn fl-btn--ghost fl-btn--sm"
-                  onClick={() => setLanguages([...languages, { language: '', proficiency: 'fluent' }])}
-                >
-                  <Plus size={14} /> Add Language
-                </button>
-              )}
-            </div>
-
-            <div className="fl-languages-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {editing ? (
-                languages.map((lang, idx) => (
-                  <div key={idx} className="fl-dynamic-item" style={{ background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.6 }}>Language #{idx + 1}</span>
-                      <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setLanguages(languages.filter((_, i) => i !== idx))}>
-                        <Trash2 size={12} /> Remove
-                      </button>
-                    </div>
-                    <div className="fl-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
-                      <div className="fl-form-group">
-                        <label className="fl-label">Language</label>
-                        <TagInput 
-                          tags={lang.language ? [lang.language] : []} 
-                          onChange={(tags) => {
-                            const newList = [...languages];
-                            newList[idx].language = tags[0] || "";
-                            setLanguages(newList);
-                          }} 
-                          options={LANGUAGES}
-                          placeholder="Select..." 
-                          showHint={false}
-                        />
-                      </div>
-                      <div className="fl-form-group">
-                        <label className="fl-label">Proficiency</label>
-                        <select 
-                          className="fl-input" 
-                          value={lang.proficiency}
-                          onChange={(e) => {
-                            const newList = [...languages];
-                            newList[idx].proficiency = e.target.value;
-                            setLanguages(newList);
-                          }}
-                        >
-                          {PROFICIENCY_OPTIONS.map(opt => (
-                            <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="fl-tags-display">
-                  {(Array.isArray(profile.languages) ? profile.languages : []).map((l, idx) => {
-                    const name = typeof l === 'string' ? l : (l?.language || 'Unknown');
-                    const proficiency = typeof l === 'string' ? 'fluent' : (l?.proficiency || 'fluent');
-                    return (
-                      <span key={idx} className="fl-tag fl-tag--alt">
-                        {name} ({proficiency})
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              {editing && languages.length === 0 && <p className="fl-error" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={14} /> At least one language is required</p>}
-            </div>
+            <label className="fl-label">Languages You Speak (press Enter to add)*</label>
+            {editing ? (
+              <>
+                <TagInput 
+                  tags={languages.map(l => typeof l === 'string' ? l : (l?.language || '')).filter(Boolean)} 
+                  onChange={(newTags) => {
+                    setLanguages(newTags.map(tag => ({ language: tag, proficiency: 'fluent' })));
+                  }} 
+                  options={LANGUAGES}
+                  placeholder="Type or select languages (e.g. Urdu, English)…" 
+                  showHint={false}
+                />
+                {languages.length === 0 && (
+                  <p className="fl-error" style={{ margin: '0.4rem 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <AlertTriangle size={14} /> At least one language is required
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="fl-tags-display">
+                {(Array.isArray(profile.languages) ? profile.languages : []).map((l, idx) => {
+                  const name = typeof l === 'string' ? l : (l?.language || 'Unknown');
+                  return (
+                    <span key={idx} className="fl-tag fl-tag--alt">
+                      {name}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -7,31 +7,15 @@ import { LANGUAGES } from "../../data/languages";
 const PROFICIENCY_OPTIONS = ["basic", "conversational", "fluent", "native"];
 
 const StepLanguages = ({ formData, setFormData, errors }) => {
-  const languages = formData.languages || [];
+  const currentTags = (formData.languages || [])
+    .map(l => typeof l === 'string' ? l : (l?.language || ''))
+    .filter(Boolean);
 
-  const addLanguage = () => {
+  const handleTagsChange = (newTags) => {
     setFormData((prev) => ({
       ...prev,
-      languages: [
-        ...(prev.languages || []),
-        { language: "", proficiency: "" },
-      ],
+      languages: newTags.map(tag => ({ language: tag, proficiency: 'fluent' }))
     }));
-  };
-
-  const removeLanguage = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      languages: (prev.languages || []).filter((_, i) => i !== index),
-    }));
-  };
-
-  const updateLanguage = (index, field, value) => {
-    setFormData((prev) => {
-      const updated = [...(prev.languages || [])];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, languages: updated };
-    });
   };
 
   return (
@@ -46,104 +30,25 @@ const StepLanguages = ({ formData, setFormData, errors }) => {
           <div>
             <label className="fob-label">
               <Globe size={15} className="fob-label-icon" />
-              Languages You Speak
+              Languages You Speak*
             </label>
-            <p className="fob-hint">Add all languages you can communicate in professionally.</p>
+            <p className="fob-hint">Type or select all languages you can communicate in professionally (press Enter to add).</p>
           </div>
-          <button type="button" className="fob-add-btn" onClick={addLanguage}>
-            <Plus size={16} />
-            Add Language
-          </button>
         </div>
 
-        <AnimatePresence>
-          {languages.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fob-empty-state"
-            >
-              <Globe size={40} className="fob-empty-icon" />
-              <p>No languages added yet. Click "Add Language" to get started.</p>
-            </motion.div>
-          )}
-
-          {languages.map((lang, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="fob-dynamic-item"
-            >
-              <div className="fob-dynamic-item-header">
-                <span className="fob-item-number">Language #{index + 1}</span>
-                <button
-                  type="button"
-                  className="fob-remove-btn"
-                  onClick={() => removeLanguage(index)}
-                >
-                  <Trash2 size={14} />
-                  Remove
-                </button>
-              </div>
-
-              <div className="fob-form-row">
-                <div className="fob-form-group">
-                  <label className="fob-label">Language*</label>
-                  <TagInput 
-                    tags={lang.language ? [lang.language] : []}
-                    onChange={(newTags) => updateLanguage(index, "language", newTags[0] || "")}
-                    options={LANGUAGES}
-                    placeholder="Select language..."
-                    showHint={false}
-                  />
-                </div>
-                <div className="fob-form-group">
-                  <label className="fob-label">Proficiency*</label>
-                  <select
-                    value={lang.proficiency}
-                    onChange={(e) =>
-                      updateLanguage(index, "proficiency", e.target.value)
-                    }
-                    className="fob-select"
-                  >
-                    <option value="">Select proficiency</option>
-                    {PROFICIENCY_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {lang.proficiency && (
-                <div className="fob-proficiency-bar">
-                  {PROFICIENCY_OPTIONS.map((opt) => (
-                    <div
-                      key={opt}
-                      className={`fob-proficiency-segment ${PROFICIENCY_OPTIONS.indexOf(opt) <=
-                        PROFICIENCY_OPTIONS.indexOf(lang.proficiency)
-                        ? "fob-proficiency-segment--filled"
-                        : ""
-                        }`}
-                    />
-                  ))}
-                  <span className="fob-proficiency-label">
-                    {lang.proficiency.charAt(0).toUpperCase() + lang.proficiency.slice(1)}
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <div style={{ marginTop: '1rem' }}>
+          <TagInput
+            tags={currentTags}
+            onChange={handleTagsChange}
+            options={LANGUAGES}
+            placeholder="e.g. Urdu, English, Punjabi..."
+            showHint={false}
+          />
+        </div>
       </div>
 
       {errors?.languages && (
-        <p className="fob-error">{errors.languages}</p>
+        <p className="fob-error" style={{ marginTop: '0.5rem' }}>{errors.languages}</p>
       )}
     </motion.div>
   );
