@@ -42,7 +42,7 @@ exports.getFullGraph = asyncHandler(async (req, res) => {
 exports.resolveSkill = asyncHandler(async (req, res) => {
   const { q } = req.query;
   if (!q) return sendError(res, 'Query parameter q is required', 400);
-  const node = await taxonomy.resolveCanonical(q);
+  const node = await taxonomy.resolvePublicSkillNode(q);
   if (!node) return sendError(res, `No skill found for "${q}"`, 404);
   sendSuccess(res, { message: 'Resolved', data: { node } });
 });

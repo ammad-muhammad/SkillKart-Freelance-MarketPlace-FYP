@@ -203,7 +203,14 @@ const getCategoryStats = asyncHandler(async (req, res) => {
  */
 const getSkillStats = asyncHandler(async (req, res) => {
   const skill = req.params.skill;
-  const rx = new RegExp(`^${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+  const taxonomy = require('../services/taxonomy.service');
+  // Match the skill's canonical name AND any aliases/synonyms — real gig data
+  // is free text and often uses a colloquial alias (e.g. "Lightroom") rather
+  // than the curated canonical name ("Adobe Lightroom"), which a name-only
+  // match would silently miss, showing all-zero stats despite real activity.
+  const terms = await taxonomy.resolveMatchTerms(skill);
+  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const rx = new RegExp(`^(${escaped.join('|')})$`, 'i');
 
   const [agg] = await Gig.aggregate([
     { $match: { status: 'active', skills: rx } },

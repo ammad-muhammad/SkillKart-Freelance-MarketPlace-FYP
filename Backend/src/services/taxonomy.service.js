@@ -154,6 +154,66 @@ async function resolveCanonical(term) {
 }
 
 /**
+ * Resolve a term for the PUBLIC skill-detail page (SkillPage.jsx), extending
+ * resolveCanonical() with a fallback to ad-hoc skill strings freelancers have
+ * typed into live Gig.skills but that were never added as a curated
+ * SkillNode — the same synthetic-skill fallback getTaxonomyTree() already
+ * uses to populate nav menu panels for categories with no curated skill
+ * children (see the `gig-skill:` entries there). Reusing that same tree here
+ * guarantees anything clickable in the nav always has somewhere real to
+ * land, by construction — no separate matching logic that could drift out
+ * of sync with the nav a second time.
+ *
+ * Deliberately kept separate from resolveCanonical(), which is used
+ * internally by unrelated features (match-scoring, category inference, the
+ * unrecognized-skill taxonomy-growth proposal flow) where this permissive
+ * fallback would be the wrong behavior — e.g. proposeUnrecognizedSkills
+ * would stop firing for exactly the ad-hoc skills it exists to catch, since
+ * they'd suddenly "resolve".
+ */
+async function resolvePublicSkillNode(term) {
+  const node = await resolveCanonical(term);
+  if (node) return node;
+
+  const wanted = slugify(term);
+  if (!wanted) return null;
+
+  const tree = await getTaxonomyTree();
+  for (const industry of tree) {
+    for (const category of industry.categories) {
+      for (const child of category.children || []) {
+        if (child.type === 'skill' && child.slug === wanted) {
+          return {
+            id: child.id,
+            name: child.name,
+            slug: child.slug,
+            type: 'skill',
+            description: `Explore ${child.name} freelancers, gigs, and pricing on SkillKart.`,
+            subcategories: [],
+            trending: [],
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Return every real-world string that should count as "this exact skill" —
+ * its canonical name plus any aliases/synonyms — for callers that need to
+ * match literal Gig/Job/FreelancerProfile skill strings precisely (e.g. a
+ * skill's own stats page), where expandSearchTerms()'s broader ancestor/
+ * descendant/related expansion would incorrectly pull in other skills.
+ * Falls back to `[term]` if it doesn't resolve to a curated node at all.
+ */
+async function resolveMatchTerms(term) {
+  const node = await resolveCanonical(term);
+  if (!node) return [term];
+  return [...new Set([node.name, ...(node.aliases || []), ...(node.synonyms || [])])];
+}
+
+/**
  * Return SkillNodes that are direct parents / ancestor categories of `nodeId`.
  * Traverses BELONGS_TO and PARENT edges upward.
  */
@@ -320,8 +380,12 @@ async function expandSearchTerms(query) {
       getRelated(node._id, 2),
     ]);
 
+    // Include each node's aliases/synonyms too, not just its canonical name —
+    // real Gig/Job/FreelancerProfile data is free text and often uses the
+    // colloquial alias ("Lightroom") rather than the curated canonical name
+    // ("Adobe Lightroom"), so canonical-only expansion silently misses it.
     const all = [node, ...ancestors, ...descendants, ...related];
-    names = [...new Set(all.map((n) => n.name))];
+    names = [...new Set(all.flatMap((n) => [n.name, ...(n.aliases || []), ...(n.synonyms || [])]))];
   } else {
     // Fuzzy fallback: text search across name, aliases, synonyms
     const fuzzy = await SkillNode.find({
@@ -694,11 +758,10 @@ async function getTaxonomyTree() {
 
   const seenNodeIds = new Set();
 
-  // `relaxLeaves` = show a category's skill children even if a specific skill
-  // isn't individually "active". Used for top categories that demonstrably have
-  // gigs/services, so their menu panel is never left empty. Sub-categories keep
-  // whatever leaves their parent was built with.
-  function buildTreeRecursively(parentNodeId, relaxLeaves = false) {
+  // A leaf (skill/technology/tool/concept) only appears if it has real
+  // activity (a gig, an open job, or a freelancer's listed skill) — otherwise
+  // it'd be a clickable nav entry that lands on an all-zeros skill page.
+  function buildTreeRecursively(parentNodeId) {
     const parentIdStr = String(parentNodeId);
     const children = parentMap.get(parentIdStr) || [];
 
@@ -720,7 +783,7 @@ async function getTaxonomyTree() {
       const isLeaf = ['skill', 'technology', 'tool', 'concept'].includes(child.type);
 
       if (isLeaf) {
-        if (!relaxLeaves && !activeSkills.has(normName)) continue;
+        if (!activeSkills.has(normName)) continue;
         seenNodeIds.add(childIdStr);
         result.push({
           id: childIdStr,
@@ -732,7 +795,7 @@ async function getTaxonomyTree() {
           featured: child.featured
         });
       } else {
-        const childrenTree = buildTreeRecursively(child._id, relaxLeaves);
+        const childrenTree = buildTreeRecursively(child._id);
         const hasGigs = activeCategories.has(normName);
         const keepCategory = hasGigs || childrenTree.length > 0;
 
@@ -778,11 +841,17 @@ async function getTaxonomyTree() {
     });
 
     const categoriesTree = catsUnderInd.map(cat => {
-      // Top categories relax the active-skill gate so their panel is populated.
-      let childrenTree = buildTreeRecursively(cat._id, true);
+      // Strict: a curated skill only shows in the nav if it has real activity
+      // (a gig, an open job, or a freelancer's listed skill) — a taxonomy
+      // entry with zero real-world usage would otherwise be clickable in the
+      // menu but land on an all-zeros "no data yet" skill page.
+      let childrenTree = buildTreeRecursively(cat._id);
 
-      // Fallback: if the taxonomy graph has no skill-children for this popular
-      // category, build the panel from the skills actually sold on its gigs.
+      // Fallback: if that leaves this popular category with no skill-children
+      // (either the graph has none, or none of them are active), build the
+      // panel from the skills actually sold on its gigs instead — those are
+      // real by construction (extracted straight from active Gig documents),
+      // so they can never lead to a zero-activity page either.
       if (childrenTree.length === 0) {
         const bucket = gigSkillsByCategory.get(normKey(cat.name));
         if (bucket && bucket.size) {
@@ -886,6 +955,8 @@ async function proposeUnrecognizedSkills(skillsArray, categoryName, sourceType, 
 module.exports = {
   // Resolution
   resolveCanonical,
+  resolvePublicSkillNode,
+  resolveMatchTerms,
   // Traversal
   getAncestors,
   getDescendants,
