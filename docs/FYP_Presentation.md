@@ -197,7 +197,7 @@
 
 **Content:**
 - **Express 4** with a layered structure: **routes → middleware → controllers → services → models**.
-- **23 route modules**, **23 controllers**, **20+ service modules**, **37 Mongoose models**.
+- **23 route modules**, **23 controllers**, **20+ service modules**, **38 Mongoose models**.
 - **Middleware chain**: authentication, RBAC, request validation, rate limiting, sanitization, error handling.
 - Cross-cutting: structured logging (Winston), Swagger API docs, scheduled cron jobs (billing, cleanup).
 
@@ -211,7 +211,7 @@
 **Presenter: Student 2**
 
 **Content:**
-- **MongoDB** with **Mongoose** — 37 collections, referenced relationships (ObjectId refs), indexed for query performance.
+- **MongoDB** with **Mongoose** — 38 collections, referenced relationships (ObjectId refs), indexed for query performance.
 - Core entities and their links:
 ```
 User ──1:1── FreelancerProfile / ClientProfile
@@ -233,12 +233,13 @@ User/Contract ──► Report ──► AdminAuditLog
 
 **Content:**
 - **User** — identity, role (superadmin/admin/freelancer/client/publicviewer), auth provider, verification flags.
-- **Contract** — the lifecycle engine: `status` state machine (active → delivered → completed / cancelled / disputed), timer, dispute sub-document.
-- **Payment** — escrow: `type` (job_escrow / wallet_deposit / hourly_invoice), `status` (deposit_pending → deposit_paid → released / refunded), platform fee + payout split.
+- **Contract** — the lifecycle engine: `status` state machine (active → delivered → completed / cancelled / disputed), timer, `milestoneMode` (fixed-price), dispute sub-document (hourly).
+- **Milestone** — (fixed-price) one funded phase: `order`, `amount`, `status` (pending_funding → funded → submitted → released), own dispute sub-document.
+- **Payment** — escrow: `type` (job_escrow / wallet_deposit / hourly_invoice), `milestoneId` link, `status` (deposit_pending → deposit_paid → released / refunded), platform fee + payout split.
 - **Gig / Job / Proposal / Review / Withdrawal / Testimonial** — marketplace records.
 - **Admin-side:** AdminAuditLog, Report, PlatformSettings, ApiLog, ErrorLog.
 
-**Speaker notes:** The **Contract** and **Payment** models are the heart of the system — both are modeled as explicit state machines with enums, which is what makes the escrow flow safe and auditable.
+**Speaker notes:** The **Contract**, **Milestone**, and **Payment** models are the heart of the system — all modeled as explicit state machines with enums, which is what makes the escrow flow safe and auditable even when a fixed-price project is split into several independently-funded phases.
 
 ---
 
@@ -372,15 +373,15 @@ User/Contract ──► Report ──► AdminAuditLog
 
 **Content — end-to-end lifecycle:**
 ```
-Register → Onboard (verify) → Post Job / Publish Gig
+Register → Onboard (verify) → Post Job (wallet must cover its budget) / Publish Gig
    → Freelancer submits Proposal → Client accepts
-   → Contract created → Client funds Escrow (deposit)
-   → Freelancer delivers → Client approves
+   → Contract created → 100% escrow locked instantly (optionally split into milestones)
+   → Freelancer delivers → Client approves (or 7-day auto-release if silent)
    → Escrow released (payout − platform fee) → Both leave Reviews
-   → (if needed) Dispute → Admin resolves
+   → (if needed) Dispute on the milestone/contract → Admin resolves
 ```
 
-**Speaker notes:** This is the core loop. Note the escrow: money is held safely from deposit until the client approves delivery, then split into the freelancer payout minus the platform fee. Disputes route to an admin who can release, refund, or split.
+**Speaker notes:** This is the core loop. Note the escrow: for fixed-price jobs, 100% of the price locks from the client's wallet the moment they hire — no separate "pay the deposit" step — and large projects can split into sequential milestones funded one at a time. If the client goes quiet after delivery, escrow auto-releases after 7 days rather than trapping the freelancer's payment. Disputes route to an admin who can release, refund, or split.
 
 *[Screenshot: contract detail page showing status + escrow]*
 
@@ -393,7 +394,7 @@ Register → Onboard (verify) → Post Job / Publish Gig
 1. Browse as a guest → open a gig/freelancer profile.
 2. Log in as a **client** → post a job (with AI auto-fill).
 3. Log in as a **freelancer** → submit a proposal (AI-drafted).
-4. Client accepts → **contract** created → **fund escrow**.
+4. Client accepts → **contract** created → **100% escrow locked automatically**.
 5. Freelancer delivers → client approves → **escrow released** → review.
 6. Try an **AI tool** (Cost Estimator / Buddy).
 
@@ -439,7 +440,7 @@ Register → Onboard (verify) → Post Job / Publish Gig
 - ✅ **6 AI features** integrated with a resilient multi-provider fallback.
 - ✅ Complete **escrow payment + wallet + withdrawal** flow.
 - ✅ **16+ page admin panel** with analytics and audit logging.
-- ✅ **~70,000 lines** of code across 280+ files; 37 data models; 23 API route groups.
+- ✅ **~70,000 lines** of code across 280+ files; 38 data models; 23 API route groups.
 - ✅ All six project objectives **achieved and demonstrated**.
 
 **Speaker notes:** Every objective from Slide 6 is met and shown live. The scale figures illustrate that this is a complete system, not a prototype.
@@ -524,7 +525,7 @@ Register → Onboard (verify) → Post Job / Publish Gig
 
 - **A1. Deployment** — Backend on Railway/Render, Frontend on Vercel (see `docs/DEPLOYMENT.md`).
 - **A2. AI provider priority config** — how `AI_PRIORITY_*` reorders the fallback chain.
-- **A3. Full ER diagram** — all 37 collections and relationships.
+- **A3. Full ER diagram** — all 38 collections and relationships.
 - **A4. Contract state machine** — the full status transition diagram.
 - **A5. Security matrix** — control vs. threat mapped.
 

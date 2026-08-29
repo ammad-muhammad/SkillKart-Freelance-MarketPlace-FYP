@@ -11,6 +11,12 @@ const contractSchema = new mongoose.Schema({
   hourlyRate: { type: Number },
   weeklyLimit: { type: Number },
   agreedDeadline: { type: Date },
+
+  // Fixed-price milestone tracking. `milestoneMode` is false (the default,
+  // single-milestone-covering-the-whole-price) unless the client explicitly
+  // split the project into multiple milestones at accept time.
+  milestoneMode: { type: Boolean, default: false },
+  currentMilestoneOrder: { type: Number, default: 1 },
   
   status: {
     type: String,

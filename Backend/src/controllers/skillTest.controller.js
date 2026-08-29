@@ -6,6 +6,20 @@ const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError, NotFoundError } = require('../utils/apiError');
 const { syncFreelancerVerification } = require('../services/verification.service');
 
+// LLMs reliably write the correct option first when generating MCQs, so
+// without reshuffling, "A" ends up correct almost every time. correctAnswer
+// is matched by its text everywhere downstream (not by index), so shuffling
+// the options array is safe.
+const shuffleOptions = (questions) => questions.map((q) => {
+  if (q.type !== 'mcq' || !Array.isArray(q.options)) return q;
+  const options = [...q.options];
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+  return { ...q, options };
+});
+
 /**
  * Generate a new skill test or resume existing one
  */
@@ -99,11 +113,11 @@ const generateTest = asyncHandler(async (req, res) => {
   const attempt = await SkillTestAttempt.create({
     userId,
     skillsTested: skillsToTest,
-    questions: rawQuestions.map(q => ({ 
-      ...q, 
-      userAnswer: '', 
+    questions: shuffleOptions(rawQuestions).map(q => ({
+      ...q,
+      userAnswer: '',
       score: 0,
-      aiEvaluation: '' 
+      aiEvaluation: ''
     })),
     status: 'pending'
   });
@@ -126,9 +140,28 @@ const generateTest = asyncHandler(async (req, res) => {
 /**
  * Submit test answers for evaluation with Level Granularity
  */
+// Violation events are client-reported (browser-integrity + camera proctoring
+// signals) — sanitize defensively rather than trusting the payload shape.
+const VIOLATION_TYPES = ['tab_switch', 'window_blur', 'fullscreen_exit', 'no_face', 'multiple_faces', 'looking_away', 'other'];
+const VIOLATION_SOURCES = ['browser', 'camera'];
+const MAX_VIOLATIONS = 50;
+
+const sanitizeViolations = (violations) => {
+  if (!Array.isArray(violations)) return [];
+  return violations.slice(0, MAX_VIOLATIONS).reduce((acc, v) => {
+    if (!v || typeof v !== 'object') return acc;
+    const type = VIOLATION_TYPES.includes(v.type) ? v.type : 'other';
+    const source = VIOLATION_SOURCES.includes(v.source) ? v.source : 'browser';
+    const reason = typeof v.reason === 'string' ? v.reason.slice(0, 300) : '';
+    const at = new Date(v.at);
+    acc.push({ type, source, reason, at: Number.isNaN(at.getTime()) ? new Date() : at });
+    return acc;
+  }, []);
+};
+
 const submitTest = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { answers: finalAnswers } = req.body; 
+  const { answers: finalAnswers, violations } = req.body;
 
   const pendingTest = await SkillTestAttempt.findOne({ userId, status: 'pending' });
   if (!pendingTest) throw new NotFoundError('No active test session found');
@@ -197,6 +230,7 @@ const submitTest = asyncHandler(async (req, res) => {
   pendingTest.passed = overallPassed;
   pendingTest.status = overallPassed ? 'completed' : 'failed';
   pendingTest.completedAt = new Date();
+  pendingTest.violations = sanitizeViolations(violations);
   await pendingTest.save();
 
   // 2. Update Freelancer Profile skills with Level & Expiration Independently

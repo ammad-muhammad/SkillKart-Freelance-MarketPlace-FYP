@@ -342,16 +342,24 @@
 }
 
 .onboarding__tag:hover {
-  background: #f8fafc;
+  background: rgba(26, 111, 168, 0.06);
   border-color: var(--onboard-accent-primary);
+  color: var(--onboard-accent-primary);
 }
 
 .onboarding__tag--active {
   background: var(--onboard-accent-primary);
   border-color: var(--onboard-accent-primary);
-  color: white;
+  color: #ffffff !important;
   font-weight: 700;
   box-shadow: 0 8px 16px rgba(26, 111, 168, 0.2);
+}
+
+.onboarding__tag--active:hover {
+  background: #042E4C;
+  border-color: #042E4C;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(4, 46, 76, 0.3);
 }
 
 /* 9️⃣ Navigation Buttons */

@@ -2,13 +2,17 @@ const Proposal = require('../models/Proposal');
 const Job = require('../models/Job');
 const Contract = require('../models/Contract');
 const ContractHistory = require('../models/ContractHistory');
+const Milestone = require('../models/Milestone');
 const FreelancerProfile = require('../models/FreelancerProfile');
+const ClientProfile = require('../models/ClientProfile');
 const { sendSuccess, sendCreated, sendPaginated, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const { getAIProvider } = require('../services/ai');
 const { checkSkillGate } = require('../utils/skillGating');
 const notifications = require('../services/notification.service');
+const { fundMilestoneFromWallet } = require('../services/milestone.service');
+const { round2 } = require('../utils/constants');
 
 /**
  * Create proposal.
@@ -181,8 +185,8 @@ const listProposals = asyncHandler(async (req, res) => {
  */
 const acceptProposal = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { message } = req.body;
-  
+  const { message, milestones } = req.body;
+
   const proposal = await Proposal.findById(id);
   if (!proposal) {
     throw new NotFoundError('Proposal not found');
@@ -201,14 +205,44 @@ const acceptProposal = asyncHandler(async (req, res) => {
     throw new ForbiddenError('An active contract already exists for this job.');
   }
 
+  const isHourly = job.budget?.type === 'hourly';
+
+  // Fixed-price hires require 100% escrow lock — validate the milestone
+  // breakdown and confirm the client can actually afford milestone 1 BEFORE
+  // touching Proposal/Contract/Job at all. This app has no Mongo transactions,
+  // so correctness comes from strict ordering: verify first, write after.
+  let milestoneDefs = null;
+  if (!isHourly) {
+    const agreedPrice = round2(Number(proposal.fixedPrice) || 0);
+    if (Array.isArray(milestones) && milestones.length > 0) {
+      const sum = round2(milestones.reduce((s, m) => s + (Number(m.amount) || 0), 0));
+      if (sum !== agreedPrice) {
+        throw new BadRequestError(`Milestone amounts must sum to the agreed price (Rs. ${agreedPrice}), got Rs. ${sum}`);
+      }
+      milestoneDefs = milestones.map((m, i) => ({
+        order: i + 1,
+        title: (m.title || `Milestone ${i + 1}`).trim(),
+        amount: round2(Number(m.amount) || 0)
+      }));
+    } else {
+      milestoneDefs = [{ order: 1, title: 'Full Project', amount: agreedPrice }];
+    }
+
+    const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
+    const balance = clientProfile?.walletBalance || 0;
+    if (balance < milestoneDefs[0].amount) {
+      throw new BadRequestError(
+        `Insufficient wallet balance to fund escrow for this hire. Need Rs. ${milestoneDefs[0].amount}, have Rs. ${round2(balance)}. Please top up your wallet first.`
+      );
+    }
+  }
+
   proposal.status = 'accepted';
   proposal.clientResponse = message;
   proposal.respondedAt = new Date();
   await proposal.save();
-  
+
   // Create Contract
-  const isHourly = job.budget?.type === 'hourly';
-  
   const contract = new Contract({
     jobId: job._id,
     proposalId: proposal._id,
@@ -216,16 +250,17 @@ const acceptProposal = asyncHandler(async (req, res) => {
     freelancerId: proposal.freelancerId,
     type: isHourly ? 'hourly' : 'fixed',
     status: 'active',
-    paymentStatus: 'pending',
-    
+    paymentStatus: isHourly ? 'pending' : 'funded',
+
     // Copy the agreed upon terms from the proposal
     fixedPrice: proposal.fixedPrice,
     hourlyRate: proposal.hourlyRate,
-    weeklyHourLimit: proposal.estimatedWeeklyHours
+    weeklyLimit: proposal.estimatedWeeklyHours,
+    milestoneMode: !!(milestoneDefs && milestoneDefs.length > 1)
   });
-  
+
   await contract.save();
-  
+
   // Create ContractHistory
   await ContractHistory.create({
     contractId: contract._id,
@@ -233,6 +268,15 @@ const acceptProposal = asyncHandler(async (req, res) => {
     newValue: { status: 'active' },
     performedBy: req.user._id
   });
+
+  // Create the milestone(s) — fixed-price only. Hourly contracts keep using
+  // weekly time-tracking invoices, not escrow milestones.
+  let createdMilestones = [];
+  if (!isHourly) {
+    createdMilestones = await Milestone.insertMany(
+      milestoneDefs.map((m) => ({ ...m, contractId: contract._id, jobId: job._id }))
+    );
+  }
 
   // Update job: move to in-progress, assign freelancer, set contractId
   job.status = 'in-progress';
@@ -246,12 +290,24 @@ const acceptProposal = asyncHandler(async (req, res) => {
     { $set: { status: 'rejected', clientResponse: 'Position filled', respondedAt: new Date() } }
   );
 
+  // Lock 100% of milestone 1 in escrow now that the contract/milestone
+  // records exist. Balance was already confirmed sufficient above.
+  if (!isHourly) {
+    await fundMilestoneFromWallet({
+      milestone: createdMilestones[0],
+      job,
+      contract,
+      clientId: req.user._id,
+      performedBy: req.user._id
+    });
+  }
+
   // Notify the hired freelancer.
   notifications.onProposalAccepted(proposal.freelancerId, { job });
 
   sendSuccess(res, {
     message: 'Proposal accepted successfully',
-    data: { proposal, contract }
+    data: { proposal, contract, milestones: createdMilestones }
   });
 });
 

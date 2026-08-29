@@ -55,7 +55,7 @@ Freelancer Submits Proposal
 ↓ *Evaluation*
 Client Reviews & Accepts Proposal
 ↓ *Commitment*
-Client Funds Escrow (Stripe Checkout)
+100% Escrow Locked Instantly (from Client's wallet — optionally split into sequential Milestones)
 ↓ *Execution*
 Freelancer works & communicates via Messaging
 ↓ *Submission*
@@ -86,7 +86,7 @@ Freelancer Requests Withdrawal
 6. **Browsing Jobs:** Uses filters (category, budget, experience level) to query `status: open` jobs. Can save jobs to their profile via the `/saved-jobs` endpoint.
 7. **Applying:** Submits a cover letter and rate. Backend blocks duplicate applications to the same job. Proposal created as `pending`.
 8. **Hiring Notification:** Client accepts. Proposal changes to `accepted`.
-9. **Working:** Freelancer receives `Escrow Funded` notification. It is now safe to begin work.
+9. **Working:** Freelancer receives an `Escrow Funded` notification once the current milestone (or the whole price, if not split) is 100% locked. The backend actually enforces this — a delivery cannot be submitted while the current milestone is unfunded, so "safe to work" is a real guarantee, not just copy.
 10. **Messaging:** Chat channel opens via the active contract.
 11. **Delivery:** Freelancer clicks "Deliver Work". Job state shifts to `delivered`.
 12. **Revisions:** Client may reject the delivery. State shifts back to `in-progress`. Freelancer must re-deliver.
@@ -105,13 +105,14 @@ Freelancer Requests Withdrawal
 5. **Editing Jobs:** Can edit jobs only if they remain `open`.
 6. **Reviewing Proposals:** Views applications. Strict IDOR protection ensures clients only see their own job proposals.
 7. **Hiring:** Accepts proposal. Job `hiredFreelancer` is set, state shifts to `in-progress`. All competing proposals are automatically marked `rejected`.
-8. **Escrow Funding:** Redirected to Stripe Checkout. Webhook updates `Payment.status = deposit_paid`.
+8. **Escrow Funding:** For fixed-price jobs, **100% of the agreed price is debited from the client's wallet automatically** the instant the proposal is accepted — no separate checkout step. The client may optionally split the price into sequential **Milestones** at accept-time; only the first is funded upfront, and later milestones are funded on demand once the previous one releases. (Hourly contracts and Gig orders keep the original Stripe-Checkout deposit flow.)
 9. **Messaging:** Chats with hired freelancer.
-10. **Delivery Review:** Job shifts to `delivered`.
-11. **Approving Work:** Approves delivery, releasing Escrow. Job state shifts to `completed`.
-12. **Reviews:** Rates the freelancer, influencing their aggregate profile score.
+10. **Delivery Review:** Job shifts to `delivered`. If the client doesn't act within a configurable window (default **7 days**), the milestone **auto-releases** to the freelancer.
+11. **Approving Work:** Approves delivery, releasing that milestone's Escrow. If it was the last (or only) milestone, the Job state shifts to `completed`; otherwise the contract advances to the next milestone, which the client funds when ready.
+12. **Disputing:** If something's wrong with the delivered work, the client can raise a **dispute** scoped to that specific milestone — it locks only that milestone (not the whole multi-phase project) pending admin review.
+13. **Reviews:** Rates the freelancer, influencing their aggregate profile score.
 
-*(Note: Clients cannot arbitrarily cancel jobs that have already been `delivered` to prevent work-theft).*
+*(Note: Clients cannot arbitrarily cancel jobs that have already been `delivered` to prevent work-theft. Also note: posting a new job at all requires the client's wallet balance to already cover its minimum budget — a "proof of funds" gate enforced before the job is even listed.)*
 
 ---
 
@@ -130,7 +131,7 @@ Orders Package
 Job Conversion
 ↓ *Backend instantly creates a `Job` (source = 'gig') locked to the Tier pricing. Skips the Proposal phase entirely.*
 Escrow Funding
-↓ *Client pays deposit via Stripe.*
+↓ *Client pays deposit via Stripe — Gig orders still use the original deposit/final Stripe-Checkout flow, not the newer wallet-based Milestone escrow used by custom Jobs.*
 Work & Delivery Lifecycle
 ↓ *Follows identical lifecycle to standard custom jobs.*
 
@@ -159,11 +160,22 @@ Work & Delivery Lifecycle
 
 ## 9. Wallet & Payment Flow
 
-- **Stripe Checkout:** Hosts the payment session. Injects custom metadata (`userId`, `jobId`).
-- **Escrow Integrity:** Managed entirely by async Webhooks (`stripe.webhook.js`).
-- **Idempotency:** Replay attacks are blocked via the `processedSessions` array. 
+- **Stripe Checkout:** Hosts the payment session for topping up a wallet, and for the legacy deposit/final flow still used by Gig orders and hourly contracts. Injects custom metadata (`userId`, `jobId`).
+- **Escrow Integrity (legacy/gig/hourly path):** Managed by async Webhooks (`stripe.webhook.js`).
+- **Idempotency:** Replay attacks are blocked via the `processedSessions` array.
 - **Refunds:** If an `in-progress` contract cancels, the Escrow is deposited into the Client's `walletBalance`.
 - **Withdrawals:** Freelancer requests payout. The internal `walletBalance` is immediately deducted, queueing a `Withdrawal` database record for manual admin processing.
+
+### 9a. Fixed-Price Milestone Escrow (custom Jobs)
+
+Custom fixed-price jobs use a newer, wallet-native escrow model — no Stripe Checkout redirect at all for funding a milestone:
+
+- **Post-Project Gate:** A client cannot even *post* a job unless their wallet balance already covers its minimum budget. Enforced in `job.controller.js` on both job creation and on publishing a draft.
+- **100% Lock at Hire:** Accepting a proposal debits the client's wallet for the full agreed price (or, if split, the first milestone's amount) and creates the `Contract` + `Milestone`(s) + `Payment` record(s) atomically — checked *before* any writes, so an insufficient balance leaves nothing half-created.
+- **Sequential Milestones:** A client may split the price into up to a few milestones at accept-time. Only milestone 1 auto-funds; milestone 2+ requires the client to explicitly click "Fund Milestone N" once ready (`POST /payments/milestones/:id/fund`) — capital isn't parked for work that hasn't started.
+- **Submit Gate:** The freelancer can only submit a delivery once the current milestone's status is `funded` (or `in_revision`) — enforced server-side, not just in the UI.
+- **7-Day Auto-Release:** An hourly cron job (`cron.service.js`) scans milestones stuck in `submitted` past their `reviewDeadline` (default 7 days, configurable via admin `SystemSettings`) and releases them automatically, notifying both parties. A milestone under an active dispute is excluded.
+- **Milestone Disputes:** Either party can raise a dispute on the *current* milestone (must be `submitted`/`in_revision`); this locks that milestone and flips the contract to `under_review`, without touching any other milestone. Admins resolve via the same actions as hourly disputes (release / refund / split / resume / reject), scoped to that one milestone's own `Payment` record.
 
 ---
 
@@ -196,6 +208,24 @@ stateDiagram-v2
     }
 ```
 
+```mermaid
+stateDiagram-v2
+    direction LR
+    %% Milestone States (fixed-price jobs)
+    state "Milestone Lifecycle" as Milestone {
+        [*] --> pending_funding
+        pending_funding --> funded : Client Funds (wallet debit)
+        funded --> submitted : Freelancer Delivers
+        submitted --> in_revision : Client Requests Changes
+        in_revision --> submitted : Freelancer Re-delivers
+        submitted --> disputed : Either Party Disputes
+        submitted --> released : Client Approves OR 7-day Auto-Release
+        disputed --> released : Admin Resolves (release/split)
+        disputed --> refunded : Admin Resolves (refund)
+        disputed --> submitted : Admin Resolves (resume/reject)
+    }
+```
+
 ---
 
 ## 11. Feature Matrix
@@ -215,7 +245,12 @@ This matrix is the definitive source of truth for the platform's current capabil
 - **Gig Ordering (Direct Purchase)**
 - **Saved Jobs** (Freelancers can bookmark jobs)
 - **Secure File Uploads** (Cloudinary Integration)
-- **Stripe Checkout Escrow Funding**
+- **Stripe Checkout Escrow Funding** (wallet top-ups, and the legacy deposit/final flow for Gig orders & hourly contracts)
+- **100% Escrow Lock at Hire** (fixed-price custom Jobs — wallet debit, no checkout redirect)
+- **Multi-Milestone Contracts:** Fixed-price jobs can be split into sequential milestones, each funded only when the client is ready to start that phase.
+- **7-Day Auto-Release:** Milestones the client hasn't reviewed in time (default 7 days, admin-configurable) release automatically to the freelancer.
+- **Post-Project Wallet Gate:** A job can't be posted (or a draft published) unless the client's wallet already covers its minimum budget.
+- **Fixed-Price Milestone Disputes:** Either party can dispute the current milestone specifically; admins resolve via release / refund / split / resume / reject, scoped to that milestone only.
 - **Idempotency Payment Protection**
 - **Delivery & Revision Cycles**
 - **Payment Release & Internal Wallet Ledgers**
@@ -227,16 +262,15 @@ This matrix is the definitive source of truth for the platform's current capabil
 ### Partially Implemented
 - **Messaging:** Functional, but relies on RESTful interval polling rather than true WebSockets.
 - **Refunds:** If a job cancels, funds go to the client's internal `walletBalance` rather than automatically refunding to their credit card via Stripe API.
+- **Dispute Mediation:** Fully implemented for hourly contracts and fixed-price milestones (raise → auto-freeze → admin resolves with release/refund/split/resume/reject) — the gap is only that Gig orders don't yet have their own dispute entry point.
 
 ### Planned (Future Enhancements)
 - **Automated Payouts:** Using Stripe Connect to auto-route freelancer withdrawals to their bank without Admin intervention.
-- **Admin Dashboard UI:** For processing manual withdrawals, resolving disputes, and moderating users.
 - **Real-Time WebSockets:** Upgrading chat to Socket.io.
-- **Multi-Milestone Contracts:** Breaking single jobs into phased payments.
+- **Gig Order Disputes:** Extending milestone-style disputes to Gig orders (currently only custom Jobs and hourly contracts support disputing).
 
 ### Not Implemented (Missing Features)
 - **Account Deletion:** Users cannot delete their accounts programmatically.
 - **Identity Verification (KYC):** No passport/ID verification integration (e.g., Onfido).
-- **Automated Dispute Mediation Center:** Clients/freelancers cannot automatically freeze contracts to summon a mediator.
 - **Wishlists:** Clients cannot "save" freelancers or gigs for later.
 - **Email Change Verification:** Changing email addresses is restricted.

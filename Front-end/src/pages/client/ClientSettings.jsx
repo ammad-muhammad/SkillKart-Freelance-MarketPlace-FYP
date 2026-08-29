@@ -10,7 +10,7 @@ const ClientSettings = () => {
   const { user, logout } = useAuth();
   const { profile, updateProfile, updateMultipleSections, showToast } = useClient();
   const isEmailUser = user?.authProvider === 'email';
-  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
+  const isSupabaseUser = !!user?.supabaseId || (user?.authProvider && user?.authProvider !== 'email');
   const [account, setAccount] = useState({
     newUsername: profile?.personalInfo?.username || "",
     newEmail: profile?.personalInfo?.email || "",

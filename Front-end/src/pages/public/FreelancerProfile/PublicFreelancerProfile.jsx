@@ -313,7 +313,7 @@ export default function PublicFreelancerProfile() {
                               <p style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', marginBottom: '1rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{gig.shortDescription}</p>
                               <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)' }}>
                                 <span style={{ fontSize: '0.9rem', color: 'var(--color-text-light)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Star size={16} fill="#f59e0b" color="#f59e0b" /> <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-text-dark)' }}>{gig.stats?.rating > 0 ? gig.stats.rating.toFixed(1) : 'New'}</span> {gig.stats?.reviewsCount > 0 && `(${gig.stats.reviewsCount})`}</span>
-                                <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-primary)', fontSize: '1.1rem' }}>From ${gig.pricing?.basic?.price || 0}</span>
+                                <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-primary)', fontSize: '1.1rem' }}>From Rs. {gig.pricing?.basic?.price || 0}</span>
                               </div>
                             </div>
                           </div>

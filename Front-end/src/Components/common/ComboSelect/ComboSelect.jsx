@@ -31,6 +31,7 @@ export default function ComboSelect({
   disabled = false,
   className = '',
   allowFreeText = false,
+  searchable = false,
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -46,15 +47,15 @@ export default function ComboSelect({
 
   const selected = items.find((o) => o.value === value) || (allowFreeText && value ? { value, label: value } : undefined);
 
-  // When closed, the input shows the selected label; when open, it shows the
-  // user's live query (so they can type to filter).
-  const inputText = open ? query : selected?.label || '';
+  // When closed or not searchable, the input shows the selected label.
+  const inputText = (open && searchable) ? query : selected?.label || '';
 
   const filtered = useMemo(() => {
+    if (!searchable) return items;
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter((o) => o.label.toLowerCase().includes(q));
-  }, [items, query]);
+  }, [items, query, searchable]);
 
   /* close on outside click */
   useEffect(() => {
@@ -72,9 +73,9 @@ export default function ComboSelect({
   // Keep the highlighted row valid as the filtered list changes.
   useEffect(() => { setActive(0); }, [query, open]);
 
-  const openMenu = () => {
+  const toggleMenu = () => {
     if (disabled) return;
-    setOpen(true);
+    setOpen((prev) => !prev);
     setQuery('');
   };
 
@@ -90,14 +91,13 @@ export default function ComboSelect({
       pick(filtered[Math.min(active, filtered.length - 1)].value);
       return;
     }
-    // No match: optionally accept exactly what was typed.
     const typed = query.trim();
     if (allowFreeText && typed) pick(typed);
   };
 
   const onKeyDown = (e) => {
     if (disabled) return;
-    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) { openMenu(); return; }
+    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) { setOpen(true); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(filtered.length - 1, a + 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
     else if (e.key === 'Enter') { e.preventDefault(); commitTyped(); }
@@ -109,23 +109,28 @@ export default function ComboSelect({
       ref={rootRef}
       className={`cmbo${open ? ' cmbo--open' : ''}${disabled ? ' cmbo--disabled' : ''}${className ? ` ${className}` : ''}`}
     >
-      <div className="cmbo__control" onClick={openMenu}>
-        {open && <Search size={15} className="cmbo__search-icon" />}
+      <div className="cmbo__control" onClick={toggleMenu} style={{ cursor: 'pointer' }}>
+        {searchable && open && <Search size={15} className="cmbo__search-icon" />}
         <input
           id={id}
           ref={inputRef}
           type="text"
+          readOnly={!searchable}
           className={`cmbo__input${!selected && !open ? ' cmbo__input--placeholder' : ''}`}
           value={inputText}
           placeholder={selected ? selected.label : placeholder}
-          onChange={(e) => { setQuery(e.target.value); if (!open) setOpen(true); }}
-          onFocus={openMenu}
+          onChange={(e) => {
+            if (!searchable) return;
+            setQuery(e.target.value);
+            if (!open) setOpen(true);
+          }}
           onKeyDown={onKeyDown}
           disabled={disabled}
           autoComplete="off"
           role="combobox"
           aria-expanded={open}
           aria-controls={id ? `${id}-listbox` : undefined}
+          style={{ cursor: searchable ? 'text' : 'pointer' }}
         />
         <ChevronDown size={16} className="cmbo__chevron" />
       </div>

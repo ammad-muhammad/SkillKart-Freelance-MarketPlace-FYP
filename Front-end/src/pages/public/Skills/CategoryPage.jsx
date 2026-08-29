@@ -432,7 +432,7 @@ export default function CategoryPage() {
                       ))}
                       <span className="mp-freelancer-card__reviews" style={{ marginLeft: '4px' }}>({f.reviews})</span>
                     </div>
-                    <div className="mp-freelancer-card__price">From ${f.price}/hr</div>
+                    <div className="mp-freelancer-card__price">From Rs. {f.price}/hr</div>
                   </Link>
                 ))}
               </div>

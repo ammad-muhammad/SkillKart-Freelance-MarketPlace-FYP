@@ -284,7 +284,7 @@ const DashboardOverview = () => {
                   <div className="fl-recent-gig__info">
                     <p className="fl-recent-gig__title">{gig.title}</p>
                     <p className="fl-recent-gig__meta">
-                      {gig.category} <span className="fl-recent-gig__dot">•</span> <span className="fl-recent-gig__price">From ${gig.pricing.basic.price}</span>
+                      {gig.category} <span className="fl-recent-gig__dot">•</span> <span className="fl-recent-gig__price">From Rs. {gig.pricing.basic.price}</span>
                     </p>
                   </div>
                 </div>

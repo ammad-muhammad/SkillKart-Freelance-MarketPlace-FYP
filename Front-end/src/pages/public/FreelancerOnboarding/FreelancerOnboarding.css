@@ -305,25 +305,34 @@
 
 .fob-input-prefix {
   position: absolute;
-  left: 16px;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   font-weight: 700;
   color: var(--fob-accent);
-  font-size: 16px;
+  font-size: 15px;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 
 .fob-input-suffix {
   position: absolute;
   right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
   font-weight: 600;
   color: var(--fob-text-muted);
   font-size: 13px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .fob-input--prefixed {
-  padding-left: 30px;
-  padding-right: 40px;
+  padding-left: 48px !important;
+  padding-right: 42px !important;
 }
 
 /* ─── Hint & Error ───────────────────────────── */

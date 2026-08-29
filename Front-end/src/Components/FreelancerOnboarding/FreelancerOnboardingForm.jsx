@@ -7,6 +7,7 @@ import {
 import { toast } from "react-toastify";
 import { useAuth } from "../../hooks/useAuth";
 import { freelancersAPI } from "../../api/freelancers";
+import ImageCropModal from "../common/ImageCropModal/ImageCropModal";
 
 import ProgressBar from "./ProgressBar";
 import StepBasicInfo from "./StepBasicInfo";
@@ -79,6 +80,7 @@ const FreelancerOnboardingForm = () => {
   const [direction, setDirection] = useState(1);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [draftData, setDraftData] = useState(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null); // raw file awaiting crop confirmation
   const { user, refreshAuth } = useAuth();
 
   const DRAFT_KEY = "freelancer_onboarding_draft";
@@ -145,48 +147,53 @@ const FreelancerOnboardingForm = () => {
     setShowDraftPrompt(false);
   };
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error("Please upload an image file");
-        return;
-      }
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    setPendingAvatarFile(file);
+  };
 
-      // 1. Show local preview immediately
-      const localUrl = URL.createObjectURL(file);
+  const handleAvatarCropConfirm = async (finalFile) => {
+    setPendingAvatarFile(null);
+
+    // 1. Show local preview immediately
+    const localUrl = URL.createObjectURL(finalFile);
+    setFormData(prev => ({
+      ...prev,
+      profilePic: finalFile,
+      profilePicUrl: localUrl
+    }));
+
+    // 2. Upload immediately to get permanent URL
+    try {
+      const avatarData = new FormData();
+      avatarData.append('avatar', finalFile);
+
+      toast.info("Uploading profile picture...");
+      const avatarRes = await freelancersAPI.uploadAvatar(avatarData);
+      const permanentUrl = avatarRes.data.data.url;
+
+      // 3. Update with permanent URL
       setFormData(prev => ({
         ...prev,
-        profilePic: file,
-        profilePicUrl: localUrl
+        profilePic: null, // Clear file object after successful upload
+        profilePicUrl: permanentUrl
       }));
-
-      // 2. Upload immediately to get permanent URL
-      try {
-        const avatarData = new FormData();
-        avatarData.append('avatar', file);
-        
-        toast.info("Uploading profile picture...");
-        const avatarRes = await freelancersAPI.uploadAvatar(avatarData);
-        const permanentUrl = avatarRes.data.data.url;
-
-        // 3. Update with permanent URL
-        setFormData(prev => ({
-          ...prev,
-          profilePic: null, // Clear file object after successful upload
-          profilePicUrl: permanentUrl
-        }));
-        toast.success("Profile picture uploaded!");
-      } catch (error) {
-        console.error("Avatar upload error:", error);
-        toast.error("Failed to upload profile picture. Please try again.");
-        // Revert to null if upload failed
-        setFormData(prev => ({
-          ...prev,
-          profilePic: null,
-          profilePicUrl: ""
-        }));
-      }
+      toast.success("Profile picture uploaded!");
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error("Failed to upload profile picture. Please try again.");
+      // Revert to null if upload failed
+      setFormData(prev => ({
+        ...prev,
+        profilePic: null,
+        profilePicUrl: ""
+      }));
     }
   };
 
@@ -438,7 +445,7 @@ const FreelancerOnboardingForm = () => {
                 </div>
                 <div className="fob-success-stat">
                   <span className="fob-success-stat-num">
-                    ${formData.hourlyRate}
+                    Rs. {formData.hourlyRate}
                   </span>
                   <span>Hourly Rate</span>
                 </div>
@@ -675,6 +682,15 @@ const FreelancerOnboardingForm = () => {
           </form>
         </div>
       </div>
+
+      <ImageCropModal
+        file={pendingAvatarFile}
+        aspect={1}
+        cropShape="round"
+        title="Adjust Profile Photo"
+        onCancel={() => setPendingAvatarFile(null)}
+        onConfirm={handleAvatarCropConfirm}
+      />
     </section>
   );
 };

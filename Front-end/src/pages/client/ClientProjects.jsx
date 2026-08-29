@@ -1,5 +1,5 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle } from 'lucide-react';
+import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
@@ -8,7 +8,7 @@ import { jobsAPI } from '../../api/jobs';
 import { paymentsAPI } from '../../api/payments';
 import { contractsAPI } from '../../api/contracts';
 import { deliveriesAPI } from '../../api/deliveries';
-import { JOB_CATEGORIES } from '../../constants/jobCategories';
+import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import Modal from '../freelancer/components/Modal';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
@@ -93,35 +93,23 @@ const ClientProjects = () => {
   const handleAccept = async () => {
     if (!reviewing) return;
     setActioning(true);
-    // Try to complete; backend returns paymentRequired when the final 50% is
-    // still owed → send the client to the final checkout.
     try {
       const { data } = await deliveriesAPI.reviewDelivery(reviewing.deliveryId, { action: 'accept' });
       const payload = data?.data || {};
-      if (payload.paymentRequired) {
-        const { data: pay } = await paymentsAPI.startFinal(reviewing.id);
-        if (pay?.data?.walletPaid) {
-          showToast('Remaining 50% paid directly from your wallet balance!');
-          setShowReviewModal({ 
-            jobId: reviewing.id, 
-            targetName: reviewing.freelancerName || 'Freelancer' 
-          });
-          setReviewing(null);
-          await fetchProfile();
-          return;
-        }
-        const url = pay?.data?.checkoutUrl;
-        if (url) { window.location.assign(url); return; }
-        showToast('Could not start the final payment. Please try again.', 'error');
-      } else {
-        showToast('Delivery accepted. Project completed!');
-        setShowReviewModal({ 
-          jobId: reviewing.id, 
-          targetName: reviewing.freelancerName || 'Freelancer' 
+      // Fixed-price milestones report `isLastMilestone: false` when there's
+      // more work left — the project isn't done yet, so skip the review modal.
+      const projectDone = payload.isLastMilestone !== false;
+      if (projectDone) {
+        showToast('Delivery accepted. Project completed and payment released!');
+        setShowReviewModal({
+          jobId: reviewing.id,
+          targetName: reviewing.freelancerName || 'Freelancer'
         });
-        setReviewing(null);
-        await fetchProfile();
+      } else {
+        showToast(`Milestone ${payload.milestone?.order || ''} accepted — escrow released to the freelancer! Fund the next milestone when you're ready to continue.`);
       }
+      setReviewing(null);
+      await fetchProfile();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to accept delivery', 'error');
     } finally {
@@ -129,6 +117,8 @@ const ClientProjects = () => {
     }
   };
 
+  // Legacy 50/50 deposit — hourly contracts only (fixed-price now locks 100%
+  // automatically at hire time via acceptProposal, see fundNextMilestone below).
   const fundDeposit = async (projId) => {
     try {
       const { data } = await paymentsAPI.startDeposit(projId);
@@ -142,6 +132,18 @@ const ClientProjects = () => {
       showToast('Could not start the deposit checkout.', 'error');
     } catch (err) {
       showToast(err.response?.data?.message || 'Deposit could not be started (it may already be paid).', 'info');
+    }
+  };
+
+  // Fund a fixed-price milestone (100% lock, wallet-only) once the client is
+  // ready to start the next phase. Milestone 1 funds automatically at hire.
+  const fundNextMilestone = async (milestoneId) => {
+    try {
+      await paymentsAPI.fundMilestone(milestoneId);
+      showToast('Milestone funded from your wallet balance! The freelancer can start this phase now.', 'success');
+      await fetchProfile();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not fund this milestone.', 'error');
     }
   };
 
@@ -386,7 +388,7 @@ const ClientProjects = () => {
               )}
 
               {/* Pending Banners */}
-              {proj.contractType === 'hourly' && proj.dispute && proj.dispute.status === 'pending' && (
+              {proj.dispute && proj.dispute.status === 'pending' && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <AlertTriangle size={14} style={{ marginRight: '6px' }} /> Contract under Dispute
@@ -454,6 +456,32 @@ const ClientProjects = () => {
                 </div>
               )}
 
+              {/* Fixed-price Milestone Progress */}
+              {proj.contractType === 'fixed' && Array.isArray(proj.milestones) && proj.milestones.length > 0 && proj.status !== 'draft' && proj.status !== 'open' && (
+                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--color-text-mid)' }}>
+                    <Layers size={14} /> Escrow Milestones ({proj.milestones.filter(m => m.status === 'released').length}/{proj.milestones.length} released)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    {proj.milestones.map((m) => {
+                      const bg = m.status === 'released' ? '#dcfce7'
+                        : m.status === 'disputed' ? '#fee2e2'
+                        : m._id === proj.currentMilestone?._id ? '#dbeafe'
+                        : '#f1f5f9';
+                      const fg = m.status === 'released' ? '#166534'
+                        : m.status === 'disputed' ? '#b91c1c'
+                        : m._id === proj.currentMilestone?._id ? '#1d4ed8'
+                        : '#475569';
+                      return (
+                        <span key={m._id} className="cl-tag" style={{ background: bg, color: fg }}>
+                          {m.order}. {m.title} — Rs. {m.amount} ({m.status.replace('_', ' ')})
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="cl-proj-card__footer">
                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
@@ -483,7 +511,7 @@ const ClientProjects = () => {
                         <Send size={14} style={{ marginRight: '6px' }} /> Publish Draft
                       </button>
                     )}
-                    {proj.status === 'in-progress' && proj.source !== 'gig' && (
+                    {proj.status === 'in-progress' && proj.source !== 'gig' && proj.contractType === 'hourly' && (
                       proj.payment && (proj.payment.status === 'deposit_paid' || proj.payment.status === 'released') ? (
                         <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
                           <CheckCircle size={14} style={{ marginRight: '6px', color: '#22c55e' }} /> Deposit Funded
@@ -491,6 +519,21 @@ const ClientProjects = () => {
                       ) : (
                         <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
                           <CreditCard size={14} style={{ marginRight: '6px' }} /> Fund Deposit
+                        </button>
+                      )
+                    )}
+                    {proj.status === 'in-progress' && proj.source !== 'gig' && proj.contractType === 'fixed' && proj.currentMilestone && (
+                      proj.currentMilestone.status === 'pending_funding' ? (
+                        <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundNextMilestone(proj.currentMilestone._id)}>
+                          <CreditCard size={14} style={{ marginRight: '6px' }} /> Fund Milestone {proj.currentMilestone.order} (Rs. {proj.currentMilestone.amount})
+                        </button>
+                      ) : proj.currentMilestone.status === 'disputed' ? (
+                        <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled style={{ color: '#ef4444', borderColor: '#ef4444' }}>
+                          <AlertTriangle size={14} style={{ marginRight: '6px' }} /> Milestone {proj.currentMilestone.order} Under Dispute
+                        </button>
+                      ) : (
+                        <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
+                          <CheckCircle size={14} style={{ marginRight: '6px', color: '#22c55e' }} /> Milestone {proj.currentMilestone.order} Escrow Funded
                         </button>
                       )
                     )}
@@ -515,22 +558,25 @@ const ClientProjects = () => {
                       </button>
                     )}
                     {proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status) && proj.endRequest?.status !== 'pending' && proj.dispute?.status !== 'pending' && (
-                      <>
-                        <button 
-                          className="cl-btn cl-btn--sm" 
-                          style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }}
-                          onClick={() => setEndRequestModal({ contractId: proj.contractId })}
-                        >
-                          <XCircle size={14} style={{ marginRight: '6px' }} /> End Contract
-                        </button>
-                        <button 
-                          className="cl-btn cl-btn--sm cl-btn--ghost" 
-                          style={{ color: '#ef4444' }}
-                          onClick={() => setDisputeModal({ contractId: proj.contractId })}
-                        >
-                          <AlertTriangle size={14} style={{ marginRight: '6px' }} /> Dispute (Force End)
-                        </button>
-                      </>
+                      <button
+                        className="cl-btn cl-btn--sm"
+                        style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }}
+                        onClick={() => setEndRequestModal({ contractId: proj.contractId })}
+                      >
+                        <XCircle size={14} style={{ marginRight: '6px' }} /> End Contract
+                      </button>
+                    )}
+                    {proj.dispute?.status !== 'pending' && (
+                      (proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status) && proj.endRequest?.status !== 'pending') ||
+                      (proj.contractType === 'fixed' && ['delivered', 'in_revision'].includes(proj.contractStatus))
+                    ) && (
+                      <button
+                        className="cl-btn cl-btn--sm cl-btn--ghost"
+                        style={{ color: '#ef4444' }}
+                        onClick={() => setDisputeModal({ contractId: proj.contractId })}
+                      >
+                        <AlertTriangle size={14} style={{ marginRight: '6px' }} /> {proj.contractType === 'hourly' ? 'Dispute (Force End)' : 'Raise Dispute'}
+                      </button>
                     )}
                     {proj.status !== 'draft' && proj.source !== 'gig' && (
                       <Link to={`/client/projects/${proj.id}/proposals`} className="cl-btn cl-btn--secondary cl-btn--sm">
@@ -619,12 +665,13 @@ const ClientProjects = () => {
 
                 <div className="cl-form-group">
                   <label className="cl-label">Subcategory</label>
-                  <input
-                    className="cl-input"
-                    placeholder="e.g. Frontend Development"
-                    value={editingProject.subcategory}
-                    onChange={e => setField({ subcategory: e.target.value })}
-                    style={{ background: '#f8fafc' }}
+                  <TagInput
+                    tags={editingProject.subcategory ? [editingProject.subcategory] : []}
+                    onChange={tags => setField({ subcategory: tags[0] || '' })}
+                    options={GIG_SUBCATEGORIES[editingProject.category] || []}
+                    maxTags={1}
+                    placeholder="Type or select subcategory…"
+                    showHint={false}
                   />
                 </div>
 
@@ -667,23 +714,21 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Min Budget ($) *</label>
+                  <label className="cl-label">Min Budget (PKR) *</label>
                   <input
                     type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.min}
                     onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
-                    style={{ background: '#f8fafc' }}
                   />
                   {editErrors.budgetMin && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMin}</span>}
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Max Budget ($) *</label>
+                  <label className="cl-label">Max Budget (PKR) *</label>
                   <input
                     type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.max}
                     onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
-                    style={{ background: '#f8fafc' }}
                   />
                   {editErrors.budgetMax && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMax}</span>}
                 </div>
@@ -695,7 +740,6 @@ const ClientProjects = () => {
                     placeholder="e.g. 1-3 months"
                     value={editingProject.duration}
                     onChange={e => setField({ duration: e.target.value })}
-                    style={{ background: '#f8fafc' }}
                   />
                 </div>
 
@@ -705,7 +749,6 @@ const ClientProjects = () => {
                     type="date" className={`cl-input${editErrors.deadline ? ' cl-input--error' : ''}`}
                     value={editingProject.deadline}
                     onChange={e => { setField({ deadline: e.target.value }); clearEditError('deadline'); }}
-                    style={{ background: '#f8fafc' }}
                   />
                   {editErrors.deadline && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.deadline}</span>}
                 </div>

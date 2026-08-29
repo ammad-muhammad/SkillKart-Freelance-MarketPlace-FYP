@@ -3,7 +3,7 @@ const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiRespons
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
 const { uploadJobAttachment: uploadJobAttachmentToCloud } = require('../services/upload.service');
-const { recommendJobCategory } = require('../services/jobCategory.service');
+const { recommendJobCategory, recommendJobSubcategory } = require('../services/jobCategory.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const Payment = require('../models/Payment');
 const Proposal = require('../models/Proposal');
@@ -37,9 +37,27 @@ const syncJobStatuses = async (query = {}) => {
 const createJob = asyncHandler(async (req, res) => {
   const jobData = req.body;
   const clientId = req.user._id;
-  
+
   const allowedStatuses = ['draft', 'open'];
   const status = allowedStatuses.includes(jobData.status) ? jobData.status : 'open';
+
+  // Proof-of-funds gate: a client can only PUBLISH a project (not just save a
+  // draft) if their wallet already covers the minimum budget they're asking
+  // for — this doesn't itself lock any escrow (that happens per-milestone at
+  // hire time), it just stops someone from posting a project they can't
+  // plausibly afford to ever fund.
+  if (status === 'open') {
+    const minBudget = Number(jobData.budget?.min) || 0;
+    if (minBudget > 0) {
+      const clientProfile = await ClientProfile.findOne({ userId: clientId });
+      const balance = clientProfile?.walletBalance || 0;
+      if (balance < minBudget) {
+        throw new BadRequestError(
+          `Please top up your wallet before posting this project. Your minimum budget is Rs. ${minBudget}, but your wallet balance is Rs. ${balance}.`
+        );
+      }
+    }
+  }
 
   const job = new Job({
     ...jobData,
@@ -82,8 +100,19 @@ const updateJob = asyncHandler(async (req, res) => {
     throw new BadRequestError(`A project that is "${job.status}" can no longer be edited.`);
   }
 
-  // Allow transitioning from draft to open
+  // Allow transitioning from draft to open — same proof-of-funds gate as
+  // creating a new project directly with status:'open'.
   if (job.status === 'draft' && req.body.status === 'open') {
+    const minBudget = Number((req.body.budget?.min ?? job.budget?.min)) || 0;
+    if (minBudget > 0) {
+      const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
+      const balance = clientProfile?.walletBalance || 0;
+      if (balance < minBudget) {
+        throw new BadRequestError(
+          `Please top up your wallet before publishing this project. Your minimum budget is Rs. ${minBudget}, but your wallet balance is Rs. ${balance}.`
+        );
+      }
+    }
     job.status = 'open';
   }
 
@@ -241,16 +270,35 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
     .populate('hiredFreelancer', 'firstName lastName profilePicture _id')
-    .populate('contractId', 'status type timer hourlyRate endRequest dispute')
+    .populate('contractId', 'status type timer hourlyRate endRequest dispute milestoneMode currentMilestoneOrder')
     .skip(skip)
     .limit(limit)
     .sort({ createdAt: -1 })
     .lean();
 
-  const payments = await Payment.find({ jobId: { $in: jobs.map((j) => j._id) } })
-    .select('jobId status depositAmount finalAmount totalAmount')
-    .lean();
-  const payByJob = new Map(payments.map((p) => [String(p.jobId), p]));
+  const contractIds = jobs.map((j) => j.contractId?._id).filter(Boolean);
+
+  // Fixed-price contracts have one Payment PER MILESTONE, not one per job —
+  // fetch milestones + their own escrow Payment together (mirrors the fix in
+  // contract.controller.js's getMyContracts) so `payment` reflects the
+  // CURRENT milestone instead of an arbitrary one when there's more than one.
+  const Milestone = require('../models/Milestone');
+  const [payments, milestonesRaw] = await Promise.all([
+    Payment.find({ jobId: { $in: jobs.map((j) => j._id) } })
+      .select('jobId milestoneId status depositAmount finalAmount totalAmount')
+      .lean(),
+    Milestone.find({ contractId: { $in: contractIds } }).sort({ order: 1 }).lean()
+  ]);
+
+  const paymentByMilestone = new Map(payments.filter((p) => p.milestoneId).map((p) => [String(p.milestoneId), p]));
+  const legacyPayByJob = new Map(payments.filter((p) => !p.milestoneId).map((p) => [String(p.jobId), p]));
+
+  const milestonesByContract = new Map();
+  for (const m of milestonesRaw) {
+    const key = String(m.contractId);
+    if (!milestonesByContract.has(key)) milestonesByContract.set(key, []);
+    milestonesByContract.get(key).push({ ...m, payment: paymentByMilestone.get(String(m._id)) || null });
+  }
 
   const Review = require('../models/Review');
   const reviews = await Review.find({ reviewerId: clientId, jobId: { $in: jobs.map((j) => j._id) } }).lean();
@@ -266,16 +314,22 @@ const getMyProjects = asyncHandler(async (req, res) => {
 
   const items = jobs.map((j) => {
     const jobLogs = logsByJob.get(String(j._id)) || {};
-    return { 
-      ...j, 
-      payment: payByJob.get(String(j._id)) || null,
+    const milestones = milestonesByContract.get(String(j.contractId?._id)) || [];
+    const currentMilestone = milestones.find((m) => m.order === j.contractId?.currentMilestoneOrder) || null;
+    return {
+      ...j,
+      milestones,
+      currentMilestone,
+      payment: currentMilestone?.payment || legacyPayByJob.get(String(j._id)) || null,
       hasReviewed: reviewedJobIds.has(String(j._id)),
       contractType: j.contractId?.type || 'fixed',
       hourlyRate: j.contractId?.hourlyRate || 0,
       timerActive: j.contractId?.timer?.isActive || false,
       timerStartedAt: j.contractId?.timer?.startedAt || null,
       endRequest: j.contractId?.endRequest || null,
-      dispute: j.contractId?.dispute || null,
+      // Fixed-price disputes live on the milestone, not the contract (see
+      // contract.controller.js's raiseDispute) — hourly still uses contract.dispute.
+      dispute: (j.contractId?.type === 'fixed' ? currentMilestone?.dispute : j.contractId?.dispute) || null,
       lastTimeLog: jobLogs.lastLog || null,
       totalDuration: jobLogs.totalDuration || 0
     };
@@ -472,6 +526,16 @@ const recommendCategory = asyncHandler(async (req, res) => {
   });
 });
 
+const recommendSubcategory = asyncHandler(async (req, res) => {
+  const { title, description, skills, category } = req.body;
+  const result = await recommendJobSubcategory(title, description, skills, category);
+
+  sendSuccess(res, {
+    message: 'Subcategory recommendation generated',
+    data: result
+  });
+});
+
 const uploadAttachment = asyncHandler(async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -499,6 +563,7 @@ module.exports = {
   closeJob,
   uploadAttachment,
   recommendCategory,
+  recommendSubcategory,
   getMyProjects,
   getMyContracts,
   reviewJob

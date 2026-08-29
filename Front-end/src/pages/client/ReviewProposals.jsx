@@ -4,17 +4,18 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { jobsAPI } from '../../api/jobs';
 import { messagesAPI } from '../../api/messages';
-import { paymentsAPI } from '../../api/payments';
 import { useClient } from '../../context/ClientContext';
-import { 
-  User, CheckCircle2, XCircle, Clock, 
+import {
+  User, CheckCircle2, XCircle, Clock,
   DollarSign, MessageSquare, ChevronLeft,
-  Mail, Star, ExternalLink
+  Mail, Star, ExternalLink, Plus, X, Layers
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import Modal from '../freelancer/components/Modal';
 import './ReviewProposals.css';
+
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 export default function ReviewProposals() {
   const { jobId } = useParams();
@@ -27,6 +28,20 @@ export default function ReviewProposals() {
   const [messagingId, setMessagingId] = useState(null);
   const [welcomeModal, setWelcomeModal] = useState(null);
   const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [splitMilestones, setSplitMilestones] = useState(false);
+  const [milestones, setMilestones] = useState([{ title: '', amount: '' }]);
+
+  const acceptingProposal = proposals.find((p) => p._id === welcomeModal);
+  const isHourlyJob = job?.budget?.type === 'hourly';
+  const agreedPrice = round2(acceptingProposal?.fixedPrice || 0);
+  const milestonesTotal = round2(milestones.reduce((s, m) => s + (Number(m.amount) || 0), 0));
+  const milestonesValid = !splitMilestones || (
+    milestones.every((m) => m.title.trim() && Number(m.amount) > 0) && milestonesTotal === agreedPrice
+  );
+
+  const addMilestoneRow = () => setMilestones((prev) => [...prev, { title: '', amount: '' }]);
+  const removeMilestoneRow = (i) => setMilestones((prev) => prev.filter((_, idx) => idx !== i));
+  const updateMilestoneRow = (i, key, val) => setMilestones((prev) => prev.map((m, idx) => (idx === i ? { ...m, [key]: val } : m)));
 
   const handleMessage = async (prop) => {
     const freelancerId = prop.freelancerId?._id;
@@ -71,43 +86,43 @@ export default function ReviewProposals() {
   const handleAcceptClick = (id) => {
     setWelcomeModal(id);
     setWelcomeMessage("Hi! I'm thrilled to accept your proposal and look forward to working with you on this project. Let's get started!");
+    setSplitMilestones(false);
+    setMilestones([{ title: '', amount: '' }]);
   };
 
   const confirmAccept = async () => {
     if (!welcomeModal) return;
+    if (splitMilestones && !milestonesValid) {
+      toast.error(`Milestone amounts must add up to exactly Rs. ${agreedPrice} (currently Rs. ${milestonesTotal}), and every milestone needs a title.`);
+      return;
+    }
+
     const id = welcomeModal;
     const message = welcomeMessage.trim();
-    
+    const milestonePayload = splitMilestones
+      ? milestones.map((m) => ({ title: m.title.trim(), amount: Number(m.amount) }))
+      : undefined;
+
     setWelcomeModal(null);
     setProcessingId(id);
     setJob(prev => prev ? { ...prev, status: 'in_progress' } : prev);
-    
-    try {
-      await proposalsAPI.acceptProposal(id, message);
-      toast.success('Proposal accepted! Now fund the 50% deposit to start the work.');
-      await fetchProfile(); // Sync global state
 
-      // Escrow: take the client straight to the 50% deposit checkout. Work can't
-      // be delivered until the deposit is funded.
-      try {
-        const { data } = await paymentsAPI.startDeposit(jobId);
-        if (data?.data?.walletPaid) {
-          toast.success('50% deposit funded successfully from your wallet balance! Work can begin.');
-          await fetchProfile(); // Sync global state
-          navigate('/client/projects');
-          return;
-        }
-        const url = data?.data?.checkoutUrl;
-        if (url) {
-          window.location.assign(url);
-          return;
-        }
-      } catch (payErr) {
-        toast.info(payErr.response?.data?.message || 'You can pay the 50% deposit from My Projects.');
-      }
-      fetchData(); // Refresh local view if we didn't redirect
+    try {
+      // Fixed-price hires now lock 100% of milestone 1's escrow as part of
+      // this call itself — there's no separate "fund the deposit" step to
+      // redirect to afterward.
+      await proposalsAPI.acceptProposal(id, message, milestonePayload);
+      toast.success(
+        isHourlyJob
+          ? 'Proposal accepted! The freelancer can start logging time.'
+          : 'Proposal accepted — 100% escrow locked for milestone 1. The freelancer can start work now.'
+      );
+      await fetchProfile(); // Sync global state
+      navigate('/client/projects');
     } catch (error) {
-      toast.error('Failed to accept proposal.');
+      // Surface the REAL backend message — this is where "insufficient wallet
+      // balance, please top up first" shows up, not a generic failure toast.
+      toast.error(error.response?.data?.message || 'Failed to accept proposal.');
       setJob(prev => prev ? { ...prev, status: 'open' } : prev);
     } finally {
       setProcessingId(null);
@@ -280,12 +295,12 @@ export default function ReviewProposals() {
             </p>
             <textarea
               className="cl-textarea"
-              style={{ 
-                width: '100%', 
-                minHeight: '120px', 
-                marginBottom: '1.5rem', 
-                padding: '0.75rem', 
-                borderRadius: '8px', 
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                marginBottom: '1.5rem',
+                padding: '0.75rem',
+                borderRadius: '8px',
                 border: '1.5px solid #d1d9e6',
                 fontFamily: 'inherit',
                 fontSize: '0.9rem',
@@ -296,6 +311,54 @@ export default function ReviewProposals() {
               onChange={(e) => setWelcomeMessage(e.target.value)}
               placeholder="Hi! I'd like to accept your proposal..."
             />
+
+            {!isHourlyJob && (
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#f8fafc' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', marginBottom: splitMilestones ? '0.9rem' : 0 }}>
+                  <input type="checkbox" checked={splitMilestones} onChange={(e) => setSplitMilestones(e.target.checked)} />
+                  <Layers size={15} /> Split into milestones (Rs. {agreedPrice} total)
+                </label>
+
+                {splitMilestones && (
+                  <>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--color-text-mid)', margin: '0 0 0.75rem' }}>
+                      Only milestone 1 is funded now. The freelancer must complete and you approve each milestone before the next one is funded.
+                    </p>
+                    {milestones.map((m, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          className="cl-input"
+                          style={{ flex: 2 }}
+                          placeholder={`Milestone ${i + 1} title`}
+                          value={m.title}
+                          onChange={(e) => updateMilestoneRow(i, 'title', e.target.value)}
+                        />
+                        <input
+                          className="cl-input"
+                          type="number"
+                          style={{ flex: 1 }}
+                          placeholder="Amount"
+                          value={m.amount}
+                          onChange={(e) => updateMilestoneRow(i, 'amount', e.target.value)}
+                        />
+                        {milestones.length > 1 && (
+                          <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeMilestoneRow(i)} style={{ padding: '0.4rem' }}>
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addMilestoneRow} style={{ marginTop: '0.25rem' }}>
+                      <Plus size={14} style={{ marginRight: '4px' }} /> Add Milestone
+                    </button>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: '0.75rem', color: milestonesTotal === agreedPrice ? '#16a34a' : '#dc2626' }}>
+                      Total: Rs. {milestonesTotal} / Rs. {agreedPrice} {milestonesTotal === agreedPrice ? '✓' : ''}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
               <button 
                 type="button" 
@@ -309,7 +372,7 @@ export default function ReviewProposals() {
                 type="button" 
                 className="cl-btn cl-btn--primary" 
                 onClick={confirmAccept}
-                disabled={processingId}
+                disabled={processingId || (splitMilestones && !milestonesValid)}
                 style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
               >
                 {processingId ? 'Accepting...' : 'Confirm & Accept'}

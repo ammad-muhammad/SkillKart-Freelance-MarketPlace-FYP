@@ -133,6 +133,71 @@
   font-weight: 500;
 }
 
+.jd-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1rem;
+}
+
+.jd-attachment {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.jd-attachment:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  border-color: var(--color-primary, #042E4C);
+}
+
+.jd-attachment__thumb {
+  width: 100%;
+  height: 110px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.jd-attachment__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.jd-attachment__icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--file-color, #64748b);
+}
+
+.jd-attachment__icon span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.jd-attachment__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 0.5rem 0.6rem;
+  border-top: 1px solid #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .jd-sidebar__card {
   background: #fff;
   border-radius: 20px;

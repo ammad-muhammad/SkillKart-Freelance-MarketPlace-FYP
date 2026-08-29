@@ -15,6 +15,12 @@ const Gig = require('../models/Gig');
  * @param {number} [opts.freelancerEarning]  amount credited to the freelancer
  *                                            (net of platform fee). Falls back to
  *                                            the job budget midpoint when omitted.
+ * @param {boolean} [opts.skipEarningsCredit]  true when the caller already
+ *   credited the freelancer's wallet AND totalEarnings itself (e.g.
+ *   milestone.service.js's releaseMilestone(), called once per milestone —
+ *   including the final one, before this function runs) — this then only
+ *   bumps `completedProjects` (which releaseMilestone never touches) instead
+ *   of crediting the same payout to the freelancer a second time.
  */
 async function finalizeJobCompletion(job, opts = {}) {
   if (!job) return;
@@ -35,16 +41,12 @@ async function finalizeJobCompletion(job, opts = {}) {
 
   // ── Freelancer stats ──
   if (job.hiredFreelancer) {
-    await FreelancerProfile.updateOne(
-      { userId: job.hiredFreelancer },
-      {
-        $inc: {
-          completedProjects: 1,
-          totalEarnings: Math.round(freelancerEarning),
-          walletBalance: Number(freelancerEarning.toFixed(2)),
-        },
-      }
-    );
+    const inc = { completedProjects: 1 };
+    if (!opts.skipEarningsCredit) {
+      inc.totalEarnings = Math.round(freelancerEarning);
+      inc.walletBalance = Number(freelancerEarning.toFixed(2));
+    }
+    await FreelancerProfile.updateOne({ userId: job.hiredFreelancer }, { $inc: inc });
   }
 
   // ── Client stats ──

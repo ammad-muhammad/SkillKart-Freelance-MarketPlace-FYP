@@ -31,7 +31,7 @@ body {
 }
 body {
   margin: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
   /* Better wrapping for long unbroken strings (URLs, IDs, emails) on narrow
      screens so they don't force horizontal overflow. */
   overflow-wrap: break-word;
@@ -90,5 +90,18 @@ textarea {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* 8. Never print floating chrome ---------------------------------------------
+   The Buddy AI launcher/panel and the notification bell are rendered globally
+   in App.jsx as fixed-position widgets — outside any page's own root, so a
+   page-local print stylesheet can't reach them. Without this they show up as
+   a stray floating circle in every "Save as PDF" / Ctrl+P output site-wide. */
+@media print {
+  .buddy-fab,
+  .buddy-panel,
+  .notif-bell {
+    display: none !important;
   }
 }
