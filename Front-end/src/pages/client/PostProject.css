@@ -11,6 +11,7 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-top: 0.5rem;
+  align-items: center;
 }
 
 .cl-doc-list {

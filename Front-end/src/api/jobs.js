@@ -1,9 +1,12 @@
 import client from './client';
 
 export const jobsAPI = {
-  // Create a new job post
-  createJob: (jobData) => 
-    client.post('/jobs', jobData),
+  // Create a new job post. Callers (PostProject.jsx, ClientContext.addProject)
+  // already show their own contextual error toast (mapping field errors,
+  // wallet-balance messages, etc.) — suppress the global auto-toast so
+  // failures (e.g. insufficient wallet balance) don't double-toast.
+  createJob: (jobData) =>
+    client.post('/jobs', jobData, { suppressErrorToast: true }),
 
   // List public marketplace jobs
   listJobs: (params) => 
@@ -23,9 +26,11 @@ export const jobsAPI = {
   searchJobs: (params) =>
     client.get('/jobs/search', { params }),
 
-  // Update job
-  updateJob: (id, jobData) => 
-    client.put(`/jobs/${id}`, jobData),
+  // Update job. Caller (ClientContext.updateProject) already shows its own
+  // error toast — suppress the global auto-toast to avoid double-toasting
+  // (e.g. the wallet-balance gate on publishing a draft).
+  updateJob: (id, jobData) =>
+    client.put(`/jobs/${id}`, jobData, { suppressErrorToast: true }),
 
   // Close job
   closeJob: (id, reason) => 
