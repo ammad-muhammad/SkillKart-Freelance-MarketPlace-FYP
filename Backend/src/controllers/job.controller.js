@@ -3,7 +3,7 @@ const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiRespons
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
 const { uploadJobAttachment: uploadJobAttachmentToCloud } = require('../services/upload.service');
-const { recommendJobCategory } = require('../services/jobCategory.service');
+const { recommendJobCategory, recommendJobSubcategory } = require('../services/jobCategory.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const Payment = require('../models/Payment');
 const Proposal = require('../models/Proposal');
@@ -472,6 +472,16 @@ const recommendCategory = asyncHandler(async (req, res) => {
   });
 });
 
+const recommendSubcategory = asyncHandler(async (req, res) => {
+  const { title, description, skills, category } = req.body;
+  const result = await recommendJobSubcategory(title, description, skills, category);
+
+  sendSuccess(res, {
+    message: 'Subcategory recommendation generated',
+    data: result
+  });
+});
+
 const uploadAttachment = asyncHandler(async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -499,6 +509,7 @@ module.exports = {
   closeJob,
   uploadAttachment,
   recommendCategory,
+  recommendSubcategory,
   getMyProjects,
   getMyContracts,
   reviewJob

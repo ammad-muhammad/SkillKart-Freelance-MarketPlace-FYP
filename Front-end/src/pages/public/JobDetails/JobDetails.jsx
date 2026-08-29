@@ -6,13 +6,68 @@ import { proposalsAPI } from '../../../api/proposals';
 import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
-import { 
-  Clock, DollarSign, Tag, Briefcase, ChevronLeft, 
-  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark
+import {
+  Clock, DollarSign, Tag, Briefcase, ChevronLeft,
+  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText
 } from 'lucide-react';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { toast } from 'react-toastify';
 import './JobDetails.css';
+
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif'];
+
+// Per-extension accent color for the generic icon block (files we can't
+// generate a real visual preview for — docx, txt, zip, etc.).
+const FILE_COLORS = {
+  pdf: '#dc2626',
+  doc: '#2563eb', docx: '#2563eb',
+  txt: '#64748b',
+  xls: '#16a34a', xlsx: '#16a34a', csv: '#16a34a',
+  ppt: '#ea580c', pptx: '#ea580c',
+  zip: '#7c3aed', rar: '#7c3aed', '7z': '#7c3aed',
+};
+
+const getFileExt = (url = '') => {
+  const clean = url.split('?')[0].split('#')[0];
+  const last = clean.split('/').pop() || '';
+  const dot = last.lastIndexOf('.');
+  return dot > -1 ? last.slice(dot + 1).toLowerCase() : '';
+};
+
+// Cloudinary renders a PDF's first page as a JPG when the PDF was uploaded as
+// an `image` resource (see Backend/src/services/upload.service.js) — inserting
+// a transformation segment right after `/image/upload/` asks for that page-1
+// thumbnail instead of the raw file. Older PDFs stored as a `raw` resource
+// (pre-fix) have no `/image/upload/` segment, so this returns null for them
+// and the card falls back to the generic icon below.
+const pdfThumbUrl = (url) =>
+  url.includes('/image/upload/')
+    ? url.replace('/image/upload/', '/image/upload/w_300,h_360,c_fill,pg_1,f_jpg,q_auto/')
+    : null;
+
+function AttachmentCard({ url, index }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const ext = getFileExt(url);
+  const isImage = IMAGE_EXTS.includes(ext);
+  const pdfThumb = ext === 'pdf' ? pdfThumbUrl(url) : null;
+  const thumbSrc = isImage ? url : pdfThumb;
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="jd-attachment">
+      <div className="jd-attachment__thumb">
+        {thumbSrc && !thumbFailed ? (
+          <img src={thumbSrc} alt="" loading="lazy" onError={() => setThumbFailed(true)} />
+        ) : (
+          <div className="jd-attachment__icon" style={{ '--file-color': FILE_COLORS[ext] || '#64748b' }}>
+            <FileText size={28} />
+            <span>{ext ? ext.toUpperCase() : 'FILE'}</span>
+          </div>
+        )}
+      </div>
+      <span className="jd-attachment__label">Attachment {index + 1}</span>
+    </a>
+  );
+}
 
 export default function JobDetails() {
   const { id } = useParams();
@@ -269,9 +324,7 @@ export default function JobDetails() {
                     <h2 className="jd-section-title">Attachments</h2>
                     <div className="jd-attachments">
                       {job.attachments.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="jd-attachment">
-                          📎 Attachment {i + 1}
-                        </a>
+                        <AttachmentCard key={i} url={url} index={i} />
                       ))}
                     </div>
                   </>

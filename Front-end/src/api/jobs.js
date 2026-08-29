@@ -38,6 +38,9 @@ export const jobsAPI = {
   recommendCategory: (data) =>
     client.post('/jobs/ai/recommend-category', data),
 
+  recommendSubcategory: (data) =>
+    client.post('/jobs/ai/recommend-subcategory', data),
+
 
 
   // Leave a review for a completed job

@@ -176,6 +176,19 @@ class RouterAIProvider extends AIProvider {
     aiUnavailable();
   }
 
+  async recommendJobSubcategory(title, description, skills, category) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.recommendJobSubcategory !== 'function') continue;
+        const result = await provider.instance.recommendJobSubcategory(title, description, skills, category);
+        if (result) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for recommendJobSubcategory:`, e.message);
+      }
+    }
+    aiUnavailable();
+  }
+
   async draftProposal(job, freelancer) {
     for (const provider of this.providers) {
       try {

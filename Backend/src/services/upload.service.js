@@ -17,8 +17,18 @@ const extensionFromName = (name = '') => {
   return parts.length > 1 ? parts.pop().toLowerCase() : '';
 };
 
-const resolveResourceType = (mimetype = '') =>
-  mimetype.startsWith(IMAGE_MIME_PREFIX) ? 'image' : 'raw';
+const resolveResourceType = (mimetype = '') => {
+  if (mimetype.startsWith(IMAGE_MIME_PREFIX)) return 'image';
+  // Cloudinary's "Restricted media types" account security setting blocks
+  // public delivery of `raw` resources (401 "deny or ACL failure") unless
+  // "Allow delivery of PDF and ZIP files" is explicitly enabled in the
+  // console. PDFs can instead be uploaded as `image` resources — Cloudinary
+  // treats PDFs as a first-class image type there (page thumbnails, etc.)
+  // and that delivery path isn't subject to the raw-file restriction, so
+  // this sidesteps the block without needing an account setting change.
+  if (mimetype === 'application/pdf') return 'image';
+  return 'raw';
+};
 
 /**
  * Build a browser-friendly URL for uploaded job documents (PDF, DOC, etc.)
