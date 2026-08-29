@@ -207,6 +207,8 @@ export const ClientProvider = ({ children }) => {
         source: j.source || 'project',
         hiredFreelancer: j.hiredFreelancer,
         payment: j.payment,
+        milestones: j.milestones || [],
+        currentMilestone: j.currentMilestone || null,
         contractId: j.contractId?._id || null,
         contractStatus: j.contractId?.status || null,
         contractType: j.contractType || 'fixed',

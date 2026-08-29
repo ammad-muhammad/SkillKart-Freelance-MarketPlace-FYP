@@ -10,9 +10,8 @@ const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/api
 const { createCheckoutSession, verifyCheckoutSession, createConnectAccount, createAccountLink, checkAccountStatus, createTransfer, createPayout, getConnectedBalance, getChargeIdFromPaymentIntent } = require('../services/stripe.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
-
-const FEE_RATE = 0.005; // 0.5% platform fee
-const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const { fundMilestoneFromWallet } = require('../services/milestone.service');
+const { PLATFORM_FEE_RATE: FEE_RATE, round2 } = require('../utils/constants');
 
 async function resolveAmount(job) {
   // If a contract exists, use its price
@@ -532,6 +531,57 @@ const withdrawFunds = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: `Withdrawal of Rs. ${amount} via ${method} initiated`, data: { withdrawal, walletBalance: profile.walletBalance } });
 });
 
+/**
+ * POST /payments/milestones/:milestoneId/fund — lock 100% of a milestone's
+ * amount in escrow (client-only). Milestone 1 on a fresh hire is funded
+ * automatically as part of accepting the proposal (proposal.controller.js);
+ * this endpoint is for funding milestone 2+ once the client is ready to
+ * start that phase — milestones are funded sequentially, not all upfront.
+ */
+const fundMilestone = asyncHandler(async (req, res) => {
+  const { milestoneId } = req.params;
+  const Milestone = require('../models/Milestone');
+  const Contract = require('../models/Contract');
+
+  const milestone = await Milestone.findById(milestoneId);
+  if (!milestone) throw new NotFoundError('Milestone not found');
+
+  const contract = await Contract.findById(milestone.contractId);
+  if (!contract) throw new NotFoundError('Contract not found');
+  if (String(contract.clientId) !== String(req.user._id)) {
+    throw new ForbiddenError('Only the project owner can fund this milestone');
+  }
+
+  // Don't allow funding the next milestone while an earlier one on this
+  // contract has an unresolved dispute.
+  const disputed = await Milestone.findOne({ contractId: contract._id, 'dispute.status': 'pending' });
+  if (disputed) {
+    throw new BadRequestError('This contract has an unresolved dispute — resolve it before funding the next milestone.');
+  }
+
+  // Milestones fund in order — can't skip ahead of an unreleased earlier one.
+  if (milestone.order > 1) {
+    const previous = await Milestone.findOne({ contractId: contract._id, order: milestone.order - 1 });
+    if (previous && previous.status !== 'released') {
+      throw new BadRequestError('The previous milestone must be released before funding this one.');
+    }
+  }
+
+  const job = await Job.findById(milestone.jobId);
+  const payment = await fundMilestoneFromWallet({
+    milestone,
+    job,
+    contract,
+    clientId: req.user._id,
+    performedBy: req.user._id
+  });
+
+  sendSuccess(res, {
+    message: 'Milestone funded successfully from your wallet balance',
+    data: { milestone, payment }
+  });
+});
+
 module.exports = {
   startDeposit,
   startFinal,
@@ -543,5 +593,6 @@ module.exports = {
   withdrawFunds,
   connectStripeAccount,
   stripeConnectCallback,
+  fundMilestone,
   FEE_RATE
 };

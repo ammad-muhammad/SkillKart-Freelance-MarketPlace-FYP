@@ -175,11 +175,16 @@ export const DisputesPage = () => {
         </select>
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="⚠️" emptyTitle="No disputes found"
-        columns={['Contract','Status','Raised By','Raised At','Actions']}
+        columns={['Contract','Type','Status','Raised By','Raised At','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(c) => (
-          <tr key={c._id}>
+          <tr key={c.type === 'fixed' ? `${c._id}-${c.milestoneId}` : c._id}>
             <td style={{ fontWeight: 500 }}>{c.jobId?.title || c._id?.slice(-6)}</td>
+            <td style={{ fontSize: '0.82rem' }}>
+              {c.type === 'fixed'
+                ? <span>Fixed — Milestone {c.milestoneOrder}: {c.milestoneTitle} ({fmt.currency(c.milestoneAmount)})</span>
+                : <span>Hourly</span>}
+            </td>
             <td><StatusBadge status={c.dispute?.status} /></td>
             <td style={{ fontSize: '0.82rem' }}>{c.clientId?.email || '—'}</td>
             <td style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>{fmt.datetime(c.dispute?.raisedAt)}</td>

@@ -18,6 +18,10 @@ router.post('/jobs/:jobId/final', authenticate, requireRole('client'), paymentCo
 // Confirm a checkout session was paid and advance the escrow
 router.post('/jobs/:jobId/confirm', authenticate, requireRole('client'), paymentController.confirmPayment);
 
+// Fund a milestone (100% lock) — used for milestone 2+ on a milestone-split
+// contract; milestone 1 is funded automatically when the proposal is accepted.
+router.post('/milestones/:milestoneId/fund', authenticate, requireRole('client'), paymentController.fundMilestone);
+
 // View the escrow record for a job (client or hired freelancer)
 router.get('/jobs/:jobId', authenticate, paymentController.getJobPayment);
 

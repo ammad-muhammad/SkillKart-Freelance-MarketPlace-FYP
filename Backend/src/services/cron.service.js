@@ -2,6 +2,9 @@ const cron = require('node-cron');
 const Contract = require('../models/Contract');
 const TimeLog = require('../models/TimeLog');
 const Payment = require('../models/Payment');
+const Milestone = require('../models/Milestone');
+const Job = require('../models/Job');
+const { approveMilestone } = require('./milestone.service');
 
 /**
  * Runs every Sunday at 23:59 (or customize schedule)
@@ -66,6 +69,38 @@ const generateWeeklyInvoices = async () => {
 };
 
 /**
+ * Runs hourly. Freelancer-protection feature: if a client neither approves
+ * nor requests revision on a submitted milestone within `escrow_release_days`
+ * (SystemSettings, default 7), the escrow auto-releases to the freelancer —
+ * so a client can't "ghost" after receiving finished work. Disputed
+ * milestones are excluded (status is 'disputed', not 'submitted', by the
+ * time a dispute is raised — see contract.controller.js's raiseDispute).
+ */
+const autoReleaseStaleMilestones = async () => {
+  console.log('[CRON] Checking for milestones past their review deadline...');
+  try {
+    const stale = await Milestone.find({ status: 'submitted', reviewDeadline: { $lte: new Date() } });
+    if (stale.length === 0) return;
+
+    for (const milestone of stale) {
+      try {
+        const contract = await Contract.findById(milestone.contractId);
+        const job = await Job.findById(milestone.jobId);
+        if (!contract || !job) continue;
+
+        const { isLastMilestone, freelancerPayout } = await approveMilestone({ milestone, contract, job, auto: true });
+        console.log(`[CRON] Auto-released milestone ${milestone._id} (order ${milestone.order}${isLastMilestone ? ', final' : ''}) — Rs. ${freelancerPayout} to freelancer.`);
+      } catch (err) {
+        // One bad milestone must not stop the rest of the batch from processing.
+        console.error(`[CRON] Failed to auto-release milestone ${milestone._id}:`, err.message);
+      }
+    }
+  } catch (error) {
+    console.error('[CRON] Error checking for stale milestones:', error);
+  }
+};
+
+/**
  * Initialize cron jobs
  */
 const initCronJobs = () => {
@@ -74,9 +109,16 @@ const initCronJobs = () => {
     generateWeeklyInvoices();
   });
   console.log('[CRON] Weekly billing cron job scheduled.');
+
+  // Run every hour, on the hour
+  cron.schedule('0 * * * *', () => {
+    autoReleaseStaleMilestones();
+  });
+  console.log('[CRON] Milestone auto-release cron job scheduled.');
 };
 
 module.exports = {
   initCronJobs,
-  generateWeeklyInvoices // exported for testing
+  generateWeeklyInvoices, // exported for testing
+  autoReleaseStaleMilestones // exported for testing
 };

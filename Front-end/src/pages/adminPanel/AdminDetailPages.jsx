@@ -1671,10 +1671,15 @@ export const DisputeDetailPage = () => {
     <div><BackButton to="/admin-panel/disputes" label="Back to Disputes" /><AdminEmptyState icon="⚠️" title="Dispute not found" /></div>
   );
 
-  const { contract, payment, history = [], deliveries = [], conversation } = payload;
+  const { contract, payment, history = [], deliveries = [], conversation, milestones = [], disputedMilestone, milestonePayment } = payload;
   const messages = conversation?.messages || [];
-  const dispute = contract.dispute || {};
+  // Fixed-price disputes live on the milestone, not the contract.
+  const dispute = (contract.type === 'fixed' ? disputedMilestone?.dispute : contract.dispute) || {};
   const isPending = dispute.status === 'pending';
+  // A fixed-price contract has one Payment PER MILESTONE — the disputed
+  // milestone's own escrow record is the relevant one here, not the
+  // contract's first Payment row (ambiguous once there's more than one).
+  const effectivePayment = contract.type === 'fixed' ? milestonePayment : payment;
 
   return (
     <div>
@@ -1709,11 +1714,18 @@ export const DisputeDetailPage = () => {
           <InfoRow label="Client">{userLabel(contract.clientId)}</InfoRow>
           <InfoRow label="Freelancer">{userLabel(contract.freelancerId)}</InfoRow>
           <InfoRow label="Contract status"><StatusBadge status={contract.status} /></InfoRow>
-          {payment ? (
+          {contract.type === 'fixed' && disputedMilestone && (
             <>
-              <InfoRow label="Escrow status"><StatusBadge status={payment.status} /></InfoRow>
-              <InfoRow label="Total held">{fmt.currency(payment.totalAmount, payment.currency)}</InfoRow>
-              <InfoRow label="Deposit">{fmt.currency(payment.depositAmount, payment.currency)}</InfoRow>
+              <InfoRow label="Disputed milestone">{disputedMilestone.order}. {disputedMilestone.title}</InfoRow>
+              <InfoRow label="Milestone amount">{fmt.currency(disputedMilestone.amount)}</InfoRow>
+              <InfoRow label="Milestones">{milestones.filter(m => m.status === 'released').length}/{milestones.length} released</InfoRow>
+            </>
+          )}
+          {effectivePayment ? (
+            <>
+              <InfoRow label="Escrow status"><StatusBadge status={effectivePayment.status} /></InfoRow>
+              <InfoRow label="Total held">{fmt.currency(effectivePayment.totalAmount, effectivePayment.currency)}</InfoRow>
+              <InfoRow label="Deposit">{fmt.currency(effectivePayment.depositAmount, effectivePayment.currency)}</InfoRow>
             </>
           ) : <InfoRow label="Escrow">No payment record</InfoRow>}
         </Card>
@@ -1776,16 +1788,16 @@ export const DisputeDetailPage = () => {
         )}
 
         {ctxTab === 'payment' && (
-          payment ? (
+          effectivePayment ? (
             <div style={{ maxWidth: 520 }}>
-              <InfoRow label="Status"><StatusBadge status={payment.status} /></InfoRow>
-              <InfoRow label="Total">{fmt.currency(payment.totalAmount, payment.currency)}</InfoRow>
-              <InfoRow label="Deposit">{fmt.currency(payment.depositAmount, payment.currency)}</InfoRow>
-              <InfoRow label="Final">{fmt.currency(payment.finalAmount, payment.currency)}</InfoRow>
-              <InfoRow label="Platform fee">{fmt.currency(payment.platformFee, payment.currency)}</InfoRow>
-              <InfoRow label="Freelancer payout">{fmt.currency(payment.freelancerPayout, payment.currency)}</InfoRow>
-              <InfoRow label="Deposit paid at">{fmt.datetime(payment.depositPaidAt)}</InfoRow>
-              <InfoRow label="Released at">{fmt.datetime(payment.releasedAt)}</InfoRow>
+              <InfoRow label="Status"><StatusBadge status={effectivePayment.status} /></InfoRow>
+              <InfoRow label="Total">{fmt.currency(effectivePayment.totalAmount, effectivePayment.currency)}</InfoRow>
+              <InfoRow label="Deposit">{fmt.currency(effectivePayment.depositAmount, effectivePayment.currency)}</InfoRow>
+              <InfoRow label="Final">{fmt.currency(effectivePayment.finalAmount, effectivePayment.currency)}</InfoRow>
+              <InfoRow label="Platform fee">{fmt.currency(effectivePayment.platformFee, effectivePayment.currency)}</InfoRow>
+              <InfoRow label="Freelancer payout">{fmt.currency(effectivePayment.freelancerPayout, effectivePayment.currency)}</InfoRow>
+              <InfoRow label="Deposit paid at">{fmt.datetime(effectivePayment.depositPaidAt)}</InfoRow>
+              <InfoRow label="Released at">{fmt.datetime(effectivePayment.releasedAt)}</InfoRow>
             </div>
           ) : <AdminEmptyState icon="💳" title="No payment record" />
         )}

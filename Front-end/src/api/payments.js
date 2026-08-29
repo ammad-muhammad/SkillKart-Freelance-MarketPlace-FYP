@@ -1,15 +1,25 @@
 import client from './client';
 
 /**
- * Escrow payments (Stripe test mode / dummy). 50% deposit up front, 50% on
- * delivery acceptance, 0.5% platform fee on release.
+ * Escrow payments (Stripe test mode / dummy). Fixed-price contracts now lock
+ * 100% of each milestone's amount in escrow (see `fundMilestone` below) —
+ * milestone 1 is funded automatically as part of accepting a proposal.
+ * `startDeposit`/`startFinal` below are the legacy 50%/50% split endpoints,
+ * kept for any pre-existing in-flight escrow records but no longer used by
+ * new hires.
  */
 export const paymentsAPI = {
-  // Start the 50% deposit checkout → { checkoutUrl, sessionId, simulated }
+  // Fund a milestone (100% lock, wallet-only) — used for milestone 2+ once
+  // the client is ready to start that phase. Milestone 1 funds automatically
+  // when the proposal is accepted, so this is never called for it.
+  fundMilestone: (milestoneId) =>
+    client.post(`/payments/milestones/${milestoneId}/fund`),
+
+  // Legacy: start the 50% deposit checkout → { checkoutUrl, sessionId, simulated }
   startDeposit: (jobId) =>
     client.post(`/payments/jobs/${jobId}/deposit`),
 
-  // Start the remaining 50% checkout (on delivery acceptance)
+  // Legacy: start the remaining 50% checkout (on delivery acceptance)
   startFinal: (jobId) =>
     client.post(`/payments/jobs/${jobId}/final`),
 
