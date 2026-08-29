@@ -1,10 +1,11 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo, uploadClientCover as apiUploadCover } from '../../utils/uploadHelper';
+import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo, uploadClientCover as apiUploadCover, validateFile } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
+import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 
 import { LANGUAGES } from '../../data/languages';
 import { Camera, Building2, Image as ImageIcon, User, MapPin, Calendar, Globe, Edit2, AlertTriangle, Target, Check, Plus, Trash2, Zap, Clock, Search, Lightbulb, Sparkles } from 'lucide-react';
@@ -91,6 +92,7 @@ const ClientProfile = () => {
   const avatarRef = useRef(null);
   const logoRef = useRef(null);
   const coverRef = useRef(null);
+  const [cropTarget, setCropTarget] = useState(null); // { file, field } while the crop modal is open
 
   const countryOptions = useMemo(() => countryList().getData(), []);
   const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
@@ -291,19 +293,38 @@ const ClientProfile = () => {
     }
   };
 
-  const handleImage = async (e, field) => {
+  // Per-field crop framing: avatar is a circle, logo is a square box, cover is a wide banner.
+  const CROP_CONFIG = {
+    avatar: { aspect: 1, cropShape: 'round', title: 'Adjust Profile Photo' },
+    companyLogo: { aspect: 1, cropShape: 'rect', title: 'Adjust Company Logo' },
+    coverPhoto: { aspect: 4 / 1, cropShape: 'rect', title: 'Adjust Cover Photo' },
+  };
+
+  const handleImage = (e, field) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
+    const check = validateFile(file);
+    if (!check.valid) {
+      showToast(check.error, 'error');
+      return;
+    }
+    setCropTarget({ file, field });
+  };
+
+  const handleCropConfirm = async (finalFile) => {
+    const field = cropTarget?.field;
+    setCropTarget(null);
 
     setSaving(true);
     try {
       let url;
       if (field === 'companyLogo') {
-        url = await apiUploadCompanyLogo(file);
+        url = await apiUploadCompanyLogo(finalFile);
       } else if (field === 'coverPhoto') {
-        url = await apiUploadCover(file);
+        url = await apiUploadCover(finalFile);
       } else {
-        url = await apiUploadAvatar(file, 'client');
+        url = await apiUploadAvatar(finalFile, 'client');
       }
       setForm((p) => ({ ...p, [field]: url }));
       showToast('Image uploaded! Save profile to persist.');
@@ -1012,6 +1033,15 @@ const ClientProfile = () => {
           transform: scale(1.15);
         }
       `}</style>
+
+      <ImageCropModal
+        file={cropTarget?.file || null}
+        aspect={CROP_CONFIG[cropTarget?.field]?.aspect || 1}
+        cropShape={CROP_CONFIG[cropTarget?.field]?.cropShape || 'rect'}
+        title={CROP_CONFIG[cropTarget?.field]?.title || 'Adjust Image'}
+        onCancel={() => setCropTarget(null)}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 };

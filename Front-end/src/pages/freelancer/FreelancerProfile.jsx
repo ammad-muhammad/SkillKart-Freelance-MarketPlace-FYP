@@ -8,13 +8,14 @@ import {
 } from 'lucide-react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
-import { uploadAvatar as apiUploadAvatar, uploadPortfolioImage as apiUploadCover } from '../../utils/uploadHelper';
+import { uploadAvatar as apiUploadAvatar, uploadPortfolioImage as apiUploadCover, validateFile } from '../../utils/uploadHelper';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import { timezones } from '../../utils/timezones';
 import { LANGUAGES } from '../../data/languages';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
+import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 import Modal from './components/Modal';
 import './FreelancerDashboard.css';
 
@@ -78,6 +79,7 @@ const FreelancerProfile = () => {
   const [socialLinks, setSocialLinks] = useState(profile?.socialLinks ? { ...profile.socialLinks } : {});
   const fileRef = useRef(null);
   const coverRef = useRef(null);
+  const [cropTarget, setCropTarget] = useState(null); // { file, kind: 'avatar'|'cover' } while the crop modal is open
 
   const startEdit = () => {
     setForm({ ...profile.personalInfo });
@@ -136,33 +138,37 @@ const FreelancerProfile = () => {
     }
   };
 
-  const handleAvatarChange = async (e) => {
+  const pickFile = (e, kind) => {
     const file = e.target.files[0];
+    e.target.value = ''; // allow re-selecting the same file later
     if (!file) return;
-
-    setSaving(true);
-    try {
-      const url = await apiUploadAvatar(file, 'freelancer');
-      setForm((p) => ({ ...p, avatar: url }));
-      showToast('Photo uploaded! Save to persist changes.');
-    } catch (error) {
-      showToast('Upload failed', 'error');
-    } finally {
-      setSaving(false);
+    const check = validateFile(file);
+    if (!check.valid) {
+      showToast(check.error, 'error');
+      return;
     }
+    setCropTarget({ file, kind });
   };
 
-  const handleCoverChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleAvatarChange = (e) => pickFile(e, 'avatar');
+  const handleCoverChange = (e) => pickFile(e, 'cover');
 
+  const handleCropConfirm = async (finalFile) => {
+    const kind = cropTarget?.kind;
+    setCropTarget(null);
     setSaving(true);
     try {
-      const url = await apiUploadCover(file);
-      setForm((p) => ({ ...p, coverPhoto: url }));
-      showToast('Cover photo uploaded! Save to persist changes.');
+      if (kind === 'avatar') {
+        const url = await apiUploadAvatar(finalFile, 'freelancer');
+        setForm((p) => ({ ...p, avatar: url }));
+        showToast('Photo uploaded! Save to persist changes.');
+      } else {
+        const url = await apiUploadCover(finalFile);
+        setForm((p) => ({ ...p, coverPhoto: url }));
+        showToast('Cover photo uploaded! Save to persist changes.');
+      }
     } catch (error) {
-      showToast('Cover upload failed', 'error');
+      showToast(kind === 'avatar' ? 'Upload failed' : 'Cover upload failed', 'error');
     } finally {
       setSaving(false);
     }
@@ -829,6 +835,15 @@ const FreelancerProfile = () => {
           </>
         )}
       </Modal>
+
+      <ImageCropModal
+        file={cropTarget?.file || null}
+        aspect={cropTarget?.kind === 'cover' ? 4 / 1 : 1}
+        cropShape={cropTarget?.kind === 'cover' ? 'rect' : 'round'}
+        title={cropTarget?.kind === 'cover' ? 'Adjust Cover Photo' : 'Adjust Profile Photo'}
+        onCancel={() => setCropTarget(null)}
+        onConfirm={handleCropConfirm}
+      />
 
       <style>{`
         .fl-profile-hero {

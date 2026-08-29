@@ -19,6 +19,7 @@ import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
 import TagInput from "../../../Components/common/TagInput/TagInput";
 import IndustryInput from "../../../Components/common/IndustryInput/IndustryInput";
+import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import "./ClientOnboarding.css";
 
 
@@ -31,6 +32,7 @@ const ClientOnboarding = () => {
     const [draftData, setDraftData] = useState(null);
     const [aiSuggestions, setAiSuggestions] = useState([]);
     const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
+    const [cropTarget, setCropTarget] = useState(null); // { file, field } while the crop modal is open
     const { refreshAuth, user } = useAuth();
     const { fetchProfile } = useClient();
 
@@ -203,17 +205,23 @@ const ClientOnboarding = () => {
 
     const handleImageUpload = (e, field) => {
         const file = e.target.files[0];
-        if (file) {
-            if (!file.type.startsWith('image/')) {
-                toast.error("Please upload an image file");
-                return;
-            }
-            setFormData(prev => ({
-                ...prev,
-                [field]: file,
-                [`${field}Url`]: URL.createObjectURL(file)
-            }));
+        e.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error("Please upload an image file");
+            return;
         }
+        setCropTarget({ file, field });
+    };
+
+    const handleCropConfirm = (finalFile) => {
+        const field = cropTarget?.field;
+        setCropTarget(null);
+        setFormData(prev => ({
+            ...prev,
+            [field]: finalFile,
+            [`${field}Url`]: URL.createObjectURL(finalFile)
+        }));
     };
 
     const toggleMultiSelect = (field, item) => {
@@ -1203,6 +1211,15 @@ const ClientOnboarding = () => {
                     </form>
                 </div>
             </div>
+
+            <ImageCropModal
+                file={cropTarget?.file || null}
+                aspect={1}
+                cropShape={cropTarget?.field === 'companyPic' ? 'rect' : 'round'}
+                title={cropTarget?.field === 'companyPic' ? 'Adjust Company Logo' : 'Adjust Profile Photo'}
+                onCancel={() => setCropTarget(null)}
+                onConfirm={handleCropConfirm}
+            />
         </section>
     );
 };
