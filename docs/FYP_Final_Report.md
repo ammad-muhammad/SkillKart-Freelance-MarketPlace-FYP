@@ -110,7 +110,7 @@ The freelance economy has become a significant part of the global digital workfo
 
 **SkillKart** is an AI-powered, dual-sided freelance marketplace built to address these problems in a single, coherent platform. It combines the two dominant freelancing models — pre-packaged **Gigs** (Fiverr-style) and custom **Jobs with Proposals** (Upwork-style) — and augments them with an integrated artificial-intelligence layer, a secure escrow-based payment system, multi-factor verification, and a comprehensive administrative panel.
 
-The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 37 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, CV analysis, and freelancer matchmaking — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage. Payments are handled through a Stripe-backed escrow workflow with wallets and withdrawals, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
+The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 38 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, CV analysis, and freelancer matchmaking — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage. Payments are handled through a Stripe-backed escrow workflow with wallets and withdrawals, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
 
 The completed system delivers the full engagement lifecycle — from registration and verification, through job posting and proposals, to escrow-secured contracts, delivery, reviews, and dispute resolution — under the supervision of a dedicated 16-module admin panel. All project objectives were achieved and demonstrated on realistic, seeded data. This report documents the motivation, design, implementation, testing, and results of the SkillKart project.
 
@@ -313,7 +313,7 @@ Crucially, the AI subsystem is engineered for **resilience** (Section 13), so it
 
 ### 8.3 Secure Escrow Payments
 
-Funds flow through a Stripe-backed **escrow** model. A client deposits funds when a contract begins; the money is held until the client approves the delivery; on release, the platform fee is deducted and the remainder is paid to the freelancer's wallet, from which they can withdraw. This protects both parties and provides a clear basis for dispute resolution.
+Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into up to a handful of sequential **milestones**, each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. A client cannot post a new project at all unless their wallet balance already covers its minimum budget — funding is proven before commitment, not promised after. On release, the platform fee is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw. This protects both parties and provides a clear basis for dispute resolution.
 
 ### 8.4 Trust, Verification, and Oversight
 
@@ -368,11 +368,11 @@ Request → Route → Middleware (auth, RBAC, validation, rate-limit, sanitizati
         → Model (Mongoose)  → MongoDB
 ```
 
-It comprises **23 route modules**, **23 controllers**, **20+ service modules**, and **37 Mongoose models**. Controllers remain thin and delegate business logic to services (for example, `stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, and `email.service`). Cross-cutting concerns — structured logging (Winston), API documentation (Swagger), and scheduled tasks (node-cron for billing and cleanup) — are handled at the application level. The server binds to `0.0.0.0` and reads its port from the environment, making it deployment-ready.
+It comprises **23 route modules**, **23 controllers**, **20+ service modules**, and **38 Mongoose models**. Controllers remain thin and delegate business logic to services (for example, `stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, and `email.service`). Cross-cutting concerns — structured logging (Winston), API documentation (Swagger), and scheduled tasks (node-cron for billing and cleanup) — are handled at the application level. The server binds to `0.0.0.0` and reads its port from the environment, making it deployment-ready.
 
 ### 9.4 MongoDB Database
 
-**MongoDB**, accessed through **Mongoose**, stores all persistent data across 37 collections. Relationships are modeled using ObjectId references, and referential integrity is maintained at the application layer. Collections are indexed for common query patterns, and large listing endpoints use server-side pagination.
+**MongoDB**, accessed through **Mongoose**, stores all persistent data across 38 collections. Relationships are modeled using ObjectId references, and referential integrity is maintained at the application layer. Collections are indexed for common query patterns, and large listing endpoints use server-side pagination.
 
 ### 9.5 Authentication Subsystem
 
@@ -394,7 +394,7 @@ AI features are delivered through a **provider router** that presents a uniform 
 
 ### 10.1 Overview
 
-SkillKart's data layer consists of **37 MongoDB collections** managed through Mongoose schemas. The design is reference-based (normalized where it aids integrity, denormalized where it aids read performance), with enums enforcing valid states and indexes supporting frequent queries. Below, the major collections are described, followed by their relationships.
+SkillKart's data layer consists of **38 MongoDB collections** managed through Mongoose schemas. The design is reference-based (normalized where it aids integrity, denormalized where it aids read performance), with enums enforcing valid states and indexes supporting frequent queries. Below, the major collections are described, followed by their relationships.
 
 ### 10.2 Major Collections / Models
 
@@ -412,14 +412,15 @@ SkillKart's data layer consists of **37 MongoDB collections** managed through Mo
 
 **Engagement Lifecycle**
 
-- **Contract** — the lifecycle engine, created when a proposal is accepted. It records the parties, `type` (`fixed`/`hourly`), pricing, deadline, an embedded time-tracking timer, a `status` state machine (`active` → `paused` → `in_revision` → `delivered` → `completed` / `pending_cancellation` / `under_review` / `cancelled`), and an embedded **dispute** sub-document.
+- **Contract** — the lifecycle engine, created when a proposal is accepted. It records the parties, `type` (`fixed`/`hourly`), pricing, deadline, an embedded time-tracking timer, `milestoneMode` and `currentMilestoneOrder` (fixed-price only), a `status` state machine (`active` → `paused` → `in_revision` → `delivered` → `completed` / `pending_cancellation` / `under_review` / `cancelled`), and an embedded **dispute** sub-document — used directly for hourly contracts; fixed-price contracts instead record the dispute on the specific **Milestone** in question, since a single contract can hold several independently-disputed milestones.
+- **Milestone** — (fixed-price contracts) one funded phase of a project: `order`, `title`, `amount`, a `status` state machine (`pending_funding` → `funded` → `submitted` → `approved`/`in_revision`/`disputed` → `released`/`refunded`), a `reviewDeadline` used by the auto-release scheduler, and its own embedded **dispute** sub-document. A contract with one implicit milestone behaves like a simple lock-then-release; a contract split into several milestones funds and releases each one sequentially.
 - **ContractHistory** — an append-only log of significant contract events (for auditability).
-- **Delivery** — a submitted deliverable with versioning and a `status` (`pending_review` | `accepted` | `revision_requested`).
+- **Delivery** — a submitted deliverable with versioning and a `status` (`pending_review` | `accepted` | `revision_requested`), linked to the specific milestone it was submitted against (fixed-price) or to the contract directly (hourly).
 - **TimeLog** — time entries for hourly contracts (timer or manual), with an approval status.
 
 **Payments & Wallet**
 
-- **Payment** — an escrow or wallet transaction: `type` (`job_escrow` | `wallet_deposit` | `hourly_invoice`), amounts (total, deposit, final), **platform fee**, **freelancer payout**, and `status` (`deposit_pending` → `deposit_paid` → `released` / `refunded`).
+- **Payment** — an escrow or wallet transaction: `type` (`job_escrow` | `wallet_deposit` | `hourly_invoice`), a `milestoneId` link (one Payment per milestone, for fixed-price contracts), amounts (total, deposit, final), **platform fee**, **freelancer payout**, and `status` (`deposit_pending` → `deposit_paid` → `released` / `refunded`).
 - **Withdrawal** — a freelancer cash-out: amount, `method` (`bank_transfer` | `paypal` | `stripe`), and `status` (`pending` | `completed` | `failed` | `cancelled`).
 - *(Wallet balances are maintained as fields on the freelancer/client profiles, updated transactionally by payment/withdrawal operations.)*
 
@@ -450,11 +451,13 @@ SkillKart's data layer consists of **37 MongoDB collections** managed through Mo
 User ──1:1──► FreelancerProfile / ClientProfile
 Client (User) ──1:N──► Job ──1:N──► Proposal
 Proposal (accepted) ──1:1──► Contract
-Contract ──1:1──► Payment ──► updates Wallet balances ──► Withdrawal
+Contract (fixed-price) ──1:N──► Milestone ──1:1──► Payment ──► updates Wallet balances ──► Withdrawal
+Contract (hourly) ──1:1──► Payment ──► updates Wallet balances ──► Withdrawal
 Contract ──1:N──► Delivery, TimeLog, ContractHistory
 Contract ──1:1──► Conversation ──1:N──► Message
 Contract ──1:N──► Review
-Contract ──(embedded)──► Dispute ──► Report ──► AdminAuditLog
+Contract ──(embedded, hourly)──► Dispute ──► Report ──► AdminAuditLog
+Milestone ──(embedded, fixed-price)──► Dispute ──► Report ──► AdminAuditLog
 Freelancer ──1:N──► Gig
 SkillNode ──N:N──► SkillRelationship (taxonomy graph)
 ```
@@ -567,13 +570,20 @@ Freelancers publish packaged services with **three pricing tiers** (Basic / Stan
 Freelancers submit proposals to jobs — including a cover letter (optionally **AI-drafted**), price, and estimated delivery. Clients review and accept or reject proposals; acceptance creates a contract.
 
 ### 12.8 Contracts
-The contract is the engagement's backbone, modeling the full lifecycle as a **state machine**. It tracks type (fixed/hourly), agreed price and deadline, deliveries, revisions, time logs, completion, and cancellation, along with an embedded dispute record.
+The contract is the engagement's backbone, modeling the full lifecycle as a **state machine**. It tracks type (fixed/hourly), agreed price and deadline, deliveries, revisions, time logs, completion, and cancellation. Hourly contracts carry a single embedded dispute record; fixed-price contracts instead track disputes per **milestone** (Section 12.10a), since a project split into several phases can have any one of them independently disputed while the rest continue normally.
 
 ### 12.9 Wallet
-Each freelancer and client has a **wallet** balance maintained on their profile. Client deposits fund escrow; released escrow credits the freelancer's wallet; withdrawals debit it. Administrators can freeze wallets when necessary.
+Each freelancer and client has a **wallet** balance maintained on their profile. Escrow debits/credits and withdrawals all move through this internal ledger. Administrators can freeze wallets when necessary. A client's wallet balance is also checked **before a project can even be posted** — a job's minimum budget must already be covered by the client's wallet, so a project cannot be listed if it could never be funded.
 
 ### 12.10 Payments & Escrow
-Payments follow the **escrow** model: a client deposits funds when a contract begins (`deposit_pending` → `deposit_paid`); the funds are held until the client approves delivery; on release, the **platform fee** is deducted and the **freelancer payout** is credited (`released`). Refunds are supported (`refunded`). Stripe processes real transactions, with a simulated mode for demonstration.
+Hourly contracts and gig orders follow the original **deposit-then-release** model: escrow is funded on request (`deposit_pending` → `deposit_paid`), held until the client approves delivery, then released (**platform fee** deducted, **freelancer payout** credited) or refunded. Fixed-price job contracts use the newer **milestone escrow** model described next. Stripe processes real transactions for wallet top-ups, with a simulated mode (`STRIPE_DUMMY`) for demonstration.
+
+### 12.10a Milestone-Based Escrow (Fixed-Price Jobs)
+When a client accepts a proposal for a fixed-price job, **100% of the agreed price is locked in escrow immediately** — debited from the client's wallet before the contract is even created, so the money is never a promise. For larger engagements, the client can split the price into up to a handful of sequential **milestones** at accept-time (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000"); only the first milestone is funded upfront, and each subsequent milestone is funded by the client only once the previous one is approved and released — capital is never locked for work that hasn't started yet.
+
+The freelancer can only submit work once the current milestone shows **funded**, guaranteeing "escrow funded, safe to work" is a real, checked guarantee rather than a UI promise. On the client's approval, the milestone's escrow releases (fee deducted, payout credited) and — if it was the last milestone — the whole contract and job complete; otherwise the contract advances to the next milestone, which the client then funds when ready.
+
+To prevent a client from strategically going silent after receiving work, a scheduled job scans for milestones the client hasn't reviewed within a configurable window (default **7 days**) and **auto-releases** them to the freelancer, notifying both parties. A milestone under an active dispute is excluded from this auto-release.
 
 ### 12.11 Messaging
 In-app messaging is tied to contracts. Participants exchange messages and attachments in a conversation, with read tracking and message notifications.
@@ -588,7 +598,7 @@ On completion, both parties can leave a **two-way review** (1–5 stars plus a c
 A structured **taxonomy** of categories and skills powers browsing and search across freelancers, gigs, and jobs. The category system is dynamic and reflects real marketplace activity.
 
 ### 12.15 Disputes
-When an engagement goes wrong, either party can raise a **dispute** on the contract, providing a reason and details. Disputes are tracked with a status and routed to administrators, who can resolve them (e.g., release escrow, refund, or split) with recorded resolution notes.
+When an engagement goes wrong, either party can raise a **dispute**, providing a reason and details. For hourly contracts the dispute is raised on the contract as a whole; for fixed-price contracts it is scoped to the **specific milestone** currently under review (delivered or in revision) — locking only that milestone rather than freezing an entire multi-phase project over one disputed phase. Disputes are tracked with a status and routed to administrators, who resolve them (release the escrow to the freelancer, refund the client, split it by percentage, or resume/reject the dispute) with recorded resolution notes; a resolved milestone dispute lets the contract continue normally into its next milestone (or completes the contract if it was the last one).
 
 ### 12.16 Admin Panel
 A comprehensive, isolated administrative interface (detailed in Section 14) for moderating and monitoring every aspect of the platform.
@@ -1043,7 +1053,7 @@ The frontend uses `VITE_API_URL` and optional `VITE_SUPABASE_*`.
 
 ### Appendix E — Database Collections
 
-The 37 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gig`, `Proposal`, `Contract`, `ContractHistory`, `Delivery`, `TimeLog`, `Payment`, `Withdrawal`, `Conversation`, `Message`, `Notification`, `Review`, `Testimonial`, `SkillNode`, `SkillRelationship`, `SkillTestAttempt`, `TaxonomyProposal`, `OTP`, `OnboardingProgress`, `ClientOnboardingDraft`, `Report`, `AdminUser`, `AdminSession`, `AdminAuditLog`, `PlatformSettings`, `SystemSettings`, `ApiLog`, `ErrorLog`, `EmailLog`, `FileUpload`, `CMSContent`, `NewsletterSubscriber`, `ContactMessage`.
+The 38 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gig`, `Proposal`, `Contract`, `Milestone`, `ContractHistory`, `Delivery`, `TimeLog`, `Payment`, `Withdrawal`, `Conversation`, `Message`, `Notification`, `Review`, `Testimonial`, `SkillNode`, `SkillRelationship`, `SkillTestAttempt`, `TaxonomyProposal`, `OTP`, `OnboardingProgress`, `ClientOnboardingDraft`, `Report`, `AdminUser`, `AdminSession`, `AdminAuditLog`, `PlatformSettings`, `SystemSettings`, `ApiLog`, `ErrorLog`, `EmailLog`, `FileUpload`, `CMSContent`, `NewsletterSubscriber`, `ContactMessage`.
 
 ### Appendix F — Project Statistics
 
