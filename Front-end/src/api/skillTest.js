@@ -9,9 +9,9 @@ export const skillTestAPI = {
     return client.get(`/skill-tests/generate?${params.toString()}`);
   },
 
-  // Submit test answers
-  submitTest: (answers) => 
-    client.post('/skill-tests/submit', { answers }),
+  // Submit test answers, along with any browser/camera proctoring violations logged during the attempt
+  submitTest: (answers, violations = []) =>
+    client.post('/skill-tests/submit', { answers, violations }),
 
   // Get test history
   getHistory: () => 
