@@ -233,7 +233,7 @@ const FreelancerProfile = () => {
             <p className="fl-profile-hero__title">{data.title || 'Professional Freelancer'}</p>
             <div className="fl-profile-hero__meta">
               <span><MapPin size={14} /> {data.location || 'Remote'}</span>
-              <span><DollarSign size={14} /> ${data.hourlyRate || '0'}/hr</span>
+              <span><DollarSign size={14} /> Rs. {data.hourlyRate || '0'}/hr</span>
               <span><Clock size={14} /> {data.availability || 'Not Set'}</span>
             </div>
           </div>

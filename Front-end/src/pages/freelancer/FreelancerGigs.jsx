@@ -498,7 +498,7 @@ const FreelancerGigs = () => {
                 <div key={tier} className={`fl-tier-edit fl-tier-edit--${tier}`}>
                   <h5 className="fl-tier-edit__label">{tier.charAt(0).toUpperCase() + tier.slice(1)}</h5>
                   <div className="fl-form-group">
-                    <label>Price ($)</label>
+                    <label>Price (Rs.)</label>
                     <input 
                       type="number" 
                       value={formData.pricing[tier].price}

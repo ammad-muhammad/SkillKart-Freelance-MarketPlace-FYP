@@ -494,7 +494,7 @@ export default function SkillPage() {
                       ))}
                       <span className="mp-freelancer-card__reviews" style={{ marginLeft: '4px' }}>({fl.reviews})</span>
                     </div>
-                    <div className="mp-freelancer-card__price">From ${fl.price}/hr</div>
+                    <div className="mp-freelancer-card__price">From Rs. {fl.price}/hr</div>
                   </Link>
                 ))}
               </div>

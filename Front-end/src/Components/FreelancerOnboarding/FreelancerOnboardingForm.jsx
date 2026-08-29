@@ -438,7 +438,7 @@ const FreelancerOnboardingForm = () => {
                 </div>
                 <div className="fob-success-stat">
                   <span className="fob-success-stat-num">
-                    ${formData.hourlyRate}
+                    Rs. {formData.hourlyRate}
                   </span>
                   <span>Hourly Rate</span>
                 </div>

@@ -667,7 +667,7 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Min Budget ($) *</label>
+                  <label className="cl-label">Min Budget (Rs.) *</label>
                   <input
                     type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.min}
@@ -678,7 +678,7 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Max Budget ($) *</label>
+                  <label className="cl-label">Max Budget (Rs.) *</label>
                   <input
                     type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.max}

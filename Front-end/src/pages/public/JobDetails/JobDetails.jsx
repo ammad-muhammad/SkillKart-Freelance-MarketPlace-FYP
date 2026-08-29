@@ -401,7 +401,7 @@ export default function JobDetails() {
               {job?.budget?.type === 'hourly' ? (
                 <>
                   <div className="jd-form-group">
-                    <label>Hourly Rate ($/hr)</label>
+                    <label>Hourly Rate (Rs./hr)</label>
                     <div className="jd-input-icon">
                       <DollarSign size={16} />
                       <input 
@@ -433,7 +433,7 @@ export default function JobDetails() {
               ) : (
                 <>
                   <div className="jd-form-group">
-                    <label>Fixed Price ($)</label>
+                    <label>Fixed Price (Rs.)</label>
                     <div className="jd-input-icon">
                       <DollarSign size={16} />
                       <input 

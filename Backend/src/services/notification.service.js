@@ -106,7 +106,7 @@ const onRevisionRequested = (freelancerId, { job }) => notify(freelancerId, {
 const onPaymentReleased = (freelancerId, { job, amount }) => notify(freelancerId, {
   type: TYPES.PAYMENT_RELEASED,
   title: 'You got paid! 🎉',
-  message: `Payment of $${amount} (net of fee) was released for "${job?.title || 'a project'}".`,
+  message: `Payment of PKR ${amount} (net of fee) was released for "${job?.title || 'a project'}".`,
   link: '/freelancer/work',
   jobId: job?._id,
 });
