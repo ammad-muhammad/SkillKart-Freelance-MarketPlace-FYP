@@ -33,6 +33,7 @@ export default function CostEstimator() {
     });
 
     const [estimate, setEstimate] = useState(null);
+    const [estimateMeta, setEstimateMeta] = useState(null); // { ref, date } — frozen at generation time for the print doc
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const pageRef = useRef(null);
@@ -104,6 +105,11 @@ export default function CostEstimator() {
                 currency: data.currency || 'PKR',
                 rationale: data.rationale || '',
                 breakdown: Array.isArray(data.breakdown) ? data.breakdown : []
+            });
+            const now = new Date();
+            setEstimateMeta({
+                ref: `SK-EST-${now.getTime().toString(36).toUpperCase()}`,
+                date: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
             });
 
             setTimeout(() => {
@@ -415,6 +421,83 @@ export default function CostEstimator() {
             </section>
 
             <Footer />
+
+            {/* PRINT-ONLY DOCUMENT — rendered by window.print() (the "Save Estimate as
+                PDF" button). Kept as a direct child of .ai-page (a sibling of Navbar/
+                Footer/every section), so the print stylesheet can hide every OTHER
+                direct child with display:none and collapse the page to just this
+                content — display:none removes hidden siblings from layout entirely,
+                unlike visibility:hidden, which would leave their height in place and
+                pad the print-out with blank pages. */}
+            {estimate && estimateMeta && (
+                <div className="estimate-print-doc" aria-hidden="true">
+                    <div className="print-doc__header">
+                        <div className="print-doc__brand">
+                            <span className="print-doc__logo">SkillKart</span>
+                            <span className="print-doc__tagline">Micro-Freelance Marketplace</span>
+                        </div>
+                        <div className="print-doc__meta">
+                            <div><strong>Estimate Ref:</strong> {estimateMeta.ref}</div>
+                            <div><strong>Date:</strong> {estimateMeta.date}</div>
+                        </div>
+                    </div>
+
+                    <h1 className="print-doc__title">Project Cost Estimate</h1>
+
+                    <table className="print-doc__details">
+                        <tbody>
+                            <tr><th>Project Type</th><td>{formData.type || '—'}</td></tr>
+                            <tr><th>Required Skills</th><td>{(formData.skills || []).join(', ') || '—'}</td></tr>
+                            <tr><th>Target Expertise Level</th><td>{formData.level}</td></tr>
+                            <tr><th>Project Duration</th><td>{formData.duration}</td></tr>
+                            <tr><th>Budget Preference</th><td>{formData.budget}</td></tr>
+                            <tr><th>Complexity</th><td>{formData.complexity}%</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div className="print-doc__range">
+                        <span className="print-doc__range-label">Estimated Market Value</span>
+                        <span className="print-doc__range-value">
+                            {formatMoney(estimate.min, estimate.currency)} – {formatMoney(estimate.max, estimate.currency)}
+                        </span>
+                    </div>
+
+                    {estimate.breakdown.length > 0 && (
+                        <>
+                            <h2 className="print-doc__section-title">Cost Breakdown</h2>
+                            <table className="print-doc__breakdown">
+                                <thead>
+                                    <tr><th>Project Phase</th><th>Estimated Cost Allocation</th></tr>
+                                </thead>
+                                <tbody>
+                                    {estimate.breakdown.map((row, i) => (
+                                        <tr key={i}>
+                                            <td>{row.label}</td>
+                                            <td>{formatMoney(row.amount, estimate.currency)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
+
+                    {estimate.rationale && (
+                        <>
+                            <h2 className="print-doc__section-title">AI Rationale</h2>
+                            <p className="print-doc__rationale">{estimate.rationale}</p>
+                        </>
+                    )}
+
+                    <div className="print-doc__footer">
+                        <p>
+                            This estimate was generated by SkillKart's AI Cost Estimator using platform
+                            and market data. It is indicative only and does not constitute a binding
+                            quote or contract.
+                        </p>
+                        <p className="print-doc__footer-brand">skillkart-fuuast.vercel.app · Generated {estimateMeta.date}</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
