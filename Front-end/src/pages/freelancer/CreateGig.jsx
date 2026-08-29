@@ -97,7 +97,7 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
       <span className="fl-pricing-tier__label">{label}</span>
     </div>
     <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
-      <label className="fl-label">Price ($)</label>
+      <label className="fl-label">Price (PKR)</label>
       <input
         type="number"
         className="fl-input"

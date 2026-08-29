@@ -10,7 +10,7 @@ import './FreelancerDashboard.css';
 const FreelancerSettings = () => {
   const { profile, updateProfile, showToast } = useFreelancer();
   const { user } = useAuth();
-  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
+  const isSupabaseUser = !!user?.supabaseId || (user?.authProvider && user?.authProvider !== 'email');
   const [form, setForm] = useState({
     username: "",
     email: "",

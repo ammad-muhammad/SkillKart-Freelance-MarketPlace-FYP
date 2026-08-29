@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { jobsAPI } from '../../api/jobs';
 import { uploadJobAttachment, validateFile } from '../../utils/uploadHelper';
-import { JOB_CATEGORIES } from '../../constants/jobCategories';
+import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import Stepper from '../freelancer/components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
@@ -444,12 +444,13 @@ const PostProject = () => {
               </div>
               <div className="cl-form-group">
                 <label className="cl-label">Subcategory</label>
-                <input
-                  type="text"
-                  className="cl-input"
-                  placeholder="e.g. Frontend Development"
-                  value={form.subcategory}
-                  onChange={(e) => updateForm({ subcategory: e.target.value })}
+                <TagInput
+                  tags={form.subcategory ? [form.subcategory] : []}
+                  onChange={(tags) => updateForm({ subcategory: tags[0] || '' })}
+                  options={GIG_SUBCATEGORIES[form.category] || []}
+                  maxTags={1}
+                  placeholder="Type or select subcategory…"
+                  showHint={false}
                 />
               </div>
               <div className="cl-form-group full">
@@ -516,7 +517,7 @@ const PostProject = () => {
             </a>
             <div className="cl-form-grid">
               <div className="cl-form-group">
-                <label className="cl-label">Minimum Budget ($)</label>
+                <label className="cl-label">Minimum Budget (PKR)</label>
                 <input
                   type="number"
                   className={`cl-input${errors.budgetMin ? ' cl-input--error' : ''}`}
@@ -529,7 +530,7 @@ const PostProject = () => {
                 <FieldError message={errors.budgetMin} />
               </div>
               <div className="cl-form-group">
-                <label className="cl-label">Maximum Budget ($)</label>
+                <label className="cl-label">Maximum Budget (PKR)</label>
                 <input
                   type="number"
                   className={`cl-input${errors.budgetMax ? ' cl-input--error' : ''}`}
@@ -770,7 +771,7 @@ const PostProject = () => {
                 </div>
                 <div className="cl-review-item">
                   <span className="cl-review-label">Budget</span>
-                  <span className="cl-review-value">Rs. {form.budget.min} – ${form.budget.max}</span>
+                  <span className="cl-review-value">Rs. {form.budget.min} – Rs. {form.budget.max}</span>
                 </div>
                 <div className="cl-review-item">
                   <span className="cl-review-label">Duration</span>

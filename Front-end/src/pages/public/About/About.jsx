@@ -2,13 +2,56 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link } from 'react-router-dom';
+import { Github, Linkedin, Mail } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import './About.css';
 
+import mineImg from '../../../assets/mine.jpeg';
+import lamizImg from '../../../assets/lamiz.jpeg';
+
 gsap.registerPlugin(ScrollTrigger);
 
 /* ─────────────────────── DATA ─────────────────────── */
+
+const TEAM_MEMBERS = [
+    {
+        name: 'Muhammad Ammad',
+        role: 'Founder & Lead Full-Stack Architect (CEO)',
+        badge: 'FYP Lead Architect',
+        bio: 'Lead Developer & Architect behind SkillKart. Spearheaded the full-stack architecture, AI Buddy engine, real-time messaging, and secure transaction workflows.',
+        image: mineImg,
+        socials: {
+            github: 'https://github.com',
+            linkedin: 'https://linkedin.com',
+            email: 'mailto:ammad@skillkart.com'
+        }
+    },
+    {
+        name: 'Lamiz Afridi',
+        role: 'Co-Founder & Lead AI Engineer (CTO)',
+        badge: 'AI & Verification Specialist',
+        bio: 'Core AI Engineer driving skill-matching intelligence, automated portfolio analysis, and credential verification algorithms that power student credibility.',
+        image: lamizImg,
+        socials: {
+            github: 'https://github.com',
+            linkedin: 'https://linkedin.com',
+            email: 'mailto:neha.lamiz@skillkart.com'
+        }
+    },
+    {
+        name: 'Neha Izhar',
+        role: 'Co-Founder & Head of Product Design (CPO)',
+        badge: 'UX & Product Lead',
+        bio: 'Architect of SkillKart\'s design identity and user experience. Focused on creating an intuitive, accessible interface that empowers student freelancers.',
+        image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80',
+        socials: {
+            github: 'https://github.com',
+            linkedin: 'https://linkedin.com',
+            email: 'mailto:neha.izhar@skillkart.com'
+        }
+    }
+];
 
 const HOW_IT_WORKS = [
     {
@@ -272,6 +315,7 @@ export default function About() {
     const audienceRef = useRef(null);
     const uvpRef = useRef(null);
     const techRef = useRef(null);
+    const teamRef = useRef(null);
     const testimonialsRef = useRef(null);
     const roadmapRef = useRef(null);
     const faqRef = useRef(null);
@@ -317,6 +361,7 @@ export default function About() {
         animateSection(audienceRef, '.audience__card');
         animateSection(uvpRef);
         animateSection(techRef, '.tech__pill');
+        animateSection(teamRef, '.team__card');
         animateSection(testimonialsRef, '.about-testimonial__card');
         animateSection(roadmapRef, '.roadmap__card');
         animateSection(faqRef);
@@ -543,6 +588,45 @@ export default function About() {
                                 on our servers.
                             </p>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ══════════════════ MEET THE FYP CREATORS ══════════════════ */}
+            <section ref={teamRef} className="about-team">
+                <div className="container">
+                    <div className="about-team__header">
+                        <div className="section-tag"><span>🎓</span> FYP Team & Founders</div>
+                        <h2 className="section-title">Meet the Creators of SkillKart</h2>
+                        <p className="section-subtitle">
+                            SkillKart was engineered as a Final Year Project by a team of passionate student innovators dedicated to empowering talent across Pakistan.
+                        </p>
+                    </div>
+                    <div className="about-team__grid">
+                        {TEAM_MEMBERS.map((member) => (
+                            <div key={member.name} className="team__card">
+                                <div className="team__card-img-wrap">
+                                    <img src={member.image} alt={member.name} className="team__card-img" />
+                                    <span className="team__card-badge">{member.badge}</span>
+                                </div>
+                                <div className="team__card-body">
+                                    <h3 className="team__card-name">{member.name}</h3>
+                                    <p className="team__card-role">{member.role}</p>
+                                    <p className="team__card-bio">{member.bio}</p>
+                                    <div className="team__card-socials">
+                                        <a href={member.socials.github} target="_blank" rel="noreferrer" title="GitHub" className="team__social-btn">
+                                            <Github size={16} />
+                                        </a>
+                                        <a href={member.socials.linkedin} target="_blank" rel="noreferrer" title="LinkedIn" className="team__social-btn">
+                                            <Linkedin size={16} />
+                                        </a>
+                                        <a href={member.socials.email} title="Email" className="team__social-btn">
+                                            <Mail size={16} />
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>

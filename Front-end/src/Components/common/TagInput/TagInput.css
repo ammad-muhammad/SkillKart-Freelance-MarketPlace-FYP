@@ -11,15 +11,17 @@
   flex-direction: column;
   background: #fff;
   border: 1.5px solid #d1d9e6;
-  border-radius: 12px;
+  border-radius: 10px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible;
   position: relative;
+  min-height: 42px;
+  box-sizing: border-box;
 }
 
 .fl-tag-input-wrapper:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(4, 46, 76, 0.08);
+  box-shadow: 0 0 0 3px rgba(4, 46, 76, 0.08);
 }
 
 .fl-tag-input--error {
@@ -27,16 +29,17 @@
 }
 
 .fl-tag-input--error:focus-within {
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
 }
 
 .fl-tag-list {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.8rem;
-  min-height: 48px;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  min-height: 42px;
+  box-sizing: border-box;
 }
 
 /* ──────────────────────────────────────────────────

@@ -318,7 +318,7 @@ export default function AiMatchmaking() {
                                         placeholder="Describe what you need — features, goals, deliverables… then tap ✨ Auto-fill."
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
-                                        rows={5}
+                                        rows={3}
                                     />
                                 </div>
 
@@ -341,32 +341,34 @@ export default function AiMatchmaking() {
                             <div className="aim-card">
                                 <div className="aim-card__title">💰 Budget & Timeline</div>
 
-                                <div className="aim-field">
-                                    <label className="aim-label" htmlFor="aim-budget">Budget (PKR)</label>
-                                    <input
-                                        id="aim-budget"
-                                        className="aim-input"
-                                        type="number"
-                                        min={1}
-                                        placeholder="e.g. 500"
-                                        value={budget}
-                                        onChange={e => setBudget(e.target.value)}
-                                    />
-                                </div>
+                                <div className="aim-fields-row">
+                                    <div className="aim-field">
+                                        <label className="aim-label" htmlFor="aim-budget">Budget (PKR)</label>
+                                        <input
+                                            id="aim-budget"
+                                            className="aim-input"
+                                            type="number"
+                                            min={1}
+                                            placeholder="e.g. 5000"
+                                            value={budget}
+                                            onChange={e => setBudget(e.target.value)}
+                                        />
+                                    </div>
 
-                                <div className="aim-field">
-                                    <label className="aim-label" htmlFor="aim-timeline">Timeline</label>
-                                    <CustomSelect
-                                        id="aim-timeline"
-                                        value={timeline}
-                                        onChange={setTimeline}
-                                        placeholder="Any timeline"
-                                        options={[
-                                            { value: '', label: 'Any timeline' },
-                                            ...['< 1 week', '1–2 weeks', '2–4 weeks', '1–3 months', '3–6 months', 'Ongoing']
-                                                .map(t => ({ value: t, label: t }))
-                                        ]}
-                                    />
+                                    <div className="aim-field">
+                                        <label className="aim-label" htmlFor="aim-timeline">Timeline</label>
+                                        <CustomSelect
+                                            id="aim-timeline"
+                                            value={timeline}
+                                            onChange={setTimeline}
+                                            placeholder="Any"
+                                            options={[
+                                                { value: '', label: 'Any' },
+                                                ...['< 1 wk', '1–2 wks', '2–4 wks', '1–3 mos', '3–6 mos', 'Ongoing']
+                                                    .map(t => ({ value: t, label: t }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -389,7 +391,7 @@ export default function AiMatchmaking() {
                                 {skills.length > 0 && (
                                     <div className="aim-tags">
                                         {skills.map(sk => (
-                                            <span key={sk} className="aim-tag">
+                                             <span key={sk} className="aim-tag">
                                                 {sk}
                                                 <button className="aim-tag__rm" onClick={() => removeSkill(sk)}>✕</button>
                                             </span>
@@ -398,10 +400,10 @@ export default function AiMatchmaking() {
                                 )}
 
                                 {/* Quick-add pills */}
-                                <div style={{ marginTop: '0.75rem' }}>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-light)', marginBottom: '0.4rem' }}>Quick add:</div>
+                                <div style={{ marginTop: '0.6rem' }}>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-light)', marginBottom: '0.35rem' }}>Quick add:</div>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                                        {ALL_SKILLS.slice(0, 8).filter(s => !skills.includes(s)).map(s => (
+                                        {ALL_SKILLS.slice(0, 6).filter(s => !skills.includes(s)).map(s => (
                                             <button
                                                 key={s}
                                                 type="button"

@@ -99,6 +99,7 @@ const ClientSidebar = () => {
               <NavLink
                 key={item.to}
                 to={to}
+                end={item.to === '/client/projects' || item.to === '/client/dashboard' || item.to === '/client/profile'}
                 className={({ isActive }) =>
                   `cl-sidebar__link${isActive ? ' cl-sidebar__link--active' : ''}`
                 }

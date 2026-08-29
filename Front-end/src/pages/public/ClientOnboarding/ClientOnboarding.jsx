@@ -380,6 +380,12 @@ const ClientOnboarding = () => {
     ];
 
     const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
+    const proficiencyOptions = useMemo(() => [
+        { value: 'basic', label: 'Basic' },
+        { value: 'conversational', label: 'Conversational' },
+        { value: 'fluent', label: 'Fluent' },
+        { value: 'native', label: 'Native' }
+    ], []);
 
     const CustomControl = ({ children, ...props }) => {
         const iconStyle = { marginLeft: '12px', opacity: 0.7, fontSize: '1rem' };
@@ -820,21 +826,19 @@ const ClientOnboarding = () => {
                             </div>
                             <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
                                 <label className="onboarding__label" style={{ fontSize: '12px', marginBottom: '4px' }}>Proficiency</label>
-                                <select 
-                                    className="onboarding__input" 
-                                    value={lang.proficiency || 'fluent'} 
-                                    onChange={(e) => {
+                                <Select
+                                    options={proficiencyOptions}
+                                    value={proficiencyOptions.find(o => o.value.toLowerCase() === (lang.proficiency || 'fluent').toLowerCase()) || proficiencyOptions[2]}
+                                    onChange={(selected) => {
                                         const newList = [...formData.languages];
-                                        newList[idx].proficiency = e.target.value;
+                                        newList[idx].proficiency = selected?.value || 'fluent';
                                         setFormData(p => ({ ...p, languages: newList }));
                                     }}
-                                    style={{ backgroundColor: '#fff' }}
-                                >
-                                    <option value="basic">Basic</option>
-                                    <option value="conversational">Conversational</option>
-                                    <option value="fluent">Fluent</option>
-                                    <option value="native">Native</option>
-                                </select>
+                                    placeholder="Select proficiency"
+                                    styles={customStyles}
+                                    classNamePrefix="skillkart-select"
+                                    menuPortalTarget={document.body}
+                                />
                             </div>
                             <button
                                 type="button"

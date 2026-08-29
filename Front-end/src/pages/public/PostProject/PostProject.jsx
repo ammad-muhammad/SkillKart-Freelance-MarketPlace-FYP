@@ -413,7 +413,7 @@ export default function PostProject() {
                                         <div className="pp-row" style={{ marginTop: '1rem' }}>
                                             <div className="pp-field">
                                                 <label className="pp-label" htmlFor="pp-bmin">
-                                                    {form.budgetType === 'fixed' ? 'Minimum Budget ($)' : 'Min Rate ($/hr)'} <span>*</span>
+                                                    {form.budgetType === 'fixed' ? 'Minimum Budget (PKR)' : 'Min Rate (PKR/hr)'} <span>*</span>
                                                 </label>
                                                 <input
                                                     id="pp-bmin"
@@ -428,7 +428,7 @@ export default function PostProject() {
                                             </div>
                                             {form.budgetType === 'fixed' && (
                                                 <div className="pp-field">
-                                                    <label className="pp-label" htmlFor="pp-bmax">Maximum Budget ($) <span>*</span></label>
+                                                    <label className="pp-label" htmlFor="pp-bmax">Maximum Budget (PKR) <span>*</span></label>
                                                     <input
                                                         id="pp-bmax"
                                                         type="number"

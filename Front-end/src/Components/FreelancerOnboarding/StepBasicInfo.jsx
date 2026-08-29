@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Briefcase, AlignLeft, DollarSign, Clock, ChevronDown, Check,
+  Briefcase, AlignLeft, Tag, Clock, ChevronDown, Check,
   Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award, Link,
   User, Upload, Globe2
 } from "lucide-react";
@@ -211,7 +211,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
       <div className="fob-form-row">
         <div className="fob-form-group">
           <label className="fob-label">
-            <DollarSign size={15} className="fob-label-icon" />
+            <Tag size={15} className="fob-label-icon" />
             Hourly Rate (PKR)*
           </label>
           <div className="fob-input-prefix-wrapper">
@@ -289,7 +289,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             ]}
             value={formData.experienceLevel}
             onChange={(val) => handleChange({ target: { name: 'experienceLevel', value: val } })}
-            placeholder="Type to search…"
+            placeholder="Select experience level..."
           />
         </div>
 
@@ -303,7 +303,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             options={timezones.map((tz) => tz.label)}
             value={formData.timezone}
             onChange={(val) => handleChange({ target: { name: 'timezone', value: val } })}
-            placeholder="Type to search timezone…"
+            placeholder="Select timezone / location..."
           />
         </div>
       </div>
