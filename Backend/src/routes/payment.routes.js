@@ -22,6 +22,11 @@ router.post('/jobs/:jobId/confirm', authenticate, requireRole('client'), payment
 // contract; milestone 1 is funded automatically when the proposal is accepted.
 router.post('/milestones/:milestoneId/fund', authenticate, requireRole('client'), paymentController.fundMilestone);
 
+// Lock/re-lock an hourly contract's wallet escrow (defaults to one week's
+// estimate) — the initial lock happens automatically at proposal accept;
+// this is for topping up once the running balance runs low.
+router.post('/contracts/:contractId/lock-hourly', authenticate, requireRole('client'), paymentController.lockHourlyContract);
+
 // View the escrow record for a job (client or hired freelancer)
 router.get('/jobs/:jobId', authenticate, paymentController.getJobPayment);
 

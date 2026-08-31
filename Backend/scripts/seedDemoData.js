@@ -1056,12 +1056,23 @@ async function run() {
         hist(`delivery_v${v}`, `Freelancer submitted delivery v${v}`, lastDelivAt);
       }
 
-      // Hourly → some time logs
+      // Hourly → some time logs, plus the wallet-lock escrow that backs them.
+      // The live app locks one week's estimate at accept time and draws it
+      // down per logged hour (see hourlyEscrow.service.js) — seed a lock
+      // generous enough to cover whatever 'pending' backlog gets generated
+      // below, so a freshly-seeded demo contract isn't already "escrow
+      // exhausted" and blocked from new time-tracking.
+      const weeklyLockAmount = isFixed ? 0 : round2((contractDoc.hourlyRate || 0) * (contractDoc.weeklyLimit || 0));
+      let pendingLogAmount = 0;
       if (!isFixed) {
         const nLogs = randInt(3, 12);
         for (let l = 0; l < nLogs; l++) {
           const day = dateBetween(startAt, contractDoc.completedAt || NOW);
           const durMs = randInt(1, 6) * 3600 * 1000;
+          const logStatus = completedJob ? 'billed' : pick(['pending', 'approved']);
+          if (logStatus === 'pending') {
+            pendingLogAmount = round2(pendingLogAmount + (durMs / 3600000) * (contractDoc.hourlyRate || 0));
+          }
           timeLogs.push({
             contractId, jobId: job._id, clientId: client.user._id, freelancerId: winner.user._id,
             duration: durMs, startTime: day, endTime: new Date(day.getTime() + durMs), date: day,
@@ -1069,10 +1080,20 @@ async function run() {
             notes: pick(['Feature implementation', 'Bug fixing', 'API integration', 'UI polish', 'Testing']),
             createdBy: winner.user._id, approvedBy: completedJob ? client.user._id : undefined,
             approvedAt: completedJob ? dateBetween(day, NOW) : undefined,
-            status: completedJob ? 'billed' : pick(['pending', 'approved']),
+            status: logStatus,
             createdAt: day, updatedAt: day,
           });
         }
+        // Completed contracts have already settled + refunded their lock;
+        // everything else keeps enough locked to cover the backlog above plus
+        // one more week's headroom so the demo freelancer can keep logging time.
+        const totalLocked = round2(pendingLogAmount + weeklyLockAmount);
+        contractDoc.hourlyEscrow = {
+          lockedBalance: completedJob ? 0 : totalLocked,
+          weeklyLockAmount,
+          totalLocked,
+          totalDrawn: completedJob ? totalLocked : 0,
+        };
       }
 
       // Release + reviews for completed

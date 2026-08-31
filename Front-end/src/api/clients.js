@@ -5,7 +5,9 @@ export const clientsAPI = {
   checkUsername: (username) =>
     client.get(`/clients/check-username?username=${encodeURIComponent(username)}`),
   getProfile: () => client.get('/clients/profile/me'),
-  updateProfile: (profileData) => client.put('/clients/profile/me', profileData),
+  // Caller (ClientContext.saveProfile) already shows its own contextual toast —
+  // suppress the global auto-toast to avoid double-toasting.
+  updateProfile: (profileData) => client.put('/clients/profile/me', profileData, { suppressErrorToast: true }),
   submitVerification: (documents) => client.post('/clients/verification/submit', { documents }),
   
   // Onboarding
@@ -31,14 +33,18 @@ export const clientsAPI = {
     });
   },
 
-  // Saved freelancers
-  toggleSavedFreelancer: (freelancerId) => 
-    client.post('/clients/saved-freelancers', { freelancerId }),
+  // Saved freelancers. Caller (ClientContext) already shows its own toast —
+  // suppress the global auto-toast to avoid double-toasting.
+  toggleSavedFreelancer: (freelancerId) =>
+    client.post('/clients/saved-freelancers', { freelancerId }, { suppressErrorToast: true }),
 
   getSavedFreelancers: () => 
     client.get('/clients/saved-freelancers'),
 
-  recommendIndustry: (data) => 
+  // Has multiple callers with inconsistent local error handling (ClientProfile.jsx
+  // handles it locally, ClientOnboarding.jsx's fetchAISuggestions doesn't) — leave
+  // the global auto-toast enabled so the latter isn't left with zero feedback.
+  recommendIndustry: (data) =>
     client.post('/clients/ai/recommend-industry', data),
 
   getPublicById: (id) => client.get(`/public/clients/${id}`)

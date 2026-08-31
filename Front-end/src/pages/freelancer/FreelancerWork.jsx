@@ -2,9 +2,9 @@ import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers } from 'lucide-react';
-import { toast } from 'react-toastify';
 import { contractsAPI } from '../../api/contracts';
 import { useAuth } from '../../hooks/useAuth';
+import { useFreelancer } from '../../context/FreelancerContext';
 import Modal from './components/Modal';
 import { deliveriesAPI } from '../../api/deliveries';
 import { timeTrackingAPI } from '../../api/timeTracking';
@@ -42,13 +42,14 @@ export default function FreelancerWork() {
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeDesc, setDisputeDesc] = useState('');
   const { user } = useAuth();
+  const { showToast } = useFreelancer();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await contractsAPI.getMyContracts({ limit: 50 });
       setContracts(Array.isArray(data?.data) ? data.data : []);
-    } catch { /* global toast */ } finally { setLoading(false); }
+    } catch { /* handled by the global error handler */ } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -62,19 +63,19 @@ export default function FreelancerWork() {
   const submitDelivery = async () => {
     if (!deliverFor) return;
     if (!delivery.message.trim() && !delivery.links.trim()) {
-      toast.warn('Add a delivery note or at least one link.');
+      showToast('Add a delivery note or at least one link.', 'warning');
       return;
     }
     setDelivering(true);
     try {
       const externalLinks = delivery.links.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
       await deliveriesAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), externalLinks });
-      toast.success('Work delivered! The client will review it.');
+      showToast('Work delivered! The client will review it.');
       setDeliverFor(null);
       setDelivery({ message: '', links: '' });
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit delivery.');
+      showToast(err.response?.data?.message || 'Failed to submit delivery.', 'error');
     } finally {
       setDelivering(false);
     }
@@ -84,15 +85,25 @@ export default function FreelancerWork() {
     try {
       setTracking(prev => ({ ...prev, [contractId]: true }));
       if (isActive) {
-        await timeTrackingAPI.stopTimer(contractId);
-        toast.success('Timer stopped successfully');
+        const { data } = await timeTrackingAPI.stopTimer(contractId);
+        if (!data?.data?.log) {
+          // Duration was under a minute — nothing was logged or billed.
+          showToast(data?.message || 'Timer stopped (duration too short to log)', 'info');
+        } else {
+          showToast(
+            data?.data?.needsTopUp
+              ? 'Timer stopped — escrow is low, ask the client to top up so this gets paid.'
+              : 'Timer stopped and paid out from escrow.',
+            data?.data?.needsTopUp ? 'warning' : 'success'
+          );
+        }
       } else {
         await timeTrackingAPI.startTimer(contractId);
-        toast.success('Timer started successfully');
+        showToast('Timer started successfully');
       }
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to toggle timer');
+      showToast(err.response?.data?.message || 'Failed to toggle timer', 'error');
     } finally {
       setTracking(prev => ({ ...prev, [contractId]: false }));
     }
@@ -104,11 +115,11 @@ export default function FreelancerWork() {
     try {
       setDelivering(true);
       await contractsAPI.requestEnd(endRequestModal.contractId, endReason, endDetails);
-      toast.success('End request sent');
+      showToast('End request sent');
       setEndRequestModal(null);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send request');
+      showToast(err.response?.data?.message || 'Failed to send request', 'error');
     } finally {
       setDelivering(false);
     }
@@ -118,10 +129,10 @@ export default function FreelancerWork() {
     try {
       setDelivering(true);
       await contractsAPI.respondEnd(contractId, action);
-      toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'}`);
+      showToast(`Request ${action === 'approve' ? 'approved' : 'rejected'}`);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to respond');
+      showToast(err.response?.data?.message || 'Failed to respond', 'error');
     } finally {
       setDelivering(false);
     }
@@ -133,11 +144,11 @@ export default function FreelancerWork() {
     try {
       setDelivering(true);
       await contractsAPI.raiseDispute(disputeModal.contractId, disputeReason, disputeDesc);
-      toast.success('Dispute raised successfully');
+      showToast('Dispute raised successfully');
       setDisputeModal(null);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to raise dispute');
+      showToast(err.response?.data?.message || 'Failed to raise dispute', 'error');
     } finally {
       setDelivering(false);
     }
@@ -217,7 +228,7 @@ export default function FreelancerWork() {
                   {isFixed ? (
                     <span><DollarSign size={14} /> Agreed: <strong>Rs. {c.fixedPrice ?? '—'}</strong></span>
                   ) : (
-                    <span><DollarSign size={14} /> Rate: <strong>Rs. {c.hourlyRate ?? '—'} / hr</strong> (Max {c.weeklyHourLimit} hrs/wk)</span>
+                    <span><DollarSign size={14} /> Rate: <strong>Rs. {c.hourlyRate ?? '—'} / hr</strong> (Max {c.weeklyLimit ?? '—'} hrs/wk)</span>
                   )}
                   {isFixed && escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
                   {isFixed && c.payment?.status === 'released' && (
@@ -284,12 +295,21 @@ export default function FreelancerWork() {
                       {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {(((c.totalDuration || 0) / 3600000) * c.hourlyRate).toFixed(2)})</span>}
                       {c.lastTimeLog && (
                         <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
-                          Last session: <strong>{Math.floor(c.lastTimeLog.duration / 3600000)}h {Math.floor((c.lastTimeLog.duration % 3600000) / 60000)}m</strong> 
+                          Last session: <strong>{Math.floor(c.lastTimeLog.duration / 3600000)}h {Math.floor((c.lastTimeLog.duration % 3600000) / 60000)}m</strong>
                           {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((c.lastTimeLog.duration / 3600000) * c.hourlyRate).toFixed(2)})</span>}
                           {' '}({new Date(c.lastTimeLog.endTime).toLocaleDateString()})
                         </span>
                       )}
                     </div>
+                    {!['completed', 'cancelled'].includes(c.status) && (
+                      <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                        <Wallet size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? '#dc2626' : '#059669' }} />
+                        <span style={{ color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? '#dc2626' : 'var(--color-text-mid)' }}>
+                          Client's escrow lock: <strong>Rs. {(c.hourlyEscrow?.lockedBalance || 0).toFixed(2)}</strong>
+                          {(c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 && ' — running low, ask the client to top up so new time logs get paid'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -371,7 +391,7 @@ export default function FreelancerWork() {
                   )}
                   {c.dispute?.status !== 'pending' && (
                     (isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && c.endRequest?.status !== 'pending') ||
-                    (isFixed && ['delivered', 'in_revision'].includes(c.status))
+                    (isFixed && ['delivered', 'in_revision'].includes(c.status) && !!c.currentMilestone)
                   ) && (
                     <button
                       className="fl-btn fl-btn--sm fl-btn--ghost"

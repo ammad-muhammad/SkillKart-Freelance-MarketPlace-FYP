@@ -13,14 +13,16 @@ export const contractsAPI = {
   requestCancellation: (id, reason) => 
     client.post(`/contracts/${id}/cancel`, { reason }),
 
-  // Hourly Contract Workflows
-  requestEnd: (id, reason, additionalDetails) => client.post(`/contracts/${id}/end-request`, { reason, additionalDetails }),
-  respondEnd: (id, action) => client.post(`/contracts/${id}/end-respond`, { action }),
-  raiseDispute: (id, reason, description) => client.post(`/contracts/${id}/dispute`, { reason, description }),
+  // Hourly Contract Workflows. Callers (ClientProjects.jsx, FreelancerWork.jsx)
+  // already show their own contextual toast — suppress the global auto-toast
+  // so failures (e.g. "No milestone found for this contract") don't double-toast.
+  requestEnd: (id, reason, additionalDetails) => client.post(`/contracts/${id}/end-request`, { reason, additionalDetails }, { suppressErrorToast: true }),
+  respondEnd: (id, action) => client.post(`/contracts/${id}/end-respond`, { action }, { suppressErrorToast: true }),
+  raiseDispute: (id, reason, description) => client.post(`/contracts/${id}/dispute`, { reason, description }, { suppressErrorToast: true }),
 
   // End contract manually (for hourly)
   endContract: (id) =>
-    client.post(`/contracts/${id}/end`),
+    client.post(`/contracts/${id}/end`, undefined, { suppressErrorToast: true }),
 
   // Get contract history
   getContractHistory: (id, params) => 

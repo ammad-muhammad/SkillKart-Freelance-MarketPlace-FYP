@@ -9,7 +9,7 @@ Express + MongoDB REST API powering the SkillKart marketplace: authentication, R
 - **Authentication** — email/password + OTP, JWT access & refresh tokens, optional Supabase social OAuth.
 - **RBAC** — role-based access control (guest, freelancer, client, admin roles) with an encrypted SuperAdmin.
 - **Marketplace** — jobs, gigs, proposals, and a strict contract lifecycle (proposal → contract → delivery → review) modelled as state machines.
-- **Payments** — fixed-price jobs lock 100% escrow from the client's wallet at hire (optionally split into sequential milestones, 7-day auto-release, per-milestone disputes — see [Escrow & Milestone Payments](#escrow--milestone-payments) below); hourly contracts and Gig orders use the original Stripe-backed deposit/final flow with a simulated/dummy mode for local development. Wallet balances, payouts, and withdrawals throughout.
+- **Payments** — fixed-price jobs lock 100% escrow from the client's wallet at hire (optionally split into sequential milestones, 7-day auto-release, per-milestone disputes); hourly contracts lock a one-week estimate from the client's wallet at hire and bill automatically per logged hour (see [Escrow & Milestone Payments](#escrow--milestone-payments) below). Gig orders are the only flow still on the original Stripe-backed deposit/final split, with a simulated/dummy mode for local development. Wallet balances, payouts, and withdrawals throughout. No wallet balance is required to post/publish a job — the balance is only checked when a proposal is accepted.
 - **Messaging** — conversation-based in-app messaging tied to contracts.
 - **Reviews & disputes** — two-way reviews and an admin-mediated dispute workflow.
 - **Skill verification** — skill taxonomy, matching, and test attempts.
@@ -229,14 +229,23 @@ Set on Railway: `EMAIL_PROVIDER=gmail`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRE
 ## Escrow & Milestone Payments
 
 Fixed-price **custom jobs** lock escrow from the client's **wallet balance** — no Stripe
-redirect, no webhook wait. Hourly contracts and **Gig orders** are unchanged and still use
-the original Stripe Checkout deposit/final flow (`payment.controller.js`'s `startDeposit`/
-`startFinal`).
+redirect, no webhook wait. Hourly contracts also lock escrow from the client's wallet
+(a separate wallet-lock model, replacing the old Stripe deposit flow for hourly — see
+[Hourly wallet-lock escrow](#hourly-wallet-lock-escrow) below). **Gig orders** are the only
+remaining flow on the original Stripe Checkout deposit/final split
+(`payment.controller.js`'s `startDeposit`/`startFinal`; it now explicitly rejects hourly
+contracts).
 
-### How it works
+There is **no wallet-balance check at job posting or publishing**, for either job type —
+`job.controller.js`'s `createJob`/`updateJob` let a client post with a $0 wallet so the job
+is visible and can collect proposals. The wallet is only enforced when a proposal is
+**accepted**.
+
+### How it works (fixed-price milestones)
 
 ```
-Proposal accepted → 100% of milestone 1 debited from client wallet (before any writes)
+Proposal accepted → wallet checked for milestone 1's amount (before any writes)
+                  → 100% of milestone 1 debited from client wallet
                   → Milestone(s) + Contract + Payment created
                   → Freelancer may submit ONLY once the current milestone is `funded`
                   → Client approves → escrow releases → next milestone unlocks for funding
@@ -247,20 +256,37 @@ Proposal accepted → 100% of milestone 1 debited from client wallet (before any
 
 - **One milestone by default** — accepting a proposal without a `milestones` array creates a single implicit "Full Project" milestone covering the whole price. Splitting into several (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000") is opt-in at accept time; amounts must sum exactly to the proposal price.
 - **Sequential, not all-upfront** — only milestone 1 auto-funds. Milestone 2+ is funded on demand via `POST /payments/milestones/:id/fund` once the client is ready, so capital isn't parked for work that hasn't started.
-- **No Mongo transactions** — none exist anywhere in this codebase. Correctness in `acceptProposal` comes from strict ordering: validate + debit the wallet **before** creating any `Contract`/`Milestone`/`Payment` records, so a failed/insufficient-balance request leaves nothing half-created.
-- **Post-project wallet gate** — `job.controller.js` blocks posting a job (or publishing a draft) unless the client's wallet balance already covers `budget.min`.
+- **No Mongo transactions** — none exist anywhere in this codebase. Correctness in `acceptProposal` comes from strict ordering: validate the wallet **before** creating any `Contract`/`Milestone`/`Payment` records, then debit as part of the same accept, so a failed/insufficient-balance request leaves nothing half-created.
+
+### Hourly wallet-lock escrow
+
+```
+Proposal accepted → wallet checked for one week's estimate (hourlyRate × estimatedWeeklyHours)
+                  → that amount locked from client wallet → Contract created, paymentStatus 'wallet_locked'
+                  → freelancer logs time (timer or manual) → gated by assertEscrowHasRoom
+                                     (unbilled work can't exceed the locked balance)
+                  → each logged chunk draws down the lock straight to the freelancer's
+                    wallet (net platform fee) — no separate client-approval step
+                  → lock exhausted → new logs wait `pending` (needsTopUp) until the client
+                    tops up via POST /payments/contracts/:id/lock-hourly (retries pending
+                    logs oldest-first)
+                  → contract ends → remaining pending logs settled, then whatever's left
+                    in the lock is refunded to the client (a lock is a hold, not a spend)
+```
+
+Hourly disputes stay **contract-level** (`contract.dispute`), unlike fixed-price's per-milestone disputes — branch on `contract.type` when reading dispute state.
 
 ### Models
 
 | Model | Role |
 |-------|------|
 | `Milestone` | Top-level collection (not embedded in `Contract`) — `order`, `amount`, `status` (`pending_funding → funded → submitted → approved/in_revision/disputed → released/refunded`), `reviewDeadline`, own `dispute` sub-document. Top-level so the auto-release cron and admin dispute list can query across all milestones cheaply. |
-| `Payment` | One row **per milestone** for fixed-price jobs (`milestoneId` set) — a contract can have several. Legacy hourly/Gig rows have no `milestoneId`. Never assume one `Payment` per `Contract`. |
-| `Contract` | `milestoneMode` (bool) + `currentMilestoneOrder` (int) added; everything else unchanged. |
+| `Payment` | One row **per milestone** for fixed-price jobs (`milestoneId` set, `type: 'job_escrow'`); one row per lock/top-up (`type: 'hourly_escrow'`) and per drawn-down chunk (`type: 'hourly_invoice'`) for hourly; Gig orders use `type: 'job_escrow'` via the legacy deposit/final split. A contract can have several `Payment` rows — never assume one `Payment` per `Contract`. |
+| `Contract` | `milestoneMode` (bool) + `currentMilestoneOrder` (int) for fixed-price; `hourlyEscrow` (`lockedBalance`, `totalLocked`, `totalDrawn`) + `paymentStatus` for hourly. |
 
-### Disputes are per-milestone, not per-contract
+### Disputes are per-milestone, not per-contract (fixed-price only)
 
-For fixed-price jobs, `raiseDispute` targets the **current milestone** — `contract.dispute` stays untouched; the milestone gets its own `dispute` sub-document instead. Hourly contracts are unchanged (still `contract.dispute`). Any code reading a fixed-price contract's dispute state must branch on `contract.type` and read the milestone's dispute for `'fixed'` — this was a real bug fixed in `getMyProjects`/`getMyContracts` and is easy to reintroduce in a new endpoint.
+For fixed-price jobs, `raiseDispute` targets the **current milestone** — `contract.dispute` stays untouched; the milestone gets its own `dispute` sub-document instead. Hourly contracts still use `contract.dispute` directly (see above). Any code reading a fixed-price contract's dispute state must branch on `contract.type` and read the milestone's dispute for `'fixed'` — this was a real bug fixed in `getMyProjects`/`getMyContracts` and is easy to reintroduce in a new endpoint.
 
 Admin resolution (`adminPanel/disputes.controller.js`) offers the same 5 actions for both paths — release to freelancer, refund client, split by percentage, resume, or reject — but a fixed-price resolution only ever settles the **one** disputed milestone and returns the contract to `active` (or completes it, if that was the last milestone). It never itself ends the whole contract; admins use the separate, pre-existing `forceComplete`/`cancelContract` tools for that.
 

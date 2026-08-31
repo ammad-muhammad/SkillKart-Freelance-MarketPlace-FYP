@@ -7,7 +7,7 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const notifications = require('../services/notification.service');
-const { PLATFORM_FEE_RATE, round2 } = require('../utils/constants');
+const { drawDownForTimeLog, refundRemainingHourlyEscrow } = require('../services/hourlyEscrow.service');
 
 /**
  * Get contract details
@@ -317,44 +317,26 @@ const respondEndContract = asyncHandler(async (req, res) => {
       contract.timer.isActive = false;
     }
 
-    // Process immediate payment for any pending time logs
+    // Settle any pending time logs against the locked escrow (oldest first —
+    // if the lock can't cover everything, whatever's left just stays
+    // 'pending' rather than being falsely marked paid), then refund whatever
+    // remains locked back to the client since the contract is now done.
     if (contract.type === 'hourly') {
       const TimeLog = require('../models/TimeLog');
-      const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' });
-      
-      if (pendingLogs.length > 0) {
-        const totalDurationMs = pendingLogs.reduce((sum, log) => sum + log.duration, 0);
-        const totalHours = totalDurationMs / (1000 * 60 * 60);
-        const amount = totalHours * contract.hourlyRate;
-        
-        if (amount > 0.01) {
-          await Payment.create({
-            jobId: contract.jobId,
-            contractId: contract._id,
-            clientId: contract.clientId,
-            freelancerId: contract.freelancerId,
-            type: 'hourly_invoice',
-            totalAmount: round2(amount),
-            depositAmount: round2(amount),
-            finalAmount: round2(amount),
-            feeRate: PLATFORM_FEE_RATE,
-            platformFee: round2(amount * PLATFORM_FEE_RATE),
-            freelancerPayout: round2(amount * (1 - PLATFORM_FEE_RATE)),
-            status: 'released',
-          });
-        }
+      const job = await Job.findById(contract.jobId);
+      const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' }).sort({ startTime: 1 });
 
-        await TimeLog.updateMany(
-          { _id: { $in: pendingLogs.map(l => l._id) } },
-          { $set: { status: 'billed', approvedBy: null } }
-        );
+      for (const log of pendingLogs) {
+        try {
+          await drawDownForTimeLog({ timeLog: log, contract, job });
+        } catch (err) {
+          const reason = err.errors?.insufficientBalance ? 'escrow exhausted' : `unexpected error: ${err.message}`;
+          console.error(`[respondEndContract] Could not settle time log ${log._id} (${reason})`);
+          break;
+        }
       }
 
-      // Release any previously generated unpaid invoices for this contract, regardless of whether there are new pending logs
-      await Payment.updateMany(
-        { contractId: contract._id, status: { $in: ['deposit_pending', 'escrow_funded'] } },
-        { $set: { status: 'released' } }
-      );
+      await refundRemainingHourlyEscrow({ contract, job });
     }
 
     await contract.save();

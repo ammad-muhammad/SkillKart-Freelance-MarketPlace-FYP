@@ -1,5 +1,5 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers } from 'lucide-react';
+import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
@@ -117,21 +117,16 @@ const ClientProjects = () => {
     }
   };
 
-  // Legacy 50/50 deposit — hourly contracts only (fixed-price now locks 100%
-  // automatically at hire time via acceptProposal, see fundNextMilestone below).
-  const fundDeposit = async (projId) => {
+  // Lock/re-lock an hourly contract's escrow from the client's wallet.
+  // Milestone-style: one week's estimate locks automatically at hire time —
+  // this is for topping up once the running balance runs low.
+  const lockHourly = async (contractId) => {
     try {
-      const { data } = await paymentsAPI.startDeposit(projId);
-      if (data?.data?.walletPaid) {
-        showToast('50% deposit funded successfully from your wallet balance! Work can begin.', 'success');
-        await fetchProfile();
-        return;
-      }
-      const url = data?.data?.checkoutUrl;
-      if (url) { window.location.assign(url); return; }
-      showToast('Could not start the deposit checkout.', 'error');
+      await paymentsAPI.lockHourlyContract(contractId);
+      showToast('Escrow locked from your wallet balance! Any unpaid logged hours were just settled.', 'success');
+      await fetchProfile();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Deposit could not be started (it may already be paid).', 'info');
+      showToast(err.response?.data?.message || 'Could not lock escrow for this contract.', 'error');
     }
   };
 
@@ -447,12 +442,24 @@ const ClientProjects = () => {
                     {proj.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((proj.totalDuration / 3600000) * proj.hourlyRate).toFixed(2)})</span>}
                     {proj.lastTimeLog && (
                       <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
-                        Last session: <strong>{Math.floor(proj.lastTimeLog.duration / 3600000)}h {Math.floor((proj.lastTimeLog.duration % 3600000) / 60000)}m</strong> 
+                        Last session: <strong>{Math.floor(proj.lastTimeLog.duration / 3600000)}h {Math.floor((proj.lastTimeLog.duration % 3600000) / 60000)}m</strong>
                         {proj.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((proj.lastTimeLog.duration / 3600000) * proj.hourlyRate).toFixed(2)})</span>}
                         {' '}({new Date(proj.lastTimeLog.endTime).toLocaleDateString()})
                       </span>
                     )}
                   </div>
+                  {proj.status !== 'completed' && proj.status !== 'closed' && (
+                    <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Wallet size={14} style={{ color: (proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 ? '#dc2626' : '#059669' }} />
+                      <span style={{ color: (proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 ? '#dc2626' : 'var(--color-text-mid)' }}>
+                        Escrow locked: <strong>Rs. {(proj.hourlyEscrow?.lockedBalance || 0).toFixed(2)}</strong>
+                        {(proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 && ' — running low'}
+                      </span>
+                      <button className="cl-btn cl-btn--outline cl-btn--sm" style={{ marginLeft: 'auto' }} onClick={() => lockHourly(proj.contractId)}>
+                        <CreditCard size={14} style={{ marginRight: '6px' }} /> Top Up Escrow
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -511,17 +518,9 @@ const ClientProjects = () => {
                         <Send size={14} style={{ marginRight: '6px' }} /> Publish Draft
                       </button>
                     )}
-                    {proj.status === 'in-progress' && proj.source !== 'gig' && proj.contractType === 'hourly' && (
-                      proj.payment && (proj.payment.status === 'deposit_paid' || proj.payment.status === 'released') ? (
-                        <button className="cl-btn cl-btn--ghost cl-btn--sm" disabled style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
-                          <CheckCircle size={14} style={{ marginRight: '6px', color: '#22c55e' }} /> Deposit Funded
-                        </button>
-                      ) : (
-                        <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundDeposit(proj.id)}>
-                          <CreditCard size={14} style={{ marginRight: '6px' }} /> Fund Deposit
-                        </button>
-                      )
-                    )}
+                    {/* Hourly escrow lock status + top-up lives in the "Hourly Project
+                        Info" panel above — no separate deposit button needed here;
+                        the initial week's lock happens automatically at hire time. */}
                     {proj.status === 'in-progress' && proj.source !== 'gig' && proj.contractType === 'fixed' && proj.currentMilestone && (
                       proj.currentMilestone.status === 'pending_funding' ? (
                         <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundNextMilestone(proj.currentMilestone._id)}>
@@ -568,7 +567,7 @@ const ClientProjects = () => {
                     )}
                     {proj.dispute?.status !== 'pending' && (
                       (proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status) && proj.endRequest?.status !== 'pending') ||
-                      (proj.contractType === 'fixed' && ['delivered', 'in_revision'].includes(proj.contractStatus))
+                      (proj.contractType === 'fixed' && ['delivered', 'in_revision'].includes(proj.contractStatus) && !!proj.currentMilestone)
                     ) && (
                       <button
                         className="cl-btn cl-btn--sm cl-btn--ghost"
@@ -588,7 +587,9 @@ const ClientProjects = () => {
                         <MessageSquare size={14} style={{ marginRight: '6px' }} /> Contact Freelancer
                       </Link>
                     )}
-                    <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}><Edit3 size={14} style={{ marginRight: '6px' }} /> Edit</button>
+                    {['draft', 'open'].includes(proj.status) && (
+                      <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}><Edit3 size={14} style={{ marginRight: '6px' }} /> Edit</button>
+                    )}
                     <button
                       className="cl-btn cl-btn--danger cl-btn--sm"
                       onClick={() => setDeleteModal(proj.id)}

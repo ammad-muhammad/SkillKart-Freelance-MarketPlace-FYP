@@ -216,7 +216,7 @@
 ```
 User ──1:1── FreelancerProfile / ClientProfile
 Client ──1:N── Job ──1:N── Proposal ──(accepted)──► Contract
-Contract ──1:1── Payment ──► Wallet balances + Withdrawal
+Contract ──1:N── Payment (one per milestone / hourly lock+invoice) ──► Wallet balances + Withdrawal
 Contract ──1:N── Delivery, Message (via Conversation), TimeLog
 Contract ──1:N── Review, Dispute
 User/Contract ──► Report ──► AdminAuditLog
@@ -235,7 +235,7 @@ User/Contract ──► Report ──► AdminAuditLog
 - **User** — identity, role (superadmin/admin/freelancer/client/publicviewer), auth provider, verification flags.
 - **Contract** — the lifecycle engine: `status` state machine (active → delivered → completed / cancelled / disputed), timer, `milestoneMode` (fixed-price), dispute sub-document (hourly).
 - **Milestone** — (fixed-price) one funded phase: `order`, `amount`, `status` (pending_funding → funded → submitted → released), own dispute sub-document.
-- **Payment** — escrow: `type` (job_escrow / wallet_deposit / hourly_invoice), `milestoneId` link, `status` (deposit_pending → deposit_paid → released / refunded), platform fee + payout split.
+- **Payment** — escrow: `type` (job_escrow / wallet_deposit / hourly_escrow / hourly_invoice), `milestoneId` link, `status` (deposit_pending → deposit_paid → released / refunded), platform fee + payout split.
 - **Gig / Job / Proposal / Review / Withdrawal / Testimonial** — marketplace records.
 - **Admin-side:** AdminAuditLog, Report, PlatformSettings, ApiLog, ErrorLog.
 
@@ -373,15 +373,18 @@ User/Contract ──► Report ──► AdminAuditLog
 
 **Content — end-to-end lifecycle:**
 ```
-Register → Onboard (verify) → Post Job (wallet must cover its budget) / Publish Gig
+Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publish Gig
    → Freelancer submits Proposal → Client accepts
-   → Contract created → 100% escrow locked instantly (optionally split into milestones)
-   → Freelancer delivers → Client approves (or 7-day auto-release if silent)
+      (wallet must now cover milestone 1 / one week's hourly estimate)
+   → Contract created → escrow locks:
+      fixed-price = milestone 1 funded instantly (later milestones funded one at a time)
+      hourly = one week's estimated cost locked (billed automatically as hours are logged)
+   → Freelancer delivers/logs time → Client approves (or 7-day auto-release if silent, fixed-price)
    → Escrow released (payout − platform fee) → Both leave Reviews
    → (if needed) Dispute on the milestone/contract → Admin resolves
 ```
 
-**Speaker notes:** This is the core loop. Note the escrow: for fixed-price jobs, 100% of the price locks from the client's wallet the moment they hire — no separate "pay the deposit" step — and large projects can split into sequential milestones funded one at a time. If the client goes quiet after delivery, escrow auto-releases after 7 days rather than trapping the freelancer's payment. Disputes route to an admin who can release, refund, or split.
+**Speaker notes:** This is the core loop. Note the escrow model differs by contract type: wallet balance is never checked at posting — only when a proposal is accepted. For fixed-price jobs, only milestone 1's amount locks instantly; later milestones are funded sequentially as work progresses, and if the client goes quiet after delivery, escrow auto-releases after 7 days rather than trapping the freelancer's payment. For hourly contracts, accepting locks one week's estimated cost, and billing draws down automatically per logged hour — no separate client approval step — with any unused lock refunded when the contract ends. Disputes route to an admin who can release, refund, or split.
 
 *[Screenshot: contract detail page showing status + escrow]*
 
@@ -394,7 +397,7 @@ Register → Onboard (verify) → Post Job (wallet must cover its budget) / Publ
 1. Browse as a guest → open a gig/freelancer profile.
 2. Log in as a **client** → post a job (with AI auto-fill).
 3. Log in as a **freelancer** → submit a proposal (AI-drafted).
-4. Client accepts → **contract** created → **100% escrow locked automatically**.
+4. Client accepts → **contract** created → **milestone 1 escrow locked automatically** (hourly: one week's estimate locked).
 5. Freelancer delivers → client approves → **escrow released** → review.
 6. Try an **AI tool** (Cost Estimator / Buddy).
 
