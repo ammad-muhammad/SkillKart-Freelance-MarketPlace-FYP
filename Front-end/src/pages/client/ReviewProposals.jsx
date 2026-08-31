@@ -8,9 +8,8 @@ import { useClient } from '../../context/ClientContext';
 import {
   User, CheckCircle2, XCircle, Clock,
   DollarSign, MessageSquare, ChevronLeft,
-  Mail, Star, ExternalLink, Plus, X, Layers
+  Mail, Star, ExternalLink, Plus, X, Layers, Wallet
 } from 'lucide-react';
-import { toast } from 'react-toastify';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import Modal from '../freelancer/components/Modal';
 import './ReviewProposals.css';
@@ -20,7 +19,7 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 export default function ReviewProposals() {
   const { jobId } = useParams();
   const navigate = useNavigate();
-  const { fetchProfile } = useClient();
+  const { fetchProfile, showToast } = useClient();
   const [job, setJob] = useState(null);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +29,9 @@ export default function ReviewProposals() {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [splitMilestones, setSplitMilestones] = useState(false);
   const [milestones, setMilestones] = useState([{ title: '', amount: '' }]);
+  // Set when accept fails with a structured insufficientBalance error —
+  // drives the guided top-up modal instead of a plain error toast.
+  const [topUpModal, setTopUpModal] = useState(null); // { required, available, contractType }
 
   const acceptingProposal = proposals.find((p) => p._id === welcomeModal);
   const isHourlyJob = job?.budget?.type === 'hourly';
@@ -50,12 +52,13 @@ export default function ReviewProposals() {
     try {
       await messagesAPI.startConversation(
         freelancerId,
-        `Hi! I'd like to discuss your proposal for "${job?.title || 'my project'}".`
+        `Hi! I'd like to discuss your proposal for "${job?.title || 'my project'}".`,
+        { suppressErrorToast: true }
       );
       navigate('/client/messages');
     } catch (error) {
       console.error('Failed to start conversation:', error);
-      toast.error('Could not start the conversation. Please try again.');
+      showToast('Could not start the conversation. Please try again.', 'error');
     } finally {
       setMessagingId(null);
     }
@@ -73,7 +76,7 @@ export default function ReviewProposals() {
       setProposals(Array.isArray(propRes.data.data) ? propRes.data.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      toast.error('Failed to load proposals.');
+      showToast('Failed to load proposals.', 'error');
     } finally {
       setLoading(false);
     }
@@ -93,7 +96,7 @@ export default function ReviewProposals() {
   const confirmAccept = async () => {
     if (!welcomeModal) return;
     if (splitMilestones && !milestonesValid) {
-      toast.error(`Milestone amounts must add up to exactly Rs. ${agreedPrice} (currently Rs. ${milestonesTotal}), and every milestone needs a title.`);
+      showToast(`Milestone amounts must add up to exactly Rs. ${agreedPrice} (currently Rs. ${milestonesTotal}), and every milestone needs a title.`, 'error');
       return;
     }
 
@@ -108,21 +111,30 @@ export default function ReviewProposals() {
     setJob(prev => prev ? { ...prev, status: 'in_progress' } : prev);
 
     try {
-      // Fixed-price hires now lock 100% of milestone 1's escrow as part of
-      // this call itself — there's no separate "fund the deposit" step to
-      // redirect to afterward.
+      // Fixed-price hires lock 100% of milestone 1's escrow, hourly hires lock
+      // one week's estimate — both as part of this call itself, there's no
+      // separate "fund the deposit" step to redirect to afterward.
       await proposalsAPI.acceptProposal(id, message, milestonePayload);
-      toast.success(
+      showToast(
         isHourlyJob
-          ? 'Proposal accepted! The freelancer can start logging time.'
+          ? 'Proposal accepted — one week\'s escrow locked. The freelancer can start logging time.'
           : 'Proposal accepted — 100% escrow locked for milestone 1. The freelancer can start work now.'
       );
       await fetchProfile(); // Sync global state
       navigate('/client/projects');
     } catch (error) {
-      // Surface the REAL backend message — this is where "insufficient wallet
-      // balance, please top up first" shows up, not a generic failure toast.
-      toast.error(error.response?.data?.message || 'Failed to accept proposal.');
+      const errData = error.response?.data?.errors;
+      if (errData?.insufficientBalance) {
+        // Guided top-up: the client can't accept until they fund their
+        // wallet — show the exact shortfall and a direct link to top up.
+        setTopUpModal({
+          required: errData.required,
+          available: errData.available,
+          contractType: errData.contractType
+        });
+      } else {
+        showToast(error.response?.data?.message || 'Failed to accept proposal.', 'error');
+      }
       setJob(prev => prev ? { ...prev, status: 'open' } : prev);
     } finally {
       setProcessingId(null);
@@ -136,11 +148,11 @@ export default function ReviewProposals() {
     setProcessingId(id);
     try {
       await proposalsAPI.rejectProposal(id, reason);
-      toast.success('Proposal rejected.');
+      showToast('Proposal rejected.');
       await fetchProfile(); // Sync global state
       fetchData(); // Refresh local view
     } catch (error) {
-      toast.error('Failed to reject proposal.');
+      showToast('Failed to reject proposal.', 'error');
     } finally {
       setProcessingId(null);
     }
@@ -376,6 +388,56 @@ export default function ReviewProposals() {
                 style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
               >
                 {processingId ? 'Accepting...' : 'Confirm & Accept'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {topUpModal && (
+        <Modal
+          open={!!topUpModal}
+          onClose={() => setTopUpModal(null)}
+          title="Top up your wallet to accept"
+        >
+          <div className="cl-modal__body" style={{ padding: '0.5rem 0 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <Wallet size={28} style={{ flexShrink: 0, color: '#2563eb' }} />
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-mid)' }}>
+                {topUpModal.contractType === 'hourly'
+                  ? "Accepting this proposal locks one week's estimated cost from your wallet so the freelancer can start logging time."
+                  : 'Accepting this proposal locks 100% of milestone 1 from your wallet so the freelancer can start work.'}
+                {' '}Your balance is a bit short — top up, then come back and hit Accept again.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ flex: 1, padding: '0.85rem', borderRadius: '10px', background: '#f8fafc', border: '1.5px solid #e2e8f0' }}>
+                <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', color: 'var(--color-text-mid)', fontWeight: 600 }}>NEEDED</p>
+                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Rs. {topUpModal.required}</p>
+              </div>
+              <div style={{ flex: 1, padding: '0.85rem', borderRadius: '10px', background: '#fef2f2', border: '1.5px solid #fecaca' }}>
+                <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', color: '#b91c1c', fontWeight: 600 }}>YOUR BALANCE</p>
+                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#b91c1c' }}>Rs. {topUpModal.available}</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="cl-btn cl-btn--ghost"
+                onClick={() => setTopUpModal(null)}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="cl-btn cl-btn--primary"
+                onClick={() => navigate('/client/wallet')}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Wallet size={16} /> Top Up Wallet
               </button>
             </div>
           </div>

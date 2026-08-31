@@ -12,12 +12,21 @@ export const paymentsAPI = {
   // Fund a milestone (100% lock, wallet-only) — used for milestone 2+ once
   // the client is ready to start that phase. Milestone 1 funds automatically
   // when the proposal is accepted, so this is never called for it.
+  // Caller (ClientProjects.jsx) already shows its own contextual toast —
+  // suppress the global auto-toast to avoid double-toasting.
   fundMilestone: (milestoneId) =>
-    client.post(`/payments/milestones/${milestoneId}/fund`),
+    client.post(`/payments/milestones/${milestoneId}/fund`, undefined, { suppressErrorToast: true }),
 
   // Legacy: start the 50% deposit checkout → { checkoutUrl, sessionId, simulated }
+  // (fixed-price/gig orders only now — hourly contracts use lockHourlyContract below)
   startDeposit: (jobId) =>
-    client.post(`/payments/jobs/${jobId}/deposit`),
+    client.post(`/payments/jobs/${jobId}/deposit`, undefined, { suppressErrorToast: true }),
+
+  // Lock/re-lock an hourly contract's wallet escrow. Omit `amount` to use the
+  // contract's standard one-week estimate. Caller (ClientProjects.jsx) shows
+  // its own toast — suppress the global auto-toast to avoid double-toasting.
+  lockHourlyContract: (contractId, amount) =>
+    client.post(`/payments/contracts/${contractId}/lock-hourly`, amount ? { amount } : undefined, { suppressErrorToast: true }),
 
   // Legacy: start the remaining 50% checkout (on delivery acceptance)
   startFinal: (jobId) =>

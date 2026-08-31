@@ -1,10 +1,25 @@
 const Contract = require('../models/Contract');
+const Job = require('../models/Job');
 const TimeLog = require('../models/TimeLog');
 const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
+const { getUnbilledAmount, drawDownForTimeLog } = require('../services/hourlyEscrow.service');
 
 const LOCKED_STATUSES = ['completed', 'cancelled', 'pending_cancellation', 'under_review'];
+
+// Block new time-tracking once already-logged-but-unbilled work would meet or
+// exceed what's currently locked in escrow — the freelancer shouldn't keep
+// working "on credit" past what the client has actually secured.
+const assertEscrowHasRoom = async (contract) => {
+  const lockedBalance = contract.hourlyEscrow?.lockedBalance || 0;
+  const unbilled = await getUnbilledAmount(contract);
+  if (unbilled >= lockedBalance) {
+    throw new BadRequestError(
+      `Escrow balance is exhausted for this contract (Rs. ${unbilled} logged against Rs. ${lockedBalance} locked). Ask the client to top up before logging more time.`
+    );
+  }
+};
 
 /**
  * Start the timer for an hourly contract
@@ -30,6 +45,8 @@ const startTimer = asyncHandler(async (req, res) => {
   if (contract.timer && contract.timer.isActive) {
     throw new BadRequestError('Timer is already running');
   }
+
+  await assertEscrowHasRoom(contract);
 
   contract.timer = {
     ...contract.timer,
@@ -100,9 +117,26 @@ const stopTimer = asyncHandler(async (req, res) => {
   contract.timer.accumulatedMs += durationMs;
   await contract.save();
 
+  // Try to pay for this chunk of work immediately, straight out of the
+  // contract's locked escrow. If the lock can't cover it, the log simply
+  // stays 'pending' — it isn't lost, it just waits for the client to top up
+  // (see the weekly cron / re-lock endpoint, which retry unbilled logs).
+  let needsTopUp = false;
+  const job = await Job.findById(contract.jobId);
+  try {
+    await drawDownForTimeLog({ timeLog: log, contract, job });
+  } catch (err) {
+    if (!err.errors?.insufficientBalance) {
+      console.error(`[stopTimer] Unexpected error drawing down time log ${log._id}:`, err.message);
+    }
+    needsTopUp = true;
+  }
+
   sendSuccess(res, {
-    message: 'Timer stopped and time logged successfully',
-    data: { timer: contract.timer, log }
+    message: needsTopUp
+      ? 'Timer stopped and time logged — escrow is low, ask the client to top up so this gets paid.'
+      : 'Timer stopped, time logged, and paid out from escrow.',
+    data: { timer: contract.timer, log, needsTopUp }
   });
 });
 
@@ -154,6 +188,8 @@ const addManualLog = asyncHandler(async (req, res) => {
     throw new BadRequestError('This time period overlaps with an existing time log');
   }
 
+  await assertEscrowHasRoom(contract);
+
   const log = await TimeLog.create({
     contractId: contract._id,
     jobId: contract.jobId,
@@ -169,9 +205,22 @@ const addManualLog = asyncHandler(async (req, res) => {
     status: 'pending'
   });
 
+  let needsTopUp = false;
+  const job = await Job.findById(contract.jobId);
+  try {
+    await drawDownForTimeLog({ timeLog: log, contract, job });
+  } catch (err) {
+    if (!err.errors?.insufficientBalance) {
+      console.error(`[addManualLog] Unexpected error drawing down time log ${log._id}:`, err.message);
+    }
+    needsTopUp = true;
+  }
+
   sendSuccess(res, {
-    message: 'Manual time logged successfully',
-    data: { log },
+    message: needsTopUp
+      ? 'Manual time logged — escrow is low, ask the client to top up so this gets paid.'
+      : 'Manual time logged and paid out from escrow.',
+    data: { log, needsTopUp },
     statusCode: 201
   });
 });

@@ -420,7 +420,7 @@ SkillKart's data layer consists of **38 MongoDB collections** managed through Mo
 
 **Payments & Wallet**
 
-- **Payment** — an escrow or wallet transaction: `type` (`job_escrow` | `wallet_deposit` | `hourly_invoice`), a `milestoneId` link (one Payment per milestone, for fixed-price contracts), amounts (total, deposit, final), **platform fee**, **freelancer payout**, and `status` (`deposit_pending` → `deposit_paid` → `released` / `refunded`).
+- **Payment** — an escrow or wallet transaction: `type` (`job_escrow` | `wallet_deposit` | `hourly_escrow` | `hourly_invoice`), a `milestoneId` link (one Payment per milestone, for fixed-price contracts), amounts (total, deposit, final), **platform fee**, **freelancer payout**, and `status` (`deposit_pending` → `deposit_paid` → `released` / `refunded`) for gig/deposit-based payments, or `wallet_locked` → `released` for milestone and hourly wallet-lock payments.
 - **Withdrawal** — a freelancer cash-out: amount, `method` (`bank_transfer` | `paypal` | `stripe`), and `status` (`pending` | `completed` | `failed` | `cancelled`).
 - *(Wallet balances are maintained as fields on the freelancer/client profiles, updated transactionally by payment/withdrawal operations.)*
 
@@ -452,7 +452,7 @@ User ──1:1──► FreelancerProfile / ClientProfile
 Client (User) ──1:N──► Job ──1:N──► Proposal
 Proposal (accepted) ──1:1──► Contract
 Contract (fixed-price) ──1:N──► Milestone ──1:1──► Payment ──► updates Wallet balances ──► Withdrawal
-Contract (hourly) ──1:1──► Payment ──► updates Wallet balances ──► Withdrawal
+Contract (hourly) ──1:N──► Payment ──► updates Wallet balances ──► Withdrawal
 Contract ──1:N──► Delivery, TimeLog, ContractHistory
 Contract ──1:1──► Conversation ──1:N──► Message
 Contract ──1:N──► Review
@@ -573,17 +573,22 @@ Freelancers submit proposals to jobs — including a cover letter (optionally **
 The contract is the engagement's backbone, modeling the full lifecycle as a **state machine**. It tracks type (fixed/hourly), agreed price and deadline, deliveries, revisions, time logs, completion, and cancellation. Hourly contracts carry a single embedded dispute record; fixed-price contracts instead track disputes per **milestone** (Section 12.10a), since a project split into several phases can have any one of them independently disputed while the rest continue normally.
 
 ### 12.9 Wallet
-Each freelancer and client has a **wallet** balance maintained on their profile. Escrow debits/credits and withdrawals all move through this internal ledger. Administrators can freeze wallets when necessary. A client's wallet balance is also checked **before a project can even be posted** — a job's minimum budget must already be covered by the client's wallet, so a project cannot be listed if it could never be funded.
+Each freelancer and client has a **wallet** balance maintained on their profile. Escrow debits/credits and withdrawals all move through this internal ledger. Administrators can freeze wallets when necessary. Posting a job carries **no wallet-balance gate** — a client can publish a job with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked only once the client goes to **accept** a proposal (Sections 12.10a–12.10b), which is the earliest point real money needs to be committed.
 
 ### 12.10 Payments & Escrow
-Hourly contracts and gig orders follow the original **deposit-then-release** model: escrow is funded on request (`deposit_pending` → `deposit_paid`), held until the client approves delivery, then released (**platform fee** deducted, **freelancer payout** credited) or refunded. Fixed-price job contracts use the newer **milestone escrow** model described next. Stripe processes real transactions for wallet top-ups, with a simulated mode (`STRIPE_DUMMY`) for demonstration.
+Gig orders follow the original **deposit-then-release** model: escrow is funded on request (`deposit_pending` → `deposit_paid`), held until the client approves delivery, then released (**platform fee** deducted, **freelancer payout** credited) or refunded. Custom-job contracts instead use one of two newer, wallet-native escrow models depending on contract type — **milestone escrow** for fixed-price jobs (12.10a) and **wallet-lock escrow** for hourly jobs (12.10b), both described next. Stripe processes real transactions for wallet top-ups, with a simulated mode (`STRIPE_DUMMY`) for demonstration.
 
 ### 12.10a Milestone-Based Escrow (Fixed-Price Jobs)
-When a client accepts a proposal for a fixed-price job, **100% of the agreed price is locked in escrow immediately** — debited from the client's wallet before the contract is even created, so the money is never a promise. For larger engagements, the client can split the price into up to a handful of sequential **milestones** at accept-time (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000"); only the first milestone is funded upfront, and each subsequent milestone is funded by the client only once the previous one is approved and released — capital is never locked for work that hasn't started yet.
+When a client accepts a proposal for a fixed-price job, **100% of the first milestone's price is locked in escrow immediately** — debited from the client's wallet as part of accepting, so the money is never a promise (the acceptance itself is rejected up front if the wallet cannot cover it). For larger engagements, the client can split the price into up to a handful of sequential **milestones** at accept-time (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000"); only the first milestone is funded upfront, and each subsequent milestone is funded by the client only once the previous one is approved and released — capital is never locked for work that hasn't started yet.
 
 The freelancer can only submit work once the current milestone shows **funded**, guaranteeing "escrow funded, safe to work" is a real, checked guarantee rather than a UI promise. On the client's approval, the milestone's escrow releases (fee deducted, payout credited) and — if it was the last milestone — the whole contract and job complete; otherwise the contract advances to the next milestone, which the client then funds when ready.
 
 To prevent a client from strategically going silent after receiving work, a scheduled job scans for milestones the client hasn't reviewed within a configurable window (default **7 days**) and **auto-releases** them to the freelancer, notifying both parties. A milestone under an active dispute is excluded from this auto-release.
+
+### 12.10b Wallet-Lock Escrow (Hourly Jobs)
+Hourly contracts use a separate escrow model, since there is no fixed total price to lock upfront. When a client accepts an hourly proposal, one **week's estimated cost** (hourly rate × the freelancer's estimated weekly hours) is locked from the client's wallet immediately as part of accepting — again rejected up front if the wallet cannot cover it. This replaced an earlier deposit-based approach for hourly work.
+
+Billing is then automatic and incremental rather than requiring a separate client approval per hour: as the freelancer logs time (via timer or manual entry), each logged amount is drawn down directly from the locked balance into the freelancer's wallet (fee deducted, payout credited), as long as the lock has room. If the freelancer's unbilled work would exceed the remaining lock, further time logging is blocked and any log already made is held **pending** until the client tops up the lock, at which point the pending logs are billed in order. When the contract ends, any unused portion of the lock is refunded back to the client's wallet, since a lock is a hold rather than a spend.
 
 ### 12.11 Messaging
 In-app messaging is tied to contracts. Participants exchange messages and attachments in a conversation, with read tracking and message notifications.
@@ -753,13 +758,13 @@ A freelancer discovers a job (via browsing, search, or AI matchmaking) and submi
 The client reviews proposals and accepts one. Acceptance creates a **contract** linking the job, proposal, client, and freelancer, and initializes its lifecycle state.
 
 ### 16.6 Payment & Escrow
-The client funds the contract by depositing into **escrow** (`deposit_pending` → `deposit_paid`). The funds are held securely by the platform and are not yet available to the freelancer.
+Acceptance itself locks the client's money, before any work begins: for a fixed-price contract, the first milestone's amount is debited from the client's wallet; for an hourly contract, one week's estimated cost is locked instead. (Gig orders, which have no proposal/acceptance step, instead fund a deposit on request.) In every case the funds are held securely by the platform and are not yet available to the freelancer.
 
 ### 16.7 Delivery & Completion
-The freelancer performs the work, submitting deliverables (with revisions as needed) and, for hourly contracts, logging time. When the client approves the final delivery, the contract moves to `completed`.
+The freelancer performs the work. For a fixed-price milestone, this means submitting a deliverable (with revisions as needed) for the client to approve. For an hourly contract, it means logging time, which is billed out of the locked escrow as it is logged rather than at one final approval. When the last milestone is approved (or the hourly contract is ended), the contract moves to `completed`.
 
 ### 16.8 Escrow Release
-On completion, the escrow is **released**: the **platform fee** is deducted, and the **freelancer payout** is credited to the freelancer's wallet, from which they can request a **withdrawal**.
+Each milestone (or each logged hour, for hourly work) is **released** individually as it is approved/billed: the **platform fee** is deducted, and the **freelancer payout** is credited to the freelancer's wallet, from which they can request a **withdrawal**. Any hourly lock left unused when the contract ends is refunded back to the client's wallet.
 
 ### 16.9 Review
 Both parties leave a two-way review. Ratings aggregate into their profiles, informing future discovery and trust.

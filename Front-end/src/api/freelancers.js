@@ -7,10 +7,12 @@ export const freelancersAPI = {
   getProfile: () => client.get('/freelancers/profile/me'),
   checkUsername: (username) =>
     client.get(`/freelancers/check-username?username=${encodeURIComponent(username)}`),
-  updateProfile: (profileData) => client.put('/freelancers/profile/me', profileData),
-  addPortfolio: (item) => client.post('/freelancers/portfolio', item),
-  updatePortfolio: (itemId, item) => client.put(`/freelancers/portfolio/${itemId}`, item),
-  deletePortfolio: (itemId) => client.delete(`/freelancers/portfolio/${itemId}`),
+  // These callers (FreelancerContext) already show their own contextual
+  // toast — suppress the global auto-toast to avoid double-toasting.
+  updateProfile: (profileData) => client.put('/freelancers/profile/me', profileData, { suppressErrorToast: true }),
+  addPortfolio: (item) => client.post('/freelancers/portfolio', item, { suppressErrorToast: true }),
+  updatePortfolio: (itemId, item) => client.put(`/freelancers/portfolio/${itemId}`, item, { suppressErrorToast: true }),
+  deletePortfolio: (itemId) => client.delete(`/freelancers/portfolio/${itemId}`, { suppressErrorToast: true }),
   parseCV: (formData) => client.post('/freelancers/parse-cv', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -22,5 +24,5 @@ export const freelancersAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   getSavedJobs: () => client.get('/freelancers/saved-jobs'),
-  toggleSavedJob: (jobId) => client.post(`/freelancers/saved-jobs/${jobId}`)
+  toggleSavedJob: (jobId) => client.post(`/freelancers/saved-jobs/${jobId}`, undefined, { suppressErrorToast: true })
 };

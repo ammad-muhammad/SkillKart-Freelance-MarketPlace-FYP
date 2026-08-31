@@ -34,6 +34,18 @@ const contractSchema = new mongoose.Schema({
     startedAt: { type: Date },
     accumulatedMs: { type: Number, default: 0 }
   },
+
+  // Hourly wallet-lock escrow: a running pre-paid balance the client funds up
+  // front (one week's estimate at accept time: hourlyRate * weeklyLimit) and
+  // that drains as logged hours are billed. Replaces the old 50/50 Stripe
+  // deposit flow for hourly contracts — see hourlyEscrow.service.js.
+  hourlyEscrow: {
+    lockedBalance: { type: Number, default: 0 },   // remaining funds available to draw down
+    weeklyLockAmount: { type: Number, default: 0 }, // standard re-lock amount (hourlyRate * weeklyLimit)
+    totalLocked: { type: Number, default: 0 },      // lifetime total ever locked
+    totalDrawn: { type: Number, default: 0 },       // lifetime total billed out of the lock
+    lastLockedAt: { type: Date }
+  },
   
   startedAt: { type: Date, default: Date.now },
   completedAt: { type: Date },

@@ -1,9 +1,10 @@
 import client from './client';
 
 export const gigsAPI = {
-  // Create a new gig
-  createGig: (gigData) => 
-    client.post('/gigs', gigData),
+  // Create/update/delete/toggle callers (FreelancerContext) already show their
+  // own contextual toast — suppress the global auto-toast to avoid double-toasting.
+  createGig: (gigData) =>
+    client.post('/gigs', gigData, { suppressErrorToast: true }),
 
   // List public gigs (Marketplace) — supports category, subcategory, skill, q,
   // minPrice, maxPrice, minRating, sort, page, limit
@@ -24,16 +25,16 @@ export const gigsAPI = {
     client.get('/gigs/my-gigs', { params }),
 
   // Update gig
-  updateGig: (id, gigData) => 
-    client.put(`/gigs/${id}`, gigData),
+  updateGig: (id, gigData) =>
+    client.put(`/gigs/${id}`, gigData, { suppressErrorToast: true }),
 
   // Delete gig
-  deleteGig: (id) => 
-    client.delete(`/gigs/${id}`),
+  deleteGig: (id) =>
+    client.delete(`/gigs/${id}`, { suppressErrorToast: true }),
 
   // Toggle gig status
-  toggleStatus: (id) => 
-    client.patch(`/gigs/${id}/status`),
+  toggleStatus: (id) =>
+    client.patch(`/gigs/${id}/status`, undefined, { suppressErrorToast: true }),
 
   // Upload gig banner
   uploadBanner: (file) => {
