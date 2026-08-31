@@ -36,15 +36,18 @@ export const jobsAPI = {
   closeJob: (id, reason) => 
     client.post(`/jobs/${id}/close`, { reason }),
 
-  // Delete job
-  deleteJob: (id) => 
-    client.delete(`/jobs/${id}`),
+  // Delete job. Caller (ClientContext.deleteProject) already shows its own
+  // toast — suppress the global auto-toast to avoid double-toasting.
+  deleteJob: (id) =>
+    client.delete(`/jobs/${id}`, { suppressErrorToast: true }),
 
+  // Callers (PostProject.jsx) already show their own toast — suppress the
+  // global auto-toast to avoid double-toasting.
   recommendCategory: (data) =>
-    client.post('/jobs/ai/recommend-category', data),
+    client.post('/jobs/ai/recommend-category', data, { suppressErrorToast: true }),
 
   recommendSubcategory: (data) =>
-    client.post('/jobs/ai/recommend-subcategory', data),
+    client.post('/jobs/ai/recommend-subcategory', data, { suppressErrorToast: true }),
 
 
 

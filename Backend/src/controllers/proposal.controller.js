@@ -12,6 +12,7 @@ const { getAIProvider } = require('../services/ai');
 const { checkSkillGate } = require('../utils/skillGating');
 const notifications = require('../services/notification.service');
 const { fundMilestoneFromWallet } = require('../services/milestone.service');
+const { estimateWeeklyLockAmount, lockHourlyEscrow } = require('../services/hourlyEscrow.service');
 const { round2 } = require('../utils/constants');
 
 /**
@@ -209,9 +210,12 @@ const acceptProposal = asyncHandler(async (req, res) => {
 
   // Fixed-price hires require 100% escrow lock — validate the milestone
   // breakdown and confirm the client can actually afford milestone 1 BEFORE
-  // touching Proposal/Contract/Job at all. This app has no Mongo transactions,
-  // so correctness comes from strict ordering: verify first, write after.
+  // touching Proposal/Contract/Job at all. Hourly hires similarly require the
+  // client to be able to lock one week's estimate (hourlyRate * proposed
+  // weekly hours) before hiring. This app has no Mongo transactions, so
+  // correctness comes from strict ordering: verify first, write after.
   let milestoneDefs = null;
+  let hourlyLockAmount = 0;
   if (!isHourly) {
     const agreedPrice = round2(Number(proposal.fixedPrice) || 0);
     if (Array.isArray(milestones) && milestones.length > 0) {
@@ -231,9 +235,26 @@ const acceptProposal = asyncHandler(async (req, res) => {
     const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
     const balance = clientProfile?.walletBalance || 0;
     if (balance < milestoneDefs[0].amount) {
-      throw new BadRequestError(
-        `Insufficient wallet balance to fund escrow for this hire. Need Rs. ${milestoneDefs[0].amount}, have Rs. ${round2(balance)}. Please top up your wallet first.`
-      );
+      return sendError(res, {
+        statusCode: 400,
+        message: `Insufficient wallet balance to fund escrow for this hire. Need Rs. ${milestoneDefs[0].amount}, have Rs. ${round2(balance)}. Please top up your wallet first.`,
+        errors: { insufficientBalance: true, required: milestoneDefs[0].amount, available: round2(balance), contractType: 'fixed' }
+      });
+    }
+  } else {
+    hourlyLockAmount = estimateWeeklyLockAmount({
+      hourlyRate: proposal.hourlyRate,
+      weeklyLimit: proposal.estimatedWeeklyHours
+    });
+
+    const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
+    const balance = clientProfile?.walletBalance || 0;
+    if (hourlyLockAmount > 0 && balance < hourlyLockAmount) {
+      return sendError(res, {
+        statusCode: 400,
+        message: `Insufficient wallet balance to lock escrow for this hire. Need Rs. ${hourlyLockAmount} (one week's estimate at Rs. ${proposal.hourlyRate}/hr × ${proposal.estimatedWeeklyHours} hrs), have Rs. ${round2(balance)}. Please top up your wallet first.`,
+        errors: { insufficientBalance: true, required: hourlyLockAmount, available: round2(balance), contractType: 'hourly' }
+      });
     }
   }
 
@@ -250,13 +271,18 @@ const acceptProposal = asyncHandler(async (req, res) => {
     freelancerId: proposal.freelancerId,
     type: isHourly ? 'hourly' : 'fixed',
     status: 'active',
+    // Fixed hires lock milestone 1 below (paymentStatus becomes 'funded' there
+    // implicitly via the milestone); hourly hires lock their weekly estimate
+    // right after this contract is saved and paymentStatus becomes
+    // 'wallet_locked' inside lockHourlyEscrow.
     paymentStatus: isHourly ? 'pending' : 'funded',
 
     // Copy the agreed upon terms from the proposal
     fixedPrice: proposal.fixedPrice,
     hourlyRate: proposal.hourlyRate,
     weeklyLimit: proposal.estimatedWeeklyHours,
-    milestoneMode: !!(milestoneDefs && milestoneDefs.length > 1)
+    milestoneMode: !!(milestoneDefs && milestoneDefs.length > 1),
+    ...(isHourly ? { hourlyEscrow: { weeklyLockAmount: hourlyLockAmount } } : {})
   });
 
   await contract.save();
@@ -290,8 +316,8 @@ const acceptProposal = asyncHandler(async (req, res) => {
     { $set: { status: 'rejected', clientResponse: 'Position filled', respondedAt: new Date() } }
   );
 
-  // Lock 100% of milestone 1 in escrow now that the contract/milestone
-  // records exist. Balance was already confirmed sufficient above.
+  // Lock escrow now that the contract/milestone records exist. Balance was
+  // already confirmed sufficient above.
   if (!isHourly) {
     await fundMilestoneFromWallet({
       milestone: createdMilestones[0],
@@ -299,6 +325,15 @@ const acceptProposal = asyncHandler(async (req, res) => {
       contract,
       clientId: req.user._id,
       performedBy: req.user._id
+    });
+  } else if (hourlyLockAmount > 0) {
+    await lockHourlyEscrow({
+      contract,
+      job,
+      clientId: req.user._id,
+      amount: hourlyLockAmount,
+      performedBy: req.user._id,
+      initial: true
     });
   }
 

@@ -213,6 +213,8 @@ export const ClientProvider = ({ children }) => {
         contractStatus: j.contractId?.status || null,
         contractType: j.contractType || 'fixed',
         hourlyRate: j.hourlyRate || 0,
+        weeklyLimit: j.weeklyLimit || 0,
+        hourlyEscrow: j.hourlyEscrow || null,
         timerActive: j.timerActive || false,
         timerStartedAt: j.timerStartedAt || null,
         endRequest: j.endRequest || null,

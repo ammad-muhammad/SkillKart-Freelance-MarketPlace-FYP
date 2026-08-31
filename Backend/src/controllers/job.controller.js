@@ -41,23 +41,10 @@ const createJob = asyncHandler(async (req, res) => {
   const allowedStatuses = ['draft', 'open'];
   const status = allowedStatuses.includes(jobData.status) ? jobData.status : 'open';
 
-  // Proof-of-funds gate: a client can only PUBLISH a project (not just save a
-  // draft) if their wallet already covers the minimum budget they're asking
-  // for — this doesn't itself lock any escrow (that happens per-milestone at
-  // hire time), it just stops someone from posting a project they can't
-  // plausibly afford to ever fund.
-  if (status === 'open') {
-    const minBudget = Number(jobData.budget?.min) || 0;
-    if (minBudget > 0) {
-      const clientProfile = await ClientProfile.findOne({ userId: clientId });
-      const balance = clientProfile?.walletBalance || 0;
-      if (balance < minBudget) {
-        throw new BadRequestError(
-          `Please top up your wallet before posting this project. Your minimum budget is Rs. ${minBudget}, but your wallet balance is Rs. ${balance}.`
-        );
-      }
-    }
-  }
+  // No proof-of-funds gate at posting time — a client can publish a project
+  // with any wallet balance so it's visible to freelancers and can collect
+  // proposals. The wallet is only checked (and locked) when they actually
+  // accept a proposal — see proposal.controller.js's acceptProposal.
 
   const job = new Job({
     ...jobData,
@@ -100,19 +87,9 @@ const updateJob = asyncHandler(async (req, res) => {
     throw new BadRequestError(`A project that is "${job.status}" can no longer be edited.`);
   }
 
-  // Allow transitioning from draft to open — same proof-of-funds gate as
-  // creating a new project directly with status:'open'.
+  // Allow transitioning from draft to open — no proof-of-funds gate here
+  // either (see createJob); the wallet is only checked at proposal-accept time.
   if (job.status === 'draft' && req.body.status === 'open') {
-    const minBudget = Number((req.body.budget?.min ?? job.budget?.min)) || 0;
-    if (minBudget > 0) {
-      const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
-      const balance = clientProfile?.walletBalance || 0;
-      if (balance < minBudget) {
-        throw new BadRequestError(
-          `Please top up your wallet before publishing this project. Your minimum budget is Rs. ${minBudget}, but your wallet balance is Rs. ${balance}.`
-        );
-      }
-    }
     job.status = 'open';
   }
 
@@ -270,7 +247,7 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
     .populate('hiredFreelancer', 'firstName lastName profilePicture _id')
-    .populate('contractId', 'status type timer hourlyRate endRequest dispute milestoneMode currentMilestoneOrder')
+    .populate('contractId', 'status type timer hourlyRate weeklyLimit hourlyEscrow endRequest dispute milestoneMode currentMilestoneOrder')
     .skip(skip)
     .limit(limit)
     .sort({ createdAt: -1 })
@@ -324,6 +301,8 @@ const getMyProjects = asyncHandler(async (req, res) => {
       hasReviewed: reviewedJobIds.has(String(j._id)),
       contractType: j.contractId?.type || 'fixed',
       hourlyRate: j.contractId?.hourlyRate || 0,
+      weeklyLimit: j.contractId?.weeklyLimit || 0,
+      hourlyEscrow: j.contractId?.hourlyEscrow || null,
       timerActive: j.contractId?.timer?.isActive || false,
       timerStartedAt: j.contractId?.timer?.startedAt || null,
       endRequest: j.contractId?.endRequest || null,

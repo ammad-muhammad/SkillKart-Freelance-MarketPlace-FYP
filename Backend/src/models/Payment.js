@@ -28,7 +28,10 @@ const paymentSchema = new mongoose.Schema({
   proposalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' },
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   freelancerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  type: { type: String, enum: ['job_escrow', 'wallet_deposit', 'hourly_invoice'], default: 'job_escrow' },
+  // 'hourly_escrow' = a wallet-lock event for an hourly contract (funds held,
+  // not yet earned). 'hourly_invoice' = a draw-down event (funds released
+  // from that lock to the freelancer for specific billed hours).
+  type: { type: String, enum: ['job_escrow', 'wallet_deposit', 'hourly_invoice', 'hourly_escrow'], default: 'job_escrow' },
 
   totalAmount: { type: Number, required: true },     // this milestone's 100% amount
   depositAmount: { type: Number, required: true },   // legacy field — equals totalAmount for new rows

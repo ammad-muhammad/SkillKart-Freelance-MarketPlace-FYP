@@ -11,6 +11,7 @@ const { createCheckoutSession, verifyCheckoutSession, createConnectAccount, crea
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
 const { fundMilestoneFromWallet } = require('../services/milestone.service');
+const { estimateWeeklyLockAmount, lockHourlyEscrow, drawDownForTimeLog } = require('../services/hourlyEscrow.service');
 const { PLATFORM_FEE_RATE: FEE_RATE, round2 } = require('../utils/constants');
 
 async function resolveAmount(job) {
@@ -582,6 +583,63 @@ const fundMilestone = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Lock (or re-lock/top-up) an hourly contract's escrow from the client's
+ * wallet. Defaults to one week's estimate (hourlyRate * weeklyLimit) unless
+ * an explicit `amount` is given. After locking, opportunistically pays out
+ * any time logs that were left unbilled while escrow was dry, oldest first,
+ * stopping as soon as the balance runs out again.
+ */
+const lockHourlyContract = asyncHandler(async (req, res) => {
+  const { contractId } = req.params;
+  const { amount } = req.body;
+  const Contract = require('../models/Contract');
+  const TimeLog = require('../models/TimeLog');
+
+  const contract = await Contract.findById(contractId);
+  if (!contract) throw new NotFoundError('Contract not found');
+  if (contract.type !== 'hourly') {
+    throw new BadRequestError('This endpoint is only for hourly contracts');
+  }
+  if (String(contract.clientId) !== String(req.user._id)) {
+    throw new ForbiddenError('Only the project owner can fund this contract');
+  }
+
+  const defaultAmount = contract.hourlyEscrow?.weeklyLockAmount
+    || estimateWeeklyLockAmount({ hourlyRate: contract.hourlyRate, weeklyLimit: contract.weeklyLimit });
+  const lockAmount = round2(Number(amount) || defaultAmount);
+  if (lockAmount <= 0) {
+    throw new BadRequestError('Enter a valid amount to lock.');
+  }
+
+  const job = await Job.findById(contract.jobId);
+  const payment = await lockHourlyEscrow({
+    contract,
+    job,
+    clientId: req.user._id,
+    amount: lockAmount,
+    performedBy: req.user._id
+  });
+
+  // Catch up any hours that piled up unpaid while the lock was dry.
+  const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' }).sort({ startTime: 1 });
+  for (const log of pendingLogs) {
+    try {
+      await drawDownForTimeLog({ timeLog: log, contract, job });
+    } catch (err) {
+      if (!err.errors?.insufficientBalance) {
+        console.error(`[lockHourlyContract] Unexpected error settling time log ${log._id}:`, err.message);
+      }
+      break; // out of balance again — remaining logs stay pending
+    }
+  }
+
+  sendSuccess(res, {
+    message: 'Escrow locked successfully from your wallet balance',
+    data: { contract, payment }
+  });
+});
+
 module.exports = {
   startDeposit,
   startFinal,
@@ -594,5 +652,6 @@ module.exports = {
   connectStripeAccount,
   stripeConnectCallback,
   fundMilestone,
+  lockHourlyContract,
   FEE_RATE
 };

@@ -75,7 +75,7 @@ const consumePendingDraft = () => {
 
 const PostProject = () => {
   const navigate = useNavigate();
-  const { fetchProfile, showToast } = useClient();
+  const { profile, fetchProfile, showToast } = useClient();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
@@ -862,6 +862,24 @@ const PostProject = () => {
                   </p>
                 </div>
               )}
+
+              <div className="cl-review-details" style={{ background: 'rgba(37, 99, 235, 0.06)', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+                <p className="cl-review-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', margin: 0 }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  {form.projectType === 'fixed' ? (
+                    <span>
+                      You can post this project with any wallet balance. Before you can <strong>accept</strong> a proposal, though,
+                      your wallet needs at least Rs. {form.budget.min} (your minimum budget) — your current balance is Rs. {profile?.walletBalance ?? 0}.
+                    </span>
+                  ) : (
+                    <span>
+                      You can post this project with any wallet balance. Before you can <strong>accept</strong> a proposal, your
+                      wallet will need to cover roughly one week of work at the freelancer's proposed hourly rate and hours —
+                      your current balance is Rs. {profile?.walletBalance ?? 0}.
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
 
             <div className="cl-publish-actions">

@@ -308,6 +308,10 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
+    // Forward structured error data attached via `new SomeApiError(message, errors)`
+    // (e.g. { insufficientBalance: true, required, available }) so the frontend
+    // can drive specific UI off it instead of string-matching the message.
+    ...(err.errors && !Array.isArray(err.errors) ? { errors: err.errors } : {}),
     error: config.env === 'development' ? err.stack : undefined
   });
 });

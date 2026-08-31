@@ -25,8 +25,11 @@ export const authAPI = {
   checkUsername: (username) =>
     client.get(`/auth/check-username?username=${encodeURIComponent(username)}`),
 
+  // Callers (ClientContext/FreelancerContext.saveProfile, Client/FreelancerSecurity,
+  // Client/FreelancerSettings) already show their own contextual toast —
+  // suppress the global auto-toast to avoid double-toasting.
   updateMe: (userData) =>
-    client.put('/auth/me', userData),
+    client.put('/auth/me', userData, { suppressErrorToast: true }),
 
   updateRole: (role) =>
     client.put('/auth/role/change', role),
@@ -35,41 +38,41 @@ export const authAPI = {
     client.post('/auth/logout'),
 
   logoutAllDevices: () =>
-    client.post('/auth/logout-all'),
+    client.post('/auth/logout-all', undefined, { suppressErrorToast: true }),
 
   changePassword: (data) =>
-    client.post('/auth/password/change', data),
+    client.post('/auth/password/change', data, { suppressErrorToast: true }),
 
   confirmChangePassword: (data) =>
-    client.post('/auth/password/change/confirm', data),
+    client.post('/auth/password/change/confirm', data, { suppressErrorToast: true }),
 
   requestPasswordReset: (email) =>
-    client.post('/auth/password/reset/request', { email }),
+    client.post('/auth/password/reset/request', { email }, { suppressErrorToast: true }),
 
   resetPassword: (email, otp, newPassword) =>
     client.post('/auth/password/reset', { email, otp, newPassword }),
 
   requestDeactivation: () =>
-    client.post('/auth/deactivate/request'),
+    client.post('/auth/deactivate/request', undefined, { suppressErrorToast: true }),
 
   confirmDeactivation: (otp) =>
-    client.post('/auth/deactivate/confirm', { otp }),
+    client.post('/auth/deactivate/confirm', { otp }, { suppressErrorToast: true }),
 
   requestDeletion: () =>
-    client.post('/auth/delete/request'),
+    client.post('/auth/delete/request', undefined, { suppressErrorToast: true }),
 
   confirmDeletion: (otp) =>
-    client.post('/auth/delete/confirm', { otp }),
+    client.post('/auth/delete/confirm', { otp }, { suppressErrorToast: true }),
 
   requestEmailChange: (newEmail) =>
-    client.post('/auth/email/change/request', { newEmail }),
+    client.post('/auth/email/change/request', { newEmail }, { suppressErrorToast: true }),
 
   confirmEmailChange: (otp) =>
-    client.post('/auth/email/change/confirm', { otp }),
+    client.post('/auth/email/change/confirm', { otp }, { suppressErrorToast: true }),
 
   requestRecoveryEmailChange: (newRecoveryEmail) =>
-    client.post('/auth/recovery-email/change/request', { newRecoveryEmail }),
+    client.post('/auth/recovery-email/change/request', { newRecoveryEmail }, { suppressErrorToast: true }),
 
   confirmRecoveryEmailChange: (otp) =>
-    client.post('/auth/recovery-email/change/confirm', { otp })
+    client.post('/auth/recovery-email/change/confirm', { otp }, { suppressErrorToast: true })
 };
