@@ -1,6 +1,7 @@
 const axios = require('axios');
 const AIProvider = require('./base.provider');
 const { JOB_CATEGORIES } = require('../../utils/constants');
+const { buildGenerateTextPrompt } = require('./promptHelpers');
 
 /**
  * DeepSeek provider — reached through DeepSeek's OpenAI-compatible
@@ -620,6 +621,18 @@ Output ONLY valid JSON matching this exact structure:
 
     const raw = await this._chat(this.liteModel, [{ role: 'user', content: prompt }], { json: true });
     return this._parseJson(raw);
+  }
+
+  /**
+   * Generic "generate with AI" for a free-text field — see base.provider.js.
+   */
+  async generateText({ fieldLabel, context, existingText }) {
+    this._assertConfigured();
+    const prompt = buildGenerateTextPrompt({ fieldLabel, context, existingText });
+
+    const raw = await this._chat(this.liteModel, [{ role: 'user', content: prompt }], { json: true });
+    const parsed = this._parseJson(raw);
+    return { text: String(parsed?.text || '').trim() };
   }
 }
 

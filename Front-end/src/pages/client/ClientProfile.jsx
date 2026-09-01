@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo, uploadClientCover as apiUploadCover, validateFile } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 
@@ -791,6 +792,15 @@ const ClientProfile = () => {
                 {errors.bio ? <span className="cl-error"><AlertTriangle size={12} /> {errors.bio}</span> : <span />}
                 <span className="cl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>
               </div>
+            )}
+            {editing && (
+              <AiGenerateText
+                className="cl-ai-generate"
+                fieldLabel="a client company's bio/about section on their freelance-marketplace profile — goals, team, and mission"
+                getContext={() => ({ companyName: form.companyName, companyType: form.companyType, industry: form.industry })}
+                getExistingText={() => form.bio}
+                onGenerated={(text) => setForm((p) => ({ ...p, bio: text.slice(0, MAX_BIO) }))}
+              />
             )}
           </div>
         </div>

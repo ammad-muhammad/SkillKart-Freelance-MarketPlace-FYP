@@ -157,9 +157,23 @@ const getDisputeById = async (req, res) => {
  * cancelContract admin tools — not a responsibility of dispute resolution.
  */
 async function resolveMilestoneDispute(req, res, { contract, action, notes, splitPercentage }) {
-  const milestone = await Milestone.findOne({ contractId: contract._id, 'dispute.status': 'pending' });
+  // Validate the action BEFORE claiming the dispute — otherwise an invalid
+  // action would still flip it to 'resolved' below and then bail out on the
+  // switch's default case, permanently losing the ability to resolve it.
+  if (!['release_freelancer', 'refund_client', 'split', 'resume', 'reject'].includes(action)) {
+    return res.status(400).json({ success: false, message: 'Invalid resolution action' });
+  }
+
+  // Atomic claim — only the request that actually flips 'pending' → 'resolved'
+  // proceeds to move money. A concurrent second call (double-click, retry)
+  // matches nothing and is rejected with 409 instead of double-processing.
+  const milestone = await Milestone.findOneAndUpdate(
+    { contractId: contract._id, 'dispute.status': 'pending' },
+    { $set: { 'dispute.status': 'resolved', 'dispute.resolvedAt': new Date(), 'dispute.resolutionNotes': notes } },
+    { new: true }
+  );
   if (!milestone) {
-    return res.status(400).json({ success: false, message: 'No active milestone dispute on this contract' });
+    return res.status(409).json({ success: false, message: 'No active milestone dispute on this contract, or it was already resolved by another request' });
   }
 
   const payment = await Payment.findOne({ milestoneId: milestone._id, type: 'job_escrow' });
@@ -225,13 +239,8 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       milestone.reviewDeadline = new Date(Date.now() + (await getEscrowReleaseDays()) * 24 * 60 * 60 * 1000);
       break;
     }
-    default:
-      return res.status(400).json({ success: false, message: 'Invalid resolution action' });
   }
 
-  milestone.dispute.status = 'resolved';
-  milestone.dispute.resolvedAt = new Date();
-  milestone.dispute.resolutionNotes = notes;
   await milestone.save();
 
   if (isFinancialAction) {
@@ -279,16 +288,31 @@ const resolveDispute = async (req, res) => {
     const { action, notes, splitPercentage } = req.body;
     const { contractId } = req.params;
 
-    const contract = await Contract.findById(contractId);
+    let contract = await Contract.findById(contractId);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
 
     if (contract.type === 'fixed') {
       return await resolveMilestoneDispute(req, res, { contract, action, notes, splitPercentage });
     }
 
-    if (!contract.dispute || contract.dispute.status !== 'pending') {
-      return res.status(400).json({ success: false, message: 'No active dispute on this contract' });
+    // Validate the action BEFORE claiming the dispute — otherwise an invalid
+    // action would still flip it to 'resolved' below and then bail out on the
+    // switch's default case, permanently losing the ability to resolve it.
+    if (!['release_freelancer', 'refund_client', 'split', 'resume', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid resolution action' });
     }
+
+    // Atomic claim (see resolveMilestoneDispute) — only the request that
+    // actually flips 'pending' → 'resolved' proceeds to move money.
+    const claimed = await Contract.findOneAndUpdate(
+      { _id: contractId, 'dispute.status': 'pending' },
+      { $set: { 'dispute.status': 'resolved', 'dispute.resolvedAt': new Date(), 'dispute.resolutionNotes': notes } },
+      { new: true }
+    );
+    if (!claimed) {
+      return res.status(409).json({ success: false, message: 'No active dispute on this contract, or it was already resolved by another request' });
+    }
+    contract = claimed;
 
     const payment = await Payment.findOne({ contractId });
 
@@ -351,14 +375,8 @@ const resolveDispute = async (req, res) => {
         // Dispute rejected — keep current state
         break;
       }
-      default:
-        return res.status(400).json({ success: false, message: 'Invalid resolution action' });
     }
 
-    // Mark dispute resolved
-    contract.dispute.status = 'resolved';
-    contract.dispute.resolvedAt = new Date();
-    contract.dispute.resolutionNotes = notes;
     await contract.save();
 
     // Add history entry

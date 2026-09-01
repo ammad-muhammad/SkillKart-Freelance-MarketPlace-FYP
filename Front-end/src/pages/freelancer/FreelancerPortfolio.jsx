@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen, Package, Loader } from 'lucide-react';
 import Modal from './components/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import './FreelancerDashboard.css';
 
 const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
@@ -214,6 +215,13 @@ const FreelancerPortfolio = () => {
                 style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: '#f8fafc', resize: 'vertical', transition: 'all 0.2s' }}
                 onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
                 onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+              />
+              <AiGenerateText
+                className="fl-ai-generate"
+                fieldLabel="a portfolio project description on a freelancer's profile — what they built and what technologies they used"
+                getContext={() => ({ title: formData.title, url: formData.url })}
+                getExistingText={() => formData.description}
+                onGenerated={(text) => setFormData({ ...formData, description: text })}
               />
             </div>
 

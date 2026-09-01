@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validation.middleware');
-const { authLimiter } = require('../middleware/rateLimit.middleware');
+const { authLimiter, otpLimiter } = require('../middleware/rateLimit.middleware');
 const { verifyRecaptcha } = require('../middleware/recaptcha.middleware');
 const {
   registerValidation,
@@ -126,7 +126,7 @@ router.post('/login',
  *         description: OTP verified successfully
  */
 router.post('/otp/verify',
-  authLimiter,
+  otpLimiter,
   otpVerificationValidation,
   validate,
   authController.verifyOtp
@@ -219,7 +219,7 @@ router.post('/password/reset/request',
  *         description: Password reset successful
  */
 router.post('/password/reset',
-  authLimiter,
+  otpLimiter,
   passwordResetValidation,
   validate,
   authController.resetPassword
@@ -250,7 +250,7 @@ router.post('/password/reset',
  *         description: Email verified successfully
  */
 router.post('/email/verify',
-  authLimiter,
+  otpLimiter,
   otpVerificationValidation,
   validate,
   authController.verifyEmail
@@ -281,7 +281,7 @@ router.post('/email/verify',
  *         description: OTP resent successfully
  */
 router.post('/otp/resend',
-  authLimiter,
+  otpLimiter,
   resendOtpValidation,
   validate,
   authController.resendOTP

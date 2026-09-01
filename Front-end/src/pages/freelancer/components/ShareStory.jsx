@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Star, Quote } from 'lucide-react';
 import { testimonialsAPI } from '../../../api/testimonials';
 import { toast } from 'react-toastify';
+import { useFreelancer } from '../../../context/FreelancerContext';
+import AiGenerateText from '../../../Components/common/AiSuggest/AiGenerateText';
 
 const MAX = 600;
 
@@ -10,6 +12,7 @@ const MAX = 600;
  * appears on the public homepage "Students Who Changed Their Life" section.
  */
 export default function ShareStory() {
+  const { profile } = useFreelancer();
   const [text, setText] = useState('');
   const [rating, setRating] = useState(5);
   const [existing, setExisting] = useState(null);
@@ -91,6 +94,12 @@ export default function ShareStory() {
         value={text}
         maxLength={MAX}
         onChange={(e) => setText(e.target.value)}
+      />
+      <AiGenerateText
+        fieldLabel="a short freelancer success story testimonial for a marketplace homepage"
+        getContext={() => ({ rating: `${rating}/5`, title: profile?.title, completedProjects: profile?.stats?.completedOrders, totalEarnings: profile?.totalEarnings })}
+        getExistingText={() => text}
+        onGenerated={(t) => setText(t.slice(0, MAX))}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>{text.length}/{MAX}</span>

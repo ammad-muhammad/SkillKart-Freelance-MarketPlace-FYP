@@ -17,7 +17,11 @@ const skillTestAttemptSchema = new mongoose.Schema({
 
   totalScore: { type: Number },
   passed: { type: Boolean },
-  status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
+  // 'evaluating' is a transient claim state — see skillTest.controller.js's
+  // submitTest, which atomically flips pending -> evaluating before the (slow,
+  // costs real AI quota) evaluation call so a concurrent duplicate submit
+  // (timer auto-submit racing a manual click) can't double-evaluate.
+  status: { type: String, enum: ['pending', 'evaluating', 'completed', 'failed'], default: 'pending' },
   completedAt: { type: Date, default: Date.now },
 
   // Proctoring audit trail — browser-integrity (tab/window/fullscreen) and

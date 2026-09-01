@@ -8,6 +8,7 @@ import { CATEGORIES, ALL_SKILLS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import ComboSelect from '../../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../../Components/common/AiSuggest/AiSuggestFill';
+import AiGenerateText from '../../../Components/common/AiSuggest/AiGenerateText';
 import { useAuth } from '../../../hooks/useAuth';
 import './PostProject.css';
 
@@ -348,6 +349,13 @@ export default function PostProject() {
                                                 {errors.description ? <span className="pp-err-msg">{errors.description}</span> : <span className="pp-hint">Min 50 characters. More detail = better AI matches.</span>}
                                                 <span className="pp-char-count">{form.description.length}</span>
                                             </div>
+                                            <AiGenerateText
+                                                className="pp-ai-generate"
+                                                fieldLabel="a client's project description for a freelance job posting"
+                                                getContext={() => ({ title: form.title, category: form.category, skills: form.skills, budget: form.budgetType === 'fixed' ? `${form.budgetMin}-${form.budgetMax} PKR fixed` : `${form.budgetMin} PKR/hr`, timeline: form.timeline })}
+                                                getExistingText={() => form.description}
+                                                onGenerated={(text) => set('description', text)}
+                                            />
                                         </div>
 
                                         {/* AI suggest & fill — category + skills from the title/description */}

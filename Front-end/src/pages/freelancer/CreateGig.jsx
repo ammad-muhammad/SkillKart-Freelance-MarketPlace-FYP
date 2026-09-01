@@ -9,6 +9,7 @@ import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 import { validateFile } from '../../utils/uploadHelper';
 import { aiAPI } from '../../api/ai';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import './FreelancerDashboard.css';
 import './CreateGig.css';
 
@@ -86,6 +87,13 @@ const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills })
         placeholder="Briefly describe what you offer (shown in gig cards)..."
       />
       <span className="fl-char-count">{gig.shortDescription.length}/150</span>
+      <AiGenerateText
+        className="fl-ai-generate"
+        fieldLabel="a short, catchy one-line gig description shown on gig cards in a freelance marketplace"
+        getContext={() => ({ title: gig.title, category: gig.category, skills: gig.skills })}
+        getExistingText={() => gig.shortDescription}
+        onGenerated={(text) => set('shortDescription', text.slice(0, 150))}
+      />
     </div>
   </div>
 );
@@ -178,6 +186,13 @@ const Step3 = ({ gig, set }) => {
           placeholder="Describe your gig in detail. Include what the buyer will receive, your process, requirements, and why they should choose you..."
         />
         <span className="fl-char-count">{gig.fullDescription.length}/2000</span>
+        <AiGenerateText
+          className="fl-ai-generate"
+          fieldLabel="a freelancer's detailed gig description — what the buyer receives, the process, requirements, and why to choose this freelancer"
+          getContext={() => ({ title: gig.title, category: gig.category, skills: gig.skills, shortDescription: gig.shortDescription })}
+          getExistingText={() => gig.fullDescription}
+          onGenerated={(text) => set('fullDescription', text.slice(0, 2000))}
+        />
       </div>
 
       <div>
@@ -211,6 +226,13 @@ const Step3 = ({ gig, set }) => {
                 value={faq.answer}
                 onChange={(e) => updateFaq(i, 'answer', e.target.value)}
                 placeholder="Your answer..."
+              />
+              <AiGenerateText
+                className="fl-ai-generate"
+                fieldLabel="the answer to a freelancer-written FAQ on their gig listing"
+                getContext={() => ({ title: gig.title, category: gig.category, question: faq.question })}
+                getExistingText={() => faq.answer}
+                onGenerated={(text) => updateFaq(i, 'answer', text)}
               />
             </div>
           </div>

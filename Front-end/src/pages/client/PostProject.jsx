@@ -8,6 +8,7 @@ import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories
 import Stepper from '../freelancer/components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import './ClientDashboard.css';
 import './PostProject.css';
 
@@ -551,6 +552,13 @@ const PostProject = () => {
                   style={{ minHeight: '60px' }}
                 />
                 <FieldError message={errors.summary} />
+                <AiGenerateText
+                  className="cl-ai-generate"
+                  fieldLabel="a one-sentence project summary for a freelance job listing"
+                  getContext={() => ({ title: form.title, category: form.category, skills: form.skills })}
+                  getExistingText={() => form.summary}
+                  onGenerated={(text) => { updateForm({ summary: text }); clearError('summary'); }}
+                />
               </div>
             </div>
           </div>
@@ -633,6 +641,13 @@ const PostProject = () => {
                 onChange={(e) => { updateForm({ fullDescription: e.target.value }); clearError('fullDescription'); }}
               />
               <FieldError message={errors.fullDescription} />
+              <AiGenerateText
+                className="cl-ai-generate"
+                fieldLabel="a client's detailed freelance project description, including background, goals, and technical requirements"
+                getContext={() => ({ title: form.title, category: form.category, skills: form.skills, summary: form.summary })}
+                getExistingText={() => form.fullDescription}
+                onGenerated={(text) => { updateForm({ fullDescription: text }); clearError('fullDescription'); }}
+              />
             </div>
             <div className="cl-form-grid">
               <div className="cl-form-group">
@@ -644,6 +659,13 @@ const PostProject = () => {
                   onChange={(e) => updateForm({ responsibilities: e.target.value })}
                   style={{ minHeight: '80px' }}
                 />
+                <AiGenerateText
+                  className="cl-ai-generate"
+                  fieldLabel="the key responsibilities section of a freelance job posting — what the hired freelancer will do"
+                  getContext={() => ({ title: form.title, category: form.category, skills: form.skills, description: form.fullDescription || form.summary })}
+                  getExistingText={() => form.responsibilities}
+                  onGenerated={(text) => updateForm({ responsibilities: text })}
+                />
               </div>
               <div className="cl-form-group">
                 <label className="cl-label">Deliverables</label>
@@ -653,6 +675,13 @@ const PostProject = () => {
                   value={form.deliverables}
                   onChange={(e) => updateForm({ deliverables: e.target.value })}
                   style={{ minHeight: '80px' }}
+                />
+                <AiGenerateText
+                  className="cl-ai-generate"
+                  fieldLabel="the deliverables section of a freelance job posting — what the final output/handoff will be"
+                  getContext={() => ({ title: form.title, category: form.category, skills: form.skills, description: form.fullDescription || form.summary })}
+                  getExistingText={() => form.deliverables}
+                  onGenerated={(text) => updateForm({ deliverables: text })}
                 />
               </div>
             </div>
@@ -694,6 +723,13 @@ const PostProject = () => {
                   value={faq.answer}
                   placeholder="Answer..."
                   onChange={(e) => updateFaq(i, 'answer', e.target.value)}
+                />
+                <AiGenerateText
+                  className="cl-ai-generate"
+                  fieldLabel="the answer to a client-written FAQ on a freelance job posting"
+                  getContext={() => ({ title: form.title, category: form.category, question: faq.question })}
+                  getExistingText={() => faq.answer}
+                  onGenerated={(text) => updateFaq(i, 'answer', text)}
                 />
               </div>
             ))}

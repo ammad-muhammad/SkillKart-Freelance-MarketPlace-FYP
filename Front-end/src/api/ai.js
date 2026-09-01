@@ -30,4 +30,10 @@ export const aiAPI = {
   // Semantic skill search: given a broad query, returns a list of specific skills
   expandSearchSkills: (query) =>
     client.post('/ai/expand-skills', { query }, { timeout: AI_TIMEOUT, suppressErrorToast: true }),
+
+  // Generic "generate with AI" for a free-text field. `context` is a flat
+  // object of whatever's already on the form (title, category, skills, tier,
+  // name, ...); `existingText` seeds an expand/polish instead of a from-scratch draft.
+  generateText: (fieldLabel, context = {}, existingText = '') =>
+    client.post('/ai/generate-text', { fieldLabel, context, existingText }, { timeout: AI_TIMEOUT }),
 };

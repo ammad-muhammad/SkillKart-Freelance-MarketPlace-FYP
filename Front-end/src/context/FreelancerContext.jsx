@@ -380,7 +380,7 @@ export const FreelancerProvider = ({ children }) => {
       showToast('Gig deleted.', 'info');
       return { success: true };
     } catch (error) {
-      showToast('Failed to delete gig', 'error');
+      showToast(error.response?.data?.message || 'Failed to delete gig', 'error');
       return { success: false, error: error.response?.data?.message };
     } finally {
       setLoading(false);
