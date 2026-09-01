@@ -1,7 +1,7 @@
 import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers } from 'lucide-react';
+import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers, Star } from 'lucide-react';
 import { contractsAPI } from '../../api/contracts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
@@ -9,6 +9,7 @@ import Modal from './components/Modal';
 import { deliveriesAPI } from '../../api/deliveries';
 import { timeTrackingAPI } from '../../api/timeTracking';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
+import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import './FreelancerDashboard.css';
 
 const STAGES = {
@@ -41,6 +42,7 @@ export default function FreelancerWork() {
   const [disputeModal, setDisputeModal] = useState(null); // contractId
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeDesc, setDisputeDesc] = useState('');
+  const [reviewModal, setReviewModal] = useState(null); // { jobId, targetName }
   const { user } = useAuth();
   const { showToast } = useFreelancer();
 
@@ -366,6 +368,14 @@ export default function FreelancerWork() {
                       <UploadCloud size={14} /> Submit Work
                     </button>
                   )}
+                  {c.status === 'completed' && !c.hasReviewed && (
+                    <button
+                      className="fl-btn fl-btn--outline fl-btn--sm"
+                      onClick={() => setReviewModal({ jobId: c.jobId?._id, targetName: `${c.clientId?.firstName || ''} ${c.clientId?.lastName || ''}`.trim() || 'Client' })}
+                    >
+                      <Star size={14} /> Leave Review
+                    </button>
+                  )}
                   {isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && (
                     <>
                       {timerActive ? (
@@ -373,7 +383,12 @@ export default function FreelancerWork() {
                           <Square size={14} /> Stop Timer
                         </button>
                       ) : (
-                        <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => toggleTimer(c._id, false)} disabled={tracking[c._id]}>
+                        <button
+                          className="fl-btn fl-btn--primary fl-btn--sm"
+                          onClick={() => toggleTimer(c._id, false)}
+                          disabled={tracking[c._id] || c.hasPendingTimeLog}
+                          title={c.hasPendingTimeLog ? 'Escrow is exhausted — ask the client to top up before logging more time' : undefined}
+                        >
                           <Play size={14} /> Start Timer
                         </button>
                       )}
@@ -390,7 +405,7 @@ export default function FreelancerWork() {
                     </>
                   )}
                   {c.dispute?.status !== 'pending' && (
-                    (isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && c.endRequest?.status !== 'pending') ||
+                    (isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status)) ||
                     (isFixed && ['delivered', 'in_revision'].includes(c.status) && !!c.currentMilestone)
                   ) && (
                     <button
@@ -504,6 +519,15 @@ export default function FreelancerWork() {
           </div>
         </form>
       </Modal>
+
+      {reviewModal && (
+        <ReviewModal
+          jobId={reviewModal.jobId}
+          targetName={reviewModal.targetName}
+          onClose={() => setReviewModal(null)}
+          onSuccess={() => { setReviewModal(null); load(); }}
+        />
+      )}
 
       <style>{`
         .fl-contract { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 1rem; padding: var(--space-5); }

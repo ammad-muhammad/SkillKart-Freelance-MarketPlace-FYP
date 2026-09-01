@@ -81,6 +81,20 @@ class AIProvider {
   async suggestTaxonomyNode(unrecognizedName, contextCategory) {
     throw new Error('Method suggestTaxonomyNode() must be implemented by the provider.');
   }
+
+  /**
+   * Generic "generate with AI" for a free-text field (job/gig description,
+   * bio, portfolio project description, FAQ answer, etc). Drafts from scratch
+   * when `existingText` is empty, or expands/polishes it into full prose when
+   * the user already typed a few words — never fabricates factual claims, so
+   * this is only used for descriptive/promotional content, not for fields
+   * that record a real event (deliveries, disputes, reviews).
+   * @param {{ fieldLabel: string, context?: Object, existingText?: string }} params
+   * @returns {Promise<{ text: string }>}
+   */
+  async generateText({ fieldLabel, context, existingText }) {
+    throw new Error('Method generateText() must be implemented by the provider.');
+  }
 }
 
 module.exports = AIProvider;

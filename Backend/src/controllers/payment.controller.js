@@ -339,8 +339,8 @@ const getMyPayments = asyncHandler(async (req, res) => {
  */
 const checkoutWalletDeposit = asyncHandler(async (req, res) => {
   const { amount } = req.body;
-  if (!amount || Number(amount) <= 0) {
-    throw new BadRequestError('Invalid deposit amount');
+  if (!amount || Number(amount) < 5) {
+    throw new BadRequestError('Minimum deposit amount is Rs. 5');
   }
 
   const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';

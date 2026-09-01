@@ -254,6 +254,22 @@ class RouterAIProvider extends AIProvider {
     aiUnavailable();
   }
 
+  // Generic "generate with AI" for a free-text field (job/gig description,
+  // bio, portfolio description, FAQ answer, etc). Only Gemini/DeepSeek
+  // implement it for now — same fall-through pattern as suggestBrief.
+  async generateText(params) {
+    for (const provider of this.providers) {
+      try {
+        if (typeof provider.instance.generateText !== 'function') continue;
+        const result = await provider.instance.generateText(params);
+        if (result && result.text) return result;
+      } catch (e) {
+        console.warn(`[AI Router] ${provider.name} failed for generateText:`, e.message);
+      }
+    }
+    aiUnavailable();
+  }
+
   // Semantic skill expansion for search. Only some providers implement it; the
   // base implementation throws, so a provider that hasn't overridden it just
   // fails its turn and we fall through to the next one.

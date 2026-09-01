@@ -1,5 +1,6 @@
 const { GoogleGenAI } = require('@google/genai');
 const AIProvider = require('./base.provider');
+const { buildGenerateTextPrompt } = require('./promptHelpers');
 
 class GeminiProvider extends AIProvider {
   constructor() {
@@ -611,6 +612,22 @@ Output ONLY valid JSON matching this exact structure:
       config: { responseMimeType: 'application/json' },
     });
     return JSON.parse(response.text);
+  }
+
+  /**
+   * Generic "generate with AI" for a free-text field — see base.provider.js.
+   */
+  async generateText({ fieldLabel, context, existingText }) {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set');
+    const prompt = buildGenerateTextPrompt({ fieldLabel, context, existingText });
+
+    const response = await this.ai.models.generateContent({
+      model: this.liteModel,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' },
+    });
+    const parsed = JSON.parse(response.text);
+    return { text: String(parsed?.text || '').trim() };
   }
 }
 

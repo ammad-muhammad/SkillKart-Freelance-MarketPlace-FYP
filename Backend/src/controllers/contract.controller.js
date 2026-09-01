@@ -189,12 +189,26 @@ const getMyContracts = asyncHandler(async (req, res) => {
   }
 
   const TimeLog = require('../models/TimeLog');
-  const recentLogs = await TimeLog.aggregate([
-    { $match: { contractId: { $in: contractIds } } },
-    { $sort: { endTime: -1 } },
-    { $group: { _id: "$contractId", lastLog: { $first: "$$ROOT" }, totalDuration: { $sum: "$duration" } } }
+  const [recentLogs, pendingLogCounts] = await Promise.all([
+    TimeLog.aggregate([
+      { $match: { contractId: { $in: contractIds } } },
+      { $sort: { endTime: -1 } },
+      { $group: { _id: "$contractId", lastLog: { $first: "$$ROOT" }, totalDuration: { $sum: "$duration" } } }
+    ]),
+    TimeLog.aggregate([
+      { $match: { contractId: { $in: contractIds }, status: 'pending' } },
+      { $group: { _id: "$contractId", count: { $sum: 1 } } }
+    ])
   ]);
   const logsByContract = new Map(recentLogs.map((log) => [String(log._id), log]));
+  const pendingCountByContract = new Map(pendingLogCounts.map((p) => [String(p._id), p.count]));
+
+  // Whether the current user has already left a review for this contract's
+  // job — same check job.controller.js's getMyProjects does for the client.
+  const Review = require('../models/Review');
+  const jobIds = contracts.map((c) => c.jobId?._id).filter(Boolean);
+  const reviews = await Review.find({ reviewerId: userId, jobId: { $in: jobIds } }).select('jobId').lean();
+  const reviewedJobIds = new Set(reviews.map((r) => String(r.jobId)));
 
   const items = contracts.map((c) => {
     const logs = logsByContract.get(String(c._id)) || {};
@@ -209,8 +223,10 @@ const getMyContracts = asyncHandler(async (req, res) => {
       // Fixed-price disputes live on the current milestone, not the contract
       // (see raiseDispute below) — hourly still uses contract.dispute.
       dispute: (c.type === 'fixed' ? currentMilestone?.dispute : c.dispute) || null,
+      hasReviewed: c.jobId ? reviewedJobIds.has(String(c.jobId._id)) : false,
       lastTimeLog: logs.lastLog || null,
-      totalDuration: logs.totalDuration || 0
+      totalDuration: logs.totalDuration || 0,
+      hasPendingTimeLog: (pendingCountByContract.get(String(c._id)) || 0) > 0
     };
   });
 

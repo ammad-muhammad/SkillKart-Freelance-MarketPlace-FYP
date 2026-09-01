@@ -114,4 +114,38 @@ const expandSkills = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Skills expanded', data: result });
 });
 
-module.exports = { buddyChat, estimateCost, suggestBrief, validateSkill, expandSkills };
+// Context values are free-form key/value pairs (title, category, skills,
+// tier, name, etc) — cap what reaches the prompt so a caller can't blow up
+// token usage with an oversized payload.
+const sanitizeGenerateContext = (context) => {
+  if (!context || typeof context !== 'object' || Array.isArray(context)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(context).slice(0, 20)) {
+    if (value == null) continue;
+    out[String(key).slice(0, 40)] = Array.isArray(value)
+      ? value.slice(0, 20).map((v) => String(v).slice(0, 100))
+      : String(value).slice(0, 300);
+  }
+  return out;
+};
+
+/**
+ * POST /ai/generate-text — generic "generate with AI" for a free-text field
+ * (job/gig description, bio, portfolio description, FAQ answer, etc).
+ * Body: { fieldLabel, context?, existingText? }
+ */
+const generateText = asyncHandler(async (req, res) => {
+  const { fieldLabel, context, existingText } = req.body;
+  if (!fieldLabel || !String(fieldLabel).trim()) {
+    throw new BadRequestError('fieldLabel is required');
+  }
+
+  const result = await getAIProvider().generateText({
+    fieldLabel: String(fieldLabel).slice(0, 200),
+    context: sanitizeGenerateContext(context),
+    existingText: String(existingText || '').slice(0, 2000),
+  });
+  sendSuccess(res, { message: 'Text generated', data: result });
+});
+
+module.exports = { buddyChat, estimateCost, suggestBrief, validateSkill, expandSkills, generateText };

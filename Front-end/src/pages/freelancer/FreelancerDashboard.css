@@ -107,6 +107,11 @@
   margin-top: 0.2rem;
 }
 
+.fl-ai-generate {
+  margin-top: 0.5rem;
+  display: block;
+}
+
 /* ── Buttons ── */
 .fl-btn {
   display: inline-flex;
