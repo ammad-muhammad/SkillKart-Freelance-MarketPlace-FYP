@@ -14,6 +14,7 @@ import { timezones } from '../../utils/timezones';
 import { LANGUAGES } from '../../data/languages';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 import Modal from './components/Modal';
@@ -332,6 +333,15 @@ const FreelancerProfile = () => {
             {editing && (
               <span className="fl-char-count">{(form.bio || '').length}/{MAX_BIO}</span>
             )}
+            {editing && (
+              <AiGenerateText
+                className="fl-ai-generate"
+                fieldLabel="a freelancer's professional bio for their marketplace profile"
+                getContext={() => ({ title: form.title, experienceLevel: form.experienceLevel, skills: skills.map((s) => s?.name).filter(Boolean) })}
+                getExistingText={() => form.bio}
+                onGenerated={(text) => setForm((p) => ({ ...p, bio: text.slice(0, MAX_BIO) }))}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -405,6 +415,17 @@ const FreelancerProfile = () => {
                       newEdu[i].description = e.target.value;
                       setEducation(newEdu);
                     }} placeholder="Describe your achievements..." />
+                    <AiGenerateText
+                      className="fl-ai-generate"
+                      fieldLabel="a short description of achievements/coursework for one education entry on a freelancer's profile"
+                      getContext={() => ({ institution: edu.institution, degree: edu.degree, field: edu.field })}
+                      getExistingText={() => edu.description}
+                      onGenerated={(text) => {
+                        const newEdu = [...education];
+                        newEdu[i].description = text;
+                        setEducation(newEdu);
+                      }}
+                    />
                   </div>
                   <button className="fl-btn fl-btn--danger fl-btn--sm" onClick={() => setEducation(education.filter((_, idx) => idx !== i))} style={{ alignSelf: 'flex-start' }}>
                     <Trash2 size={14} /> Remove Entry

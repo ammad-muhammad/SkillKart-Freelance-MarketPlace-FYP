@@ -242,6 +242,10 @@
     margin-top: 2px;
 }
 
+.pp-ai-generate {
+    margin-top: 0.5rem;
+}
+
 /* Inputs */
 .pp-input,
 .pp-textarea,

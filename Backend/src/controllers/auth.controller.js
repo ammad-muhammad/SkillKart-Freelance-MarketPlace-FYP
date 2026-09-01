@@ -679,10 +679,17 @@ const verifyEmail = asyncHandler(async (req, res) => {
 const resendOTP = asyncHandler(async (req, res) => {
   const { email, purpose } = req.body;
 
-  await otpService.generateAndSendOTP(email, purpose || 'email_verification');
+  const result = await otpService.resendOTP(email, purpose || 'email_verification');
+  if (!result.success) {
+    return sendError(res, {
+      statusCode: 429,
+      message: result.message,
+      errors: { secondsRemaining: result.secondsRemaining }
+    });
+  }
 
   sendSuccess(res, {
-    message: 'OTP sent successfully'
+    message: result.message
   });
 });
 

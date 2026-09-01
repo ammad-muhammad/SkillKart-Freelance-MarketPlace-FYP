@@ -29,9 +29,11 @@ const generateTest = asyncHandler(async (req, res) => {
 
   console.log(`[SkillTest] Generating test for user ${userId}. Specific Skill: ${specificSkill || 'None (Baseline Mixed)'}`);
 
-  // 1. ALWAYS delete any existing pending test to ensure a fresh start
-  // This satisfies the requirement that we never resume old/stale sessions
-  await SkillTestAttempt.deleteMany({ userId, status: 'pending' });
+  // 1. ALWAYS delete any existing pending/evaluating test to ensure a fresh
+  // start. This satisfies the requirement that we never resume old/stale
+  // sessions, and also sweeps up an 'evaluating' row orphaned by a crash
+  // between claiming it and the AI call finishing (see submitTest).
+  await SkillTestAttempt.deleteMany({ userId, status: { $in: ['pending', 'evaluating'] } });
 
   // 2. Fetch LATEST profile without any potential caching
   const profile = await FreelancerProfile.findOne({ userId }).lean();
@@ -163,8 +165,16 @@ const submitTest = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { answers: finalAnswers, violations } = req.body;
 
-  const pendingTest = await SkillTestAttempt.findOne({ userId, status: 'pending' });
-  if (!pendingTest) throw new NotFoundError('No active test session found');
+  // Atomic claim — the per-question timer's auto-advance can call this
+  // directly on timeout in the same window as a manual "Complete
+  // Verification" click; only the request that actually flips
+  // pending -> evaluating proceeds to call the (real-cost) AI provider.
+  const pendingTest = await SkillTestAttempt.findOneAndUpdate(
+    { userId, status: 'pending' },
+    { $set: { status: 'evaluating' } },
+    { new: true }
+  );
+  if (!pendingTest) throw new NotFoundError('No active test session found, or it is already being evaluated');
 
   // Map answers to the question structure
   const submissionData = pendingTest.questions.map((q, idx) => ({
@@ -176,8 +186,15 @@ const submitTest = asyncHandler(async (req, res) => {
 
   const ai = getAIProvider();
   console.log(`Evaluating test for user ${userId} with ${submissionData.length} answers...`);
-  
-  const evaluationResult = await ai.evaluateSkillTest(submissionData);
+
+  let evaluationResult;
+  try {
+    evaluationResult = await ai.evaluateSkillTest(submissionData);
+  } catch (err) {
+    // Release the claim so the user isn't stuck unable to ever submit again.
+    await SkillTestAttempt.updateOne({ _id: pendingTest._id, status: 'evaluating' }, { $set: { status: 'pending' } });
+    throw err;
+  }
 
   // Combine answers with evaluations
   const evaluatedQuestions = submissionData.map((ans, index) => ({

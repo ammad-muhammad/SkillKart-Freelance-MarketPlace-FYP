@@ -262,14 +262,23 @@ const listMyGigs = asyncHandler(async (req, res) => {
   const freelancerId = req.user._id;
   
   const query = { freelancerId };
-  
+
   const total = await Gig.countDocuments(query);
   const gigs = await Gig.find(query)
     .skip(skip)
     .limit(limit)
     .sort({ createdAt: -1 });
-  
-  sendPaginated(res, { data: gigs, page, limit, total });
+
+  // Active-order counts so the UI can block deleting a gig mid-delivery.
+  const gigIds = gigs.map((g) => g._id);
+  const activeCounts = await Job.aggregate([
+    { $match: { gigId: { $in: gigIds }, status: 'in-progress' } },
+    { $group: { _id: '$gigId', count: { $sum: 1 } } },
+  ]);
+  const activeByGig = new Map(activeCounts.map((c) => [String(c._id), c.count]));
+  const data = gigs.map((g) => ({ ...g.toObject(), activeOrders: activeByGig.get(String(g._id)) || 0 }));
+
+  sendPaginated(res, { data, page, limit, total });
 });
 
 /**
@@ -277,12 +286,21 @@ const listMyGigs = asyncHandler(async (req, res) => {
  */
 const deleteGig = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const gig = await Gig.findOneAndDelete({ _id: id, freelancerId: req.user._id });
-  
+  const gig = await Gig.findOne({ _id: id, freelancerId: req.user._id });
+
   if (!gig) {
     throw new NotFoundError('Gig not found or unauthorized');
   }
-  
+
+  // Don't let a gig with an active order be deleted out from under a client
+  // mid-delivery — the order's `gigId` would be left dangling.
+  const activeOrder = await Job.findOne({ gigId: id, status: 'in-progress' }).select('_id');
+  if (activeOrder) {
+    throw new BadRequestError('This gig has an active order and cannot be deleted until it is completed or cancelled.');
+  }
+
+  await gig.deleteOne();
+
   sendSuccess(res, { message: 'Gig deleted successfully' });
 });
 

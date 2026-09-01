@@ -19,6 +19,7 @@ import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
 import TagInput from "../../../Components/common/TagInput/TagInput";
 import IndustryInput from "../../../Components/common/IndustryInput/IndustryInput";
+import AiGenerateText from "../../../Components/common/AiSuggest/AiGenerateText";
 import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import "./ClientOnboarding.css";
 
@@ -798,6 +799,12 @@ const ClientOnboarding = () => {
                 <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '4px', fontWeight: '500' }}>
                     Introduce yourself and your organization to help top freelancers understand your requirements. (Min 20 characters)
                 </p>
+                <AiGenerateText
+                    fieldLabel="a client company's bio/about section on their freelance-marketplace profile — goals, team, and mission"
+                    getContext={() => ({ companyName: formData.companyName, companyType: formData.companyType, industry: formData.industryType })}
+                    getExistingText={() => formData.bio}
+                    onGenerated={(text) => setFormData((p) => ({ ...p, bio: text }))}
+                />
             </div>
 
             <div className="onboarding__form-group">

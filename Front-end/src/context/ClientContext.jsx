@@ -473,7 +473,7 @@ export const ClientProvider = ({ children }) => {
       showToast('Project deleted.', 'info');
       return { success: true };
     } catch (error) {
-      showToast('Failed to delete project', 'error');
+      showToast(error.response?.data?.message || 'Failed to delete project', 'error');
       return { success: false };
     } finally {
       setLoading(false);

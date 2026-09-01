@@ -212,7 +212,15 @@ const SkillTest = () => {
   // Backward navigation is intentionally not supported — each question locks
   // once you move past it (manually or via the 20s timer running out).
 
+  // Synchronous ref guard — the per-question timer can call this directly on
+  // timeout in the same tick as a manual "Complete Verification" click, before
+  // the `setSubmitting(true)` state update has re-rendered to disable the
+  // button. A plain state check here would still race; the ref doesn't.
+  const submittingRef = useRef(false);
+
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await skillTestAPI.submitTest(answers, violationLog.current);
@@ -225,6 +233,7 @@ const SkillTest = () => {
       const msg = error.response?.data?.message || 'Submission failed. Please try again.';
       toast.error(msg);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

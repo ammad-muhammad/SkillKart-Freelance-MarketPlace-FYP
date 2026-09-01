@@ -6,6 +6,7 @@ import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 import { validateFile } from '../../utils/uploadHelper';
 import { Plus, X, Upload, Trash2, Image as ImageIcon, Eye, Star, Pause, Play, Edit2, Package } from 'lucide-react';
@@ -81,7 +82,12 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
           <button className="fl-btn fl-btn--sm fl-btn--outline" onClick={() => onEdit(gig)}>
             <Edit2 size={14} />
           </button>
-          <button className="fl-btn fl-btn--sm fl-btn--danger" onClick={() => onDelete(gig._id)}>
+          <button
+            className="fl-btn fl-btn--sm fl-btn--danger"
+            onClick={() => onDelete(gig._id)}
+            disabled={!!gig.activeOrders}
+            title={gig.activeOrders ? 'This gig has an active order and cannot be deleted' : 'Delete gig'}
+          >
             <Trash2 size={14} />
           </button>
         </div>
@@ -366,20 +372,34 @@ const FreelancerGigs = () => {
               </div>
               <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
                 <label>Short Description (for cards)</label>
-                <textarea 
+                <textarea
                   value={formData.shortDescription}
                   onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
                   rows={2}
-                  required 
+                  required
+                />
+                <AiGenerateText
+                  className="fl-ai-generate"
+                  fieldLabel="a short, catchy one-line gig description shown on gig cards in a freelance marketplace"
+                  getContext={() => ({ title: formData.title, category: formData.category, skills: formData.skills })}
+                  getExistingText={() => formData.shortDescription}
+                  onGenerated={(text) => setFormData({ ...formData, shortDescription: text.slice(0, 150) })}
                 />
               </div>
               <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
                 <label>Full Description</label>
-                <textarea 
+                <textarea
                   value={formData.fullDescription}
                   onChange={(e) => setFormData({...formData, fullDescription: e.target.value})}
                   rows={5}
-                  required 
+                  required
+                />
+                <AiGenerateText
+                  className="fl-ai-generate"
+                  fieldLabel="a freelancer's detailed gig description — what the buyer receives, the process, requirements, and why to choose this freelancer"
+                  getContext={() => ({ title: formData.title, category: formData.category, skills: formData.skills, shortDescription: formData.shortDescription })}
+                  getExistingText={() => formData.fullDescription}
+                  onGenerated={(text) => setFormData({ ...formData, fullDescription: text.slice(0, 2000) })}
                 />
               </div>
               <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
@@ -513,11 +533,18 @@ const FreelancerGigs = () => {
                       onChange={(e) => updateFaq(i, 'question', e.target.value)}
                       style={{ marginBottom: '0.5rem' }}
                     />
-                    <textarea 
-                      placeholder="Answer" 
+                    <textarea
+                      placeholder="Answer"
                       value={faq.answer}
                       onChange={(e) => updateFaq(i, 'answer', e.target.value)}
                       rows={2}
+                    />
+                    <AiGenerateText
+                      className="fl-ai-generate"
+                      fieldLabel="the answer to a freelancer-written FAQ on their gig listing"
+                      getContext={() => ({ title: formData.title, category: formData.category, question: faq.question })}
+                      getExistingText={() => faq.answer}
+                      onGenerated={(text) => updateFaq(i, 'answer', text)}
                     />
                   </div>
                 </div>

@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { timezones, getCurrentTimezone } from "../../utils/timezones";
 import ComboSelect from "../common/ComboSelect/ComboSelect";
+import AiGenerateText from "../common/AiSuggest/AiGenerateText";
 
 const AVAILABILITY_OPTIONS = [
   { value: "full-time",     label: "Full Time",     desc: "40+ hrs/week",     Icon: Zap       },
@@ -205,6 +206,12 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
         />
         <p className="fob-hint">{formData.bio?.length || 0}/500 characters</p>
         {errors?.bio && <p className="fob-error">{errors.bio}</p>}
+        <AiGenerateText
+          fieldLabel="a freelancer's professional bio for their marketplace profile"
+          getContext={() => ({ title: formData.title, experienceLevel: formData.experienceLevel, availability: formData.availability })}
+          getExistingText={() => formData.bio}
+          onGenerated={(text) => setFormData((p) => ({ ...p, bio: text.slice(0, 500) }))}
+        />
       </div>
 
       {/* Hourly Rate + Availability row */}

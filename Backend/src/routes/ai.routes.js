@@ -14,5 +14,6 @@ router.post('/cost-estimate', strictLimiter, aiController.estimateCost);
 router.post('/suggest-brief', strictLimiter, aiController.suggestBrief);
 router.post('/validate-skill', strictLimiter, aiController.validateSkill);
 router.post('/expand-skills', strictLimiter, aiController.expandSkills);
+router.post('/generate-text', strictLimiter, aiController.generateText);
 
 module.exports = router;

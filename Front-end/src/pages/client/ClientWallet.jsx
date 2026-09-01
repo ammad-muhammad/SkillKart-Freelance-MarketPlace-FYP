@@ -236,7 +236,7 @@ export default function ClientWallet() {
               <button className="cl-btn cl-btn--ghost" onClick={() => setDepositModal(false)} disabled={depositing}>Cancel</button>
               <button
                 className="cl-btn cl-btn--primary"
-                disabled={!depositAmount || Number(depositAmount) <= 0 || depositing}
+                disabled={!depositAmount || Number(depositAmount) < 5 || depositing}
                 onClick={handleDeposit}
               >
                 {depositing ? 'Redirecting...' : 'Proceed to Checkout'}

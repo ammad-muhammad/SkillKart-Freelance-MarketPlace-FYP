@@ -13,6 +13,7 @@ import Modal from '../freelancer/components/Modal';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
+import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
@@ -566,7 +567,7 @@ const ClientProjects = () => {
                       </button>
                     )}
                     {proj.dispute?.status !== 'pending' && (
-                      (proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status) && proj.endRequest?.status !== 'pending') ||
+                      (proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status)) ||
                       (proj.contractType === 'fixed' && ['delivered', 'in_revision'].includes(proj.contractStatus) && !!proj.currentMilestone)
                     ) && (
                       <button
@@ -590,12 +591,14 @@ const ClientProjects = () => {
                     {['draft', 'open'].includes(proj.status) && (
                       <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}><Edit3 size={14} style={{ marginRight: '6px' }} /> Edit</button>
                     )}
-                    <button
-                      className="cl-btn cl-btn--danger cl-btn--sm"
-                      onClick={() => setDeleteModal(proj.id)}
-                    >
-                      <Trash2 size={14} style={{ marginRight: '6px' }} /> Delete
-                    </button>
+                    {!['in-progress', 'delivered', 'completed'].includes(proj.status) && (
+                      <button
+                        className="cl-btn cl-btn--danger cl-btn--sm"
+                        onClick={() => setDeleteModal(proj.id)}
+                      >
+                        <Trash2 size={14} style={{ marginRight: '6px' }} /> Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -772,6 +775,13 @@ const ClientProjects = () => {
                     placeholder="Describe the project scope, responsibilities, and deliverables (min 50 characters)…"
                   />
                   {editErrors.description && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.description}</span>}
+                  <AiGenerateText
+                    className="cl-ai-generate"
+                    fieldLabel="a client's detailed freelance project description, including scope, responsibilities, and deliverables"
+                    getContext={() => ({ title: editingProject.title, category: editingProject.category, skills: editingProject.skills })}
+                    getExistingText={() => editingProject.description}
+                    onGenerated={(text) => { setField({ description: text }); clearEditError('description'); }}
+                  />
                 </div>
               </div>
             </div>

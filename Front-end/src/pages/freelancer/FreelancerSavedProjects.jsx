@@ -73,22 +73,22 @@ export default function FreelancerSavedProjects() {
                                     View Details
                                 </Link>
                                 {(() => {
-                                    const isCompleted = project.status === 'Completed' || project.status === 'Closed';
+                                    const isOpen = project.status === 'open';
                                     const myProposal = proposals?.find(p => (p.jobId?._id || p.jobId) === (project._id || project.id));
-                                    
-                                    if (isCompleted) {
-                                        return (
-                                            <span className="fsp-card__btn" style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}>
-                                                Completed
-                                            </span>
-                                        );
-                                    }
-                                    
+
                                     if (myProposal) {
                                         return (
                                             <Link to="/freelancer/proposals" className="fsp-card__btn" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
                                                 Applied
                                             </Link>
+                                        );
+                                    }
+
+                                    if (!isOpen) {
+                                        return (
+                                            <span className="fsp-card__btn" style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}>
+                                                {project.status ? project.status.replace('-', ' ') : 'Unavailable'}
+                                            </span>
                                         );
                                     }
 

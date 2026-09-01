@@ -12,7 +12,10 @@ const OTP = () => {
     const { verifyOtp } = useAuth();
     const navigate = useNavigate();
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-    const [timer, setTimer] = useState(30);
+    // Matches the backend's 1-minute per-email resend cooldown
+    // (OTP.canRequestNewOTP) — a shorter local timer would let the button
+    // re-enable before the backend actually allows a new OTP.
+    const [timer, setTimer] = useState(60);
     const [canResend, setCanResend] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -187,7 +190,7 @@ const OTP = () => {
             await authAPI.resendOTP(emailForResend, purpose);
 
             setSuccess("New code sent to your email!");
-            setTimer(30);
+            setTimer(60);
             setCanResend(false);
             setOtp(["", "", "", "", "", ""]);
 

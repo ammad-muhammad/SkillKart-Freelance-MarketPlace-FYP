@@ -274,7 +274,7 @@ export default function GigDetail() {
                           ))}
                         </ul>
                       )}
-                      {!isOwnGig && (
+                      {!isOwnGig && gig.status === 'active' && (
                         <button
                           className="gd-tier__order"
                           onClick={() => handleOrder(tier.key)}
@@ -282,6 +282,11 @@ export default function GigDetail() {
                         >
                           {ordering === tier.key ? 'Starting…' : `Order · Rs. ${tier.price}`}
                         </button>
+                      )}
+                      {!isOwnGig && gig.status !== 'active' && (
+                        <p className="gd-pricing__note" style={{ margin: 0, color: '#b45309' }}>
+                          This gig is currently paused and not accepting orders.
+                        </p>
                       )}
                     </div>
                   ))}

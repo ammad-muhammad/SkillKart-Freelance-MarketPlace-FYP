@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X, Loader2 } from "lucide-react";
 import { freelancersAPI } from "../../api/freelancers";
 import { toast } from "react-toastify";
+import AiGenerateText from "../common/AiSuggest/AiGenerateText";
 
 const StepPortfolio = ({ formData, setFormData, errors }) => {
   const fileInputRefs = useRef([]);
@@ -186,6 +187,12 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
                   className="fob-textarea"
                   placeholder="Describe the project, your role, technologies used, and impact..."
                   rows={3}
+                />
+                <AiGenerateText
+                  fieldLabel="a portfolio project description on a freelancer's profile — the project, their role, technologies used, and impact"
+                  getContext={() => ({ title: project.title, url: project.url })}
+                  getExistingText={() => project.description}
+                  onGenerated={(text) => updateProject(index, 'description', text)}
                 />
               </div>
 
