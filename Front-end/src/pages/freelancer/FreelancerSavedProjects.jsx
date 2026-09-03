@@ -1,6 +1,7 @@
 import { useFreelancer } from '../../context/FreelancerContext';
 import { Link } from 'react-router-dom';
-import { Bookmark, X, DollarSign, Clock } from 'lucide-react';
+import { Bookmark, X, Clock } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
 import './FreelancerSavedProjects.css';
 
 export default function FreelancerSavedProjects() {
@@ -48,7 +49,7 @@ export default function FreelancerSavedProjects() {
                                 
                                 <div className="fsp-card__meta">
                                     <span className="fsp-card__meta-item">
-                                        <DollarSign size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: 'var(--color-text-light)' }} />
+                                        <PkrIcon size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: 'var(--color-text-light)' }} />
                                         {typeof project.budget === 'object' 
                                             ? `Rs. ${project.budget.min} - Rs. ${project.budget.max}`
                                             : project.budget || 'Rs. 500+'}

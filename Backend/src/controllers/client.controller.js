@@ -1,12 +1,13 @@
 const ClientProfile = require('../models/ClientProfile');
 const ClientOnboardingDraft = require('../models/ClientOnboardingDraft');
 const User = require('../models/User');
-const { uploadProfilePicture } = require('../services/upload.service');
+const { uploadProfilePicture, cleanupOrphanedAsset } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
 const { applyUsernameUpdate } = require('../utils/username');
 const { getAIProvider } = require('../services/ai');
+const { stripHtml } = require('../utils/sanitizeInput');
 
 /**
  * Calculate client profile completion
@@ -120,7 +121,7 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   allowedFields.forEach(field => {
     if (updates[field] !== undefined) {
-      profile[field] = updates[field];
+      profile[field] = field === 'description' ? stripHtml(updates[field]) : updates[field];
     }
   });
 
@@ -205,32 +206,45 @@ const getClientById = asyncHandler(async (req, res) => {
 /**
  * Get public client profile by ID
  */
+// Only these fields are ever returned for a public (anonymous-visitor)
+// client profile — same explicit-whitelist pattern as
+// freelancer.controller.js's PUBLIC_FREELANCER_FIELDS, so a new sensitive
+// field added to ClientProfile in the future doesn't auto-leak the way a
+// blacklist would. `totalSpent` is deliberately included — it's a real,
+// designed "trust signal" feature the public client-profile page displays
+// (the freelancer-side equivalent, totalEarnings, is NOT public because no
+// such feature exists there).
+const PUBLIC_CLIENT_FIELDS = [
+  'userId', 'companyName', 'companyType', 'companyLogo', 'coverPhoto',
+  'companySize', 'industry', 'industryType', 'customIndustry', 'website',
+  'description', 'location', 'services', 'techStack', 'hiringFrequency',
+  'timezone', 'socialLinks', 'languages', 'rating', 'verificationStatus',
+  'totalProjectsPosted', 'totalSpent', 'createdAt'
+];
+
 const getPublicClientById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
-  const profile = await ClientProfile.findOne({ userId: id })
+
+  const raw = await ClientProfile.findOne({ userId: id })
     .populate('userId', 'firstName lastName profilePicture')
     .lean();
-  
-  if (!profile) {
+
+  if (!raw) {
     throw new NotFoundError('Client not found');
   }
 
   // Calculate dynamic total projects posted
   const Job = require('../models/Job');
-  profile.totalProjectsPosted = await Job.countDocuments({ 
+  raw.totalProjectsPosted = await Job.countDocuments({
     clientId: id,
     status: { $ne: 'draft' }
   });
 
-  // Remove sensitive fields
-  delete profile.securitySettings;
-  delete profile.notificationSettings;
-  delete profile.verificationDocuments;
-  delete profile.walletBalance;
-  delete profile.savedFreelancers;
-  delete profile.processedSessions;
-  
+  const profile = {};
+  PUBLIC_CLIENT_FIELDS.forEach((field) => {
+    if (raw[field] !== undefined) profile[field] = raw[field];
+  });
+
   sendSuccess(res, {
     message: 'Public client profile retrieved successfully',
     data: { profile }
@@ -439,8 +453,10 @@ const uploadAvatar = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
+  const previousUrl = (await User.findById(userId).select('profilePicture').lean())?.profilePicture;
   const fileUpload = await uploadProfilePicture(userId, req.file);
   const user = await User.findByIdAndUpdate(userId, { profilePicture: fileUpload.url }, { new: true });
+  cleanupOrphanedAsset(userId, previousUrl);
 
   // Recalculate profile completion
   const profile = await ClientProfile.findOne({ userId });
@@ -466,12 +482,14 @@ const uploadCompanyLogo = asyncHandler(async (req, res) => {
   }
 
   const fileUpload = await uploadProfilePicture(userId, req.file);
-  
+
   const profile = await ClientProfile.findOne({ userId });
   if (profile) {
+    const previousUrl = profile.companyLogo;
     profile.companyLogo = fileUpload.url;
     profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));
     await profile.save();
+    cleanupOrphanedAsset(userId, previousUrl);
   }
 
   sendSuccess(res, {
@@ -490,13 +508,14 @@ const uploadCoverImage = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
-  const { uploadProfilePicture } = require('../services/upload.service');
   const fileUpload = await uploadProfilePicture(userId, req.file);
-  
+
   const profile = await ClientProfile.findOne({ userId });
   if (profile) {
+    const previousUrl = profile.coverPhoto;
     profile.coverPhoto = fileUpload.url;
     await profile.save();
+    cleanupOrphanedAsset(userId, previousUrl);
   }
 
   sendSuccess(res, {

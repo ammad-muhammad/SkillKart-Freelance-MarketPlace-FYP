@@ -193,17 +193,23 @@ const Registration = () => {
                                 >
                                     <p style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginBottom: '1.5rem', fontSize: '0.95rem' }}>How would you like to join?</p>
                                     <div className="auth-role-grid">
-                                        <div 
+                                        <div
                                             className={`auth-role-card ${role === "client" ? "active" : ""}`}
                                             onClick={() => handleRoleSelect("client")}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRoleSelect("client"); } }}
                                         >
                                             <Briefcase size={28} className="auth-role-icon" />
                                             <div className="auth-role-title">Client</div>
                                             <div className="auth-role-desc">Hire Elite Talent</div>
                                         </div>
-                                        <div 
+                                        <div
                                             className={`auth-role-card ${role === "freelancer" ? "active" : ""}`}
                                             onClick={() => handleRoleSelect("freelancer")}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRoleSelect("freelancer"); } }}
                                         >
                                             <Code size={28} className="auth-role-icon" />
                                             <div className="auth-role-title">Freelancer</div>
@@ -230,8 +236,9 @@ const Registration = () => {
                                     <form onSubmit={handleSubmit} className="auth-form">
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                             <div className="auth-input-group">
-                                                <label className="auth-label">First Name</label>
+                                                <label className="auth-label" htmlFor="reg-first-name">First Name</label>
                                                 <input
+                                                    id="reg-first-name"
                                                     type="text"
                                                     name="firstName"
                                                     required
@@ -243,8 +250,9 @@ const Registration = () => {
                                                 />
                                             </div>
                                             <div className="auth-input-group">
-                                                <label className="auth-label">Last Name</label>
+                                                <label className="auth-label" htmlFor="reg-last-name">Last Name</label>
                                                 <input
+                                                    id="reg-last-name"
                                                     type="text"
                                                     name="lastName"
                                                     required
@@ -258,10 +266,11 @@ const Registration = () => {
                                         </div>
 
                                         <div className="auth-input-group">
-                                            <label className="auth-label">Email Address</label>
+                                            <label className="auth-label" htmlFor="reg-email">Email Address</label>
                                             <div className="auth-input-wrapper">
                                                 <Mail size={18} className="auth-input-icon" />
                                                 <input
+                                                    id="reg-email"
                                                     type="email"
                                                     name="email"
                                                     required
@@ -274,10 +283,11 @@ const Registration = () => {
                                         </div>
 
                                         <div className="auth-input-group">
-                                            <label className="auth-label">Password</label>
+                                            <label className="auth-label" htmlFor="reg-password">Password</label>
                                             <div className="auth-input-wrapper">
                                                 <Lock size={18} className="auth-input-icon" />
                                                 <input
+                                                    id="reg-password"
                                                     type={showPassword ? "text" : "password"}
                                                     name="password"
                                                     required
@@ -293,10 +303,11 @@ const Registration = () => {
                                         </div>
 
                                         <div className="auth-input-group">
-                                            <label className="auth-label">Confirm Password</label>
+                                            <label className="auth-label" htmlFor="reg-confirm-password">Confirm Password</label>
                                             <div className="auth-input-wrapper">
                                                 <Lock size={18} className="auth-input-icon" />
                                                 <input
+                                                    id="reg-confirm-password"
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     name="confirmPassword"
                                                     required

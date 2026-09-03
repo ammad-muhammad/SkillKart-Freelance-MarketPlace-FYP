@@ -69,11 +69,11 @@ const Role = () => {
         };
         window.addEventListener('mousemove', onMouseMove);
         return () => window.removeEventListener('mousemove', onMouseMove);
-    }, [0]);
+    }, []);
 
     const headingWords = ['Tell', 'Us', 'More,', 'About', 'Yourself.'];
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async () => {
         if (role == "") return;
 
         setLoading(true);
@@ -81,7 +81,7 @@ const Role = () => {
         setSuccess("");
 
         try {
-            const userResponse = await authAPI.updateRole({
+            await authAPI.updateRole({
                 role: role
             });
 
@@ -212,11 +212,11 @@ const Role = () => {
                         </div>
                         <button
                             onClick={() => role && handleSubmit()}
-                            disabled={!role}
+                            disabled={!role || loading}
                             className="hero__btn-main"
-                            style={{ width: '100%', justifyContent: 'center', border: 'none', cursor: role ? 'pointer' : 'not-allowed', padding: '16px', opacity: role ? 1 : 0.4 }}
+                            style={{ width: '100%', justifyContent: 'center', border: 'none', cursor: (role && !loading) ? 'pointer' : 'not-allowed', padding: '16px', opacity: role ? 1 : 0.4 }}
                         >
-                            Continue <ArrowRight size={18} />
+                            {loading ? 'Please wait…' : 'Continue'} <ArrowRight size={18} />
                         </button>
                     </div>
                 </div>

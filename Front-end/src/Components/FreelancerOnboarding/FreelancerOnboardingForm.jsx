@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Rocket
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { safeToast as toast } from "../../utils/safeToast";
 import { useAuth } from "../../hooks/useAuth";
 import { freelancersAPI } from "../../api/freelancers";
 import ImageCropModal from "../common/ImageCropModal/ImageCropModal";
@@ -331,6 +331,7 @@ const FreelancerOnboardingForm = () => {
           proficiency: l.proficiency
         })),
         portfolio: processedPortfolio,
+        profilePicUrl,
         education: formData.education,
         certifications: formData.certifications,
         timezone: formData.timezone,

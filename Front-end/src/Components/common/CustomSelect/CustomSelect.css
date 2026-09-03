@@ -209,3 +209,59 @@
 .csel--compact .csel__menu {
     min-width: 160px;
 }
+
+/* ── Variant: dark (TaxonomyAdmin's existing indigo-on-dark palette) ── */
+.csel--dark .csel__trigger {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.csel--dark .csel__trigger:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.csel--dark.csel--open .csel__trigger {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.csel--dark .csel__value {
+    color: #f3f4f6;
+}
+
+.csel--dark .csel__value--placeholder {
+    color: #9ca3af;
+}
+
+.csel--dark .csel__chevron {
+    color: #9ca3af;
+}
+
+.csel--dark.csel--open .csel__chevron {
+    color: #6366f1;
+}
+
+.csel--dark .csel__menu {
+    background: rgba(31, 41, 55, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.csel--dark .csel__option {
+    color: #d1d5db;
+}
+
+.csel--dark .csel__option:hover {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+}
+
+.csel--dark .csel__option--selected {
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+}
+
+.csel--dark .csel__check {
+    color: #6366f1;
+}

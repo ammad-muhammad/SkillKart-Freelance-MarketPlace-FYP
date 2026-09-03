@@ -10,11 +10,6 @@ const otpSchema = new mongoose.Schema({
     index: true
   },
 
-  otp: {
-    type: String,
-    required: true
-  },
-
   otpHash: {
     type: String,
     required: true,
@@ -134,9 +129,11 @@ otpSchema.statics.createOTP = async function({
   const otpHash = this.hashOTP(otp);
   const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
+  // The raw `otp` is returned below (for emailing) but never persisted —
+  // only its one-way `otpHash` is stored, so a DB read/breach can't recover
+  // still-valid codes.
   const otpRecord = await this.create({
     email,
-    otp, // Store for sending, but will be removed after sending
     otpHash,
     purpose,
     userId,

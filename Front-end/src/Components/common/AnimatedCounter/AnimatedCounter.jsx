@@ -35,7 +35,6 @@ const AnimatedCounter = ({ value }) => {
   useEffect(() => {
     if (!hasStarted) return;
 
-    let start = 0;
     const duration = 2000; // 2 seconds
     const startTime = performance.now();
 

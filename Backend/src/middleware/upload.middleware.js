@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const { FileUploadError } = require('../utils/apiError');
+const { matchesExtension } = require('../utils/fileSignature');
 
 const storage = multer.memoryStorage();
 
@@ -30,8 +31,26 @@ const upload = multer({
   fileFilter
 });
 
-const uploadSingle = (fieldName) => upload.single(fieldName);
-const uploadMultiple = (fieldName, maxCount = 5) => upload.array(fieldName, maxCount);
-const uploadFields = (fields) => upload.fields(fields);
+// Multer's fileFilter only sees metadata (name/mimetype), not the actual
+// bytes — both are trivially spoofable. Once memoryStorage has buffered the
+// file, verify its real magic bytes match the extension it claims to be.
+const verifyFileSignature = (req, res, next) => {
+  const files = req.files
+    ? (Array.isArray(req.files) ? req.files : Object.values(req.files).flat())
+    : (req.file ? [req.file] : []);
+
+  for (const file of files) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!matchesExtension(file.buffer, ext)) {
+      return next(new FileUploadError('File content does not match its extension.'));
+    }
+  }
+
+  next();
+};
+
+const uploadSingle = (fieldName) => [upload.single(fieldName), verifyFileSignature];
+const uploadMultiple = (fieldName, maxCount = 5) => [upload.array(fieldName, maxCount), verifyFileSignature];
+const uploadFields = (fields) => [upload.fields(fields), verifyFileSignature];
 
 module.exports = { upload, uploadSingle, uploadMultiple, uploadFields };

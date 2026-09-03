@@ -9,6 +9,7 @@ import { log } from "../utils/logger";
 
 const ClientContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useClient = () => {
   const ctx = useContext(ClientContext);
   if (!ctx) throw new Error('useClient must be used inside ClientProvider');
@@ -274,6 +275,10 @@ export const ClientProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    // Deliberately depend on primitive user fields, not `user` itself — the
+    // object reference can change without these values changing and would
+    // over-fire this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.role, user?.id, user?._id, authLoading, fetchProfile]);
 
   const showToast = (message, type = 'success') => {

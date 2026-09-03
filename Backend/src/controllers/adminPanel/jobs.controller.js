@@ -1,6 +1,7 @@
 const Job = require('../../models/Job');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
+const { parsePagination } = require('../../utils/helpers');
 
 const JOB_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -16,8 +17,9 @@ const getJobs = async (req, res) => {
     const {
       search, status, type, clientId,
       dateFrom, dateTo, budgetMin, budgetMax,
-      page = 1, limit = 20, sortBy = 'createdAt', order = 'desc'
+      sortBy = 'createdAt', order = 'desc'
     } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const filter = {};
     if (status) filter.status = status;
@@ -40,20 +42,19 @@ const getJobs = async (req, res) => {
       filter.$or = [{ title: new RegExp(search, 'i') }, { description: new RegExp(search, 'i') }];
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [jobs, total] = await Promise.all([
       Job.find(filter)
         .populate('clientId', 'email firstName lastName')
         .sort({ [sortBy]: order === 'asc' ? 1 : -1 })
         .skip(skip)
-        .limit(parseInt(limit))
+        .limit(limit)
         .lean(),
       Job.countDocuments(filter)
     ]);
 
     return res.status(200).json({
       success: true, jobs,
-      pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) }
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
     });
   } catch (err) {
     console.error('[Jobs] error:', err);

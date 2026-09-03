@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Star, Quote } from 'lucide-react';
 import { testimonialsAPI } from '../../../api/testimonials';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import AiGenerateText from '../../../Components/common/AiSuggest/AiGenerateText';
 

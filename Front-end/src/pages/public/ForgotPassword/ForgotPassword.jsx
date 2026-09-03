@@ -137,10 +137,11 @@ const ForgotPassword = () => {
 
                         <form onSubmit={handleSubmit} className="auth-form">
                             <div className="auth-input-group">
-                                <label className="auth-label">Email Address</label>
+                                <label className="auth-label" htmlFor="forgot-email">Email Address</label>
                                 <div className="auth-input-wrapper">
                                     <Mail size={18} className="auth-input-icon" />
                                     <input
+                                        id="forgot-email"
                                         type="email"
                                         name="email"
                                         required
@@ -154,10 +155,11 @@ const ForgotPassword = () => {
                             </div>
 
                             <div className="auth-input-group">
-                                <label className="auth-label">New Password</label>
+                                <label className="auth-label" htmlFor="forgot-new-password">New Password</label>
                                 <div className="auth-input-wrapper">
                                     <Lock size={18} className="auth-input-icon" />
                                     <input
+                                        id="forgot-new-password"
                                         type={showPassword ? "text" : "password"}
                                         name="newPassword"
                                         required
@@ -174,10 +176,11 @@ const ForgotPassword = () => {
                             </div>
 
                             <div className="auth-input-group">
-                                <label className="auth-label">Confirm Password</label>
+                                <label className="auth-label" htmlFor="forgot-confirm-password">Confirm Password</label>
                                 <div className="auth-input-wrapper">
                                     <Lock size={18} className="auth-input-icon" />
                                     <input
+                                        id="forgot-confirm-password"
                                         type={showConfirmPassword ? "text" : "password"}
                                         name="confirmPassword"
                                         required

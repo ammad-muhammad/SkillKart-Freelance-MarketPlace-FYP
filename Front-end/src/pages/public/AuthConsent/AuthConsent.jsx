@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
 import { log } from "../../../utils/logger";
 
 const AuthConsent = () => {
@@ -98,7 +98,7 @@ const AuthConsent = () => {
     };
 
     processOAuthCallback();
-  }, []); // ✅ Empty dependency array
+  }, [handleSupabaseOAuth, navigate]);
 
   // A component MUST return valid JSX. Previously this returned `undefined`,
   // which throws during render and breaks the OAuth callback screen.

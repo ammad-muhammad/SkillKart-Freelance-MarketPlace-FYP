@@ -2,7 +2,8 @@ import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
-import { FileText, DollarSign, AlignLeft, Image as ImageIcon, Rocket, Save, CheckCircle2, XCircle, Star, Zap, Crown, X, Plus } from 'lucide-react';
+import { FileText, AlignLeft, Image as ImageIcon, Rocket, Save, CheckCircle2, XCircle, Star, Zap, Crown, X, Plus } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
 import Stepper from './components/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
@@ -41,8 +42,9 @@ const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills })
     <h2 className="fl-step-body__title">Step 1: Basic Information</h2>
 
     <div className="fl-form-group full" style={{ marginBottom: '1.25rem' }}>
-      <label className="fl-label">Gig Title *</label>
+      <label className="fl-label" htmlFor="cg-title">Gig Title *</label>
       <input
+        id="cg-title"
         className="fl-input"
         maxLength={80}
         value={gig.title}
@@ -55,8 +57,9 @@ const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills })
 
 
     <div className="fl-form-group full" style={{ marginBottom: '1.25rem', marginTop: '0.75rem' }}>
-      <label className="fl-label">Category * {validatingCategory && <span style={{fontSize: '0.8rem', color: 'var(--color-primary)'}}>(Validating by AI...)</span>}</label>
+      <label className="fl-label" htmlFor="cg-category">Category * {validatingCategory && <span style={{fontSize: '0.8rem', color: 'var(--color-primary)'}}>(Validating by AI...)</span>}</label>
       <ComboSelect
+        id="cg-category"
         options={CATEGORIES}
         value={gig.category}
         onChange={onCategoryChange}
@@ -77,8 +80,9 @@ const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills })
     </div>
 
     <div className="fl-form-group full">
-      <label className="fl-label">Short Description *</label>
+      <label className="fl-label" htmlFor="cg-short-desc">Short Description *</label>
       <textarea
+        id="cg-short-desc"
         className="fl-textarea"
         maxLength={150}
         rows={3}
@@ -107,8 +111,9 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
       <span className="fl-pricing-tier__label">{label}</span>
     </div>
     <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
-      <label className="fl-label">Price (PKR)</label>
+      <label className="fl-label" htmlFor={`cg-price-${tier}`}>Price (PKR)</label>
       <input
+        id={`cg-price-${tier}`}
         type="number"
         className="fl-input"
         min={1}
@@ -118,8 +123,9 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
       />
     </div>
     <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
-      <label className="fl-label">Delivery (days)</label>
+      <label className="fl-label" htmlFor={`cg-delivery-${tier}`}>Delivery (days)</label>
       <input
+        id={`cg-delivery-${tier}`}
         type="number"
         className="fl-input"
         min={1}
@@ -129,8 +135,9 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
       />
     </div>
     <div className="fl-form-group">
-      <label className="fl-label">Revisions</label>
+      <label className="fl-label" htmlFor={`cg-revisions-${tier}`}>Revisions</label>
       <input
+        id={`cg-revisions-${tier}`}
         type="text"
         className="fl-input"
         value={data.revisions}
@@ -176,8 +183,9 @@ const Step3 = ({ gig, set }) => {
       <h2 className="fl-step-body__title">Step 3: Description & FAQs</h2>
 
       <div className="fl-form-group full" style={{ marginBottom: '1.5rem' }}>
-        <label className="fl-label">Full Description *</label>
+        <label className="fl-label" htmlFor="cg-full-desc">Full Description *</label>
         <textarea
+          id="cg-full-desc"
           className="fl-textarea"
           rows={8}
           maxLength={2000}
@@ -210,8 +218,9 @@ const Step3 = ({ gig, set }) => {
               <button className="fl-btn fl-btn--sm fl-btn--ghost" onClick={() => removeFaq(i)}>✕ Remove</button>
             </div>
             <div className="fl-form-group" style={{ marginBottom: '0.6rem' }}>
-              <label className="fl-label">Question</label>
+              <label className="fl-label" htmlFor={`cg-faq-q-${i}`}>Question</label>
               <input
+                id={`cg-faq-q-${i}`}
                 className="fl-input"
                 value={faq.question}
                 onChange={(e) => updateFaq(i, 'question', e.target.value)}
@@ -219,8 +228,9 @@ const Step3 = ({ gig, set }) => {
               />
             </div>
             <div className="fl-form-group">
-              <label className="fl-label">Answer</label>
+              <label className="fl-label" htmlFor={`cg-faq-a-${i}`}>Answer</label>
               <textarea
+                id={`cg-faq-a-${i}`}
                 className="fl-textarea"
                 rows={2}
                 value={faq.answer}
@@ -325,7 +335,7 @@ const Step4 = ({ gig, set }) => {
 
       {/* Banner */}
       <div className="fl-form-group full" style={{ marginBottom: '1.5rem' }}>
-        <label className="fl-label">Banner Image</label>
+        <label className="fl-label" htmlFor="cg-banner-input">Banner Image</label>
         <div className="fl-upload-zone" onClick={() => bannerRef.current?.click()}>
           {gig.media.banner ? (
             <img src={gig.media.banner} alt="banner" className="fl-upload-zone__preview" />
@@ -337,7 +347,7 @@ const Step4 = ({ gig, set }) => {
             </div>
           )}
         </div>
-        <input ref={bannerRef} type="file" accept="image/*" hidden onChange={handleBanner} />
+        <input id="cg-banner-input" ref={bannerRef} type="file" accept="image/*" hidden onChange={handleBanner} />
         {gig.media.banner && (
           <button
             className="fl-btn fl-btn--ghost fl-btn--sm"
@@ -352,14 +362,14 @@ const Step4 = ({ gig, set }) => {
       {/* Multiple Images */}
       <div className="fl-form-group full" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <label className="fl-label">Portfolio Images (max 5)</label>
+          <label className="fl-label" htmlFor="cg-images-input">Portfolio Images (max 5)</label>
           {gig.media.images.length < 5 && (
             <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => imagesRef.current?.click()}>
               <Plus size={14} /> Add Images
             </button>
           )}
         </div>
-        <input ref={imagesRef} type="file" accept="image/*" multiple hidden onChange={handleImages} />
+        <input id="cg-images-input" ref={imagesRef} type="file" accept="image/*" multiple hidden onChange={handleImages} />
         <div className="fl-images-grid">
           {gig.media.images.map((img, i) => (
             <div key={i} className="fl-image-thumb">
@@ -375,8 +385,9 @@ const Step4 = ({ gig, set }) => {
 
       {/* Video Link */}
       <div className="fl-form-group full" style={{ marginBottom: '1.5rem' }}>
-        <label className="fl-label">Video Link (Optional)</label>
+        <label className="fl-label" htmlFor="cg-video-link">Video Link (Optional)</label>
         <input
+          id="cg-video-link"
           type="url"
           className="fl-input"
           value={gig.media.videoLink}
@@ -461,7 +472,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
       </div>
 
       <div className="fl-review-section">
-        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><DollarSign size={18} /> Pricing</h4>
+        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><PkrIcon size={18} /> Pricing</h4>
         <div className="fl-review-pricing">
           {tiers.map(({ key, label, icon }) => (
             <div key={key} className="fl-review-pricing__tier">

@@ -24,6 +24,24 @@ const AVATAR_BGS = [
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
+// Score candidates in bounded-size concurrent batches rather than either (a)
+// one at a time — the original approach, which made 100-candidate matching
+// take 30+ seconds — or (b) all 100 at once, which just moves the same
+// problem into a thundering herd of thousands of simultaneous MongoDB
+// queries against a single connection pool. A batch of 10 keeps real
+// concurrency (each candidate's own skill-pair scoring is already
+// parallelized inside calcMatchScore) without overwhelming the DB.
+const MATCH_BATCH_SIZE = 10;
+async function scoreInBatches(items, scoreFn) {
+  const results = [];
+  for (let i = 0; i < items.length; i += MATCH_BATCH_SIZE) {
+    const batch = items.slice(i, i + MATCH_BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map((item, j) => scoreFn(item, i + j)));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 const initials = (first, last, email) => {
   const a = (first || '').trim();
   const b = (last || '').trim();
@@ -138,7 +156,28 @@ const matchFreelancers = async (brief, { limit = 8 } = {}) => {
 
   const validCandidates = candidates.filter((p) => p.userId); // skip orphaned profiles
 
-  const scoredPromises = validCandidates.map(async (p, i) => {
+  // Pre-warm the taxonomy caches for every skill name this run will need, in
+  // a small handful of bulk queries, instead of letting each candidate's
+  // scoring pass discover them one at a time. This is what actually fixes
+  // matchmaking's multi-second latency — see taxonomy.service.js's
+  // warmResolveCache/warmDirectRelationshipCache doc comments.
+  const taxonomy = require('./taxonomy.service');
+  const requiredSkillNames = (brief.skills || []).filter(Boolean);
+  const allCandidateSkillNames = validCandidates.flatMap((p) =>
+    (p.skills || []).map((s) => (typeof s === 'object' ? s.name : s)).filter(Boolean)
+  );
+  await taxonomy.warmResolveCache([...requiredSkillNames, ...allCandidateSkillNames]);
+
+  const [requiredNodes, candidateNodes] = await Promise.all([
+    Promise.all(requiredSkillNames.map((s) => taxonomy.resolveCanonical(s))),
+    Promise.all([...new Set(allCandidateSkillNames)].map((s) => taxonomy.resolveCanonical(s))),
+  ]);
+  await taxonomy.warmDirectRelationshipCache(
+    requiredNodes.filter(Boolean).map((n) => n._id),
+    candidateNodes.filter(Boolean).map((n) => n._id)
+  );
+
+  const scored = await scoreInBatches(validCandidates, async (p, i) => {
     const { score, reasons, rating, rate, completed, skills, verifiedCount } = await scoreFreelancer(p, brief);
     const u = p.userId;
     const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || (u.email ? u.email.split('@')[0] : 'Freelancer');
@@ -167,8 +206,6 @@ const matchFreelancers = async (brief, { limit = 8 } = {}) => {
       availability: availabilityLabel(p.availability),
     };
   });
-
-  const scored = await Promise.all(scoredPromises);
 
   scored.sort((a, b) => b.matchScore - a.matchScore);
 

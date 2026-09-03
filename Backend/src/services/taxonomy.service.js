@@ -29,6 +29,17 @@ function cacheGet(key) {
   return entry.data;
 }
 
+// Distinguishes "never cached" from "cached, and the cached value happens to
+// be null/false/0" — cacheGet() alone can't tell these apart, which silently
+// defeated caching for every "resolved to nothing" result (a very common
+// case: most skill-pair relationship lookups find no edge at all).
+function cacheHas(key) {
+  const entry = _cache.get(key);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) { _cache.delete(key); return false; }
+  return true;
+}
+
 function cacheSet(key, data) {
   _cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
@@ -139,8 +150,7 @@ async function traverseReverse(endId, relationshipTypes, maxDepth = 3) {
 async function resolveCanonical(term) {
   if (!term) return null;
   const cacheKey = `resolve:${norm(term)}`;
-  const cached = cacheGet(cacheKey);
-  if (cached !== null) return cached;
+  if (cacheHas(cacheKey)) return cacheGet(cacheKey);
 
   let node = await SkillNode.resolveByName(term);
 
@@ -151,6 +161,62 @@ async function resolveCanonical(term) {
 
   cacheSet(cacheKey, node || null);
   return node;
+}
+
+/**
+ * Batch-resolve many terms in ONE query instead of one findOne() per term.
+ * Populates the exact same `resolve:*` cache entries resolveCanonical()
+ * reads, so callers don't need to change at all — this just pre-warms the
+ * cache before a hot loop that would otherwise call resolveCanonical() many
+ * times over (e.g. scoring every candidate in a matchmaking run against a
+ * few required skills: 100+ distinct terms one findOne() at a time, each a
+ * real round-trip to the DB, vs. one query for all of them here).
+ */
+async function warmResolveCache(terms) {
+  const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const uniqueTerms = [...new Set((terms || []).map((t) => String(t || '').trim()).filter(Boolean))];
+  const uncached = uniqueTerms.filter((t) => !cacheHas(`resolve:${norm(t)}`));
+  if (!uncached.length) return;
+
+  const orClauses = [];
+  uncached.forEach((t) => {
+    const esc = escapeRegex(t);
+    orClauses.push(
+      { name: { $regex: `^${esc}$`, $options: 'i' } },
+      { aliases: { $regex: `^${esc}$`, $options: 'i' } },
+      { synonyms: { $regex: `^${esc}$`, $options: 'i' } },
+      { slug: t.toLowerCase() }
+    );
+  });
+
+  const docs = await SkillNode.find({
+    status: { $in: ['active', 'merged'] },
+    $or: orClauses,
+  }).lean();
+
+  // Merged nodes redirect to their target — resolve all such targets in one
+  // more batched lookup rather than one findById() per merged doc.
+  const mergedIds = [...new Set(docs.filter((d) => d.status === 'merged' && d.mergedInto).map((d) => String(d.mergedInto)))];
+  let mergedTargets = new Map();
+  if (mergedIds.length) {
+    const targets = await SkillNode.find({ _id: { $in: mergedIds } }).lean();
+    mergedTargets = new Map(targets.map((t) => [String(t._id), t]));
+  }
+
+  for (const term of uncached) {
+    const lower = norm(term);
+    const lowerSlug = term.toLowerCase();
+    let doc = docs.find((d) =>
+      norm(d.name) === lower ||
+      (d.aliases || []).some((a) => norm(a) === lower) ||
+      (d.synonyms || []).some((s) => norm(s) === lower) ||
+      d.slug === lowerSlug
+    ) || null;
+    if (doc && doc.status === 'merged' && doc.mergedInto) {
+      doc = mergedTargets.get(String(doc.mergedInto)) || doc;
+    }
+    cacheSet(`resolve:${lower}`, doc);
+  }
 }
 
 /**
@@ -234,6 +300,14 @@ async function getDescendants(nodeId, maxDepth = 4) {
  */
 async function getPrerequisites(nodeId) {
   return traverseGraph(nodeId, ['PREREQUISITE', 'DEPENDS_ON'], 5);
+}
+
+/**
+ * Reverse of getPrerequisites — nodes that have `nodeId` somewhere in their
+ * own prerequisite chain (i.e. things that depend on `nodeId`).
+ */
+async function getDependents(nodeId) {
+  return traverseReverse(nodeId, ['PREREQUISITE', 'DEPENDS_ON'], 5);
 }
 
 /**
@@ -432,78 +506,147 @@ async function expandSearchTerms(query) {
  *   Candidate is RELATED_TO (2 hops)  → 0.35
  *   No graph connection               → 0.0
  */
+/**
+ * Direct RELATED_TO/SIMILAR_TO edge between two nodes (order-independent),
+ * cached like every other graph lookup in this service — this was previously
+ * the one query in calcMatchScore's hot path with no cache at all, re-run
+ * uncached for every single (required × candidate) skill pair.
+ */
+async function getDirectRelationship(nodeIdA, nodeIdB) {
+  const [a, b] = [String(nodeIdA), String(nodeIdB)].sort();
+  const cacheKey = `directrel:${a}:${b}`;
+  if (cacheHas(cacheKey)) return cacheGet(cacheKey);
+
+  const rel = await SkillRelationship.findOne({
+    $or: [
+      { from: nodeIdA, to: nodeIdB, type: { $in: ['RELATED_TO', 'SIMILAR_TO'] } },
+      { from: nodeIdB, to: nodeIdA, type: { $in: ['RELATED_TO', 'SIMILAR_TO'] } },
+    ],
+  }).lean();
+
+  cacheSet(cacheKey, rel || null);
+  return rel;
+}
+
+/**
+ * Batch-warm getDirectRelationship()'s cache for every (required-node ×
+ * any-node) pair in ONE query, instead of one findOne() per candidate skill
+ * per required skill (which is where the real cost was: only a handful of
+ * required-skill nodes exist per match run, but up to 100+ distinct
+ * candidate-skill nodes, so this is the required side driving one bulk
+ * fetch rather than the candidate side driving hundreds of individual ones).
+ * Any (reqId, otherId) pair with no matching edge is explicitly cached as
+ * "no relationship" so later lookups don't re-query for it either.
+ */
+async function warmDirectRelationshipCache(reqNodeIds, candNodeIds) {
+  const reqIds = [...new Set((reqNodeIds || []).map(String))];
+  const candIds = [...new Set((candNodeIds || []).map(String))];
+  if (!reqIds.length || !candIds.length) return;
+
+  const rels = await SkillRelationship.find({
+    type: { $in: ['RELATED_TO', 'SIMILAR_TO'] },
+    $or: [{ from: { $in: reqIds } }, { to: { $in: reqIds } }],
+  }).lean();
+
+  for (const reqId of reqIds) {
+    for (const candId of candIds) {
+      if (reqId === candId) continue;
+      const [a, b] = [reqId, candId].sort();
+      const cacheKey = `directrel:${a}:${b}`;
+      if (cacheHas(cacheKey)) continue;
+
+      const rel = rels.find((r) =>
+        (String(r.from) === reqId && String(r.to) === candId) ||
+        (String(r.from) === candId && String(r.to) === reqId)
+      ) || null;
+      cacheSet(cacheKey, rel);
+    }
+  }
+}
+
+/**
+ * Score a single (required, candidate) skill pair. Split out of
+ * calcMatchScore so every pair in a match run can be scored concurrently
+ * (see below) instead of one sequential `await` at a time.
+ */
+async function scoreSkillPair(req, cand) {
+  const [reqNode, candNode] = await Promise.all([resolveCanonical(req), resolveCanonical(cand)]);
+
+  if (!reqNode || !candNode) {
+    return norm(req) === norm(cand) ? { score: 1.0, match: cand } : { score: 0, match: null };
+  }
+  if (String(reqNode._id) === String(candNode._id)) {
+    return { score: 1.0, match: cand };
+  }
+
+  // All remaining relationship checks are independent of each other, so run
+  // them concurrently and take the highest-priority one that applies —
+  // equivalent to the original's sequential highest-priority-first checks,
+  // since the priority order here is already monotonically decreasing.
+  //
+  // Every one of these is keyed by reqNode (there are only as many distinct
+  // required-skill nodes as the brief lists — typically 1-5), never by
+  // candNode (of which there can be 100+ distinct nodes across a full
+  // candidate pool). getDependents(reqNode) replaces what would otherwise be
+  // getPrerequisites(candNode) called once per distinct candidate skill —
+  // the same check, just from the cheap side of the relationship, so the
+  // whole match run needs a handful of graph traversals total instead of one
+  // per candidate skill.
+  const [reqDescendants, reqDependents, reqAncestors, reqPrereqs, directRel] = await Promise.all([
+    getDescendants(reqNode._id, 2),
+    getDependents(reqNode._id),
+    getAncestors(reqNode._id, 2),
+    getPrerequisites(reqNode._id),
+    getDirectRelationship(reqNode._id, candNode._id),
+  ]);
+
+  // Is the candidate a child/descendant of required? (e.g. Next.js → React)
+  if (reqDescendants.some((d) => String(d._id) === String(candNode._id))) return { score: 0.85, match: cand };
+  // Does candidate depend on or have the required node as a prerequisite? (e.g. Next.js depends on React)
+  if (reqDependents.some((p) => String(p._id) === String(candNode._id))) return { score: 0.85, match: cand };
+  // Is the candidate a parent/ancestor of required? (e.g. JavaScript → React)
+  if (reqAncestors.some((a) => String(a._id) === String(candNode._id))) return { score: 0.70, match: cand };
+  // Is the candidate a prerequisite of the required skill? (e.g. React candidate satisfies Next.js required loosely)
+  if (reqPrereqs.some((p) => String(p._id) === String(candNode._id))) return { score: 0.70, match: cand };
+  // 1-hop RELATED_TO
+  if (directRel) return { score: 0.55 * (directRel.weight || 1), match: cand };
+
+  return { score: 0, match: null };
+}
+
 async function calcMatchScore(requiredSkillNames, candidateSkillNames) {
   if (!requiredSkillNames || requiredSkillNames.length === 0) {
     return { score: 0.5, matched: [], partial: [], missed: [], ratio: 0.5 };
   }
 
+  // Score every (required, candidate) pair concurrently. With up to ~5 graph
+  // queries per pair, doing this one pair at a time across every candidate in
+  // a match run (100s of pairs) was the single largest contributor to
+  // matchmaking taking 30+ seconds — this reduces it to one round-trip depth
+  // regardless of how many pairs there are.
+  const pairs = [];
+  for (const req of requiredSkillNames) {
+    for (const cand of candidateSkillNames || []) {
+      pairs.push({ req, cand });
+    }
+  }
+  const results = await Promise.all(pairs.map(({ req, cand }) => scoreSkillPair(req, cand)));
+
   const matched = [];
   const partial = [];
   const missed = [];
   let totalWeight = 0;
+  let idx = 0;
 
   for (const req of requiredSkillNames) {
-    const reqNode = await resolveCanonical(req);
     let bestScore = 0;
     let bestMatch = null;
-
-    for (const cand of candidateSkillNames) {
-      const candNode = await resolveCanonical(cand);
-      if (!reqNode || !candNode) {
-        // Fall back to string comparison
-        if (norm(req) === norm(cand)) { bestScore = 1.0; bestMatch = cand; }
-        continue;
-      }
-
-      // Exact same node
-      if (String(reqNode._id) === String(candNode._id)) {
-        bestScore = 1.0; bestMatch = cand; break;
-      }
-
-      // Is the candidate a child/descendant of required? (e.g. Next.js → React)
-      const reqDescendants = await getDescendants(reqNode._id, 2);
-      if (reqDescendants.some((d) => String(d._id) === String(candNode._id))) {
-        if (0.85 > bestScore) { bestScore = 0.85; bestMatch = cand; }
-        continue;
-      }
-
-      // Does candidate depend on or have the required node as a prerequisite? (e.g. Next.js depends on React)
-      const candPrereqs = await getPrerequisites(candNode._id);
-      if (candPrereqs.some((p) => String(p._id) === String(reqNode._id))) {
-        if (0.85 > bestScore) { bestScore = 0.85; bestMatch = cand; }
-        continue;
-      }
-
-      // Is the candidate a parent/ancestor of required? (e.g. JavaScript → React)
-      const reqAncestors = await getAncestors(reqNode._id, 2);
-      if (reqAncestors.some((a) => String(a._id) === String(candNode._id))) {
-        if (0.70 > bestScore) { bestScore = 0.70; bestMatch = cand; }
-        continue;
-      }
-
-      // Is the candidate a prerequisite of the required skill? (e.g. React candidate satisfies Next.js required loosely)
-      const reqPrereqs = await getPrerequisites(reqNode._id);
-      if (reqPrereqs.some((p) => String(p._id) === String(candNode._id))) {
-        if (0.70 > bestScore) { bestScore = 0.70; bestMatch = cand; }
-        continue;
-      }
-
-      // 1-hop RELATED_TO
-      const directRel = await SkillRelationship.findOne({
-        $or: [
-          { from: reqNode._id, to: candNode._id, type: { $in: ['RELATED_TO', 'SIMILAR_TO'] } },
-          { from: candNode._id, to: reqNode._id, type: { $in: ['RELATED_TO', 'SIMILAR_TO'] } },
-        ],
-      });
-      if (directRel) {
-        const ws = 0.55 * (directRel.weight || 1);
-        if (ws > bestScore) { bestScore = ws; bestMatch = cand; }
-        continue;
-      }
+    for (let i = 0; i < (candidateSkillNames || []).length; i++) {
+      const r = results[idx++];
+      if (r.score > bestScore) { bestScore = r.score; bestMatch = r.match; }
     }
 
     totalWeight += bestScore;
-
     if (bestScore >= 1.0) matched.push({ required: req, matched: bestMatch, score: bestScore });
     else if (bestScore > 0) partial.push({ required: req, matched: bestMatch, score: bestScore });
     else missed.push(req);
@@ -557,9 +700,42 @@ async function createRelationship(fromId, toId, type, weight = 1.0, metadata = {
 
 /** Merge `sourceId` into `targetId` — all edges from source are transferred. */
 async function mergeNodes(sourceId, targetId) {
-  // Move all relationships
-  await SkillRelationship.updateMany({ from: sourceId }, { from: targetId });
-  await SkillRelationship.updateMany({ to: sourceId }, { to: targetId });
+  const targetIdStr = String(targetId);
+
+  // Redirect every edge that touches the source node onto the target node —
+  // one at a time rather than updateMany, because a blind redirect can
+  // produce a self-loop (source->target becoming target->target) or collide
+  // with an edge the target already has (both violate the {from,to,type}
+  // unique index — updateMany would throw mid-batch and leave a partial
+  // merge). Drop those instead of redirecting them.
+  const outgoing = await SkillRelationship.find({ from: sourceId });
+  for (const rel of outgoing) {
+    if (String(rel.to) === targetIdStr) {
+      await SkillRelationship.deleteOne({ _id: rel._id }); // would self-loop
+      continue;
+    }
+    const dup = await SkillRelationship.findOne({ from: targetId, to: rel.to, type: rel.type });
+    if (dup) {
+      await SkillRelationship.deleteOne({ _id: rel._id }); // target already has this edge
+    } else {
+      await SkillRelationship.updateOne({ _id: rel._id }, { from: targetId });
+    }
+  }
+
+  const incoming = await SkillRelationship.find({ to: sourceId });
+  for (const rel of incoming) {
+    if (String(rel.from) === targetIdStr) {
+      await SkillRelationship.deleteOne({ _id: rel._id }); // would self-loop
+      continue;
+    }
+    const dup = await SkillRelationship.findOne({ from: rel.from, to: targetId, type: rel.type });
+    if (dup) {
+      await SkillRelationship.deleteOne({ _id: rel._id }); // target already has this edge
+    } else {
+      await SkillRelationship.updateOne({ _id: rel._id }, { to: targetId });
+    }
+  }
+
   // Mark source as merged
   await SkillNode.findByIdAndUpdate(sourceId, { status: 'merged', mergedInto: targetId });
   invalidateCache();
@@ -972,6 +1148,8 @@ module.exports = {
   // Matching
   calcMatchScore,
   getCertificationImpact,
+  warmResolveCache,
+  warmDirectRelationshipCache,
   // Admin
   createNode,
   createRelationship,

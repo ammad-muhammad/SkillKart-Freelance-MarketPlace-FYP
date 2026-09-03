@@ -9,12 +9,14 @@ const EmailLog = require('../../models/EmailLog');
 const ErrorLog = require('../../models/ErrorLog');
 const SystemSettings = require('../../models/SystemSettings');
 const { auditLog } = require('../../utils/adminAudit');
+const { parsePagination } = require('../../utils/helpers');
 
 // ─── Chat Moderation ──────────────────────────────────────────────────────────
 
 const getConversations = async (req, res) => {
   try {
-    const { search, userId, page = 1, limit = 20 } = req.query;
+    const { search, userId } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
 
     // Filter by a specific participant (userId), or resolve an email/name search
@@ -29,11 +31,10 @@ const getConversations = async (req, res) => {
       filter.participants = { $in: matched.map(u => u._id) };
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [conversations, total] = await Promise.all([
       Conversation.find(filter)
         .populate('participants', 'email firstName lastName profilePicture')
-        .sort({ updatedAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+        .sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       Conversation.countDocuments(filter)
     ]);
 
@@ -43,7 +44,7 @@ const getConversations = async (req, res) => {
       messageCount: await Message.countDocuments({ conversationId: c._id })
     })));
 
-    return res.status(200).json({ success: true, conversations: withCounts, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, conversations: withCounts, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('[Chat] getConversations error:', err);
     return res.status(500).json({ success: false, message: 'Failed to load conversations' });
@@ -186,22 +187,22 @@ const replyAsAdmin = async (req, res) => {
 
 const getReviews = async (req, res) => {
   try {
-    const { isHidden, minRating, maxRating, page = 1, limit = 20 } = req.query;
+    const { isHidden, minRating, maxRating } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
     if (isHidden !== undefined && isHidden !== '') filter.isHidden = isHidden === 'true';
     if (minRating) filter.rating = { $gte: parseFloat(minRating) };
     if (maxRating) filter.rating = { ...(filter.rating || {}), $lte: parseFloat(maxRating) };
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [reviews, total] = await Promise.all([
       Review.find(filter)
         .populate('reviewerId', 'email firstName lastName')
         .populate('revieweeId', 'email firstName lastName')
-        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+        .sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Review.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ success: true, reviews, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, reviews, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load reviews' });
   }
@@ -301,22 +302,22 @@ const broadcastNotification = async (req, res) => {
 
 const getReports = async (req, res) => {
   try {
-    const { status, priority, category, page = 1, limit = 20 } = req.query;
+    const { status, priority, category } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
     if (category) filter.category = category;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [reports, total] = await Promise.all([
       Report.find(filter)
         .populate('reportedBy', 'email firstName lastName')
         .populate('reportedUser', 'email firstName lastName')
-        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+        .sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Report.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ success: true, reports, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, reports, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load reports' });
   }
@@ -386,13 +387,14 @@ const dismissReport = async (req, res) => {
 
 const getSystemLogs = async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100);
+    const skip = (page - 1) * limit;
     const [logs, total] = await Promise.all([
-      AdminAuditLog.find({ category: 'monitoring' }).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      AdminAuditLog.find({ category: 'monitoring' }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       AdminAuditLog.countDocuments({ category: 'monitoring' })
     ]);
-    return res.status(200).json({ success: true, logs, pagination: { total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, logs, pagination: { total, page, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load system logs' });
   }
@@ -400,17 +402,19 @@ const getSystemLogs = async (req, res) => {
 
 const getEmailLogs = async (req, res) => {
   try {
-    const { status, provider, page = 1, limit = 50 } = req.query;
+    const { status, provider } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100);
     const filter = {};
     if (status) filter.status = status;
     if (provider) filter.provider = provider;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const [logs, total] = await Promise.all([
-      EmailLog.find(filter).sort({ sentAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      EmailLog.find(filter).sort({ sentAt: -1 }).skip(skip).limit(limit).lean(),
       EmailLog.countDocuments(filter)
     ]);
-    return res.status(200).json({ success: true, logs, pagination: { total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, logs, pagination: { total, page, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load email logs' });
   }
@@ -418,17 +422,19 @@ const getEmailLogs = async (req, res) => {
 
 const getApiLogs = async (req, res) => {
   try {
-    const { status, path: pathFilter, page = 1, limit = 50 } = req.query;
+    const { status, path: pathFilter } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100);
     const filter = {};
     if (status) filter.statusCode = parseInt(status);
     if (pathFilter) filter.path = new RegExp(pathFilter, 'i');
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const [logs, total] = await Promise.all([
-      ApiLog.find(filter).sort({ timestamp: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      ApiLog.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
       ApiLog.countDocuments(filter)
     ]);
-    return res.status(200).json({ success: true, logs, pagination: { total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, logs, pagination: { total, page, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load API logs' });
   }
@@ -436,17 +442,19 @@ const getApiLogs = async (req, res) => {
 
 const getErrorLogs = async (req, res) => {
   try {
-    const { resolved, type, page = 1, limit = 50 } = req.query;
+    const { resolved, type } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100);
     const filter = {};
     if (resolved !== undefined && resolved !== '') filter.resolved = resolved === 'true';
     if (type) filter.type = type;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const [logs, total] = await Promise.all([
-      ErrorLog.find(filter).sort({ timestamp: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      ErrorLog.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
       ErrorLog.countDocuments(filter)
     ]);
-    return res.status(200).json({ success: true, logs, pagination: { total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, logs, pagination: { total, page, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load error logs' });
   }
@@ -465,7 +473,9 @@ const markErrorResolved = async (req, res) => {
 
 const getAuditLogs = async (req, res) => {
   try {
-    const { adminEmail, category, severity, action, dateFrom, dateTo, page = 1, limit = 50 } = req.query;
+    const { adminEmail, category, severity, action, dateFrom, dateTo } = req.query;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100);
     const filter = {};
     if (adminEmail) filter.adminEmail = new RegExp(adminEmail, 'i');
     if (category) filter.category = category;
@@ -477,13 +487,13 @@ const getAuditLogs = async (req, res) => {
       if (dateTo)   filter.createdAt.$lte = new Date(dateTo);
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const [logs, total] = await Promise.all([
-      AdminAuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      AdminAuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       AdminAuditLog.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ success: true, logs, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, logs, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load audit logs' });
   }

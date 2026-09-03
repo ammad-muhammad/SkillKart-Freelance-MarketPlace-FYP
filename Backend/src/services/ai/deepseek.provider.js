@@ -2,6 +2,7 @@ const axios = require('axios');
 const AIProvider = require('./base.provider');
 const { JOB_CATEGORIES } = require('../../utils/constants');
 const { buildGenerateTextPrompt } = require('./promptHelpers');
+const { difficultyInstruction } = require('../../utils/skillTestDifficulty');
 
 /**
  * DeepSeek provider — reached through DeepSeek's OpenAI-compatible
@@ -175,7 +176,7 @@ ${text}
 
     const prompt = `
 Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
-Generate exactly ${count} questions. The difficulty should be moderate (not too hard, not too easy).
+Generate exactly ${count} questions. ${difficultyInstruction()}
 CRITICAL: These questions MUST be completely fresh, unique, and different from previous attempts. (Random Context ID: ${skills.join('-')}-${Date.now()})
 IMPORTANT:
 1. DISTRIBUTION: You MUST generate exactly ${count} questions.

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AdminLoader, AdminEmptyState, StatusBadge, AdminPagination,
-  ConfirmDialog, ExportButtons, AdminFilterBar, SkeletonTable, fmt
+  ConfirmDialog, ExportButtons, AdminFilterBar, SkeletonTable
 } from '../../Components/adminPanel/AdminCommon';
 
 // ─── Helper to create consistent page stubs ────────────────────
@@ -68,7 +68,7 @@ const makeListPage = ({
                   <tr><td colSpan={columns.length}>
                     <AdminEmptyState icon={icon} title={`No ${title.toLowerCase()} found`} />
                   </td></tr>
-                ) : data.map((item, i) => renderRow(item, navigate))}
+                ) : data.map((item) => renderRow(item, navigate))}
               </tbody>
             </table>
           </div>

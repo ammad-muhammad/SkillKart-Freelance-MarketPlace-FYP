@@ -400,7 +400,7 @@ export default function AiMatchmaking() {
                                         {skills.map(sk => (
                                              <span key={sk} className="aim-tag">
                                                 {sk}
-                                                <button className="aim-tag__rm" onClick={() => removeSkill(sk)}>✕</button>
+                                                <button className="aim-tag__rm" onClick={() => removeSkill(sk)} aria-label={`Remove skill: ${sk}`}>✕</button>
                                             </span>
                                         ))}
                                     </div>

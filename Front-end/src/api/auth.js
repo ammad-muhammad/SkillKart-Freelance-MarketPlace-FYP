@@ -1,4 +1,5 @@
 import client from './client';
+import { tokenManager } from '../utils/tokenManager';
 
 export const authAPI = {
   login: (email, password) =>
@@ -35,7 +36,7 @@ export const authAPI = {
     client.put('/auth/role/change', role),
 
   logout: () =>
-    client.post('/auth/logout'),
+    client.post('/auth/logout', { refreshToken: tokenManager.getRefreshToken() }),
 
   logoutAllDevices: () =>
     client.post('/auth/logout-all', undefined, { suppressErrorToast: true }),

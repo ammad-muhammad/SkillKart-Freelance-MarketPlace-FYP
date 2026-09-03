@@ -2,13 +2,12 @@ import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
-import { jobsAPI } from '../../api/jobs';
-import { deliveriesAPI } from '../../api/deliveries';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  Clock, DollarSign, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag
+  Clock, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag
 } from 'lucide-react';
-import { toast } from 'react-toastify';
+import PkrIcon from '../../Components/common/PkrIcon';
+import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
 
@@ -20,6 +19,7 @@ export default function FreelancerProposals() {
 
   useEffect(() => {
     fetchProposals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProposals = async () => {
@@ -43,7 +43,7 @@ export default function FreelancerProposals() {
       await proposalsAPI.withdrawProposal(id);
       toast.success('Proposal withdrawn.');
       fetchProposals();
-    } catch (error) {
+    } catch {
       toast.error('Failed to withdraw proposal.');
     }
   };
@@ -95,7 +95,7 @@ export default function FreelancerProposals() {
               <div className="fl-prop-card__body">
                 <div className="fl-prop-card__details">
                   <div className="fl-prop-card__detail">
-                    <DollarSign size={14} />
+                    <PkrIcon size={14} />
                     <span>Your Bid: <strong>Rs. {prop.fixedPrice || prop.hourlyRate}{prop.hourlyRate ? '/hr' : ''}</strong></span>
                   </div>
                   <div className="fl-prop-card__detail">

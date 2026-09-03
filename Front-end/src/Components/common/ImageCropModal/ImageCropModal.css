@@ -46,6 +46,10 @@
   padding: 4px;
   border-radius: 6px;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 .icm-close:hover:not(:disabled) { background: #f1f5f9; }
 .icm-close:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, Briefcase, TrendingUp, Users, ArrowRight } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { categories as staticCategories } from "../../../data/categories";
 import { publicAPI } from "../../../api/publicData";
 import Navbar from "../../../Components/common/Navbar/Navbar";
 import Footer from "../../../Components/common/Footer/Footer";
@@ -15,8 +14,6 @@ export default function Categories() {
   const heroRef = useRef(null);
   const gridRef = useRef(null);
   const navigate = useNavigate();
-  // Static taxonomy provides the descriptions/icons (no DB source) but NOT the
-  // counts — those start at 0 and are filled with REAL gig counts from the API.
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
 

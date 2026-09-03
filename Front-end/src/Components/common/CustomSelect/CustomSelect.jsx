@@ -12,6 +12,8 @@ import './CustomSelect.css';
  *   compact   – bool – smaller trigger (for toolbar sort)
  *   className – extra class on the root .csel wrapper
  *   id        – id forwarded to the trigger for <label htmlFor>
+ *   variant   – 'light' (default) | 'dark' — dark keeps TaxonomyAdmin's
+ *               existing indigo-on-dark palette instead of the site's navy theme
  */
 export default function CustomSelect({
     options = [],
@@ -22,6 +24,7 @@ export default function CustomSelect({
     className = '',
     id,
     disabled = false,
+    variant = 'light',
 }) {
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
@@ -61,7 +64,7 @@ export default function CustomSelect({
     return (
         <div
             ref={rootRef}
-            className={`csel${open ? ' csel--open' : ''}${compact ? ' csel--compact' : ''}${className ? ` ${className}` : ''}${disabled ? ' csel--disabled' : ''}`}
+            className={`csel${open ? ' csel--open' : ''}${compact ? ' csel--compact' : ''}${variant === 'dark' ? ' csel--dark' : ''}${className ? ` ${className}` : ''}${disabled ? ' csel--disabled' : ''}`}
         >
             <button
                 id={id}

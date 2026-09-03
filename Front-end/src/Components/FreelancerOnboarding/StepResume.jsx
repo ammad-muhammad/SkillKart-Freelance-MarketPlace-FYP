@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Upload, X, CheckCircle2, AlertCircle, FileType, Zap, Check, Sparkles, ChevronRight } from "lucide-react";
-import { toast } from "react-toastify";
+import { safeToast as toast } from "../../utils/safeToast";
 import { freelancersAPI } from "../../api/freelancers";
 
 const ACCEPTED_TYPES = [
@@ -184,6 +184,7 @@ const StepResume = ({ formData, setFormData, errors }) => {
                 className="fob-resume-remove-btn"
                 onClick={removeResume}
                 disabled={formData.isParsingCV}
+                aria-label="Remove resume"
               >
                 <X size={16} />
               </button>

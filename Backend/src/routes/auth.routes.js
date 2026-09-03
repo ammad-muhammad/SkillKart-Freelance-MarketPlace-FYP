@@ -60,7 +60,7 @@ const {
 router.post('/register/user',
   authLimiter,
   verifyRecaptcha('register'),
-  emailValidation,
+  registerValidation,
   validate,
   authController.createUser
 );
