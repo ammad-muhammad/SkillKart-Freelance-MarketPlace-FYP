@@ -150,9 +150,12 @@ axiosInstance.interceptors.response.use(
           refreshToken
         });
 
+        // The backend rotates the refresh token on every use — persist the
+        // NEW one, not the one we just sent (that one is now invalidated
+        // server-side; reusing it again would be treated as token theft).
         tokenManager.setTokens(
           data.data.accessToken,
-          refreshToken
+          data.data.refreshToken || refreshToken
         );
 
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;

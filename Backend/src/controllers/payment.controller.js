@@ -499,7 +499,7 @@ const withdrawFunds = asyncHandler(async (req, res) => {
 
     // Execute Real Stripe Payout
     const payout = await createPayout(amount, profile.stripeAccountId, 'pkr');
-    
+
     const withdrawal = await Withdrawal.create({
       userId: req.user._id,
       amount: Number(amount),
@@ -508,14 +508,26 @@ const withdrawFunds = asyncHandler(async (req, res) => {
       transactionId: payout.id
     });
 
-    profile.walletBalance -= Number(amount);
-    await profile.save();
-    
+    // Atomic conditional debit — two concurrent withdrawal requests (a
+    // double-click, or a client retry after a slow response) could otherwise
+    // both pass the balance check above before either writes, debiting the
+    // wallet only once instead of twice while creating two Withdrawal rows.
+    const updatedProfile = await FreelancerProfile.findOneAndUpdate(
+      { userId: req.user._id, walletBalance: { $gte: Number(amount) } },
+      { $inc: { walletBalance: -Number(amount) } },
+      { new: true }
+    );
+    if (!updatedProfile) {
+      // The payout already happened by this point — this only fires if a
+      // concurrent request won the race and drained the balance first.
+      throw new BadRequestError('Insufficient funds available for withdrawal. A concurrent withdrawal may have just been processed — check your withdrawal history before retrying.');
+    }
+
     notifications.onWithdrawalRequested(req.user._id, { amount, method });
-    
-    return sendSuccess(res, { message: `Payout of PKR ${amount} to your bank account initiated!`, data: { withdrawal, walletBalance: profile.walletBalance } });
+
+    return sendSuccess(res, { message: `Payout of PKR ${amount} to your bank account initiated!`, data: { withdrawal, walletBalance: updatedProfile.walletBalance } });
   }
-  
+
   // Create Withdrawal Request first (For Bank/PayPal)
   const withdrawal = await Withdrawal.create({
     userId: req.user._id,
@@ -523,13 +535,20 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     method
   });
 
-  profile.walletBalance -= Number(amount);
-  await profile.save();
-  
+  // Same atomic-debit guard as the Stripe branch above.
+  const updatedProfile = await FreelancerProfile.findOneAndUpdate(
+    { userId: req.user._id, walletBalance: { $gte: Number(amount) } },
+    { $inc: { walletBalance: -Number(amount) } },
+    { new: true }
+  );
+  if (!updatedProfile) {
+    throw new BadRequestError('Insufficient funds available for withdrawal. A concurrent withdrawal may have just been processed — check your withdrawal history before retrying.');
+  }
+
   // Trigger notification
   notifications.onWithdrawalRequested(req.user._id, { amount, method });
 
-  sendSuccess(res, { message: `Withdrawal of Rs. ${amount} via ${method} initiated`, data: { withdrawal, walletBalance: profile.walletBalance } });
+  sendSuccess(res, { message: `Withdrawal of Rs. ${amount} via ${method} initiated`, data: { withdrawal, walletBalance: updatedProfile.walletBalance } });
 });
 
 /**

@@ -119,7 +119,7 @@ const FreelancerGigs = () => {
     faqs: []
   });
 
-  const [uploading, setUploading] = useState(false);
+  const [, setUploading] = useState(false);
   const bannerRef = useRef(null);
   const imagesRef = useRef(null);
   const [bannerCropFile, setBannerCropFile] = useState(null);

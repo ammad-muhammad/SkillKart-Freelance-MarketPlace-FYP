@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { paymentsAPI } from '../../api/payments';
-import { Wallet, DollarSign, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
+import { Wallet, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './ClientDashboard.css';
 
 // Human-readable labels for raw payment status enums (never show "deposit_pending").
@@ -31,13 +33,16 @@ export default function ClientWallet() {
   const [depositing, setDepositing] = useState(false);
   const [walletBalance, setWalletBalance] = useState(profile?.walletBalance || 0);
   const depositConfirmed = useRef(false);
+  const depositModalRef = useRef(null);
+  const closeDepositModal = useCallback(() => { if (!depositing) setDepositModal(false); }, [depositing]);
+  useFocusTrap(depositModalRef, depositModal, closeDepositModal);
 
   // Sync with context profile when it loads/updates
   useEffect(() => {
     if (profile && profile.walletBalance !== undefined) {
       setWalletBalance(profile.walletBalance);
     }
-  }, [profile?.walletBalance]);
+  }, [profile]);
 
   useEffect(() => {
     // Process Stripe session return if present
@@ -74,8 +79,6 @@ export default function ClientWallet() {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
-
-  const totalSpent = profile?.stats?.totalSpent || profile?.totalSpent || 0;
 
   // Calculate active escrow: deposit is paid, but final isn't released
   const activeEscrow = payments
@@ -125,10 +128,10 @@ export default function ClientWallet() {
       <div className="fl-stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', marginBottom: '2rem' }}>
         <div className="cl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
           <div className="cl-stat-card__bg" style={{ opacity: 0.1 }}>
-            <DollarSign size={100} />
+            <PkrIcon size={100} />
           </div>
           <div className="cl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
-            <DollarSign size={24} />
+            <PkrIcon size={24} />
           </div>
           <div className="cl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="cl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available Wallet Balance</div>
@@ -153,7 +156,7 @@ export default function ClientWallet() {
         <div className="cl-card__body">
           {payments.length === 0 ? (
             <EmptyState
-              icon={DollarSign}
+              icon={PkrIcon}
               title="No Transactions Yet"
               message="Your payment history will appear here once you deposit funds or pay freelancers."
               actionText="Add Funds"
@@ -210,11 +213,19 @@ export default function ClientWallet() {
 
       {/* Dummy Deposit Modal */}
       {depositModal && (
-        <div className="cl-modal-overlay" onClick={() => setDepositModal(false)}>
-          <div className="cl-modal" onClick={e => e.stopPropagation()}>
+        <div className="cl-modal-overlay" onClick={closeDepositModal}>
+          <div
+            ref={depositModalRef}
+            className="cl-modal"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add Funds to Wallet"
+            tabIndex={-1}
+          >
             <div className="cl-modal__header">
               <h3>Add Funds to Wallet</h3>
-              <button className="cl-modal__close" onClick={() => setDepositModal(false)}>&times;</button>
+              <button className="cl-modal__close" onClick={closeDepositModal} disabled={depositing} aria-label="Close">&times;</button>
             </div>
             <div className="cl-modal__body">
               <div className="cl-form-group">
@@ -233,7 +244,7 @@ export default function ClientWallet() {
               </p>
             </div>
             <div className="cl-modal__footer">
-              <button className="cl-btn cl-btn--ghost" onClick={() => setDepositModal(false)} disabled={depositing}>Cancel</button>
+              <button className="cl-btn cl-btn--ghost" onClick={closeDepositModal} disabled={depositing}>Cancel</button>
               <button
                 className="cl-btn cl-btn--primary"
                 disabled={!depositAmount || Number(depositAmount) < 5 || depositing}

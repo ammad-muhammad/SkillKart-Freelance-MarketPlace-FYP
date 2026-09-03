@@ -210,17 +210,17 @@ const createProposalValidation = [
 
   body('fixedPrice')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Fixed price must be positive'),
+    .isFloat({ gt: 0 }).withMessage('Fixed price must be greater than 0'),
 
   body('hourlyRate')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Hourly rate must be positive'),
+    .isFloat({ gt: 0 }).withMessage('Hourly rate must be greater than 0'),
 
   body('estimatedDeliveryTime')
     .optional()
     .trim()
     .isLength({ max: 100 }).withMessage('Estimated delivery time too long'),
-    
+
   body('estimatedWeeklyHours')
     .optional()
     .isInt({ min: 1, max: 168 }).withMessage('Weekly hours must be between 1 and 168'),
@@ -246,17 +246,17 @@ const updateProposalValidation = [
 
   body('fixedPrice')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Fixed price must be positive'),
+    .isFloat({ gt: 0 }).withMessage('Fixed price must be greater than 0'),
 
   body('hourlyRate')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Hourly rate must be positive'),
+    .isFloat({ gt: 0 }).withMessage('Hourly rate must be greater than 0'),
 
   body('estimatedDeliveryTime')
     .optional()
     .trim()
     .isLength({ max: 100 }).withMessage('Estimated delivery time too long'),
-    
+
   body('estimatedWeeklyHours')
     .optional()
     .isInt({ min: 1, max: 168 }).withMessage('Weekly hours must be between 1 and 168')

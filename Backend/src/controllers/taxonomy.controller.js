@@ -1,5 +1,6 @@
 const SkillNode = require('../models/SkillNode');
 const SkillRelationship = require('../models/SkillRelationship');
+const TaxonomyProposal = require('../models/TaxonomyProposal');
 const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError, BadRequestError } = require('../utils/apiError');

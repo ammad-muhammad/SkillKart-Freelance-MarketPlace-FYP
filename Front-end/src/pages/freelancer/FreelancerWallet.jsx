@@ -1,10 +1,12 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { paymentsAPI } from '../../api/payments';
-import { Wallet, DollarSign, ArrowDownToLine, CheckCircle2, Clock, Lightbulb } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { Wallet, ArrowDownToLine, CheckCircle2, Clock, Lightbulb } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
+import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './FreelancerDashboard.css';
 
 // Human-readable labels for raw payment/withdrawal status enums, so the wallet
@@ -30,8 +32,11 @@ export default function FreelancerWallet() {
   const [loading, setLoading] = useState(true);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawMethod, setWithdrawMethod] = useState('stripe');
+  const [withdrawMethod] = useState('stripe');
   const [withdrawing, setWithdrawing] = useState(false);
+  const withdrawModalRef = useRef(null);
+  const closeWithdrawModal = useCallback(() => { if (!withdrawing) setWithdrawModal(false); }, [withdrawing]);
+  useFocusTrap(withdrawModalRef, withdrawModal, closeWithdrawModal);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -81,7 +86,7 @@ export default function FreelancerWallet() {
       if (res.data?.data?.url) {
         window.location.href = res.data.data.url;
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to initiate Stripe connection.');
     }
   };
@@ -151,10 +156,10 @@ export default function FreelancerWallet() {
       <div className="fl-stat-grid" style={{ marginBottom: '2rem' }}>
         <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
           <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}>
-            <DollarSign size={100} />
+            <PkrIcon size={100} />
           </div>
           <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
-            <DollarSign size={24} />
+            <PkrIcon size={24} />
           </div>
           <div className="fl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available for Withdrawal</div>
@@ -189,7 +194,7 @@ export default function FreelancerWallet() {
         <div className="fl-card__body">
           {transactions.length === 0 ? (
             <EmptyState 
-              icon={DollarSign}
+              icon={PkrIcon}
               title="No Transactions Yet"
               message="Your payment and withdrawal history will appear here once you complete jobs and receive or withdraw funds."
             />
@@ -258,11 +263,20 @@ export default function FreelancerWallet() {
 
       {/* Withdraw Modal */}
       {withdrawModal && (
-        <div className="fl-modal-overlay" style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center' }} onClick={() => !withdrawing && setWithdrawModal(false)}>
-          <div className="fl-modal" style={{ borderRadius: '24px', padding: '2.5rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255,255,255,0.1)', background: 'var(--color-bg)', width: '100%', maxWidth: '500px', transform: 'translateY(-5vh)' }} onClick={e => e.stopPropagation()}>
+        <div className="fl-modal-overlay" style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center' }} onClick={closeWithdrawModal}>
+          <div
+            ref={withdrawModalRef}
+            className="fl-modal"
+            style={{ borderRadius: '24px', padding: '2.5rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255,255,255,0.1)', background: 'var(--color-bg)', width: '100%', maxWidth: '500px', transform: 'translateY(-5vh)' }}
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Withdraw Funds"
+            tabIndex={-1}
+          >
             <div className="fl-modal__header" style={{ borderBottom: 'none', padding: '0', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.75rem', fontWeight: '800', background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', color: 'transparent', margin: 0 }}>Withdraw Funds</h3>
-              <button className="fl-modal__close" onClick={() => !withdrawing && setWithdrawModal(false)} disabled={withdrawing} style={{ background: '#f1f5f9', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+              <button className="fl-modal__close" onClick={closeWithdrawModal} disabled={withdrawing} aria-label="Close" style={{ background: '#f1f5f9', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', color: '#64748b' }}>&times;</button>
             </div>
             
             <div className="fl-modal__body" style={{ padding: '0' }}>
@@ -312,9 +326,9 @@ export default function FreelancerWallet() {
             </div>
             
             <div className="fl-modal__footer" style={{ borderTop: 'none', padding: '0', marginTop: '2.5rem', display: 'flex', gap: '1rem' }}>
-              <button 
-                className="fl-btn fl-btn--ghost" 
-                onClick={() => setWithdrawModal(false)} 
+              <button
+                className="fl-btn fl-btn--ghost"
+                onClick={closeWithdrawModal}
                 disabled={withdrawing}
                 style={{ flex: 1, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--color-secondary)', color: 'var(--color-text-mid)', border: 'none' }}
               >

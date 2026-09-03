@@ -60,7 +60,7 @@ const login = asyncHandler(async (req, res) => {
     }
 
     // Step 3: Direct Login (2FA Disabled)
-    const tokens = require('../utils/jwt').generateTokenPair(user);
+    const tokens = await authService.issueTokenPair(user);
     
     // Trigger login alert
     handleLoginAlert(user, 'Email/Password (2FA Disabled)', {
@@ -531,11 +531,13 @@ const confirmRecoveryEmailChange = asyncHandler(async (req, res) => {
 const refreshToken = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
-  const accessToken = await authService.refreshAccessToken(refreshToken);
+  // Rotates on every use — the response's refreshToken REPLACES the one the
+  // client sent; reusing the old one again is treated as token theft.
+  const { accessToken, refreshToken: newRefreshToken } = await authService.refreshAccessToken(refreshToken);
 
   sendSuccess(res, {
     message: 'Token refreshed successfully',
-    data: { accessToken }
+    data: { accessToken, refreshToken: newRefreshToken }
   });
 });
 
@@ -602,21 +604,16 @@ const confirmChangePassword = asyncHandler(async (req, res) => {
 const requestPasswordReset = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  // Check if user exists
+  // Always return the same generic response whether or not the email is
+  // registered — a differing response (404 vs 200) lets an attacker enumerate
+  // valid accounts. Only actually send an OTP when the user exists.
   const user = await User.findOne({ email });
-  
-  if (!user) {
-    return sendError(res, {
-      statusCode: 404,
-      message: 'User with this email does not exist'
-    });
+  if (user) {
+    await otpService.generateAndSendOTP(email, 'password_reset');
   }
 
-  // Only send OTP if user exists
-  await otpService.generateAndSendOTP(email, 'password_reset');
-
   sendSuccess(res, {
-    message: 'Password reset OTP sent to your email'
+    message: 'If an account exists for this email, a password reset OTP has been sent.'
   });
 });
 
@@ -697,8 +694,9 @@ const resendOTP = asyncHandler(async (req, res) => {
  * Logout
  */
 const logout = asyncHandler(async (req, res) => {
-  // In a stateless JWT setup, logout is handled client-side
-  // But you can blacklist tokens if needed
+  // Revoke this specific refresh token's RefreshToken record so it can't be
+  // used again (this device only — other logged-in devices are unaffected).
+  await authService.revokeRefreshToken(req.body.refreshToken);
 
   sendSuccess(res, {
     message: 'Logged out successfully'
@@ -706,11 +704,13 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 /**
- * Log out from ALL devices by bumping the user's tokenVersion, which
- * immediately invalidates every previously-issued access & refresh token.
+ * Log out from ALL devices by bumping the user's tokenVersion (invalidates
+ * every previously-issued access token immediately) and revoking every
+ * refresh token on record for this user.
  */
 const logoutAllDevices = asyncHandler(async (req, res) => {
   await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+  await authService.revokeAllRefreshTokens(req.user._id);
 
   sendSuccess(res, {
     message: 'Signed out from all devices'

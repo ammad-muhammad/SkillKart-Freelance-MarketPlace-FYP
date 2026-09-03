@@ -27,6 +27,26 @@ const startServer = async () => {
     console.log('🚀 Starting Freelance Platform Backend...');
     console.log('========================================');
 
+    // STRIPE_DUMMY silently simulates every payment instead of calling Stripe —
+    // fine for local dev, catastrophic in production (clients would see
+    // "payment successful" while no money ever actually moves). Refuse to boot
+    // rather than risk it going live unnoticed.
+    if (config.env === 'production' && process.env.STRIPE_DUMMY === 'true') {
+      console.error('❌ STRIPE_DUMMY=true is set in a production environment. Refusing to start.');
+      console.error('   Remove STRIPE_DUMMY (or set it to false) and provide a real STRIPE_SECRET_KEY.');
+      process.exit(1);
+    }
+
+    // SKILL_TEST_EASY_MODE tells the frontend it's safe to reveal correct
+    // answers (a testing-only aid) — accidentally left on in production would
+    // silently defeat the entire skill-verification system the marketplace's
+    // trust model depends on. Same "refuse to boot" treatment as STRIPE_DUMMY.
+    if (config.env === 'production' && /^(1|true|yes)$/i.test(process.env.SKILL_TEST_EASY_MODE || '')) {
+      console.error('❌ SKILL_TEST_EASY_MODE is enabled in a production environment. Refusing to start.');
+      console.error('   Remove SKILL_TEST_EASY_MODE (or set it to false) before deploying to production.');
+      process.exit(1);
+    }
+
     // Connect to MongoDB
     console.log('📦 Connecting to MongoDB...');
     await connectDB();

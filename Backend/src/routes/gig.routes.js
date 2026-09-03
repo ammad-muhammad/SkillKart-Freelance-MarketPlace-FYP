@@ -4,6 +4,8 @@ const gigController = require('../controllers/gig.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
 const { uploadSingle } = require('../middleware/upload.middleware');
+const { validate } = require('../middleware/validation.middleware');
+const { createGigValidation, updateGigValidation } = require('../validators/gig.validator');
 const upload = { single: uploadSingle };
 
 // Public routes
@@ -27,15 +29,19 @@ router.post('/:id/order',
 );
 
 // Protected routes (Freelancers)
-router.post('/', 
-  authenticate, 
-  requireRole('freelancer'), 
+router.post('/',
+  authenticate,
+  requireRole('freelancer'),
+  createGigValidation,
+  validate,
   gigController.createGig
 );
 
-router.put('/:id', 
-  authenticate, 
-  requireRole('freelancer'), 
+router.put('/:id',
+  authenticate,
+  requireRole('freelancer'),
+  updateGigValidation,
+  validate,
   gigController.updateGig
 );
 

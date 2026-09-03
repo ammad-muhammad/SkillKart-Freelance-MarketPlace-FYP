@@ -183,12 +183,13 @@ const FreelancerSettings = () => {
         <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Tag size={18} /> Change Username</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
-            <label className="fl-label">Current Username</label>
-            <input className="fl-input" value={profile?.personalInfo?.username || ""} disabled />
+            <label className="fl-label" htmlFor="fs-current-username">Current Username</label>
+            <input id="fs-current-username" className="fl-input" value={profile?.personalInfo?.username || ""} disabled />
           </div>
           <div className="fl-form-group">
-            <label className="fl-label">New Username</label>
+            <label className="fl-label" htmlFor="fs-new-username">New Username</label>
             <input
+              id="fs-new-username"
               className="fl-input"
               value={form.username}
               onChange={(e) => set('username', e.target.value)}
@@ -213,13 +214,14 @@ const FreelancerSettings = () => {
         <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={18} /> {isSupabaseUser ? "Email Address" : "Change Email"}</h3>
         <div className="fl-form-grid">
           <div className="fl-form-group">
-            <label className="fl-label">Current Email</label>
-            <input className="fl-input" value={profile?.personalInfo?.email || ""} disabled />
+            <label className="fl-label" htmlFor="fs-current-email">Current Email</label>
+            <input id="fs-current-email" className="fl-input" value={profile?.personalInfo?.email || ""} disabled />
           </div>
           {!isSupabaseUser && (
             <div className="fl-form-group">
-              <label className="fl-label">New Email</label>
+              <label className="fl-label" htmlFor="fs-new-email">New Email</label>
               <input
+                id="fs-new-email"
                 type="email"
                 className="fl-input"
                 value={form.email}
@@ -248,8 +250,9 @@ const FreelancerSettings = () => {
           <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Shield size={18} /> Recovery Information</h3>
           <div className="fl-form-grid">
             <div className="fl-form-group">
-              <label className="fl-label">Recovery Email</label>
+              <label className="fl-label" htmlFor="fs-recovery-email">Recovery Email</label>
               <input
+                id="fs-recovery-email"
                 type="email"
                 className="fl-input"
                 value={form.recoveryEmail}
@@ -258,8 +261,9 @@ const FreelancerSettings = () => {
               />
             </div>
             <div className="fl-form-group">
-              <label className="fl-label">Recovery Phone Number</label>
+              <label className="fl-label" htmlFor="fs-recovery-phone">Recovery Phone Number</label>
               <input
+                id="fs-recovery-phone"
                 type="tel"
                 className="fl-input"
                 value={form.recoveryPhone}
@@ -334,6 +338,7 @@ const FreelancerSettings = () => {
             <div className="fl-form-group">
               <input
                 className="fl-input"
+                aria-label="Enter OTP"
                 placeholder="Enter OTP"
                 value={deactivateOtp}
                 onChange={(e) => setDeactivateOtp(e.target.value)}
@@ -360,6 +365,7 @@ const FreelancerSettings = () => {
         <div className="fl-form-group">
           <input
             className="fl-input"
+            aria-label="Enter OTP"
             placeholder="Enter OTP"
             value={emailOtp}
             onChange={(e) => setEmailOtp(e.target.value)}
@@ -383,6 +389,7 @@ const FreelancerSettings = () => {
         <div className="fl-form-group">
           <input
             className="fl-input"
+            aria-label="Enter OTP"
             placeholder="Enter OTP"
             value={recoveryEmailOtp}
             onChange={(e) => setRecoveryEmailOtp(e.target.value)}

@@ -47,4 +47,8 @@ const reviewSchema = new mongoose.Schema({
 // A user can only review a specific job once
 reviewSchema.index({ jobId: 1, reviewerId: 1 }, { unique: true });
 
+// freelancer.controller.js / job.controller.js fetch a user's public reviews
+// via Review.find({ revieweeId, type }) — the most common read path.
+reviewSchema.index({ revieweeId: 1, type: 1 });
+
 module.exports = mongoose.model('Review', reviewSchema);

@@ -102,4 +102,12 @@ const freelancerProfileSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// Matches freelancer.controller.js's searchFreelancers filter/sort fields —
+// userId already has an implicit index via its `unique: true` above.
+freelancerProfileSchema.index({ 'skills.name': 1 });
+freelancerProfileSchema.index({ verificationStatus: 1 });
+freelancerProfileSchema.index({ hourlyRate: 1 });
+freelancerProfileSchema.index({ rating: -1 });
+freelancerProfileSchema.index({ availability: 1 });
+
 module.exports = mongoose.model('FreelancerProfile', freelancerProfileSchema);

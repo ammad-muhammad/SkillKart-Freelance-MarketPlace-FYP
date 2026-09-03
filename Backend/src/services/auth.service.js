@@ -1,10 +1,77 @@
+const crypto = require('crypto');
 const User = require('../models/User');
-const { generateTokenPair } = require('../utils/jwt');
+const RefreshToken = require('../models/RefreshToken');
+const { generateToken, generateRefreshToken, verifyRefreshToken, decodeToken } = require('../utils/jwt');
 const { AuthenticationError, NotFoundError } = require('../utils/apiError');
 const bcrypt = require('bcryptjs');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const ClientProfile = require('../models/ClientProfile');
 const { sendLoginAlertEmail, sendPasswordChangeAlertEmail } = require('./email.service');
+const { getSupabaseClient } = require('../config/supabase');
+const { USER_ROLES } = require('../utils/constants');
+
+// Self-registration must never be able to grant a privileged role — the route
+// validator already restricts this, but this whitelist is a second,
+// unconditional guard so no caller of registerWithEmail (present or future)
+// can create anything above a plain marketplace account.
+const SELF_REGISTERABLE_ROLES = [USER_ROLES.FREELANCER, USER_ROLES.CLIENT, USER_ROLES.PUBLIC_VIEWER];
+
+/**
+ * Issue a brand-new access/refresh token pair for a fresh login (not a
+ * refresh-rotation — see rotateRefreshToken for that) and persist a
+ * RefreshToken record so the refresh token can be tracked/rotated/revoked.
+ * Starts a new rotation family.
+ */
+const issueTokenPair = async (user) => {
+  const accessToken = generateToken(user);
+  const familyId = crypto.randomUUID();
+  const { refreshTokenStr } = await mintChildToken(familyId, user);
+
+  return { accessToken, refreshToken: refreshTokenStr };
+};
+
+/**
+ * Mint a new refresh token as a child of the given family, persisting its
+ * RefreshToken record. Does not touch any other record — callers decide
+ * whether/how to mark a parent as replaced.
+ */
+const mintChildToken = async (familyId, user) => {
+  const jti = crypto.randomUUID();
+  const refreshTokenStr = generateRefreshToken(user, jti);
+  const { exp } = decodeToken(refreshTokenStr);
+
+  await RefreshToken.create({
+    jti,
+    userId: String(user._id || user.id || 'superadmin'),
+    familyId,
+    expiresAt: new Date(exp * 1000)
+  });
+
+  return { jti, refreshTokenStr };
+};
+
+/**
+ * Rotate a refresh token: mint a new one in the same family, mark the old
+ * record as replaced (not just revoked — see RefreshToken.js's
+ * `replacedByJti` doc comment for why the distinction matters for reuse
+ * detection).
+ */
+const rotateRefreshToken = async (tokenRecord, user) => {
+  const { jti, refreshTokenStr } = await mintChildToken(tokenRecord.familyId, user);
+
+  tokenRecord.revokedAt = new Date();
+  tokenRecord.replacedByJti = jti;
+  await tokenRecord.save();
+
+  return refreshTokenStr;
+};
+
+// A near-simultaneous second refresh call using the same (just-rotated) token
+// is a normal race — multiple tabs restored at once, a scheduled refresh and
+// a 401-triggered refresh landing together, a client retry — not necessarily
+// theft. Only escalate to the full theft response once a rotated token is
+// reused well after the fact, when a genuine race is implausible.
+const REUSE_GRACE_MS = 10_000;
 
 /**
  * Register new user with email/password
@@ -22,7 +89,7 @@ const registerWithEmail = async (userData) => {
     password,
     firstName: firstName || "",
     lastName: lastName || "",
-    role: role || 'publicviewer',
+    role: SELF_REGISTERABLE_ROLES.includes(role) ? role : USER_ROLES.PUBLIC_VIEWER,
     authProvider: 'email',
     isOnBoardingCompleted: false,
     isEmailVerified: false
@@ -89,20 +156,68 @@ const loginSuperAdmin = async (username, password, encryptedCredentials) => {
     role: 'superadmin'
   };
 
-  const tokens = generateTokenPair(superAdminUser);
+  const tokens = await issueTokenPair(superAdminUser);
   return { user: superAdminUser, tokens };
 };
 
 /**
- * Refresh access token
+ * Refresh access token. Rotates the refresh token on every successful use —
+ * the caller must persist the NEW refresh token and discard the old one
+ * (using the old one again after this call is treated as token theft, see
+ * below). Returns { accessToken, refreshToken }.
  */
-const refreshAccessToken = async (refreshToken) => {
-  const { verifyRefreshToken, generateToken } = require('../utils/jwt');
+const refreshAccessToken = async (refreshTokenStr) => {
+  const decoded = verifyRefreshToken(refreshTokenStr);
 
-  const decoded = verifyRefreshToken(refreshToken);
+  // A refresh token minted before this rotation feature existed carries no
+  // `jti` and was never recorded — it can't be tracked, so it's rejected
+  // rather than silently trusted. This is a one-time inconvenience for
+  // sessions active at deploy time (they simply have to log in again), in
+  // exchange for actually being able to detect and respond to token theft.
+  if (!decoded.jti) {
+    throw new AuthenticationError('Session expired. Please log in again.');
+  }
+
+  const tokenRecord = await RefreshToken.findOne({ jti: decoded.jti });
+  if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
+    throw new AuthenticationError('Session expired. Please log in again.');
+  }
+
+  if (tokenRecord.revokedAt) {
+    const wasRotatedForward = !!tokenRecord.replacedByJti;
+    const withinGraceWindow = wasRotatedForward && (Date.now() - tokenRecord.revokedAt.getTime()) < REUSE_GRACE_MS;
+
+    // A rotated-forward token reused within the grace window is treated as a
+    // benign race (two tabs restored together, a scheduled refresh and a
+    // 401-triggered refresh landing at the same moment, a client retry) —
+    // fall through and mint another child of the same family instead of
+    // punishing it. Anything else (reused well after rotation, or a token
+    // that was revoked by an explicit logout, not rotation) is not
+    // explainable by a race and is treated as before.
+    if (!withinGraceWindow) {
+      // Replaying a token that was already rotated forward (as opposed to one
+      // that was revoked by an explicit logout) means a second copy of this
+      // exact refresh token is in play well outside any plausible race
+      // window — a strong signal it was stolen. Kill every token in the
+      // family and force a real re-login rather than trusting either copy.
+      if (wasRotatedForward) {
+        await RefreshToken.updateMany(
+          { familyId: tokenRecord.familyId, revokedAt: null },
+          { revokedAt: new Date() }
+        );
+        if (tokenRecord.userId !== 'superadmin') {
+          await User.updateOne({ _id: tokenRecord.userId }, { $inc: { tokenVersion: 1 } }).catch(() => {});
+        }
+      }
+      throw new AuthenticationError('Session expired. Please log in again.');
+    }
+  }
 
   if (decoded.userId === 'superadmin') {
-    return generateToken({ _id: 'superadmin', email: decoded.email, role: 'superadmin' });
+    const superAdminUser = { _id: 'superadmin', email: decoded.email, role: 'superadmin' };
+    const accessToken = generateToken(superAdminUser);
+    const refreshToken = await rotateRefreshToken(tokenRecord, superAdminUser);
+    return { accessToken, refreshToken };
   }
 
   const user = await User.findById(decoded.userId);
@@ -114,7 +229,31 @@ const refreshAccessToken = async (refreshToken) => {
     throw new AuthenticationError('Session expired. Please log in again.');
   }
 
-  return generateToken(user);
+  const accessToken = generateToken(user);
+  const refreshToken = await rotateRefreshToken(tokenRecord, user);
+  return { accessToken, refreshToken };
+};
+
+/**
+ * Revoke a single refresh token (logout on this device only). Silently a
+ * no-op for an already-invalid/unrecognized token — logout must never fail.
+ */
+const revokeRefreshToken = async (refreshTokenStr) => {
+  if (!refreshTokenStr) return;
+  try {
+    const decoded = decodeToken(refreshTokenStr);
+    if (!decoded?.jti) return;
+    await RefreshToken.updateOne({ jti: decoded.jti, revokedAt: null }, { revokedAt: new Date() });
+  } catch {
+    // best-effort only
+  }
+};
+
+/**
+ * Revoke every refresh token issued to a user (logout from all devices).
+ */
+const revokeAllRefreshTokens = async (userId) => {
+  await RefreshToken.updateMany({ userId: String(userId), revokedAt: null }, { revokedAt: new Date() });
 };
 
 /**
@@ -129,6 +268,9 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 
   user.password = newPassword;
   user.lastPasswordChange = new Date();
+  // Invalidate every token issued before this change — a password change is
+  // exactly the moment a stolen access/refresh token should stop working.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 
   return true;
@@ -143,6 +285,8 @@ const resetPassword = async (email, newPassword) => {
 
   user.password = newPassword;
   user.lastPasswordChange = new Date();
+  // Invalidate every token issued before this reset, same as changePassword.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 
   return true;
@@ -160,7 +304,7 @@ const verifyEmail = async (email) => {
   await user.save();
 
 
-  const tokens = generateTokenPair(user);
+  const tokens = await issueTokenPair(user);
   return { success: true, user: user.toAuthJSON(), tokens };
 };
 
@@ -202,17 +346,21 @@ const createOrUpdateFromOAuth = async (oauthData) => {
  * Handles Google, GitHub, LinkedIn login
  */
 const authenticateWithSupabase = async (supabaseAccessToken) => {
-  // Decode Supabase JWT
-  let payload;
-  try {
-    payload = JSON.parse(
-      Buffer.from(supabaseAccessToken.split('.')[1], 'base64').toString()
-    );
-  } catch (error) {
-    throw new AuthenticationError('Invalid Supabase token');
+  // Verify the token against Supabase's own auth server — this checks the
+  // signature/issuer/expiry server-side. Never trust a client-decoded JWT
+  // payload here: without this call, anyone can hand-craft an unsigned
+  // token claiming to be any email and get real access/refresh tokens back.
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    throw new AuthenticationError('Supabase authentication is not configured');
   }
 
-  const { sub: supabaseId, email, user_metadata, app_metadata } = payload;
+  const { data, error } = await supabase.auth.getUser(supabaseAccessToken);
+  if (error || !data?.user) {
+    throw new AuthenticationError('Invalid or expired Supabase token');
+  }
+
+  const { id: supabaseId, email, user_metadata, app_metadata } = data.user;
   const provider = (app_metadata?.provider || 'email').toLowerCase();
 
   console.log('🔐 Supabase OAuth:', provider, '-', email);
@@ -286,8 +434,7 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
     console.log('✅ User updated:', email);
   }
 
-  // Generate tokens using your existing function
-  const tokens = generateTokenPair(user);
+  const tokens = await issueTokenPair(user);
 
   return { 
     user: user.toAuthJSON(), 
@@ -418,7 +565,10 @@ module.exports = {
   registerWithEmail,
   loginWithEmail,
   loginSuperAdmin,
+  issueTokenPair,
   refreshAccessToken,
+  revokeRefreshToken,
+  revokeAllRefreshTokens,
   changePassword,
   resetPassword,
   verifyEmail,

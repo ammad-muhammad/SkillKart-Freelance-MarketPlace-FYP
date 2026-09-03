@@ -3,7 +3,7 @@
  * Each page is exported individually and imported in AppRoutes.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   AdminLoader, AdminEmptyState, StatusBadge, AdminPagination,
   ExportButtons, AdminFilterBar, SkeletonTable, ConfirmDialog, AdminModal, fmt
@@ -15,6 +15,7 @@ import {
   adminMonitoring, adminAuditLogs, adminAnalytics, adminSettings
 } from '../../api/adminPanel';
 import { AdjustWalletModal } from './AdminDetailPages';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 
 // ─── Reusable page shell ───────────────────────────────────────
 const PageShell = ({ title, desc, icon, headerRight, children }) => (
@@ -81,7 +82,7 @@ const useList = (fetchFn, dataKey) => {
       setError(e?.message || 'Network error — please try again.');
       setData([]);
     } finally { setLoading(false); }
-  }, [page, fetchFn]);
+  }, [page, fetchFn, dataKey]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -93,8 +94,7 @@ const useList = (fetchFn, dataKey) => {
 // ═══════════════════════════════════════════════════════════════
 export const JobsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminJobs.list, 'jobs');
-  const [search, setSearch] = useState('');
+  const { data, pagination, loading, error, setPage, load } = useList(adminJobs.list, 'jobs');
   const [status, setStatus] = useState('');
 
   return (
@@ -102,12 +102,14 @@ export const JobsPage = () => {
       headerRight={<ExportButtons onExport={format => window.open(adminJobs.exportUrl({ format }), '_blank')} />}>
       <AdminFilterBar>
         <input className="ap-input" style={{ maxWidth: 240 }} placeholder="Search title…"
-          onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })}
-          onChange={e => setSearch(e.target.value)} />
-        <select className="ap-select" style={{ maxWidth: 160 }} value={status} onChange={e => { setStatus(e.target.value); load({ status: e.target.value, page: 1 }); }}>
-          <option value="">All statuses</option>
-          {['open','in-progress','completed','closed','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+          onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
+        <CustomSelect
+          compact
+          value={status}
+          onChange={val => { setStatus(val); load({ status: val, page: 1 }); }}
+          placeholder="All statuses"
+          options={[{ value: '', label: 'All statuses' }, ...['open','in-progress','completed','closed','cancelled'].map(s => ({ value: s, label: s }))]}
+        />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💼" emptyTitle="No jobs found"
         columns={['Title','Client','Status','Budget','Posted','Actions']}
@@ -134,7 +136,7 @@ export const JobsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ContractsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminContracts.list, 'contracts');
+  const { data, pagination, loading, error, setPage, load } = useList(adminContracts.list, 'contracts');
 
   return (
     <PageShell title="Contracts" desc="All platform contracts" icon="📋"
@@ -163,16 +165,19 @@ export const ContractsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const DisputesPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminDisputes.list, 'disputes');
+  const { data, pagination, loading, error, setPage, load } = useList(adminDisputes.list, 'disputes');
+  const [status, setStatus] = useState('');
 
   return (
     <PageShell title="Disputes" desc="All contract disputes requiring attention" icon="⚠️">
       <AdminFilterBar>
-        <select className="ap-select" style={{ maxWidth: 160 }} onChange={e => load({ status: e.target.value, page: 1 })}>
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="resolved">Resolved</option>
-        </select>
+        <CustomSelect
+          compact
+          value={status}
+          onChange={val => { setStatus(val); load({ status: val, page: 1 }); }}
+          placeholder="All statuses"
+          options={[{ value: '', label: 'All statuses' }, { value: 'pending', label: 'Pending' }, { value: 'resolved', label: 'Resolved' }]}
+        />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="⚠️" emptyTitle="No disputes found"
         columns={['Contract','Type','Status','Raised By','Raised At','Actions']}
@@ -205,17 +210,20 @@ export const DisputesPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const PaymentsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminPayments.list, 'payments');
+  const { data, pagination, loading, error, setPage, load } = useList(adminPayments.list, 'payments');
   const [status, setStatus] = useState('');
 
   return (
     <PageShell title="Payments" desc="All escrow and payment records" icon="💳"
       headerRight={<ExportButtons onExport={format => window.open(adminPayments.exportUrl({ format }), '_blank')} />}>
       <AdminFilterBar>
-        <select className="ap-select" style={{ maxWidth: 180 }} value={status} onChange={e => { setStatus(e.target.value); load({ status: e.target.value, page: 1 }); }}>
-          <option value="">All statuses</option>
-          {['deposit_pending','deposit_paid','released','refunded'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <CustomSelect
+          compact
+          value={status}
+          onChange={val => { setStatus(val); load({ status: val, page: 1 }); }}
+          placeholder="All statuses"
+          options={[{ value: '', label: 'All statuses' }, ...['deposit_pending','deposit_paid','released','refunded'].map(s => ({ value: s, label: s }))]}
+        />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💳" emptyTitle="No payments found"
         columns={['ID','Client','Freelancer','Total','Fee','Status','Date','Actions']}
@@ -287,8 +295,9 @@ export const WalletsPage = () => {
 // WITHDRAWALS
 // ═══════════════════════════════════════════════════════════════
 export const WithdrawalsPage = () => {
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminWithdrawals.list, 'withdrawals');
+  const { data, pagination, loading, error, setPage, load } = useList(adminWithdrawals.list, 'withdrawals');
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState('');
 
   const act = async (id, action) => {
     setBusy(true);
@@ -313,10 +322,13 @@ export const WithdrawalsPage = () => {
     <PageShell title="Withdrawals" desc="Pending and processed withdrawal requests" icon="💸"
       headerRight={<ExportButtons onExport={format => window.open(adminWithdrawals.exportUrl({ format }), '_blank')} />}>
       <AdminFilterBar>
-        <select className="ap-select" style={{ maxWidth: 160 }} onChange={e => load({ status: e.target.value, page: 1 })}>
-          <option value="">All statuses</option>
-          {['pending','completed','failed','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <CustomSelect
+          compact
+          value={status}
+          onChange={val => { setStatus(val); load({ status: val, page: 1 }); }}
+          placeholder="All statuses"
+          options={[{ value: '', label: 'All statuses' }, ...['pending','completed','failed','cancelled'].map(s => ({ value: s, label: s }))]}
+        />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💸" emptyTitle="No withdrawals found"
         columns={['User','Amount','Method','Status','Requested','Actions']}
@@ -372,7 +384,7 @@ export const TransactionsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ChatPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminChat.list, 'conversations');
+  const { data, pagination, loading, error, setPage, load } = useList(adminChat.list, 'conversations');
 
   return (
     <PageShell title="Chat Moderation" desc="Monitor all platform conversations" icon="💬">
@@ -402,8 +414,9 @@ export const ChatPage = () => {
 // REVIEWS
 // ═══════════════════════════════════════════════════════════════
 export const ReviewsPage = () => {
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminReviews.list, 'reviews');
+  const { data, pagination, loading, error, setPage, load } = useList(adminReviews.list, 'reviews');
   const [busy, setBusy] = useState(false);
+  const [isHidden, setIsHidden] = useState('');
 
   const doHide = async (id) => {
     const reason = prompt('Reason for hiding this review?');
@@ -417,11 +430,13 @@ export const ReviewsPage = () => {
   return (
     <PageShell title="Reviews" desc="Manage user reviews and ratings" icon="⭐">
       <AdminFilterBar>
-        <select className="ap-select" style={{ maxWidth: 160 }} onChange={e => load({ isHidden: e.target.value, page: 1 })}>
-          <option value="">All</option>
-          <option value="false">Visible</option>
-          <option value="true">Hidden</option>
-        </select>
+        <CustomSelect
+          compact
+          value={isHidden}
+          onChange={val => { setIsHidden(val); load({ isHidden: val, page: 1 }); }}
+          placeholder="All"
+          options={[{ value: '', label: 'All' }, { value: 'false', label: 'Visible' }, { value: 'true', label: 'Hidden' }]}
+        />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="⭐" emptyTitle="No reviews found"
         columns={['Reviewer','Reviewee','Rating','Status','Date','Actions']}
@@ -479,11 +494,11 @@ export const NotificationsPage = () => {
         <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="ap-form-group">
             <label className="ap-label">Target Audience</label>
-            <select className="ap-select" value={target} onChange={e => setTarget(e.target.value)}>
-              <option value="all">All Users</option>
-              <option value="freelancer">Freelancers Only</option>
-              <option value="client">Clients Only</option>
-            </select>
+            <CustomSelect
+              value={target}
+              onChange={setTarget}
+              options={[{ value: 'all', label: 'All Users' }, { value: 'freelancer', label: 'Freelancers Only' }, { value: 'client', label: 'Clients Only' }]}
+            />
           </div>
           <div className="ap-form-group">
             <label className="ap-label">Title</label>
@@ -507,15 +522,19 @@ export const NotificationsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ReportsPage = () => {
   const navigate = useNavigate();
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminReports.list, 'reports');
+  const { data, pagination, loading, error, setPage, load } = useList(adminReports.list, 'reports');
+  const [status, setStatus] = useState('');
 
   return (
     <PageShell title="Reports" desc="User-submitted reports and flags" icon="🚩">
       <AdminFilterBar>
-        <select className="ap-select" style={{ maxWidth: 160 }} onChange={e => load({ status: e.target.value, page: 1 })}>
-          <option value="">All</option>
-          {['pending','investigating','resolved','dismissed'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <CustomSelect
+          compact
+          value={status}
+          onChange={val => { setStatus(val); load({ status: val, page: 1 }); }}
+          placeholder="All"
+          options={[{ value: '', label: 'All' }, ...['pending','investigating','resolved','dismissed'].map(s => ({ value: s, label: s }))]}
+        />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="🚩" emptyTitle="No reports found"
         columns={['Reporter','Reported User','Category','Status','Date','Actions']}
@@ -619,7 +638,7 @@ export const MonitoringPage = () => {
 // AUDIT LOGS
 // ═══════════════════════════════════════════════════════════════
 export const AuditLogsPage = () => {
-  const { data, pagination, loading, error, page, setPage, load } = useList(adminAuditLogs.list, 'logs');
+  const { data, pagination, loading, error, setPage, load } = useList(adminAuditLogs.list, 'logs');
 
   const SEV_COLOR = { info: 'blue', warning: 'yellow', critical: 'red' };
 

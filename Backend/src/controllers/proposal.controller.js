@@ -14,6 +14,7 @@ const notifications = require('../services/notification.service');
 const { fundMilestoneFromWallet } = require('../services/milestone.service');
 const { estimateWeeklyLockAmount, lockHourlyEscrow } = require('../services/hourlyEscrow.service');
 const { round2 } = require('../utils/constants');
+const { stripHtml } = require('../utils/sanitizeInput');
 
 /**
  * Create proposal.
@@ -43,13 +44,14 @@ const createProposal = asyncHandler(async (req, res) => {
   }
 
   // Validate explicit fields based on job type
+  const isMissing = (v) => v === undefined || v === null || v === '';
   const isHourly = job.budget?.type === 'hourly';
   if (isHourly) {
-    if (!proposalData.hourlyRate || !proposalData.estimatedWeeklyHours) {
+    if (isMissing(proposalData.hourlyRate) || isMissing(proposalData.estimatedWeeklyHours)) {
       throw new ForbiddenError('Hourly proposals must include hourlyRate and estimatedWeeklyHours.');
     }
   } else {
-    if (!proposalData.fixedPrice || !proposalData.estimatedDeliveryTime) {
+    if (isMissing(proposalData.fixedPrice) || isMissing(proposalData.estimatedDeliveryTime)) {
       throw new ForbiddenError('Fixed-price proposals must include fixedPrice and estimatedDeliveryTime.');
     }
   }
@@ -68,8 +70,16 @@ const createProposal = asyncHandler(async (req, res) => {
     });
   }
 
+  // Only content fields are ever taken from the body — lifecycle fields
+  // (status, clientResponse, respondedAt) are never client-settable.
   const proposal = new Proposal({
-    ...proposalData,
+    jobId: proposalData.jobId,
+    fixedPrice: proposalData.fixedPrice,
+    hourlyRate: proposalData.hourlyRate,
+    estimatedDeliveryTime: proposalData.estimatedDeliveryTime,
+    estimatedWeeklyHours: proposalData.estimatedWeeklyHours,
+    attachments: proposalData.attachments,
+    coverLetter: stripHtml(proposalData.coverLetter),
     freelancerId,
     status: 'pending'
   });
@@ -111,7 +121,9 @@ const updateProposal = asyncHandler(async (req, res) => {
 
   // Allow-list only
   for (const key of ['coverLetter', 'fixedPrice', 'hourlyRate', 'estimatedDeliveryTime', 'estimatedWeeklyHours', 'attachments']) {
-    if (Object.prototype.hasOwnProperty.call(req.body, key)) proposal[key] = req.body[key];
+    if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+      proposal[key] = key === 'coverLetter' ? stripHtml(req.body[key]) : req.body[key];
+    }
   }
   await proposal.save();
 
@@ -126,15 +138,25 @@ const updateProposal = asyncHandler(async (req, res) => {
  */
 const getProposalById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   const proposal = await Proposal.findById(id)
     .populate('jobId')
     .populate('freelancerId', 'firstName lastName email profilePicture rating');
-  
+
   if (!proposal) {
     throw new NotFoundError('Proposal not found');
   }
-  
+
+  // Ownership: only the freelancer who submitted it, or the client who owns
+  // the job it's on, may view a proposal's bid/cover-letter/identity —
+  // matches the same check every other proposal endpoint already enforces.
+  const isOwnerFreelancer = req.user.role === 'freelancer' && String(proposal.freelancerId?._id) === String(req.user._id);
+  const isOwnerClient = req.user.role === 'client' && String(proposal.jobId?.clientId) === String(req.user._id);
+  const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+  if (!isOwnerFreelancer && !isOwnerClient && !isAdmin) {
+    throw new ForbiddenError('You do not have permission to view this proposal');
+  }
+
   sendSuccess(res, {
     message: 'Proposal retrieved successfully',
     data: { proposal }
@@ -256,6 +278,22 @@ const acceptProposal = asyncHandler(async (req, res) => {
         errors: { insufficientBalance: true, required: hourlyLockAmount, available: round2(balance), contractType: 'hourly' }
       });
     }
+  }
+
+  // Atomically claim the job before writing anything else. The checks above
+  // (job.status !== 'open', job.contractId) are a plain read — two accept
+  // requests on two different proposals for the same job (or the same
+  // proposal double-submitted) could both pass them before either writes.
+  // This conditional update can only succeed for exactly one concurrent
+  // request; the loser aborts here, before any Proposal/Contract/Milestone
+  // record — or wallet debit — exists, so there's nothing to clean up.
+  const claimedJob = await Job.findOneAndUpdate(
+    { _id: job._id, status: 'open', contractId: { $exists: false } },
+    { $set: { status: 'in-progress', hiredFreelancer: proposal.freelancerId } },
+    { new: true }
+  );
+  if (!claimedJob) {
+    throw new BadRequestError('This project is no longer open — another proposal may have just been accepted.');
   }
 
   proposal.status = 'accepted';

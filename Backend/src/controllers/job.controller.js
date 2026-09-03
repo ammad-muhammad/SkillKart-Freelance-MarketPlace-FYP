@@ -12,6 +12,7 @@ const { buildGraphSearchQuery } = require('../services/search.service');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const Review = require('../models/Review');
 const notifications = require('../services/notification.service');
+const { stripHtml } = require('../utils/sanitizeInput');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -34,6 +35,8 @@ const syncJobStatuses = async (query = {}) => {
 /**
  * Create job
  */
+const CREATABLE_JOB_FIELDS = ['title', 'description', 'budget', 'skills', 'category', 'subcategory', 'experienceLevel', 'duration', 'deadline', 'attachments'];
+
 const createJob = asyncHandler(async (req, res) => {
   const jobData = req.body;
   const clientId = req.user._id;
@@ -46,8 +49,19 @@ const createJob = asyncHandler(async (req, res) => {
   // proposals. The wallet is only checked (and locked) when they actually
   // accept a proposal — see proposal.controller.js's acceptProposal.
 
+  // Only content fields are ever taken from the body — lifecycle/identity
+  // fields (hiredFreelancer, contractId, completedAt, statsRolledUp, source,
+  // gigId, ...) are never client-settable at creation, same rule as updateJob.
+  const fields = {};
+  for (const key of CREATABLE_JOB_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(jobData, key)) {
+      fields[key] = jobData[key];
+    }
+  }
+  if (fields.description !== undefined) fields.description = stripHtml(fields.description);
+
   const job = new Job({
-    ...jobData,
+    ...fields,
     clientId,
     status
   });
@@ -96,7 +110,7 @@ const updateJob = asyncHandler(async (req, res) => {
   // Apply only whitelisted content fields.
   for (const key of EDITABLE_JOB_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(req.body, key)) {
-      job[key] = req.body[key];
+      job[key] = key === 'description' ? stripHtml(req.body[key]) : req.body[key];
     }
   }
   await job.save();
@@ -120,16 +134,22 @@ const getJobById = asyncHandler(async (req, res) => {
 
   await syncJobStatuses({ _id: id });
 
+  // This route is public (optionalAuth) — never populate proposals' bids/
+  // cover-letters/applicant identities here, and never leak email addresses.
+  // The UI only ever needs a count and "have I already applied", both
+  // computed below without exposing any other freelancer's proposal data.
   const job = await Job.findById(id)
-    .populate('clientId', 'firstName lastName email profilePicture')
-    .populate('hiredFreelancer', 'firstName lastName email profilePicture')
-    .populate({
-      path: 'proposals',
-      populate: { path: 'freelancerId', select: 'firstName lastName profilePicture' }
-    });
+    .populate('clientId', 'firstName lastName profilePicture')
+    .populate('hiredFreelancer', 'firstName lastName profilePicture');
 
   if (!job) {
     throw new NotFoundError('Job not found');
+  }
+
+  const proposalsCount = Array.isArray(job.proposals) ? job.proposals.length : 0;
+  let hasApplied = false;
+  if (req.user?.role === 'freelancer') {
+    hasApplied = await Proposal.exists({ jobId: job._id, freelancerId: req.user._id });
   }
 
   // Enrich with the poster's real client stats (rating, verification, and a live
@@ -148,6 +168,9 @@ const getJobById = asyncHandler(async (req, res) => {
   }
 
   const jobObj = job.toObject();
+  delete jobObj.proposals; // never expose the raw proposal id list either
+  jobObj.proposalsCount = proposalsCount;
+  jobObj.hasApplied = !!hasApplied;
   jobObj.clientStats = clientStats;
 
   sendSuccess(res, {
@@ -159,16 +182,31 @@ const getJobById = asyncHandler(async (req, res) => {
 /**
  * List jobs
  */
+// Whitelisted sort fields for listJobs — never build a Mongo sort object
+// directly from user input.
+const JOB_SORT_FIELDS = {
+  createdAt: 'createdAt',
+  budget: 'budget.min',
+  deadline: 'deadline',
+  title: 'title'
+};
+
 const listJobs = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { status, category, skills, experienceLevel, budgetType, clientId } = req.query;
-  
+  const { status, category, skills, experienceLevel, budgetType, clientId, minBudget, maxBudget, sortBy, sortOrder } = req.query;
+
   await syncJobStatuses(clientId ? { clientId } : {});
-  
+
   const query = { status: 'open' }; // Strictly only open jobs for public
   if (clientId) query.clientId = clientId;
   if (experienceLevel) query.experienceLevel = experienceLevel;
   if (budgetType) query['budget.type'] = budgetType;
+
+  if (minBudget || maxBudget) {
+    query['budget.min'] = {};
+    if (minBudget) query['budget.min'].$gte = parseFloat(minBudget);
+    if (maxBudget) query['budget.min'].$lte = parseFloat(maxBudget);
+  }
 
   // Graph-aware category filter: expand to related categories
   if (category) {
@@ -185,14 +223,17 @@ const listJobs = asyncHandler(async (req, res) => {
     const uniqueExpanded = [...new Set(expandedAll)];
     query.skills = { $in: uniqueExpanded.length ? uniqueExpanded : skillsArray };
   }
-  
+
+  const sortField = JOB_SORT_FIELDS[sortBy] || 'createdAt';
+  const sortDir = sortOrder === 'asc' ? 1 : -1;
+
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
     .populate('clientId', 'firstName lastName profilePicture')
     .skip(skip)
     .limit(limit)
-    .sort({ createdAt: -1 });
-  
+    .sort({ [sortField]: sortDir });
+
   sendPaginated(res, { data: jobs, page, limit, total });
 });
 

@@ -193,10 +193,11 @@ const Login = () => {
 
                         <form onSubmit={handleSubmit} className="auth-form">
                             <div className="auth-input-group">
-                                <label className="auth-label">Email Address</label>
+                                <label className="auth-label" htmlFor="login-email">Email Address</label>
                                 <div className="auth-input-wrapper">
                                     <Mail size={18} className="auth-input-icon" />
                                     <input
+                                        id="login-email"
                                         type="email"
                                         name="email"
                                         required
@@ -211,12 +212,13 @@ const Login = () => {
 
                             <div className="auth-input-group">
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <label className="auth-label">Password</label>
+                                    <label className="auth-label" htmlFor="login-password">Password</label>
                                     <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--auth-accent)', fontWeight: 600 }}>Forgot Password?</Link>
                                 </div>
                                 <div className="auth-input-wrapper">
                                     <Lock size={18} className="auth-input-icon" />
                                     <input
+                                        id="login-password"
                                         type={showPassword ? "text" : "password"}
                                         name="password"
                                         required

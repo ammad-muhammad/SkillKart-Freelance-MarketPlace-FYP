@@ -63,7 +63,10 @@ const uploadToCloudinary = async (file, folder = 'uploads', options = {}) => {
     const uploadOptions = {
       folder,
       resource_type: resourceType,
-      access_mode: 'public',
+      // isPublic:false (e.g. CVs) get Cloudinary's authenticated delivery
+      // mode instead of a plain public URL — actually enforces FileUpload's
+      // isPublic flag rather than leaving every asset equally guessable.
+      access_mode: options.isPublic === false ? 'authenticated' : 'public',
       use_filename: true,
       unique_filename: true
     };
@@ -146,7 +149,7 @@ const uploadProfilePicture = async (userId, file) => {
  * Upload CV
  */
 const uploadCV = async (userId, file) => {
-  const result = await uploadToCloudinary(file, 'cvs');
+  const result = await uploadToCloudinary(file, 'cvs', { isPublic: false });
 
   const fileUpload = await FileUpload.create({
     userId,
@@ -227,6 +230,25 @@ const getUserFiles = async (userId, fileType = null) => {
   return await FileUpload.find(query).sort({ createdAt: -1 });
 };
 
+/**
+ * Best-effort cleanup of a previously-uploaded asset that a user just
+ * replaced or removed (old avatar, logo, cover photo, portfolio image).
+ * Never called before the NEW asset/field is already saved, so a failure
+ * here never risks losing both. Swallows all errors — asset cleanup must
+ * never fail the user-facing request.
+ */
+const cleanupOrphanedAsset = async (userId, url) => {
+  if (!url) return;
+  try {
+    const old = await FileUpload.findOne({ userId, url });
+    if (!old) return;
+    await deleteFromCloudinary(old.cloudinaryId);
+    await FileUpload.deleteOne({ _id: old._id });
+  } catch (error) {
+    console.error('[upload] old asset cleanup failed:', error.message);
+  }
+};
+
 module.exports = {
   uploadToCloudinary,
   uploadJobAttachment,
@@ -236,5 +258,6 @@ module.exports = {
   uploadPortfolioImage,
   deleteFromCloudinary,
   deleteFile,
-  getUserFiles
+  getUserFiles,
+  cleanupOrphanedAsset
 };

@@ -46,16 +46,22 @@ async function fundMilestoneFromWallet({ milestone, job, contract, clientId, per
     throw new BadRequestError(`Milestone is not awaiting funding (status: ${milestone.status})`);
   }
 
-  const clientProfile = await ClientProfile.findOne({ userId: clientId });
-  const balance = clientProfile?.walletBalance || 0;
-  if (balance < milestone.amount) {
+  // Atomic conditional debit — a plain read-then-write here would let two
+  // concurrent funding attempts (e.g. accepting two proposals in close
+  // succession) both pass the balance check before either writes, debiting
+  // the wallet only once instead of twice.
+  const updatedProfile = await ClientProfile.findOneAndUpdate(
+    { userId: clientId, walletBalance: { $gte: milestone.amount } },
+    { $inc: { walletBalance: -milestone.amount } },
+    { new: true }
+  );
+  if (!updatedProfile) {
+    const clientProfile = await ClientProfile.findOne({ userId: clientId }).lean();
+    const balance = clientProfile?.walletBalance || 0;
     throw new BadRequestError(
       `Insufficient wallet balance to fund this milestone. Need Rs. ${milestone.amount}, have Rs. ${round2(balance)}. Please top up your wallet first.`
     );
   }
-
-  clientProfile.walletBalance = round2(balance - milestone.amount);
-  await clientProfile.save();
 
   const payment = await Payment.create({
     jobId: job._id,

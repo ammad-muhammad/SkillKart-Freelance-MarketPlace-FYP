@@ -82,7 +82,7 @@ const FreelancerPortfolio = () => {
       const url = await uploadPortfolioImage(file);
       setFormData(prev => ({ ...prev, images: [url] }));
       showToast('Image uploaded successfully!');
-    } catch (error) {
+    } catch {
       showToast('Image upload failed', 'error');
     } finally {
       setIsUploading(false);

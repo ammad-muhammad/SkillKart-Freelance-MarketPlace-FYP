@@ -5,6 +5,7 @@ const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError, NotFoundError } = require('../utils/apiError');
 const { syncFreelancerVerification } = require('../services/verification.service');
+const { isEasyMode } = require('../utils/skillTestDifficulty');
 
 // LLMs reliably write the correct option first when generating MCQs, so
 // without reshuffling, "A" ends up correct almost every time. correctAnswer
@@ -132,7 +133,8 @@ const generateTest = asyncHandler(async (req, res) => {
       questions: attempt.questions,
       skills: skillsToTest,
       attemptId: attempt._id,
-      mcqFallback // UI can note the test mix is below the usual MCQ ratio
+      mcqFallback, // UI can note the test mix is below the usual MCQ ratio
+      easyMode: isEasyMode() // testing-only: tells the UI it's safe to reveal correct answers
     }
   });
 });

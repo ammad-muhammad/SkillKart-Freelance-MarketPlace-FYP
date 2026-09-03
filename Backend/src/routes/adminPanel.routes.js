@@ -55,7 +55,7 @@ router.get('/search', searchCtrl.globalSearch);
 router.get   ('/users',                       paginationSchema, usersCtrl.getUsers);
 router.get   ('/users/export',                usersCtrl.exportUsers);
 router.get   ('/users/:id',                   usersCtrl.getUserById);
-router.patch ('/users/:id',                   usersCtrl.editUser);
+router.patch ('/users/:id',                   requirePermission('users.write'), usersCtrl.editUser);
 router.patch ('/users/:id/suspend',           suspendSchema, requirePermission('users.write'), usersCtrl.suspendUser);
 router.patch ('/users/:id/unsuspend',         requirePermission('users.write'), usersCtrl.unsuspendUser);
 router.delete('/users/:id',                   requirePermission('users.write'), usersCtrl.deleteUser);

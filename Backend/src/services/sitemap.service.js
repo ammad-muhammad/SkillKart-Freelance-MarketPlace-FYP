@@ -137,6 +137,23 @@ const collectUrls = async () => {
     })
   );
 
+  // Public client profiles
+  const clients = await safe('clients', () =>
+    User.find({ role: 'client', isActive: true })
+      .select('_id updatedAt')
+      .sort({ updatedAt: -1 })
+      .limit(5000)
+      .lean()
+  );
+  clients.forEach((u) =>
+    urls.push({
+      loc: `${origin}/clients/${u._id}`,
+      lastmod: u.updatedAt,
+      changefreq: 'weekly',
+      priority: '0.5'
+    })
+  );
+
   // Category pages, derived from the categories that actually have live gigs.
   const categories = await safe('categories', () => Gig.distinct('category', { status: 'active' }));
   categories.filter(Boolean).forEach((c) =>

@@ -3,7 +3,8 @@
  * Import individually:
  *   import { AdminBadge, AdminLoader, AdminEmptyState, StatusBadge, AdminPagination } from './AdminCommon';
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 // ─── AdminBadge ────────────────────────────────────────────────
 export const AdminBadge = ({ children, variant = 'blue' }) => (
@@ -96,18 +97,30 @@ export const ConfirmDialog = ({
   open, onClose, onConfirm, title, message, confirmLabel = 'Confirm',
   confirmClass = 'ap-btn-danger', loading = false, children
 }) => {
+  const modalRef = useRef(null);
+  const handleClose = useCallback(() => { if (!loading) onClose?.(); }, [loading, onClose]);
+  useFocusTrap(modalRef, open, handleClose);
+
   if (!open) return null;
   return (
-    <div className="ap-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ap-modal" style={{ maxWidth: 420 }}>
+    <div className="ap-modal-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
+      <div
+        ref={modalRef}
+        className="ap-modal"
+        style={{ maxWidth: 420 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+      >
         <div className="ap-modal-header">
           <h3 className="ap-modal-title">{title}</h3>
-          <button className="ap-modal-close" onClick={onClose}>✕</button>
+          <button className="ap-modal-close" onClick={handleClose} disabled={loading} aria-label="Close">✕</button>
         </div>
         {message && <p style={{ color: 'var(--ap-text-secondary)', fontSize: '0.9rem', margin: '0 0 8px' }}>{message}</p>}
         {children}
         <div className="ap-modal-footer">
-          <button className="ap-btn ap-btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="ap-btn ap-btn-secondary" onClick={handleClose} disabled={loading}>Cancel</button>
           <button className={`ap-btn ${confirmClass}`} onClick={onConfirm} disabled={loading}>
             {loading ? <><span className="ap-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Working…</> : confirmLabel}
           </button>
@@ -119,6 +132,9 @@ export const ConfirmDialog = ({
 
 // ─── AdminModal ────────────────────────────────────────────────
 export const AdminModal = ({ open, onClose, title, children, size = '', footer }) => {
+  const modalRef = useRef(null);
+  useFocusTrap(modalRef, open, onClose);
+
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -127,10 +143,17 @@ export const AdminModal = ({ open, onClose, title, children, size = '', footer }
   if (!open) return null;
   return (
     <div className="ap-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={`ap-modal${size ? ` ap-modal-${size}` : ''}`}>
+      <div
+        ref={modalRef}
+        className={`ap-modal${size ? ` ap-modal-${size}` : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+      >
         <div className="ap-modal-header">
           <h3 className="ap-modal-title">{title}</h3>
-          <button className="ap-modal-close" onClick={onClose}>✕</button>
+          <button className="ap-modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         {children}
         {footer && <div className="ap-modal-footer">{footer}</div>}
@@ -238,6 +261,7 @@ export const AdminTimeline = ({ items = [] }) => (
 );
 
 // ─── Format helpers ────────────────────────────────────────────
+// eslint-disable-next-line react-refresh/only-export-components
 export const fmt = {
   date:     (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
   datetime: (d) => d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',

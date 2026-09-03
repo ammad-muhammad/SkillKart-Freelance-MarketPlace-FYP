@@ -263,6 +263,20 @@ const convertToApiError = (error) => {
     return new TokenError(error.message);
   }
 
+  // Multer errors (oversized file, wrong field name, too many files, ...) —
+  // these are client mistakes, never a server fault.
+  // eslint-disable-next-line global-require
+  if (error instanceof require('multer').MulterError) {
+    const MULTER_MESSAGES = {
+      LIMIT_FILE_SIZE: 'File is too large.',
+      LIMIT_FILE_COUNT: 'Too many files uploaded.',
+      LIMIT_UNEXPECTED_FILE: 'Unexpected file field.',
+      LIMIT_FIELD_COUNT: 'Too many fields.',
+      LIMIT_PART_COUNT: 'Too many parts in the upload.'
+    };
+    return new BadRequestError(MULTER_MESSAGES[error.code] || 'File upload failed.');
+  }
+
   // Default to internal server error
   return new InternalServerError(error.message);
 };

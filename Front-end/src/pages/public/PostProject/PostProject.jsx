@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
@@ -80,9 +80,23 @@ function qualityScore(form) {
 /* ─────────────── MAIN PAGE ─────────────── */
 export default function PostProject() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
     const [step, setStep] = useState(0);
-    const [form, setForm] = useState(INIT);
+    // If the Cost Estimator handed off an estimate (navigate('/post-project', { state: { estimate, type, skills } })),
+    // pre-fill the relevant fields instead of silently discarding it — the normal
+    // direct-navigation case (no state) falls back to the plain INIT form.
+    const [form, setForm] = useState(() => {
+        const handoff = location.state?.estimate;
+        if (!handoff) return INIT;
+        return {
+            ...INIT,
+            category: CATEGORIES.includes(location.state?.type) ? location.state.type : '',
+            budgetMin: handoff.min != null ? String(handoff.min) : '',
+            budgetMax: handoff.max != null ? String(handoff.max) : '',
+            skills: Array.isArray(location.state?.skills) ? location.state.skills : [],
+        };
+    });
     const [errors, setErrors] = useState({});
     const [skillInput, setSkillInput] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -103,10 +117,10 @@ export default function PostProject() {
     }, []);
 
     /* update a field */
-    const set = (key, value) => {
+    const set = useCallback((key, value) => {
         setForm(prev => ({ ...prev, [key]: value }));
         if (errors[key]) setErrors(prev => { const e = { ...prev }; delete e[key]; return e; });
-    };
+    }, [errors]);
 
     /* validate current step and advance */
     const next = () => {
@@ -139,7 +153,7 @@ export default function PostProject() {
     const handleFiles = useCallback((fileList) => {
         const valid = Array.from(fileList).filter(f => f.size < 10 * 1024 * 1024); // 10 MB max
         set('files', [...form.files, ...valid]);
-    }, [form.files]);
+    }, [form.files, set]);
 
     const handleDrop = (e) => {
         e.preventDefault(); setDragOver(false);
@@ -490,6 +504,7 @@ export default function PostProject() {
                                         <div className="pp-skill-input-wrap">
                                             <input
                                                 id="pp-skill-input"
+                                                aria-label="Add a required skill"
                                                 className={`pp-input${errors.skills ? ' pp-input--error' : ''}`}
                                                 placeholder="e.g. React, Figma, Python…"
                                                 value={skillInput}
@@ -507,7 +522,7 @@ export default function PostProject() {
                                                 {form.skills.map(sk => (
                                                     <span key={sk} className="pp-tag">
                                                         {sk}
-                                                        <button className="pp-tag__remove" onClick={() => removeSkill(sk)}>✕</button>
+                                                        <button className="pp-tag__remove" onClick={() => removeSkill(sk)} aria-label={`Remove skill: ${sk}`}>✕</button>
                                                     </span>
                                                 ))}
                                             </div>
@@ -559,7 +574,7 @@ export default function PostProject() {
                                                 {form.files.map((f, i) => (
                                                     <div key={i} className="pp-file-item">
                                                         <span>📄 {f.name} <span style={{ color: 'var(--color-text-light)', fontWeight: 400, fontSize: '0.75rem' }}>({(f.size / 1024).toFixed(0)} KB)</span></span>
-                                                        <button className="pp-file-remove" onClick={() => set('files', form.files.filter((_, j) => j !== i))}>✕</button>
+                                                        <button className="pp-file-remove" onClick={() => set('files', form.files.filter((_, j) => j !== i))} aria-label={`Remove file: ${f.name}`}>✕</button>
                                                     </div>
                                                 ))}
                                             </div>

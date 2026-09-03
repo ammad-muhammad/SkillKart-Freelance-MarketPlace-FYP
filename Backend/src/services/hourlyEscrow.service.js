@@ -45,17 +45,22 @@ async function lockHourlyEscrow({ contract, job, clientId, amount, performedBy, 
     throw new BadRequestError('Lock amount must be greater than zero');
   }
 
-  const clientProfile = await ClientProfile.findOne({ userId: clientId });
-  const balance = clientProfile?.walletBalance || 0;
-  if (balance < lockAmount) {
+  // Atomic conditional debit — see milestone.service.js's fundMilestoneFromWallet
+  // for why a plain read-then-write here is unsafe under concurrent requests
+  // (e.g. an accept + a manual top-up landing close together).
+  const updatedProfile = await ClientProfile.findOneAndUpdate(
+    { userId: clientId, walletBalance: { $gte: lockAmount } },
+    { $inc: { walletBalance: -lockAmount } },
+    { new: true }
+  );
+  if (!updatedProfile) {
+    const clientProfile = await ClientProfile.findOne({ userId: clientId }).lean();
+    const balance = clientProfile?.walletBalance || 0;
     throw new BadRequestError(
       `Insufficient wallet balance to lock escrow for this hourly contract. Need Rs. ${lockAmount}, have Rs. ${round2(balance)}. Please top up your wallet first.`,
       { insufficientBalance: true, required: lockAmount, available: round2(balance), contractType: 'hourly' }
     );
   }
-
-  clientProfile.walletBalance = round2(balance - lockAmount);
-  await clientProfile.save();
 
   const payment = await Payment.create({
     jobId: job._id,

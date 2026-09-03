@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminAPI } from '../../api/admin';
 import Navbar from '../../Components/common/Navbar/Navbar';
 import Footer from '../../Components/common/Footer/Footer';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import './TaxonomyAdmin.css';
 
 const NODE_TYPES = ['industry', 'category', 'profession', 'skill', 'technology', 'tool', 'concept'];
@@ -17,6 +19,7 @@ const TaxonomyAdmin = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
   const [allNodesList, setAllNodesList] = useState([]); // for relation selection dropdown
@@ -29,6 +32,8 @@ const TaxonomyAdmin = () => {
 
   // Form states
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const createModalRef = useRef(null);
+  const fetchNodesSeq = useRef(0); // ignore stale fetchNodes responses that resolve after a newer request started
   const [newNode, setNewNode] = useState({
     name: '', type: 'skill', description: '', weight: 1.0, icon: '', color: '', aliases: '', synonyms: ''
   });
@@ -46,9 +51,15 @@ const TaxonomyAdmin = () => {
   });
 
   const [editNode, setEditNode] = useState(null);
+  // Controlled state for the "add relationship" row under AI proposal review —
+  // was two uncontrolled <select defaultValue>s read via getElementById.
+  const [newRelType, setNewRelType] = useState('BELONGS_TO');
+  const [newRelTarget, setNewRelTarget] = useState('');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const closeCreateModal = useCallback(() => { if (!actionLoading) setShowCreateModal(false); }, [actionLoading]);
+  useFocusTrap(createModalRef, showCreateModal, closeCreateModal);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -56,8 +67,13 @@ const TaxonomyAdmin = () => {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     fetchNodes();
-  }, [page, search, typeFilter]);
+  }, [fetchNodes]);
 
   useEffect(() => {
     // Fetch all nodes list for dropdowns (limit 300 to keep it manageable, sort by name)
@@ -87,25 +103,28 @@ const TaxonomyAdmin = () => {
     }
   };
 
-  const fetchNodes = async () => {
+  const fetchNodes = useCallback(async () => {
+    const requestId = ++fetchNodesSeq.current;
     setLoading(true);
     try {
       const res = await adminAPI.getNodes({
         page,
         limit,
-        q: search,
+        q: debouncedSearch,
         type: typeFilter
       });
+      if (requestId !== fetchNodesSeq.current) return; // a newer request has since started — ignore this stale response
       if (res.data?.data) {
         setNodes(res.data.data.nodes);
         setTotal(res.data.data.total);
       }
     } catch (err) {
+      if (requestId !== fetchNodesSeq.current) return;
       showToast(err.response?.data?.message || 'Failed to fetch nodes', 'error');
     } finally {
-      setLoading(false);
+      if (requestId === fetchNodesSeq.current) setLoading(false);
     }
-  };
+  }, [page, limit, debouncedSearch, typeFilter]);
 
   const handleSelectProposal = (p) => {
     setSelectedProposal(p);
@@ -228,28 +247,6 @@ const TaxonomyAdmin = () => {
     }
   };
 
-  const handleDisconnectRelation = async (rel) => {
-    if (!window.confirm('Are you sure you want to disconnect this relationship?')) return;
-    setActionLoading(true);
-    try {
-      await adminAPI.deleteRelationship({
-        from: rel.from,
-        to: rel.to,
-        type: rel.type
-      });
-      showToast('Relationship deleted successfully');
-      // Refresh current node details
-      const res = await adminAPI.getNodes({ limit: 1, q: selectedNode.name });
-      if (res.data?.data?.nodes?.length > 0) {
-        setSelectedNode(res.data.data.nodes[0]);
-      }
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to delete relationship', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleMergeNodes = async (e) => {
     e.preventDefault();
     if (!mergeForm.targetId) {
@@ -324,10 +321,13 @@ const TaxonomyAdmin = () => {
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
-              <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
-                <option value="">All Node Types</option>
-                {NODE_TYPES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-              </select>
+              <CustomSelect
+                variant="dark"
+                value={typeFilter}
+                onChange={(val) => { setTypeFilter(val); setPage(1); }}
+                placeholder="All Node Types"
+                options={[{ value: '', label: 'All Node Types' }, ...NODE_TYPES.map(t => ({ value: t, label: t.toUpperCase() }))]}
+              />
             </div>
 
             <div className="tax-nodes-list">
@@ -396,12 +396,12 @@ const TaxonomyAdmin = () => {
                   <div className="tax-form-group-row">
                     <div className="tax-form-group">
                       <label>Type</label>
-                      <select 
-                        value={editNode.type} 
-                        onChange={e => setEditNode({ ...editNode, type: e.target.value })}
-                      >
-                        {NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
+                      <CustomSelect
+                        variant="dark"
+                        value={editNode.type}
+                        onChange={val => setEditNode({ ...editNode, type: val })}
+                        options={NODE_TYPES}
+                      />
                     </div>
                     <div className="tax-form-group">
                       <label>Weight (0.0 - 1.0)</label>
@@ -462,17 +462,18 @@ const TaxonomyAdmin = () => {
                   </div>
                   <div className="tax-form-group" style={{ marginTop: '0.75rem' }}>
                     <label>Canonical Parent Node (Hierarchical Menu Placement)</label>
-                    <select
+                    <CustomSelect
+                      variant="dark"
                       value={editNode.canonicalParent || ''}
-                      onChange={e => setEditNode({ ...editNode, canonicalParent: e.target.value || null })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: '#1f2937', color: '#fff', border: '1px solid #374151' }}
-                    >
-                      <option value="">No Canonical Parent (Industry / Root Category)</option>
-                      {allNodesList
-                        .filter(n => n._id !== editNode._id)
-                        .map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)
-                      }
-                    </select>
+                      onChange={val => setEditNode({ ...editNode, canonicalParent: val || null })}
+                      placeholder="No Canonical Parent (Industry / Root Category)"
+                      options={[
+                        { value: '', label: 'No Canonical Parent (Industry / Root Category)' },
+                        ...allNodesList
+                          .filter(n => n._id !== editNode._id)
+                          .map(n => ({ value: n._id, label: `${n.name} (${n.type})` }))
+                      ]}
+                    />
                   </div>
                   <div className="tax-form-group-row">
                     <div className="tax-form-group">
@@ -562,17 +563,15 @@ const TaxonomyAdmin = () => {
                   <form onSubmit={handleMergeNodes} className="tax-merge-form">
                     <p className="tax-warning-text">⚠️ Warning: Merging moves all relationships to target and redirects queries.</p>
                     <div className="tax-merge-inputs">
-                      <select 
-                        value={mergeForm.targetId} 
-                        onChange={e => setMergeForm({ targetId: e.target.value })}
-                        required
-                      >
-                        <option value="">Select target node...</option>
-                        {allNodesList
+                      <CustomSelect
+                        variant="dark"
+                        value={mergeForm.targetId}
+                        onChange={val => setMergeForm({ targetId: val })}
+                        placeholder="Select target node..."
+                        options={allNodesList
                           .filter(n => n._id !== selectedNode._id)
-                          .map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)
-                        }
-                      </select>
+                          .map(n => ({ value: n._id, label: `${n.name} (${n.type})` }))}
+                      />
                       <button type="submit" className="tax-btn-danger" disabled={actionLoading}>
                         Merge Into Target
                       </button>
@@ -585,26 +584,24 @@ const TaxonomyAdmin = () => {
                   <h3>Connect Relationship (Build Graph Edge)</h3>
                   <form onSubmit={handleCreateRelation} className="tax-relation-form">
                     <div className="tax-form-row">
-                      <select 
-                        value={relationForm.type} 
-                        onChange={e => setRelationForm({ ...relationForm, type: e.target.value })}
-                      >
-                        {RELATIONSHIP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      
+                      <CustomSelect
+                        variant="dark"
+                        value={relationForm.type}
+                        onChange={val => setRelationForm({ ...relationForm, type: val })}
+                        options={RELATIONSHIP_TYPES}
+                      />
+
                       <span className="relation-arrow">➔</span>
 
-                      <select 
-                        value={relationForm.toId} 
-                        onChange={e => setRelationForm({ ...relationForm, toId: e.target.value })}
-                        required
-                      >
-                        <option value="">Select target node...</option>
-                        {allNodesList
+                      <CustomSelect
+                        variant="dark"
+                        value={relationForm.toId}
+                        onChange={val => setRelationForm({ ...relationForm, toId: val })}
+                        placeholder="Select target node..."
+                        options={allNodesList
                           .filter(n => n._id !== selectedNode._id)
-                          .map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)
-                        }
-                      </select>
+                          .map(n => ({ value: n._id, label: `${n.name} (${n.type})` }))}
+                      />
                     </div>
                     <div className="tax-form-row">
                       <input 
@@ -701,12 +698,12 @@ const TaxonomyAdmin = () => {
                   <div className="tax-form-group-row">
                     <div className="tax-form-group">
                       <label>Type</label>
-                      <select 
-                        value={reviewForm.type} 
-                        onChange={e => setReviewForm({ ...reviewForm, type: e.target.value })}
-                      >
-                        {NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
+                      <CustomSelect
+                        variant="dark"
+                        value={reviewForm.type}
+                        onChange={val => setReviewForm({ ...reviewForm, type: val })}
+                        options={NODE_TYPES}
+                      />
                     </div>
                     <div className="tax-form-group">
                       <label>Weight (0.0 - 1.0)</label>
@@ -763,14 +760,16 @@ const TaxonomyAdmin = () => {
                   </div>
                   <div className="tax-form-group" style={{ marginTop: '0.75rem' }}>
                     <label>Canonical Parent Node (Hierarchical Menu Placement)</label>
-                    <select
+                    <CustomSelect
+                      variant="dark"
                       value={reviewForm.canonicalParent || ''}
-                      onChange={e => setReviewForm({ ...reviewForm, canonicalParent: e.target.value || null })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: '#1f2937', color: '#fff', border: '1px solid #374151' }}
-                    >
-                      <option value="">No Canonical Parent (Industry / Root Category)</option>
-                      {allNodesList.map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)}
-                    </select>
+                      onChange={val => setReviewForm({ ...reviewForm, canonicalParent: val || null })}
+                      placeholder="No Canonical Parent (Industry / Root Category)"
+                      options={[
+                        { value: '', label: 'No Canonical Parent (Industry / Root Category)' },
+                        ...allNodesList.map(n => ({ value: n._id, label: `${n.name} (${n.type})` }))
+                      ]}
+                    />
                   </div>
                   <div className="tax-form-group-row">
                     <div className="tax-form-group">
@@ -837,24 +836,33 @@ const TaxonomyAdmin = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <select id="new-rel-type" defaultValue="BELONGS_TO" style={{ flex: 1 }}>
-                        {RELATIONSHIP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <select id="new-rel-target" style={{ flex: 2 }}>
-                        <option value="">Select target node...</option>
-                        {allNodesList.map(n => <option key={n._id} value={n.name}>{n.name} ({n.type})</option>)}
-                      </select>
-                      <button 
-                        type="button" 
+                      <div style={{ flex: 1 }}>
+                        <CustomSelect
+                          variant="dark"
+                          value={newRelType}
+                          onChange={setNewRelType}
+                          options={RELATIONSHIP_TYPES}
+                        />
+                      </div>
+                      <div style={{ flex: 2 }}>
+                        <CustomSelect
+                          variant="dark"
+                          value={newRelTarget}
+                          onChange={setNewRelTarget}
+                          placeholder="Select target node..."
+                          options={allNodesList.map(n => ({ value: n.name, label: `${n.name} (${n.type})` }))}
+                        />
+                      </div>
+                      <button
+                        type="button"
                         className="tax-btn-secondary"
                         onClick={() => {
-                          const typeVal = document.getElementById('new-rel-type').value;
-                          const targetVal = document.getElementById('new-rel-target').value;
-                          if (!targetVal) return;
+                          if (!newRelTarget) return;
                           setReviewForm({
                             ...reviewForm,
-                            relationships: [...reviewForm.relationships, { targetName: targetVal, type: typeVal, weight: 1.0 }]
+                            relationships: [...reviewForm.relationships, { targetName: newRelTarget, type: newRelType, weight: 1.0 }]
                           });
+                          setNewRelTarget('');
                         }}
                       >
                         + Add
@@ -889,11 +897,19 @@ const TaxonomyAdmin = () => {
 
       {/* CREATE MODAL */}
       {showCreateModal && (
-        <div className="tax-modal-overlay">
-          <div className="tax-modal">
+        <div className="tax-modal-overlay" onClick={closeCreateModal}>
+          <div
+            ref={createModalRef}
+            className="tax-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create SkillNode"
+            tabIndex={-1}
+          >
             <div className="tax-modal-header">
               <h3>Create SkillNode</h3>
-              <button className="tax-modal-close" onClick={() => setShowCreateModal(false)}>×</button>
+              <button className="tax-modal-close" onClick={closeCreateModal} disabled={actionLoading} aria-label="Close">×</button>
             </div>
             <form onSubmit={handleCreateNode} className="tax-form">
               <div className="tax-form-group">
@@ -909,12 +925,12 @@ const TaxonomyAdmin = () => {
               <div className="tax-form-group-row">
                 <div className="tax-form-group">
                   <label>Type</label>
-                  <select 
-                    value={newNode.type} 
-                    onChange={e => setNewNode({ ...newNode, type: e.target.value })}
-                  >
-                    {NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <CustomSelect
+                    variant="dark"
+                    value={newNode.type}
+                    onChange={val => setNewNode({ ...newNode, type: val })}
+                    options={NODE_TYPES}
+                  />
                 </div>
                 <div className="tax-form-group">
                   <label>Weight (0.0 - 1.0)</label>
@@ -976,14 +992,16 @@ const TaxonomyAdmin = () => {
               </div>
               <div className="tax-form-group" style={{ marginTop: '0.75rem' }}>
                 <label>Canonical Parent Node (Hierarchical Menu Placement)</label>
-                <select
+                <CustomSelect
+                  variant="dark"
                   value={newNode.canonicalParent || ''}
-                  onChange={e => setNewNode({ ...newNode, canonicalParent: e.target.value || null })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', background: '#1f2937', color: '#fff', border: '1px solid #374151' }}
-                >
-                  <option value="">No Canonical Parent (Industry / Root Category)</option>
-                  {allNodesList.map(n => <option key={n._id} value={n._id}>{n.name} ({n.type})</option>)}
-                </select>
+                  onChange={val => setNewNode({ ...newNode, canonicalParent: val || null })}
+                  placeholder="No Canonical Parent (Industry / Root Category)"
+                  options={[
+                    { value: '', label: 'No Canonical Parent (Industry / Root Category)' },
+                    ...allNodesList.map(n => ({ value: n._id, label: `${n.name} (${n.type})` }))
+                  ]}
+                />
               </div>
               <div className="tax-form-group-row">
                 <div className="tax-form-group">

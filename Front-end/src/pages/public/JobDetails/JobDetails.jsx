@@ -1,5 +1,5 @@
 import Loader from '../../../Components/common/Loader/Loader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { jobsAPI } from '../../../api/jobs';
 import { proposalsAPI } from '../../../api/proposals';
@@ -7,11 +7,14 @@ import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import {
-  Clock, DollarSign, Tag, Briefcase, ChevronLeft,
-  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText
+  Clock, Tag, Briefcase, ChevronLeft,
+  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText, X
 } from 'lucide-react';
+import PkrIcon from '../../../Components/common/PkrIcon';
+import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import { useFreelancer } from '../../../context/FreelancerContext';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 import './JobDetails.css';
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif'];
@@ -79,6 +82,9 @@ export default function JobDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const applyModalRef = useRef(null);
+  const closeApplyModal = useCallback(() => { if (!submitting) setShowApplyModal(false); }, [submitting]);
+  useFocusTrap(applyModalRef, showApplyModal, closeApplyModal);
   const [proposalData, setProposalData] = useState({
     coverLetter: '',
     fixedPrice: '',
@@ -88,13 +94,13 @@ export default function JobDetails() {
     attachments: []
   });
 
-  useEffect(() => {
-    fetchJob();
-  }, [id]);
-
-  const fetchJob = async () => {
+  const fetchSeq = useRef(0); // ignore a response if navigation to another job has since started
+  const fetchJob = useCallback(async () => {
+    const requestId = ++fetchSeq.current;
+    setLoading(true);
     try {
       const res = await jobsAPI.getJobById(id);
+      if (requestId !== fetchSeq.current) return; // a newer job fetch has since started — ignore this stale response
       setJob(res.data.data.job);
       const isHourly = res.data.data.job.budget?.type === 'hourly';
       setProposalData(prev => ({
@@ -103,12 +109,21 @@ export default function JobDetails() {
         fixedPrice: !isHourly ? res.data.data.job.budget?.min || '' : ''
       }));
     } catch (error) {
+      if (requestId !== fetchSeq.current) return;
       console.error('Failed to fetch job:', error);
       toast.error('Job not found or error loading details.');
     } finally {
-      setLoading(false);
+      if (requestId === fetchSeq.current) setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchJob();
+  }, [fetchJob]);
+
+  useEffect(() => {
+    document.title = job?.title ? `${job.title} – SkillKart` : 'Project Details – SkillKart';
+  }, [job?.title]);
 
   // Gate the Apply button BEFORE opening the modal so a logged-out user is sent
   // to login (and returned here after) instead of filling the form then bouncing.
@@ -245,7 +260,7 @@ export default function JobDetails() {
 
   const isClient = user?.role === 'client';
   const isFreelancer = user?.role === 'freelancer';
-  const hasApplied = job.proposals?.some(p => p.freelancerId?._id === user?._id);
+  const hasApplied = job.hasApplied;
   const isSaved = Array.isArray(savedProjects) && savedProjects.some(sj => (sj._id || sj) === job._id);
 
   const handleToggleSave = async () => {
@@ -372,10 +387,10 @@ export default function JobDetails() {
                       className="jd-apply__btn" 
                       style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                     >
-                      <Send size={16} /> View Proposals ({job.proposals?.length || 0})
+                      <Send size={16} /> View Proposals ({job.proposalsCount || 0})
                     </Link>
                     <p className="jd-apply__note" style={{ textAlign: 'center', margin: 0 }}>
-                      {job.proposals?.length || 0} proposal{job.proposals?.length === 1 ? '' : 's'} received for this project.
+                      {job.proposalsCount || 0} proposal{job.proposalsCount === 1 ? '' : 's'} received for this project.
                     </p>
                   </div>
                 ) : (
@@ -397,7 +412,7 @@ export default function JobDetails() {
                       </button>
                     </div>
                     <p className="jd-apply__note">
-                      {job.proposals?.length || 0} proposals already submitted.
+                      {job.proposalsCount || 0} proposals already submitted.
                     </p>
                   </>
                 )}
@@ -410,10 +425,17 @@ export default function JobDetails() {
       {/* Apply Modal */}
       {showApplyModal && (
         <div className="jd-modal-overlay">
-          <div className="jd-modal">
+          <div
+            ref={applyModalRef}
+            className="jd-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Submit Proposal"
+            tabIndex={-1}
+          >
             <div className="jd-modal__header">
               <h3>Submit Proposal</h3>
-              <button onClick={() => setShowApplyModal(false)}>&times;</button>
+              <button onClick={closeApplyModal} aria-label="Close" disabled={submitting}><X size={20} /></button>
             </div>
             <form onSubmit={handleApply} className="jd-modal__body">
               {job?.budget?.type === 'hourly' ? (
@@ -421,7 +443,7 @@ export default function JobDetails() {
                   <div className="jd-form-group">
                     <label>Hourly Rate (Rs./hr)</label>
                     <div className="jd-input-icon">
-                      <DollarSign size={16} />
+                      <PkrIcon size={16} />
                       <input 
                         type="number" 
                         required 
@@ -453,7 +475,7 @@ export default function JobDetails() {
                   <div className="jd-form-group">
                     <label>Fixed Price (PKR)</label>
                     <div className="jd-input-icon">
-                      <DollarSign size={16} />
+                      <PkrIcon size={16} />
                       <input 
                         type="number" 
                         required 
@@ -466,15 +488,11 @@ export default function JobDetails() {
                   </div>
                   <div className="jd-form-group">
                     <label>Estimated Delivery Time</label>
-                    <select 
+                    <CustomSelect
                       value={proposalData.estimatedDeliveryTime}
-                      onChange={e => setProposalData({ ...proposalData, estimatedDeliveryTime: e.target.value })}
-                    >
-                      <option>Less than 1 week</option>
-                      <option>1-2 weeks</option>
-                      <option>1 month</option>
-                      <option>3+ months</option>
-                    </select>
+                      onChange={val => setProposalData({ ...proposalData, estimatedDeliveryTime: val })}
+                      options={['Less than 1 week', '1-2 weeks', '1 month', '3+ months']}
+                    />
                   </div>
                 </>
               )}
@@ -514,7 +532,7 @@ export default function JobDetails() {
               </div>
 
               <div className="jd-modal__footer">
-                <button type="button" onClick={() => setShowApplyModal(false)} className="jd-btn--ghost">Cancel</button>
+                <button type="button" onClick={closeApplyModal} disabled={submitting} className="jd-btn--ghost">Cancel</button>
                 <button type="submit" disabled={submitting} className="jd-btn--primary">
                   {submitting ? 'Submitting...' : 'Send Proposal'}
                 </button>

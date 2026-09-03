@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const AIProvider = require('./base.provider');
+const { difficultyInstruction } = require('../../utils/skillTestDifficulty');
 
 class ClaudeProvider extends AIProvider {
   constructor() {
@@ -101,7 +102,7 @@ ${text}
 
     const prompt = `
 Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
-Generate exactly ${count} questions. The difficulty should be moderate (not too hard, not too easy).
+Generate exactly ${count} questions. ${difficultyInstruction()}
 CRITICAL: These questions MUST be completely fresh, unique, and different from previous attempts. (Random Context ID: ${skills.join('-')}-${Date.now()})
 IMPORTANT: 
 1. DISTRIBUTION: You MUST generate exactly ${count} questions. 

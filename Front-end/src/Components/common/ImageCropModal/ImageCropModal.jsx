@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Cropper from 'react-easy-crop';
 import { X, ZoomIn, ZoomOut } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
 import { getCroppedImageBlob, blobToFile } from '../../../utils/cropImage';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 import './ImageCropModal.css';
 
 /**
@@ -26,6 +27,7 @@ export default function ImageCropModal({ file, aspect = 1, cropShape = 'rect', t
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const modalRef = useRef(null);
 
   const imageSrc = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
@@ -42,6 +44,10 @@ export default function ImageCropModal({ file, aspect = 1, cropShape = 'rect', t
   const onCropComplete = useCallback((_croppedArea, areaPixels) => {
     setCroppedAreaPixels(areaPixels);
   }, []);
+
+  const handleClose = useCallback(() => { if (!processing) onCancel?.(); }, [processing, onCancel]);
+
+  useFocusTrap(modalRef, !!file && !!imageSrc, handleClose);
 
   if (!file || !imageSrc) return null;
 
@@ -67,11 +73,19 @@ export default function ImageCropModal({ file, aspect = 1, cropShape = 'rect', t
   };
 
   return (
-    <div className="icm-overlay" onClick={onCancel}>
-      <div className="icm-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="icm-overlay" onClick={handleClose}>
+      <div
+        ref={modalRef}
+        className="icm-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+      >
         <div className="icm-header">
           <h3>{title}</h3>
-          <button type="button" className="icm-close" onClick={onCancel} disabled={processing}>
+          <button type="button" className="icm-close" onClick={handleClose} disabled={processing} aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -107,7 +121,7 @@ export default function ImageCropModal({ file, aspect = 1, cropShape = 'rect', t
           <button type="button" className="icm-btn icm-btn--ghost" onClick={handleUseOriginal} disabled={processing}>
             Use Original
           </button>
-          <button type="button" className="icm-btn icm-btn--ghost" onClick={onCancel} disabled={processing}>
+          <button type="button" className="icm-btn icm-btn--ghost" onClick={handleClose} disabled={processing}>
             Cancel
           </button>
           <button type="button" className="icm-btn icm-btn--primary" onClick={handleApply} disabled={processing}>

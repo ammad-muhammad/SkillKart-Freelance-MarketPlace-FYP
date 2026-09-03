@@ -11,11 +11,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 const {
     companyName,
-    websiteUrl,
     contactEmail,
     jurisdiction,
     effectiveDate,
-    lastUpdated,
 } = policyState;
 
 const TOC_ITEMS = [

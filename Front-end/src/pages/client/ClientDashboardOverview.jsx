@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
-import { FolderOpen, Zap, Users2, DollarSign, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
+import { FolderOpen, Zap, Users2, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
 import Loader from '../../Components/common/Loader/Loader';
 import './ClientDashboard.css';
 
@@ -20,7 +20,6 @@ const StatCard = ({ icon, value, label, to }) => {
 };
 
 const ClientDashboardOverview = () => {
-  const { user } = useAuth();
   const { profile, projects, loading } = useClient();
   const personalInfo = profile?.personalInfo || {};
   
@@ -40,7 +39,7 @@ const ClientDashboardOverview = () => {
     { icon: <FolderOpen size={20} />, value: projects.length,                          label: 'Total Projects',    to: '/client/projects' },
     { icon: <Zap size={20} />,        value: openProjects,                             label: 'Open Jobs',         to: '/client/projects' },
     { icon: <Users2 size={20} />,     value: hiredCount,                               label: 'Freelancers Hired', to: '/client/saved' },
-    { icon: <DollarSign size={20} />, value: `Rs. ${totalSpent.toLocaleString()}`,        label: 'Total Spent',       to: '/client/projects' },
+    { icon: <PkrIcon size={20} />, value: `Rs. ${totalSpent.toLocaleString()}`,        label: 'Total Spent',       to: '/client/projects' },
   ];
 
   const recentProjects = projects.slice(0, 3);

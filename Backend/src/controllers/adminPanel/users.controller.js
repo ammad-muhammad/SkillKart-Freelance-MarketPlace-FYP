@@ -1,4 +1,16 @@
 const User = require('../../models/User');
+const { USER_ROLES } = require('../../utils/constants');
+const { parsePagination } = require('../../utils/helpers');
+
+// superadmin is granted exclusively via `npm run setup:superadmin` (encrypted, out-of-band) —
+// never assignable through the generic user-edit endpoint.
+const ADMIN_ASSIGNABLE_ROLES = [
+  USER_ROLES.ADMIN,
+  USER_ROLES.CONTENT_EDITOR,
+  USER_ROLES.FREELANCER,
+  USER_ROLES.CLIENT,
+  USER_ROLES.PUBLIC_VIEWER
+];
 const FreelancerProfile = require('../../models/FreelancerProfile');
 const ClientProfile = require('../../models/ClientProfile');
 const Contract = require('../../models/Contract');
@@ -32,9 +44,9 @@ const getUsers = async (req, res) => {
     const {
       role, search, isBlocked, showDeleted,
       dateFrom, dateTo,
-      sortBy = 'createdAt', order = 'desc',
-      page = 1, limit = 20
+      sortBy = 'createdAt', order = 'desc'
     } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const filter = { isSystemAccount: { $ne: true } }; // hide the Support system account
 
@@ -73,7 +85,6 @@ const getUsers = async (req, res) => {
       ];
     }
 
-    const skip  = (parseInt(page) - 1) * parseInt(limit);
     const sort  = { [sortBy]: order === 'asc' ? 1 : -1 };
 
     const [users, total] = await Promise.all([
@@ -81,7 +92,7 @@ const getUsers = async (req, res) => {
         .select('-password -passwordResetToken')
         .sort(sort)
         .skip(skip)
-        .limit(parseInt(limit))
+        .limit(limit)
         .lean(),
       User.countDocuments(filter)
     ]);
@@ -151,6 +162,10 @@ const editUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (req.body.role !== undefined && !ADMIN_ASSIGNABLE_ROLES.includes(req.body.role)) {
+      return res.status(400).json({ success: false, message: 'Invalid or non-assignable role' });
+    }
 
     const allowedFields = ['firstName', 'lastName', 'phone', 'role', 'isEmailVerified'];
     const prev = {};

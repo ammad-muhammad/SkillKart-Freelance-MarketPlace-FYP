@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { paymentsAPI } from '../../api/payments';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../utils/safeToast';
 
 export default function StripeCallback() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [status, setStatus] = useState('Verifying your Stripe account...');
+  const [status] = useState('Verifying your Stripe account...');
 
   useEffect(() => {
     const verifyStripe = async () => {

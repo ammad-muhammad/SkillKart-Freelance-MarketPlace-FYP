@@ -15,6 +15,7 @@ import {
   adminReports, adminChat, adminWallets, adminPayments
 } from '../../api/adminPanel';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 
 // ─── Shared bits ───────────────────────────────────────────────
 const BackButton = ({ to, label }) => {
@@ -329,10 +330,11 @@ export const EditUserModal = ({ open, user, onClose, onSaved }) => {
       </div>
       <div className="ap-form-group">
         <label className="ap-label">Role</label>
-        <select className="ap-select" value={form.role || 'client'} onChange={e => set('role', e.target.value)}>
-          <option value="client">client</option>
-          <option value="freelancer">freelancer</option>
-        </select>
+        <CustomSelect
+          value={form.role || 'client'}
+          onChange={val => set('role', val)}
+          options={['client', 'freelancer']}
+        />
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--ap-text-secondary)', cursor: 'pointer' }}>
         <input type="checkbox" checked={!!form.isEmailVerified} onChange={e => set('isEmailVerified', e.target.checked)} />
@@ -475,9 +477,9 @@ const useUserProfile = (userId, deps = []) => {
     try { const res = await adminUsers.getProfile(userId); setProfile(res?.profile || null); }
     catch { setProfile(null); }
     finally { setLoading(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
-  useEffect(() => { reload(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [reload, ...deps]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { reload(); }, [reload, ...deps]);
   return { profile, loading, reload };
 };
 
@@ -628,10 +630,13 @@ export const VerificationPanel = ({ user, onChange }) => {
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <StatusBadge status={profile.verificationStatus} />
-              <select className="ap-select" style={{ maxWidth: 150 }} disabled={busy} value={profile.verificationStatus || 'unverified'}
-                onChange={e => act(() => adminUsers.setVerification(user._id, { status: e.target.value }))}>
-                {['unverified', 'pending', 'verified', ...(isFreelancer ? [] : ['rejected'])].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <CustomSelect
+                compact
+                disabled={busy}
+                value={profile.verificationStatus || 'unverified'}
+                onChange={val => act(() => adminUsers.setVerification(user._id, { status: val }))}
+                options={['unverified', 'pending', 'verified', ...(isFreelancer ? [] : ['rejected'])]}
+              />
             </div>
           </div>
         )}
@@ -778,9 +783,9 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Experience</label>
-              <select className="ap-select" value={form.experienceLevel} onChange={e => set('experienceLevel', e.target.value)}>{['Entry', 'Intermediate', 'Expert'].map(x => <option key={x}>{x}</option>)}</select></div>
+              <CustomSelect value={form.experienceLevel} onChange={val => set('experienceLevel', val)} options={['Entry', 'Intermediate', 'Expert']} /></div>
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Availability</label>
-              <select className="ap-select" value={form.availability} onChange={e => set('availability', e.target.value)}>{['full-time', 'part-time', 'contract', 'not-available'].map(x => <option key={x}>{x}</option>)}</select></div>
+              <CustomSelect value={form.availability} onChange={val => set('availability', val)} options={['full-time', 'part-time', 'contract', 'not-available']} /></div>
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Timezone</label><input className="ap-input" value={form.timezone} onChange={e => set('timezone', e.target.value)} /></div>
           </div>
 
@@ -789,8 +794,8 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
             {form.skills.map((s, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                 <input className="ap-input" style={{ flex: 2 }} placeholder="Skill name" value={s.name} onChange={e => setSkill(i, 'name', e.target.value)} />
-                <select className="ap-select" style={{ flex: 1 }} value={s.level} onChange={e => setSkill(i, 'level', e.target.value)}>{SKILL_LEVELS.map(l => <option key={l}>{l}</option>)}</select>
-                <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => removeSkill(i)}>✕</button>
+                <CustomSelect className="ap-flex1" value={s.level} onChange={val => setSkill(i, 'level', val)} options={SKILL_LEVELS} />
+                <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => removeSkill(i)} aria-label={`Remove skill${s.name ? `: ${s.name}` : ''}`}>✕</button>
               </div>
             ))}
             <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={addSkill}>+ Add skill</button>
@@ -802,8 +807,8 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
             {(form.languages || []).map((l, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                 <input className="ap-input" style={{ flex: 2 }} placeholder="Language" value={l.language} onChange={e => setLang(i, 'language', e.target.value)} />
-                <select className="ap-select" style={{ flex: 1 }} value={l.proficiency} onChange={e => setLang(i, 'proficiency', e.target.value)}>{PROFICIENCY.map(p => <option key={p}>{p}</option>)}</select>
-                <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => removeLang(i)}>✕</button>
+                <CustomSelect className="ap-flex1" value={l.proficiency} onChange={val => setLang(i, 'proficiency', val)} options={PROFICIENCY} />
+                <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => removeLang(i)} aria-label={`Remove language${l.language ? `: ${l.language}` : ''}`}>✕</button>
               </div>
             ))}
             <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={addLang}>+ Add language</button>
@@ -824,7 +829,7 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
           <div style={{ display: 'flex', gap: 12 }}>
             <div className="ap-form-group" style={{ flex: 2 }}><label className="ap-label">Company name</label><input className="ap-input" value={form.companyName} onChange={e => set('companyName', e.target.value)} /></div>
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Type</label>
-              <select className="ap-select" value={form.companyType} onChange={e => set('companyType', e.target.value)}>{['Individual', 'Startup', 'SME', 'Enterprise'].map(x => <option key={x}>{x}</option>)}</select></div>
+              <CustomSelect value={form.companyType} onChange={val => set('companyType', val)} options={['Individual', 'Startup', 'SME', 'Enterprise']} /></div>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Company size</label><input className="ap-input" value={form.companySize} onChange={e => set('companySize', e.target.value)} /></div>
@@ -1147,10 +1152,12 @@ export const EditJobModal = ({ open, job, onClose, onSaved }) => {
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Category</label>
-          <select className="ap-select" value={form.category || ''} onChange={e => set('category', e.target.value)}>
-            <option value="">— none —</option>
-            {JOB_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <CustomSelect
+            value={form.category || ''}
+            onChange={val => set('category', val)}
+            placeholder="— none —"
+            options={JOB_CATEGORIES}
+          />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Subcategory</label>
@@ -1161,23 +1168,25 @@ export const EditJobModal = ({ open, job, onClose, onSaved }) => {
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Status</label>
-          <select className="ap-select" value={form.status || 'open'} onChange={e => set('status', e.target.value)}>
-            {JOB_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <CustomSelect value={form.status || 'open'} onChange={val => set('status', val)} options={JOB_STATUSES} />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Experience level</label>
-          <select className="ap-select" value={form.experienceLevel || ''} onChange={e => set('experienceLevel', e.target.value)}>
-            <option value="">— none —</option>
-            {JOB_EXPERIENCE.map(x => <option key={x} value={x}>{x}</option>)}
-          </select>
+          <CustomSelect
+            value={form.experienceLevel || ''}
+            onChange={val => set('experienceLevel', val)}
+            placeholder="— none —"
+            options={JOB_EXPERIENCE}
+          />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Duration</label>
-          <select className="ap-select" value={form.duration || ''} onChange={e => set('duration', e.target.value)}>
-            <option value="">— none —</option>
-            {JOB_DURATIONS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+          <CustomSelect
+            value={form.duration || ''}
+            onChange={val => set('duration', val)}
+            placeholder="— none —"
+            options={JOB_DURATIONS}
+          />
         </div>
       </div>
 
@@ -1193,7 +1202,7 @@ export const EditJobModal = ({ open, job, onClose, onSaved }) => {
           {(form.skills || []).map((s, i) => (
             <span key={i} className="ap-badge ap-badge-blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               {s}
-              <button type="button" onClick={() => removeSkill(i)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>✕</button>
+              <button type="button" onClick={() => removeSkill(i)} aria-label={`Remove skill: ${s}`} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>✕</button>
             </span>
           ))}
           {(!form.skills || form.skills.length === 0) && <span style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>No skills</span>}
@@ -1203,10 +1212,7 @@ export const EditJobModal = ({ open, job, onClose, onSaved }) => {
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Budget type</label>
-          <select className="ap-select" value={form.budgetType || 'fixed'} onChange={e => set('budgetType', e.target.value)}>
-            <option value="fixed">fixed</option>
-            <option value="hourly">hourly</option>
-          </select>
+          <CustomSelect value={form.budgetType || 'fixed'} onChange={val => set('budgetType', val)} options={['fixed', 'hourly']} />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Budget min (PKR)</label>
@@ -1278,7 +1284,7 @@ export const ContractDetailPage = () => {
     <div><BackButton to="/admin-panel/contracts" label="Back to Contracts" /><AdminEmptyState icon="📋" title="Contract not found" /></div>
   );
 
-  const { contract, history = [], timeLogs = [], payment, deliveries = [] } = payload;
+  const { contract, history = [], timeLogs = [], payments = [], deliveries = [] } = payload;
   const active   = ['active', 'in_revision', 'delivered', 'under_review'].includes(contract.status);
   const paused   = contract.status === 'paused';
   const closed   = ['completed', 'cancelled'].includes(contract.status);
@@ -1321,16 +1327,19 @@ export const ContractDetailPage = () => {
           <InfoRow label="Completed">{fmt.datetime(contract.completedAt)}</InfoRow>
           {contract.jobId && <InfoRow label="Job"><Link to={`/admin-panel/jobs/${contract.jobId._id}`} style={{ color: 'var(--ap-text-link)' }}>View job →</Link></InfoRow>}
         </Card>
-        <Card title="Escrow Payment">
-          {payment ? (
-            <>
-              <InfoRow label="Status"><StatusBadge status={payment.status} /></InfoRow>
-              <InfoRow label="Total">{fmt.currency(payment.totalAmount, payment.currency)}</InfoRow>
-              <InfoRow label="Deposit">{fmt.currency(payment.depositAmount, payment.currency)}</InfoRow>
-              <InfoRow label="Platform fee">{fmt.currency(payment.platformFee, payment.currency)}</InfoRow>
-              <InfoRow label="Freelancer payout">{fmt.currency(payment.freelancerPayout, payment.currency)}</InfoRow>
-              <InfoRow label="Released at">{fmt.datetime(payment.releasedAt)}</InfoRow>
-            </>
+        <Card title={`Escrow Payment${payments.length > 1 ? 's' : ''}`}>
+          {payments.length ? (
+            payments.map((payment, i) => (
+              <div key={payment._id} style={i > 0 ? { marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--ap-border)' } : undefined}>
+                {payments.length > 1 && <InfoRow label="Payment">{payment.type}</InfoRow>}
+                <InfoRow label="Status"><StatusBadge status={payment.status} /></InfoRow>
+                <InfoRow label="Total">{fmt.currency(payment.totalAmount, payment.currency)}</InfoRow>
+                <InfoRow label="Deposit">{fmt.currency(payment.depositAmount, payment.currency)}</InfoRow>
+                <InfoRow label="Platform fee">{fmt.currency(payment.platformFee, payment.currency)}</InfoRow>
+                <InfoRow label="Freelancer payout">{fmt.currency(payment.freelancerPayout, payment.currency)}</InfoRow>
+                <InfoRow label="Released at">{fmt.datetime(payment.releasedAt)}</InfoRow>
+              </div>
+            ))
           ) : <AdminEmptyState icon="💳" title="No escrow yet" />}
           {contract.dispute?.status && (
             <div className="ap-alert ap-alert-warning" style={{ marginTop: 16 }}>
@@ -1487,9 +1496,11 @@ export const EditContractModal = ({ open, contract, onClose, onSaved }) => {
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Status</label>
-          <select className="ap-select" value={form.status || 'active'} onChange={e => set('status', e.target.value)}>
-            {CONTRACT_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-          </select>
+          <CustomSelect
+            value={form.status || 'active'}
+            onChange={val => set('status', val)}
+            options={CONTRACT_STATUSES.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
+          />
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
@@ -1849,7 +1860,6 @@ export const DisputeDetailPage = () => {
 // ═══════════════════════════════════════════════════════════════
 export const ReportDetailPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [report, setReport]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -2140,8 +2150,13 @@ export const PaymentDetailPage = () => {
           <InfoRow label="Status"><StatusBadge status={payment.status} /></InfoRow>
           <InfoRow label="Type">{payment.type}</InfoRow>
           <InfoRow label="Total">{fmt.currency(payment.totalAmount, payment.currency)}</InfoRow>
-          <InfoRow label="Deposit (50%)">{fmt.currency(payment.depositAmount, payment.currency)}</InfoRow>
-          <InfoRow label="Final (50%)">{fmt.currency(payment.finalAmount, payment.currency)}</InfoRow>
+          {payment.type === 'job_escrow' && <>
+            {/* The 50/50 deposit/final split only exists for the legacy Gig-order
+                flow (Payment.type: 'job_escrow') — fixed-price milestones and
+                hourly wallet-lock escrow are never split this way. */}
+            <InfoRow label="Deposit (50%)">{fmt.currency(payment.depositAmount, payment.currency)}</InfoRow>
+            <InfoRow label="Final (50%)">{fmt.currency(payment.finalAmount, payment.currency)}</InfoRow>
+          </>}
           <InfoRow label="Fee rate">{payment.feeRate != null ? `${(payment.feeRate * 100).toFixed(2)}%` : '—'}</InfoRow>
           <InfoRow label="Platform fee">{fmt.currency(payment.platformFee, payment.currency)}</InfoRow>
           <InfoRow label="Freelancer payout">{fmt.currency(payment.freelancerPayout, payment.currency)}</InfoRow>
@@ -2156,7 +2171,7 @@ export const PaymentDetailPage = () => {
           {payment.contractId && <InfoRow label="Contract"><Link to={`/admin-panel/contracts/${payment.contractId._id || payment.contractId}`} style={{ color: 'var(--ap-text-link)' }}>View contract →</Link></InfoRow>}
           {payment.jobId && <InfoRow label="Job"><Link to={`/admin-panel/jobs/${payment.jobId._id || payment.jobId}`} style={{ color: 'var(--ap-text-link)' }}>View job →</Link></InfoRow>}
           <InfoRow label="Created">{fmt.datetime(payment.createdAt)}</InfoRow>
-          <InfoRow label="Deposit paid at">{fmt.datetime(payment.depositPaidAt)}</InfoRow>
+          {payment.type === 'job_escrow' && <InfoRow label="Deposit paid at">{fmt.datetime(payment.depositPaidAt)}</InfoRow>}
           <InfoRow label="Released at">{fmt.datetime(payment.releasedAt)}</InfoRow>
           {payment.stripe?.simulated && <InfoRow label="Stripe">Simulated (test)</InfoRow>}
         </Card>

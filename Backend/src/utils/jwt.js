@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const { UnauthorizedError } = require('./apiError');
 
 /**
  * Generate access token
@@ -25,14 +26,18 @@ const generateToken = (user) => {
 /**
  * Generate refresh token
  * @param {Object} user - User object
+ * @param {String} jti - unique id for this refresh token, tracked in the
+ *   RefreshToken collection so it can be revoked/rotated server-side — a
+ *   valid signature alone no longer means a refresh token is still usable.
  * @returns {String} Refresh token
  */
-const generateRefreshToken = (user) => {
+const generateRefreshToken = (user, jti) => {
   const payload = {
     userId: user._id || user.id || 'superadmin',
     email: user.email,
     tv: user.tokenVersion || 0,
-    type: 'refresh'
+    type: 'refresh',
+    jti
   };
 
   return jwt.sign(payload, config.jwt.refreshSecret, {
@@ -56,10 +61,10 @@ const verifyToken = (token) => {
     });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      throw new Error('Token expired');
+      throw new UnauthorizedError('Token expired');
     }
     if (error.name === 'JsonWebTokenError') {
-      throw new Error('Invalid token');
+      throw new UnauthorizedError('Invalid token');
     }
     throw error;
   }
@@ -79,10 +84,10 @@ const verifyRefreshToken = (token) => {
     });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      throw new Error('Refresh token expired');
+      throw new UnauthorizedError('Refresh token expired');
     }
     if (error.name === 'JsonWebTokenError') {
-      throw new Error('Invalid refresh token');
+      throw new UnauthorizedError('Invalid refresh token');
     }
     throw error;
   }
@@ -99,18 +104,6 @@ const decodeToken = (token) => {
   } catch (error) {
     return null;
   }
-};
-
-/**
- * Generate tokens pair
- * @param {Object} user - User object
- * @returns {Object} Object with accessToken and refreshToken
- */
-const generateTokenPair = (user) => {
-  return {
-    accessToken: generateToken(user),
-    refreshToken: generateRefreshToken(user)
-  };
 };
 
 /**
@@ -166,7 +159,6 @@ module.exports = {
   verifyToken,
   verifyRefreshToken,
   decodeToken,
-  generateTokenPair,
   extractTokenFromHeader,
   isTokenExpired,
   getTokenExpiration

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { adminUsers } from '../../api/adminPanel';
 import {
@@ -6,12 +6,13 @@ import {
   ConfirmDialog, ExportButtons, AdminFilterBar, SkeletonTable, AdminUserAvatar, fmt
 } from '../../Components/adminPanel/AdminCommon';
 import { EditUserModal } from './AdminDetailPages';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 
 const ROLES = ['all', 'freelancer', 'client'];
 
 const UsersPage = () => {
   const navigate = useNavigate();
-  const [sp, setSp] = useSearchParams();
+  const [sp] = useSearchParams();
 
   // ── State ──────────────────────────────────────────────────────
   const [users, setUsers]       = useState([]);
@@ -22,6 +23,8 @@ const UsersPage = () => {
   // Filters
   const [role, setRole]         = useState(sp.get('role') || 'all');
   const [search, setSearch]     = useState(sp.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(sp.get('search') || '');
+  const loadSeq = useRef(0); // ignore stale load() responses that resolve after a newer request started
   const [isBlocked, setBlocked] = useState(sp.get('isBlocked') || '');
   const [page, setPage]         = useState(Number(sp.get('page')) || 1);
 
@@ -33,11 +36,12 @@ const UsersPage = () => {
 
   // ── Fetch ──────────────────────────────────────────────────────
   const load = useCallback(async (params = {}) => {
+    const requestId = ++loadSeq.current;
     setLoading(true);
     try {
       const p = {
         role: params.role ?? role,
-        search: params.search ?? search,
+        search: params.search ?? debouncedSearch,
         isBlocked: params.isBlocked ?? isBlocked,
         page: params.page ?? page,
         limit: 20,
@@ -47,20 +51,34 @@ const UsersPage = () => {
       Object.keys(p).forEach(k => (p[k] === '' || p[k] === 'all') && delete p[k]);
 
       const res = await adminUsers.list(p);
+      if (requestId !== loadSeq.current) return; // a newer request has since started — ignore this stale response
       setUsers(res?.users || []);
       setPag(res?.pagination || { total: 0, page: 1, limit: 20, pages: 1 });
     } catch (err) {
+      if (requestId !== loadSeq.current) return;
       console.error('[Users] load error:', err);
     } finally {
-      setLoading(false);
+      if (requestId === loadSeq.current) setLoading(false);
     }
-  }, [role, search, isBlocked, page]);
+  }, [role, debouncedSearch, isBlocked, page]);
 
   useEffect(() => { load(); }, [load]);
 
+  // Debounce the search box so it doesn't fire a request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   // ── Handlers ────────────────────────────────────────────────────
   const changeRole = (r) => { setRole(r); setPage(1); };
-  const handleSearch = (e) => { if (e.key === 'Enter') { setPage(1); load({ search: e.target.value, page: 1 }); } };
+  const handleSearch = (e) => {
+    if (e.key === 'Enter') {
+      setPage(1);
+      setDebouncedSearch(e.target.value);
+      load({ search: e.target.value, page: 1 });
+    }
+  };
 
   const doSuspend = async () => {
     if (!suspendTarget) return;
@@ -137,16 +155,13 @@ const UsersPage = () => {
           onKeyDown={handleSearch}
           onChange={e => setSearch(e.target.value)}
         />
-        <select
-          className="ap-select"
-          style={{ maxWidth: 160 }}
+        <CustomSelect
+          compact
           value={isBlocked}
-          onChange={e => { setBlocked(e.target.value); setPage(1); }}
-        >
-          <option value="">All statuses</option>
-          <option value="false">Active</option>
-          <option value="true">Suspended</option>
-        </select>
+          onChange={val => { setBlocked(val); setPage(1); }}
+          placeholder="All statuses"
+          options={[{ value: '', label: 'All statuses' }, { value: 'false', label: 'Active' }, { value: 'true', label: 'Suspended' }]}
+        />
         <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => load()}>
           🔄 Refresh
         </button>

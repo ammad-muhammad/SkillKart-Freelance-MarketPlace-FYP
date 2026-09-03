@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Check, CheckCheck } from 'lucide-react';
 import { notificationsAPI } from '../../../api/notifications';
