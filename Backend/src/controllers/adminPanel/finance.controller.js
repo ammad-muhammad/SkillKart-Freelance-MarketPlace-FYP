@@ -5,6 +5,7 @@ const Withdrawal = require('../../models/Withdrawal');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
+const { parsePagination } = require('../../utils/helpers');
 
 const PAYMENT_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -19,7 +20,8 @@ const PAYMENT_COLUMNS = [
 
 const getPayments = async (req, res) => {
   try {
-    const { status, clientId, freelancerId, amountMin, amountMax, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
+    const { status, clientId, freelancerId, amountMin, amountMax, dateFrom, dateTo } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
     if (status) filter.status = status;
     if (clientId) filter.clientId = clientId;
@@ -27,17 +29,16 @@ const getPayments = async (req, res) => {
     if (dateFrom || dateTo) { filter.createdAt = {}; if (dateFrom) filter.createdAt.$gte = new Date(dateFrom); if (dateTo) filter.createdAt.$lte = new Date(dateTo); }
     if (amountMin || amountMax) { filter.totalAmount = {}; if (amountMin) filter.totalAmount.$gte = parseFloat(amountMin); if (amountMax) filter.totalAmount.$lte = parseFloat(amountMax); }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [payments, total] = await Promise.all([
       Payment.find(filter)
         .populate('clientId', 'email firstName lastName')
         .populate('freelancerId', 'email firstName lastName')
         .populate('contractId', 'type status')
-        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+        .sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Payment.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ success: true, payments, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, payments, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load payments' });
   }
@@ -193,18 +194,18 @@ const releaseEscrow = async (req, res) => {
 
 const getWallets = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { page, limit, skip } = parsePagination(req.query);
+    const halfLimit = Math.max(1, Math.floor(limit / 2));
 
     const [freelancers, clients, totalF, totalC] = await Promise.all([
       FreelancerProfile.find({ walletBalance: { $gt: 0 } })
         .populate('userId', 'email firstName lastName')
         .select('userId walletBalance totalEarnings isFrozenWallet walletFrozenAt')
-        .skip(skip).limit(parseInt(limit) / 2).lean(),
+        .skip(skip).limit(halfLimit).lean(),
       ClientProfile.find({ walletBalance: { $gt: 0 } })
         .populate('userId', 'email firstName lastName')
         .select('userId walletBalance totalSpent isFrozenWallet walletFrozenAt')
-        .skip(skip).limit(parseInt(limit) / 2).lean(),
+        .skip(skip).limit(halfLimit).lean(),
       FreelancerProfile.countDocuments({ walletBalance: { $gt: 0 } }),
       ClientProfile.countDocuments({ walletBalance: { $gt: 0 } })
     ]);
@@ -321,20 +322,20 @@ const WITHDRAWAL_COLUMNS = [
 
 const getWithdrawals = async (req, res) => {
   try {
-    const { status, method, page = 1, limit = 20 } = req.query;
+    const { status, method } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
     if (status) filter.status = status;
     if (method) filter.method = method;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [withdrawals, total] = await Promise.all([
       Withdrawal.find(filter)
         .populate('userId', 'email firstName lastName')
-        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+        .sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Withdrawal.countDocuments(filter)
     ]);
 
-    return res.status(200).json({ success: true, withdrawals, pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) } });
+    return res.status(200).json({ success: true, withdrawals, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load withdrawals' });
   }
@@ -398,26 +399,31 @@ const TRANSACTION_COLUMNS = [
 
 const getTransactions = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { page, limit, skip } = parsePagination(req.query);
+    const halfLimit = Math.max(1, Math.floor(limit / 2));
 
-    const [payments, withdrawals, total] = await Promise.all([
+    const [payments, withdrawals, paymentCount, withdrawalCount] = await Promise.all([
       Payment.find()
         .populate('clientId', 'email firstName lastName')
         .populate('freelancerId', 'email firstName lastName')
-        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit) / 2).lean(),
+        .sort({ createdAt: -1 }).skip(skip).limit(halfLimit).lean(),
       Withdrawal.find()
         .populate('userId', 'email firstName lastName')
-        .sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit) / 2).lean(),
-      Payment.countDocuments() + Withdrawal.countDocuments()
+        .sort({ createdAt: -1 }).skip(skip).limit(halfLimit).lean(),
+      Payment.countDocuments(),
+      Withdrawal.countDocuments()
     ]);
+    const total = paymentCount + withdrawalCount;
 
     const transactions = [
       ...payments.map(p => ({ ...p, transactionType: 'payment' })),
       ...withdrawals.map(w => ({ ...w, transactionType: 'withdrawal', amount: w.amount, currency: 'PKR' }))
     ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    return res.status(200).json({ success: true, transactions });
+    return res.status(200).json({
+      success: true, transactions,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load transactions' });
   }

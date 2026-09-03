@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Trash2, Inbox } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../utils/safeToast';
 import { notificationsAPI } from '../../api/notifications';
 import { useNotification } from '../../context/NotificationContext';
 import './NotificationsPage.css';

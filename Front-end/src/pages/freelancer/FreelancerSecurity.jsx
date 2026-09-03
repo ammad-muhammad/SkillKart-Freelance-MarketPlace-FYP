@@ -109,7 +109,7 @@ const FreelancerSecurity = () => {
       });
       setOtpTimer(60);
       showToast('New verification code sent');
-    } catch (error) {
+    } catch {
       showToast('Failed to resend code', 'error');
     }
   };
@@ -175,7 +175,7 @@ const FreelancerSecurity = () => {
       await authAPI.requestPasswordReset({ email: profile?.personalInfo?.email });
       setForgotSent(true);
       showToast('OTP sent to your email!');
-    } catch (error) {
+    } catch {
       showToast('Failed to send reset link', 'error');
     } finally {
       setSaving(false);

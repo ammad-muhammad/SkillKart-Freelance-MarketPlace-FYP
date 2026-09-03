@@ -1,8 +1,8 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X, Loader2 } from "lucide-react";
 import { freelancersAPI } from "../../api/freelancers";
-import { toast } from "react-toastify";
+import { safeToast as toast } from "../../utils/safeToast";
 import AiGenerateText from "../common/AiSuggest/AiGenerateText";
 
 const StepPortfolio = ({ formData, setFormData, errors }) => {

@@ -1,6 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { useClient } from '../../context/ClientContext';
-import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar, uploadCompanyLogo as apiUploadCompanyLogo, uploadClientCover as apiUploadCover, validateFile } from '../../utils/uploadHelper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
@@ -86,7 +85,6 @@ const EXECUTIVE_ROLES = ['Founder', 'Product Lead', 'CTO', 'Engineering Manager'
 
 const ClientProfile = () => {
   const { profile, saveProfile, showToast } = useClient();
-  const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   
@@ -128,17 +126,17 @@ const ClientProfile = () => {
     control: (base, state) => ({
       ...base,
       background: "#fff",
-      borderColor: state.isFocused ? "var(--color-primary)" : "#cbd5e1",
-      borderRadius: "10px",
-      minHeight: "42px",
+      borderColor: state.isFocused ? "var(--color-primary)" : "#d1d9e6",
+      borderRadius: "12px",
+      minHeight: "48px",
       color: "#0f172a",
       fontSize: "0.875rem",
       fontFamily: "var(--font-body)",
-      boxShadow: state.isFocused ? "0 0 0 3px rgba(4,46,76,0.08)" : "none",
+      boxShadow: state.isFocused ? "0 0 0 4px rgba(4,46,76,0.08)" : "none",
       transition: "all 0.2s ease",
       cursor: "pointer",
       "&:hover": {
-        borderColor: state.isFocused ? "var(--color-primary)" : "#94a3b8"
+        borderColor: state.isFocused ? "var(--color-primary)" : "#b7c9e2"
       }
     }),
     menu: (base) => ({
@@ -230,6 +228,7 @@ const ClientProfile = () => {
     if (editing && form.companyType !== 'Individual') {
       fetchAISuggestions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, form.companyType]);
 
   const startEdit = () => {
@@ -262,6 +261,14 @@ const ClientProfile = () => {
       if (!form.companyName?.trim()) newErrors.companyName = 'Company Name is required';
       if (!form.industry || (Array.isArray(form.industry) && form.industry.length === 0)) {
         newErrors.industry = 'Please select your Industry';
+      }
+      if (form.website?.trim()) {
+        try {
+          const url = new URL(form.website.trim());
+          if (!/^https?:$/.test(url.protocol)) throw new Error('invalid protocol');
+        } catch {
+          newErrors.website = 'Please enter a valid URL (e.g. https://company.com)';
+        }
       }
     }
     setErrors(newErrors);
@@ -369,7 +376,7 @@ const ClientProfile = () => {
       }
       setForm((p) => ({ ...p, [field]: url }));
       showToast('Image uploaded! Save profile to persist.');
-    } catch (error) {
+    } catch {
       showToast('Upload failed', 'error');
     } finally {
       setSaving(false);
@@ -494,8 +501,9 @@ const ClientProfile = () => {
         <div className="cl-form-grid">
           {/* Full Name */}
           <div className="cl-form-group">
-            <label className="cl-label">Full Name*</label>
+            <label className="cl-label" htmlFor="cp-full-name">Full Name*</label>
             <input
+              id="cp-full-name"
               type="text"
               className={`cl-input${errors.fullName ? ' cl-input--error' : ''}`}
               value={editing ? form.fullName || '' : profile?.personalInfo?.fullName || ''}
@@ -508,8 +516,9 @@ const ClientProfile = () => {
 
           {/* Username */}
           <div className="cl-form-group">
-            <label className="cl-label">Username</label>
+            <label className="cl-label" htmlFor="cp-username">Username</label>
             <input
+              id="cp-username"
               type="text"
               className="cl-input"
               value={editing ? form.username || '' : profile?.personalInfo?.username || ''}
@@ -520,8 +529,9 @@ const ClientProfile = () => {
 
           {/* Email */}
           <div className="cl-form-group">
-            <label className="cl-label">Email (Immutable)</label>
+            <label className="cl-label" htmlFor="cp-email">Email (Immutable)</label>
             <input
+              id="cp-email"
               type="email"
               className="cl-input"
               value={profile?.personalInfo?.email || ''}
@@ -531,8 +541,9 @@ const ClientProfile = () => {
 
           {/* Phone */}
           <div className="cl-form-group">
-            <label className="cl-label">Phone</label>
+            <label className="cl-label" htmlFor="cp-phone">Phone</label>
             <input
+              id="cp-phone"
               type="text"
               className="cl-input"
               value={editing ? form.phone || '' : profile?.personalInfo?.phone || ''}
@@ -544,9 +555,10 @@ const ClientProfile = () => {
 
           {/* Organization Type */}
           <div className="cl-form-group">
-            <label className="cl-label">Organization Type*</label>
+            <label className="cl-label" htmlFor="cp-org-type">Organization Type*</label>
             {editing ? (
               <Select
+                inputId="cp-org-type"
                 options={COMPANY_TYPE_OPTIONS}
                 value={COMPANY_TYPE_OPTIONS.find(o => o.value === form.companyType) || null}
                 onChange={(val) => {
@@ -576,8 +588,9 @@ const ClientProfile = () => {
           {/* Company Name - Hidden for Individuals */}
           {data.companyType !== 'Individual' && (
             <div className="cl-form-group">
-              <label className="cl-label">Company Name*</label>
+              <label className="cl-label" htmlFor="cp-company-name">Company Name*</label>
               <input
+                id="cp-company-name"
                 type="text"
                 className={`cl-input${errors.companyName ? ' cl-input--error' : ''}`}
                 value={editing ? form.companyName || '' : profile?.personalInfo?.companyName || ''}
@@ -656,9 +669,10 @@ const ClientProfile = () => {
 
           {/* Country */}
           <div className="cl-form-group">
-            <label className="cl-label">Country / Location*</label>
+            <label className="cl-label" htmlFor="cp-country">Country / Location*</label>
             {editing ? (
               <Select
+                inputId="cp-country"
                 options={countryOptions}
                 value={form.location ? countryOptions.find(opt => opt.label === form.location) : null}
                 onChange={(val) => setForm(p => ({ ...p, location: val ? val.label : '' }))}
@@ -678,9 +692,10 @@ const ClientProfile = () => {
 
           {/* Timezone */}
           <div className="cl-form-group">
-            <label className="cl-label">Timezone / Base Location</label>
+            <label className="cl-label" htmlFor="cp-timezone">Timezone / Base Location</label>
             {editing ? (
               <Select
+                inputId="cp-timezone"
                 options={timezones}
                 value={form.timezone ? timezones.find(t => t.label === form.timezone) : null}
                 onChange={(val) => setForm(p => ({ ...p, timezone: val ? val.label : '' }))}
@@ -700,10 +715,11 @@ const ClientProfile = () => {
 
           {/* LinkedIn Profile */}
           <div className="cl-form-group">
-            <label className="cl-label">LinkedIn Profile (Optional)</label>
+            <label className="cl-label" htmlFor="cp-linkedin">LinkedIn Profile (Optional)</label>
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }}><Building2 size={16} /></div>
               <input
+                id="cp-linkedin"
                 type="text"
                 className="cl-input"
                 style={{ paddingLeft: '38px' }}
@@ -718,23 +734,26 @@ const ClientProfile = () => {
           {/* Website - Hidden for Individuals */}
           {data.companyType !== 'Individual' && (
             <div className="cl-form-group">
-              <label className="cl-label">Website</label>
+              <label className="cl-label" htmlFor="cp-website">Website</label>
               <input
+                id="cp-website"
                 type="url"
-                className="cl-input"
+                className={`cl-input${errors.website ? ' cl-input--error' : ''}`}
                 value={editing ? form.website || '' : profile?.personalInfo?.website || ''}
                 onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))}
                 disabled={!editing}
                 placeholder="https://company.com"
               />
+              {editing && errors.website && <span className="cl-error"><AlertTriangle size={12} /> {errors.website}</span>}
             </div>
           )}
 
           {/* Hiring Experience */}
           <div className="cl-form-group">
-            <label className="cl-label">Hiring Experience*</label>
+            <label className="cl-label" htmlFor="cp-hiring-exp">Hiring Experience*</label>
             {editing ? (
               <Select
+                inputId="cp-hiring-exp"
                 options={HIRING_EXP_OPTIONS}
                 value={HIRING_EXP_OPTIONS.find(o => o.value === form.isNewToHiring) || null}
                 onChange={(val) => setForm(p => ({ ...p, isNewToHiring: val ? val.value : '' }))}
@@ -777,8 +796,9 @@ const ClientProfile = () => {
 
           {/* Bio */}
           <div className="cl-form-group full">
-            <label className="cl-label">Bio / About yourself*</label>
+            <label className="cl-label" htmlFor="cp-bio">Bio / About yourself*</label>
             <textarea
+              id="cp-bio"
               className={`cl-textarea${errors.bio ? ' cl-input--error' : ''}`}
               maxLength={MAX_BIO}
               rows={4}
@@ -825,9 +845,10 @@ const ClientProfile = () => {
           {languages.map((lang, idx) => (
             <div key={idx} style={{ display: 'grid', gridTemplateColumns: editing ? '1fr 1fr auto' : '1fr 1fr', gap: '1rem', alignItems: 'end', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e5edf5' }}>
               <div className="cl-form-group" style={{ marginBottom: 0 }}>
-                <label className="cl-label">Language</label>
+                <label className="cl-label" htmlFor={`cp-lang-${idx}`}>Language</label>
                 {editing ? (
                   <Select
+                    inputId={`cp-lang-${idx}`}
                     options={languageOptions}
                     value={lang.language ? { value: lang.language, label: lang.language } : null}
                     onChange={(selected) => {
@@ -843,9 +864,10 @@ const ClientProfile = () => {
                 ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? lang : (lang?.language || 'Unknown')}</div>}
               </div>
               <div className="cl-form-group" style={{ marginBottom: 0 }}>
-                <label className="cl-label">Proficiency</label>
+                <label className="cl-label" htmlFor={`cp-prof-${idx}`}>Proficiency</label>
                 {editing ? (
                   <Select
+                    inputId={`cp-prof-${idx}`}
                     options={PROFICIENCY_SELECT_OPTIONS}
                     value={PROFICIENCY_SELECT_OPTIONS.find(o => o.value.toLowerCase() === (lang.proficiency || 'fluent').toLowerCase()) || PROFICIENCY_SELECT_OPTIONS[2]}
                     onChange={(selected) => {
@@ -897,9 +919,10 @@ const ClientProfile = () => {
         <div className="cl-form-grid" style={{ marginBottom: '1.25rem' }}>
           {/* Budget Allocation */}
           <div className="cl-form-group">
-            <label className="cl-label">Budget Allocation</label>
+            <label className="cl-label" htmlFor="cp-budget">Budget Allocation</label>
             {editing ? (
               <Select
+                inputId="cp-budget"
                 options={budgetOptions}
                 value={currentBudgetOption}
                 onChange={(opt) => setBudgetRange({ min: opt ? opt.min : 0, max: opt ? opt.max : 0 })}
@@ -914,9 +937,10 @@ const ClientProfile = () => {
 
           {/* Engagement Type */}
           <div className="cl-form-group">
-            <label className="cl-label">Engagement Type</label>
+            <label className="cl-label" htmlFor="cp-engagement">Engagement Type</label>
             {editing ? (
               <Select
+                inputId="cp-engagement"
                 options={ENGAGEMENT_OPTIONS}
                 value={ENGAGEMENT_OPTIONS.find(o => o.value === hiringFrequency) || null}
                 onChange={(val) => setHiringFrequency(val ? val.value : '')}
@@ -936,10 +960,11 @@ const ClientProfile = () => {
           {editing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="cl-label">Technical Complexity Awareness</span>
+                <label className="cl-label" htmlFor="cp-tech-understanding">Technical Complexity Awareness</label>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)' }}>{technicalUnderstanding}/10</span>
               </div>
               <input
+                id="cp-tech-understanding"
                 type="range"
                 min="1"
                 max="10"
@@ -968,9 +993,10 @@ const ClientProfile = () => {
 
         {/* Project Urgency */}
         <div className="cl-form-group" style={{ marginBottom: '1.5rem' }}>
-          <label className="cl-label">Project Urgency</label>
+          <label className="cl-label" htmlFor="cp-urgency">Project Urgency</label>
           {editing ? (
             <Select
+              inputId="cp-urgency"
               options={URGENCY_OPTIONS}
               value={URGENCY_OPTIONS.find(o => o.value === urgency) || null}
               onChange={(val) => setUrgency(val ? val.value : '')}

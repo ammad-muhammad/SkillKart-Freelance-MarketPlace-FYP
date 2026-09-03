@@ -199,6 +199,7 @@ export default function BrowseFreelancers() {
 
     const isMounted = useRef(true);
     useEffect(() => () => { isMounted.current = false; }, []);
+    const fetchSeq = useRef(0); // ignore a response if a newer filter-change request has since started
 
     /* set page title */
     useEffect(() => {
@@ -215,6 +216,7 @@ export default function BrowseFreelancers() {
 
     /* fetch real freelancers from the API (no mock fallback) */
     const fetchFreelancers = useCallback(async () => {
+        const requestId = ++fetchSeq.current;
         setLoading(true);
         setError(null);
         try {
@@ -229,13 +231,13 @@ export default function BrowseFreelancers() {
                 limit: PER_PAGE,
             };
             const res = await freelancersAPI.search(params);
-            if (!isMounted.current) return;
+            if (!isMounted.current || requestId !== fetchSeq.current) return;
             // sendPaginated → { data: [...profiles], meta: { pagination: { total } } }
             const items = Array.isArray(res.data?.data) ? res.data.data : [];
             setFreelancers(items.map(mapProfileToCard));
             setTotal(res.data?.meta?.pagination?.total ?? items.length);
         } catch (err) {
-            if (!isMounted.current) return;
+            if (!isMounted.current || requestId !== fetchSeq.current) return;
             setFreelancers([]);
             setTotal(0);
             setError(
@@ -243,18 +245,11 @@ export default function BrowseFreelancers() {
                 'Could not load freelancers right now. Please try again.'
             );
         } finally {
-            if (isMounted.current) setLoading(false);
+            if (isMounted.current && requestId === fetchSeq.current) setLoading(false);
         }
     }, [query, minRating, maxRate, selectedSkills, location, sortBy, page]);
 
     useEffect(() => { fetchFreelancers(); }, [fetchFreelancers]);
-
-    const toggleSkill = (skill) => {
-        setSelectedSkills(prev =>
-            prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
-        );
-        setPage(1);
-    };
 
     const clearFilters = () => {
         setQuery(''); setDraftQuery(''); setMinRating(0);

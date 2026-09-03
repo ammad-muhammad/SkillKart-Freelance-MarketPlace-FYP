@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { useAuth } from '../../../hooks/useAuth';

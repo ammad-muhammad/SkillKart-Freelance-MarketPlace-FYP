@@ -67,6 +67,7 @@
     "nodemailer": "^6.9.7",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.19.1",
+    "sanitize-html": "^2.17.7",
     "skillkart-root": "file:..",
     "stripe": "^22.2.1",
     "supertest": "^7.2.2",

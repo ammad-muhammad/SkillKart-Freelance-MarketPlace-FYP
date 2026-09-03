@@ -50,4 +50,13 @@ const gigSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Matches gig.controller.js's listGigs query shape: filtered by status
+// (defaults to 'active' for public listings) and sorted by createdAt, or
+// filtered by owner (freelancerId), category/subcategory, or skills.
+gigSchema.index({ status: 1, createdAt: -1 });
+gigSchema.index({ freelancerId: 1 });
+gigSchema.index({ category: 1 });
+gigSchema.index({ subcategory: 1 });
+gigSchema.index({ skills: 1 });
+
 module.exports = mongoose.model('Gig', gigSchema);

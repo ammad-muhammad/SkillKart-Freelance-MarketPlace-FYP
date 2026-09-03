@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const NotificationContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotification = () => {
   const ctx = useContext(NotificationContext);
   if (!ctx) throw new Error('useNotification must be used inside NotificationProvider');
@@ -19,7 +20,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       const { data } = await notificationsAPI.unreadCount();
       setUnreadCount(data?.data?.unreadCount || 0);
-    } catch (error) {
+    } catch {
       // Ignore network errors in background polling
     }
   }, [user]);

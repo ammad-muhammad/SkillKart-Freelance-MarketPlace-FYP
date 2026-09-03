@@ -1,6 +1,5 @@
 const Contract = require('../models/Contract');
 const Delivery = require('../models/Delivery');
-const Payment = require('../models/Payment');
 const Job = require('../models/Job');
 const Milestone = require('../models/Milestone');
 const { sendSuccess } = require('../utils/apiResponse');
@@ -9,6 +8,8 @@ const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/api
 const notifications = require('../services/notification.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const { approveMilestone, getEscrowReleaseDays } = require('../services/milestone.service');
+const { drawDownForTimeLog, refundRemainingHourlyEscrow } = require('../services/hourlyEscrow.service');
+const TimeLog = require('../models/TimeLog');
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -170,28 +171,42 @@ const reviewDelivery = asyncHandler(async (req, res) => {
     });
   }
 
-  // Hourly contracts have no milestones — unchanged single-Payment release.
+  // Hourly contracts have no milestones and no single "job_escrow" Payment
+  // (that type belongs exclusively to the legacy gig/job 50/50 flow) — an
+  // hourly contract's money lives in contract.hourlyEscrow.lockedBalance,
+  // built up via per-logged-hour `hourly_invoice` Payments. Completing one
+  // here must settle any still-pending time logs against that lock and
+  // refund whatever's left to the client, exactly like the mutual
+  // end-contract flow (contract.controller.js's respondEndContract) already
+  // does — otherwise the remaining lock is stranded: unreachable by any
+  // further time-tracking (blocked once status is 'completed') and never
+  // refunded (that only happens via the end-request flow this bypasses).
   contract.status = 'completed';
   contract.completedAt = new Date();
-  await contract.save();
 
-  const payment = await Payment.findOne({ contractId: contract._id, type: 'job_escrow' });
-  if (payment && payment.status !== 'released') {
-    payment.platformFee = round2(payment.totalAmount * payment.feeRate);
-    payment.freelancerPayout = round2(payment.totalAmount - payment.platformFee);
-    payment.status = 'released';
-    payment.releasedAt = new Date();
-    await payment.save();
+  const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' }).sort({ startTime: 1 });
+  let totalDrawn = 0; // gross amount drawn from escrow — what the client actually spent
+  for (const log of pendingLogs) {
+    try {
+      const { amount } = await drawDownForTimeLog({ timeLog: log, contract, job });
+      totalDrawn += amount;
+    } catch (err) {
+      const reason = err.errors?.insufficientBalance ? 'escrow exhausted' : `unexpected error: ${err.message}`;
+      console.error(`[reviewDelivery] Could not settle time log ${log._id} (${reason})`);
+      break;
+    }
   }
+  await refundRemainingHourlyEscrow({ contract, job });
+
+  await contract.save();
 
   if (job && job.status !== 'completed') {
     job.status = 'completed';
     job.completedAt = new Date();
-    if (payment) {
-      await finalizeJobCompletion(job, { freelancerEarning: payment.freelancerPayout, clientSpend: payment.totalAmount });
-    } else {
-      await job.save();
-    }
+    // skipEarningsCredit: true — drawDownForTimeLog already credited the
+    // freelancer's wallet/totalEarnings per settled log above; without this
+    // flag finalizeJobCompletion would credit the same payout a second time.
+    await finalizeJobCompletion(job, { clientSpend: totalDrawn, skipEarningsCredit: true });
   }
 
   notifications.onProjectCompleted(contract.freelancerId, { job: { _id: contract.jobId } });

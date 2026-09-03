@@ -1,11 +1,14 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers, Star } from 'lucide-react';
+import { Briefcase, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers, Star } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { contractsAPI } from '../../api/contracts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
 import Modal from './components/Modal';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { deliveriesAPI } from '../../api/deliveries';
 import { timeTrackingAPI } from '../../api/timeTracking';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
@@ -36,6 +39,9 @@ export default function FreelancerWork() {
   const [delivery, setDelivery] = useState({ message: '', links: '' });
   const [delivering, setDelivering] = useState(false);
   const [tracking, setTracking] = useState({}); // state for tracking operations
+  const deliverModalRef = useRef(null);
+  const closeDeliverModal = useCallback(() => { if (!delivering) setDeliverFor(null); }, [delivering]);
+  useFocusTrap(deliverModalRef, !!deliverFor, closeDeliverModal);
   const [endRequestModal, setEndRequestModal] = useState(null); // contractId
   const [endReason, setEndReason] = useState('Work completed');
   const [endDetails, setEndDetails] = useState('');
@@ -228,9 +234,9 @@ export default function FreelancerWork() {
 
                 <div className="fl-contract__money">
                   {isFixed ? (
-                    <span><DollarSign size={14} /> Agreed: <strong>Rs. {c.fixedPrice ?? '—'}</strong></span>
+                    <span><PkrIcon size={14} /> Agreed: <strong>Rs. {c.fixedPrice ?? '—'}</strong></span>
                   ) : (
-                    <span><DollarSign size={14} /> Rate: <strong>Rs. {c.hourlyRate ?? '—'} / hr</strong> (Max {c.weeklyLimit ?? '—'} hrs/wk)</span>
+                    <span><PkrIcon size={14} /> Rate: <strong>Rs. {c.hourlyRate ?? '—'} / hr</strong> (Max {c.weeklyLimit ?? '—'} hrs/wk)</span>
                   )}
                   {isFixed && escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
                   {isFixed && c.payment?.status === 'released' && (
@@ -425,11 +431,19 @@ export default function FreelancerWork() {
 
       {/* Delivery modal */}
       {deliverFor && (
-        <div className="fl-deliver-overlay" onClick={() => !delivering && setDeliverFor(null)}>
-          <div className="fl-deliver-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="fl-deliver-overlay" onClick={closeDeliverModal}>
+          <div
+            ref={deliverModalRef}
+            className="fl-deliver-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Submit Work — ${deliverFor.title}`}
+            tabIndex={-1}
+          >
             <div className="fl-deliver-modal__head">
               <h3>Submit Work — {deliverFor.title}</h3>
-              <button onClick={() => !delivering && setDeliverFor(null)}><X size={18} /></button>
+              <button onClick={closeDeliverModal} disabled={delivering} aria-label="Close"><X size={18} /></button>
             </div>
             <div className="fl-deliver-modal__body">
               <label className="fl-label">Delivery note</label>
@@ -440,7 +454,7 @@ export default function FreelancerWork() {
                 value={delivery.links} onChange={(e) => setDelivery(d => ({ ...d, links: e.target.value }))}></textarea>
             </div>
             <div className="fl-deliver-modal__foot">
-              <button className="fl-btn fl-btn--ghost" onClick={() => setDeliverFor(null)} disabled={delivering}>Cancel</button>
+              <button className="fl-btn fl-btn--ghost" onClick={closeDeliverModal} disabled={delivering}>Cancel</button>
               <button className="fl-btn fl-btn--primary" onClick={submitDelivery} disabled={delivering}>
                 {delivering ? 'Submitting…' : 'Deliver Work'}
               </button>
@@ -456,15 +470,13 @@ export default function FreelancerWork() {
         </p>
         <form onSubmit={handleRequestEnd}>
           <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label">Reason for ending</label>
-            <select className="fl-input" value={endReason} onChange={e => setEndReason(e.target.value)} required>
-              <option value="Work completed">Work completed</option>
-              <option value="Mutual agreement">Mutual agreement</option>
-              <option value="Client no longer requires work">Client no longer requires work</option>
-              <option value="Freelancer unavailable">Freelancer unavailable</option>
-              <option value="Communication issues">Communication issues</option>
-              <option value="Other">Other</option>
-            </select>
+            <label className="fl-label" htmlFor="fw-end-reason">Reason for ending</label>
+            <CustomSelect
+              id="fw-end-reason"
+              value={endReason}
+              onChange={setEndReason}
+              options={['Work completed', 'Mutual agreement', 'Client no longer requires work', 'Freelancer unavailable', 'Communication issues', 'Other']}
+            />
           </div>
           {endReason === 'Other' && (
             <div style={{ marginBottom: '1rem' }}>

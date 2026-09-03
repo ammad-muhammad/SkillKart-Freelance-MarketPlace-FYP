@@ -4,7 +4,7 @@ const Payment = require('../../models/Payment');
 const TimeLog = require('../../models/TimeLog');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
-const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
+const { parsePagination } = require('../../utils/helpers');
 
 const CONTRACT_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -19,8 +19,9 @@ const getContracts = async (req, res) => {
   try {
     const {
       search, status, type, clientId, freelancerId,
-      dateFrom, dateTo, page = 1, limit = 20, sortBy = 'createdAt', order = 'desc'
+      dateFrom, dateTo, sortBy = 'createdAt', order = 'desc'
     } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const filter = {};
     if (status) filter.status = status;
@@ -33,7 +34,6 @@ const getContracts = async (req, res) => {
       if (dateTo)   filter.createdAt.$lte = new Date(dateTo);
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [contracts, total] = await Promise.all([
       Contract.find(filter)
         .populate('clientId', 'email firstName lastName')
@@ -41,14 +41,14 @@ const getContracts = async (req, res) => {
         .populate('jobId', 'title')
         .sort({ [sortBy]: order === 'asc' ? 1 : -1 })
         .skip(skip)
-        .limit(parseInt(limit))
+        .limit(limit)
         .lean(),
       Contract.countDocuments(filter)
     ]);
 
     return res.status(200).json({
       success: true, contracts,
-      pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) }
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load contracts' });
@@ -66,16 +66,18 @@ const getContractById = async (req, res) => {
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
 
     const Delivery = require('../../models/Delivery');
-    const [history, timeLogs, payment, deliveries] = await Promise.all([
+    // A fixed-price contract can have one Payment per milestone, and an hourly
+    // contract one per lock/top-up/invoice — never assume a single result.
+    const [history, timeLogs, payments, deliveries] = await Promise.all([
       ContractHistory.find({ contractId: contract._id })
         .populate('performedBy', 'email firstName lastName')
         .sort({ createdAt: -1 }).lean(),
       TimeLog.find({ contractId: contract._id }).sort({ startedAt: -1 }).lean(),
-      Payment.findOne({ contractId: contract._id }).lean(),
+      Payment.find({ contractId: contract._id }).sort({ createdAt: 1 }).lean(),
       Delivery.find({ contractId: contract._id }).sort({ version: -1 }).lean()
     ]);
 
-    return res.status(200).json({ success: true, contract, history, timeLogs, payment, deliveries });
+    return res.status(200).json({ success: true, contract, history, timeLogs, payments, deliveries });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load contract' });
   }
@@ -181,35 +183,72 @@ const resumeContract = transition('active', 'resume', 'info');
 const cancelContract = transition('cancelled', 'cancel', 'critical');
 
 /**
- * POST /contracts/:id/force-complete — mark completed and release escrow to the
- * freelancer (internal ledger). Idempotent on an already-released payment.
+ * POST /contracts/:id/force-complete — mark completed and release any
+ * outstanding escrow to the freelancer (internal ledger).
+ *
+ * Reuses the exact same money-movement functions as the normal completion
+ * paths (milestone.service.js's releaseMilestone / hourlyEscrow.service.js's
+ * drawDownForTimeLog+refundRemainingHourlyEscrow) — never re-implements
+ * escrow release inline, and never assumes a single Payment row: a
+ * fixed-price contract can have one funded milestone per Payment, so every
+ * non-terminal milestone is released, not just whichever Payment happened to
+ * be found first.
  */
 const forceComplete = async (req, res) => {
   try {
-    const FreelancerProfile = require('../../models/FreelancerProfile');
+    const Job = require('../../models/Job');
+    const Milestone = require('../../models/Milestone');
+    const { releaseMilestone } = require('../../services/milestone.service');
+    const { drawDownForTimeLog, refundRemainingHourlyEscrow } = require('../../services/hourlyEscrow.service');
+    const { finalizeJobCompletion } = require('../../services/jobCompletion.service');
+
     const contract = await Contract.findById(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
+    if (contract.status === 'completed') {
+      return res.status(400).json({ success: false, message: 'Contract is already completed' });
+    }
 
-    const payment = await Payment.findOne({ contractId: contract._id });
-    let released = 0;
-    if (payment && payment.status !== 'released' && payment.status !== 'refunded') {
-      const fee = round2(payment.totalAmount * (payment.feeRate || PLATFORM_FEE_RATE));
-      payment.platformFee = fee;
-      payment.freelancerPayout = round2(payment.totalAmount - fee);
-      payment.status = 'released';
-      payment.releasedAt = new Date();
-      await payment.save();
-      released = payment.freelancerPayout;
-      await FreelancerProfile.updateOne(
-        { userId: contract.freelancerId },
-        { $inc: { walletBalance: released, totalEarnings: released } }
-      );
+    const job = contract.jobId ? await Job.findById(contract.jobId) : null;
+    let released = 0;   // net amount paid out to the freelancer, for the admin-facing response
+    let clientSpend = 0; // gross amount to roll up into ClientProfile.totalSpent
+
+    if (contract.type === 'fixed') {
+      const milestones = await Milestone.find({
+        contractId: contract._id,
+        status: { $in: ['funded', 'submitted', 'in_revision', 'disputed'] }
+      }).sort({ order: 1 });
+      for (const milestone of milestones) {
+        const { payment, freelancerPayout } = await releaseMilestone({ milestone, contract, job });
+        released += freelancerPayout;
+        clientSpend += payment.totalAmount;
+      }
+    } else {
+      const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' }).sort({ startTime: 1 });
+      for (const log of pendingLogs) {
+        try {
+          const { amount } = await drawDownForTimeLog({ timeLog: log, contract, job });
+          released += amount;
+          clientSpend += amount;
+        } catch (err) {
+          console.error(`[Contracts] forceComplete: could not settle time log ${log._id}: ${err.message}`);
+          break;
+        }
+      }
+      await refundRemainingHourlyEscrow({ contract, job });
     }
 
     const prev = contract.status;
     contract.status = 'completed';
     contract.completedAt = new Date();
     await contract.save();
+
+    if (job && job.status !== 'completed') {
+      job.status = 'completed';
+      job.completedAt = new Date();
+      // skipEarningsCredit: true — releaseMilestone/drawDownForTimeLog already
+      // credited the freelancer's wallet/totalEarnings above.
+      await finalizeJobCompletion(job, { clientSpend, skipEarningsCredit: true });
+    }
 
     recordHistory(contract._id, 'admin_force_complete', `[Admin] Force-completed. Released ${released} to freelancer. ${req.body.reason || ''}`.trim(), req.admin.email, { status: prev }, { status: 'completed', released });
     auditLog(req, {

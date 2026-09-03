@@ -22,4 +22,8 @@ const messageSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+// message.controller.js loads a conversation's messages via
+// Message.find({ conversationId }).sort({ createdAt: 1 }) — every page load.
+messageSchema.index({ conversationId: 1, createdAt: 1 });
+
 module.exports = mongoose.model('Message', messageSchema);

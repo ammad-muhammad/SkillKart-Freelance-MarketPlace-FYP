@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Clock, Wallet, TrendingUp, Search } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
@@ -124,7 +124,12 @@ export default function BrowseProjects() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
+  const fetchSeq = useRef(0); // ignore a response if a newer filter-change request has since started
+
   const fetchJobs = useCallback(async () => {
+    const requestId = ++fetchSeq.current;
     setLoading(true);
     setError(null);
     try {
@@ -139,16 +144,18 @@ export default function BrowseProjects() {
       };
 
       const res = await (query ? jobsAPI.searchJobs(params) : jobsAPI.listJobs(params));
+      if (!isMounted.current || requestId !== fetchSeq.current) return;
       const responseData = res.data;
       setJobs(Array.isArray(responseData.data) ? responseData.data : []);
       setTotal(responseData.meta?.pagination?.total || 0);
     } catch (err) {
+      if (!isMounted.current || requestId !== fetchSeq.current) return;
       console.error('Failed to fetch jobs:', err);
       setJobs([]);
       setTotal(0);
       setError(err.response?.data?.message || 'Could not load projects right now. Please try again.');
     } finally {
-      setLoading(false);
+      if (isMounted.current && requestId === fetchSeq.current) setLoading(false);
     }
   }, [query, filters, page]);
 

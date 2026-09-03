@@ -245,7 +245,7 @@ export default function HelpCenter() {
                                 {activecat !== 'all' && (
                                     <span className="hc-faq__cat-pill">
                                         {CATEGORIES.find(c => c.id === activecat)?.label}
-                                        <button className="hc-faq__cat-clear" onClick={() => setActivecat('all')}>✕</button>
+                                        <button className="hc-faq__cat-clear" onClick={() => setActivecat('all')} aria-label="Clear category filter">✕</button>
                                     </span>
                                 )}
                             </div>

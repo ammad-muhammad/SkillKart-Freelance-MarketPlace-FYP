@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Star, X } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
 import { jobsAPI } from '../../../api/jobs';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 import './ReviewModal.css';
 
 export default function ReviewModal({ jobId, targetName, onClose, onSuccess }) {
@@ -9,6 +10,10 @@ export default function ReviewModal({ jobId, targetName, onClose, onSuccess }) {
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const modalRef = useRef(null);
+  const handleClose = () => { if (!submitting) onClose?.(); };
+
+  useFocusTrap(modalRef, true, handleClose);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,11 +40,18 @@ export default function ReviewModal({ jobId, targetName, onClose, onSuccess }) {
   };
 
   return (
-    <div className="rm-overlay" onClick={onClose}>
-      <div className="rm-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="rm-overlay" onClick={handleClose}>
+      <div
+        ref={modalRef}
+        className="rm-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+      >
         <div className="rm-header">
           <h3>Leave a Review</h3>
-          <button className="rm-close" onClick={onClose} disabled={submitting}>
+          <button className="rm-close" onClick={handleClose} disabled={submitting} aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -75,7 +87,7 @@ export default function ReviewModal({ jobId, targetName, onClose, onSuccess }) {
           </div>
 
           <div className="rm-footer">
-            <button type="button" className="rm-btn rm-btn--ghost" onClick={onClose} disabled={submitting}>
+            <button type="button" className="rm-btn rm-btn--ghost" onClick={handleClose} disabled={submitting}>
               Cancel
             </button>
             <button type="submit" className="rm-btn rm-btn--primary" disabled={submitting}>

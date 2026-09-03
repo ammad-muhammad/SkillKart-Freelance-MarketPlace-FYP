@@ -98,25 +98,30 @@ const updateUser = asyncHandler(async (req, res) => {
  */
 const deleteUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   const user = await User.findById(id);
   if (!user) {
     throw new NotFoundError('User not found');
   }
 
-  // Cascade Deletion
-  const mongoose = require('mongoose');
-  
-  await Promise.all([
-    mongoose.model('Job') ? mongoose.model('Job').deleteMany({ clientId: id }) : Promise.resolve(),
-    mongoose.model('ClientProfile') ? mongoose.model('ClientProfile').deleteOne({ userId: id }) : Promise.resolve(),
-    mongoose.model('FreelancerProfile') ? mongoose.model('FreelancerProfile').deleteOne({ userId: id }) : Promise.resolve(),
-    mongoose.model('Proposal') ? mongoose.model('Proposal').deleteMany({ freelancerId: id }) : Promise.resolve(),
-    User.deleteOne({ _id: id })
-  ]);
-  
+  // Soft delete only — matches the admin-panel's own deleteUser. The old
+  // hard-delete here only ever cleaned up the user's own Job/Profile/
+  // Proposal docs, never Contract/Milestone/Payment/Review/Message/
+  // TimeLog/Withdrawal/Gig — leaving those with dangling references that
+  // crash the first time anything populates the deleted user (e.g.
+  // contract.controller.js immediately reads `contract.clientId._id` after
+  // populate). A hard delete can't be made safe without a full cascade
+  // across every one of those collections for both client and freelancer
+  // roles; soft-deleting avoids the whole class of orphan-reference bugs by
+  // never actually removing the referenced document.
+  user.deletedAt = new Date();
+  user.deletedBy = req.user?.email || 'superadmin';
+  user.isActive = false;
+  user.isBlocked = true;
+  await user.save();
+
   sendSuccess(res, {
-    message: 'User and associated data deleted successfully'
+    message: 'User soft-deleted — account deactivated, data preserved'
   });
 });
 
@@ -191,8 +196,8 @@ const updateUserRole = asyncHandler(async (req, res) => {
  */
 const searchUsers = asyncHandler(async (req, res) => {
   const { q, page: pageNum = 1, limit: limitNum = 10 } = req.query;
-  const page = parseInt(pageNum);
-  const limit = parseInt(limitNum);
+  const page = Math.max(parseInt(pageNum) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(limitNum) || 10, 1), 100);
   const skip = (page - 1) * limit;
   
   const query = {

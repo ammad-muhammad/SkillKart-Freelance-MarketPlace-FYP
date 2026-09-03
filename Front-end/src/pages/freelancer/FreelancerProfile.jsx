@@ -2,10 +2,11 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../api/auth';
 import { 
-  Plus, Trash2, Edit3, Briefcase, Award, GraduationCap, MapPin, 
-  DollarSign, Clock, Globe, Github, Linkedin, ExternalLink,
+  Plus, Trash2, Edit3, Briefcase, Award, GraduationCap, MapPin,
+  Clock, Globe, Github, Linkedin, ExternalLink,
   ChevronDown, Calendar, FileText, Check, X, User, Link as LinkIcon, Camera, Image as ImageIcon, Sparkles, FolderOpen, AlertTriangle
 } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar, uploadPortfolioImage as apiUploadCover, validateFile } from '../../utils/uploadHelper';
@@ -27,7 +28,6 @@ const FreelancerProfile = () => {
   const { profile, saveProfile, showToast } = useFreelancer();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const isSupabaseUser = !!user?.supabaseId || user?.authProvider !== 'email';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
@@ -110,6 +110,21 @@ const FreelancerProfile = () => {
         return;
       }
 
+      if (socialLinks.website?.trim()) {
+        let validUrl = true;
+        try {
+          const url = new URL(socialLinks.website.trim());
+          validUrl = /^https?:$/.test(url.protocol);
+        } catch {
+          validUrl = false;
+        }
+        if (!validUrl) {
+          showToast('Please enter a valid website URL (e.g. https://example.com)', 'error');
+          setSaving(false);
+          return;
+        }
+      }
+
       const updatedProfile = {
         ...profile,
         personalInfo: { 
@@ -127,9 +142,11 @@ const FreelancerProfile = () => {
         socialLinks: { ...profile.socialLinks, ...socialLinks }
       };
 
-      const success = await saveProfile(updatedProfile);
-      if (success) {
+      const result = await saveProfile(updatedProfile);
+      if (result?.success) {
         setEditing(false);
+      } else {
+        showToast(result?.message || 'Update failed. Please check your details and try again.', 'error');
       }
     } catch (err) {
       console.error('Update failed:', err);
@@ -168,7 +185,7 @@ const FreelancerProfile = () => {
         setForm((p) => ({ ...p, coverPhoto: url }));
         showToast('Cover photo uploaded! Save to persist changes.');
       }
-    } catch (error) {
+    } catch {
       showToast(kind === 'avatar' ? 'Upload failed' : 'Cover upload failed', 'error');
     } finally {
       setSaving(false);
@@ -179,9 +196,6 @@ const FreelancerProfile = () => {
   const removePortfolioLink = (i) => setPortfolioLinks((prev) => prev.filter((_, idx) => idx !== i));
   const updatePortfolioLink = (i, val) =>
     setPortfolioLinks((prev) => prev.map((l, idx) => (idx === i ? val : l)));
-
-  const initials = (profile?.personalInfo?.fullName || 'FL')
-    .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const data = editing ? form : (profile?.personalInfo || {});
 
@@ -257,7 +271,7 @@ const FreelancerProfile = () => {
             <p className="fl-profile-hero__title">{data.title || 'Professional Freelancer'}</p>
             <div className="fl-profile-hero__meta">
               <span><MapPin size={14} /> {data.location || 'Remote'}</span>
-              <span><DollarSign size={14} /> Rs. {data.hourlyRate || '0'}/hr</span>
+              <span><PkrIcon size={14} /> Rs. {data.hourlyRate || '0'}/hr</span>
               <span><Clock size={14} /> {data.availability || 'Not Set'}</span>
             </div>
           </div>
@@ -296,9 +310,10 @@ const FreelancerProfile = () => {
             { key: 'experienceLevel', label: 'Experience Level', type: 'select', opts: ['Entry', 'Intermediate', 'Expert'] },
           ].map(({ key, label, type, opts }) => (
             <div key={key} className="fl-form-group">
-              <label className="fl-label">{label}</label>
+              <label className="fl-label" htmlFor={`fp-${key}`}>{label}</label>
               {type === 'select' ? (
                 <ComboSelect
+                  id={`fp-${key}`}
                   options={opts}
                   value={editing ? form[key] : profile?.personalInfo?.[key]}
                   onChange={(val) => setForm((p) => ({ ...p, [key]: val }))}
@@ -307,6 +322,7 @@ const FreelancerProfile = () => {
                 />
               ) : (
                 <input
+                  id={`fp-${key}`}
                   type={type || 'text'}
                   className="fl-input"
                   value={editing ? form[key] || '' : profile?.personalInfo?.[key] || ''}
@@ -320,8 +336,9 @@ const FreelancerProfile = () => {
 
           {/* Bio */}
           <div className="fl-form-group full">
-            <label className="fl-label">Professional Bio</label>
+            <label className="fl-label" htmlFor="fp-bio">Professional Bio</label>
             <textarea
+              id="fp-bio"
               className="fl-textarea"
               maxLength={MAX_BIO}
               value={editing ? form.bio || '' : profile?.personalInfo?.bio || ''}
@@ -367,24 +384,24 @@ const FreelancerProfile = () => {
               {editing ? (
                 <div className="fl-form-grid">
                   <div className="fl-form-group">
-                    <label className="fl-label">Institution</label>
-                    <input className="fl-input" value={edu.institution} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-edu-institution-${i}`}>Institution</label>
+                    <input id={`fp-edu-institution-${i}`} className="fl-input" value={edu.institution} onChange={(e) => {
                       const newEdu = [...education];
                       newEdu[i].institution = e.target.value;
                       setEducation(newEdu);
                     }} placeholder="University Name" />
                   </div>
                   <div className="fl-form-group">
-                    <label className="fl-label">Degree</label>
-                    <input className="fl-input" value={edu.degree} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-edu-degree-${i}`}>Degree</label>
+                    <input id={`fp-edu-degree-${i}`} className="fl-input" value={edu.degree} onChange={(e) => {
                       const newEdu = [...education];
                       newEdu[i].degree = e.target.value;
                       setEducation(newEdu);
                     }} placeholder="Bachelor's, Master's, etc." />
                   </div>
                   <div className="fl-form-group">
-                    <label className="fl-label">Field of Study</label>
-                    <input className="fl-input" value={edu.field} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-edu-field-${i}`}>Field of Study</label>
+                    <input id={`fp-edu-field-${i}`} className="fl-input" value={edu.field} onChange={(e) => {
                       const newEdu = [...education];
                       newEdu[i].field = e.target.value;
                       setEducation(newEdu);
@@ -392,16 +409,16 @@ const FreelancerProfile = () => {
                   </div>
                   <div className="fl-form-row">
                     <div className="fl-form-group">
-                      <label className="fl-label">Start Date</label>
-                      <input type="date" className="fl-input" value={edu.startDate ? new Date(edu.startDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                      <label className="fl-label" htmlFor={`fp-edu-start-${i}`}>Start Date</label>
+                      <input id={`fp-edu-start-${i}`} type="date" className="fl-input" value={edu.startDate ? new Date(edu.startDate).toISOString().split('T')[0] : ''} onChange={(e) => {
                         const newEdu = [...education];
                         newEdu[i].startDate = e.target.value;
                         setEducation(newEdu);
                       }} />
                     </div>
                     <div className="fl-form-group">
-                      <label className="fl-label">End Date</label>
-                      <input type="date" className="fl-input" value={edu.endDate ? new Date(edu.endDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                      <label className="fl-label" htmlFor={`fp-edu-end-${i}`}>End Date</label>
+                      <input id={`fp-edu-end-${i}`} type="date" className="fl-input" value={edu.endDate ? new Date(edu.endDate).toISOString().split('T')[0] : ''} onChange={(e) => {
                         const newEdu = [...education];
                         newEdu[i].endDate = e.target.value;
                         setEducation(newEdu);
@@ -409,8 +426,8 @@ const FreelancerProfile = () => {
                     </div>
                   </div>
                   <div className="fl-form-group full">
-                    <label className="fl-label">Description (Optional)</label>
-                    <textarea className="fl-textarea" rows={2} value={edu.description} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-edu-desc-${i}`}>Description (Optional)</label>
+                    <textarea id={`fp-edu-desc-${i}`} className="fl-textarea" rows={2} value={edu.description} onChange={(e) => {
                       const newEdu = [...education];
                       newEdu[i].description = e.target.value;
                       setEducation(newEdu);
@@ -473,16 +490,16 @@ const FreelancerProfile = () => {
               {editing ? (
                 <div className="fl-form-grid">
                   <div className="fl-form-group">
-                    <label className="fl-label">Certification Name</label>
-                    <input className="fl-input" value={cert.name} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-cert-name-${i}`}>Certification Name</label>
+                    <input id={`fp-cert-name-${i}`} className="fl-input" value={cert.name} onChange={(e) => {
                       const newCert = [...certifications];
                       newCert[i].name = e.target.value;
                       setCertifications(newCert);
                     }} placeholder="e.g. AWS Certified Solutions Architect" />
                   </div>
                   <div className="fl-form-group">
-                    <label className="fl-label">Issuing Organization</label>
-                    <input className="fl-input" value={cert.issuer} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-cert-issuer-${i}`}>Issuing Organization</label>
+                    <input id={`fp-cert-issuer-${i}`} className="fl-input" value={cert.issuer} onChange={(e) => {
                       const newCert = [...certifications];
                       newCert[i].issuer = e.target.value;
                       setCertifications(newCert);
@@ -490,16 +507,16 @@ const FreelancerProfile = () => {
                   </div>
                   <div className="fl-form-row">
                     <div className="fl-form-group">
-                      <label className="fl-label">Issue Date</label>
-                      <input type="date" className="fl-input" value={cert.issueDate ? new Date(cert.issueDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                      <label className="fl-label" htmlFor={`fp-cert-issue-date-${i}`}>Issue Date</label>
+                      <input id={`fp-cert-issue-date-${i}`} type="date" className="fl-input" value={cert.issueDate ? new Date(cert.issueDate).toISOString().split('T')[0] : ''} onChange={(e) => {
                         const newCert = [...certifications];
                         newCert[i].issueDate = e.target.value;
                         setCertifications(newCert);
                       }} />
                     </div>
                     <div className="fl-form-group">
-                      <label className="fl-label">Expiry Date (Optional)</label>
-                      <input type="date" className="fl-input" value={cert.expiryDate ? new Date(cert.expiryDate).toISOString().split('T')[0] : ''} onChange={(e) => {
+                      <label className="fl-label" htmlFor={`fp-cert-expiry-date-${i}`}>Expiry Date (Optional)</label>
+                      <input id={`fp-cert-expiry-date-${i}`} type="date" className="fl-input" value={cert.expiryDate ? new Date(cert.expiryDate).toISOString().split('T')[0] : ''} onChange={(e) => {
                         const newCert = [...certifications];
                         newCert[i].expiryDate = e.target.value;
                         setCertifications(newCert);
@@ -507,16 +524,16 @@ const FreelancerProfile = () => {
                     </div>
                   </div>
                   <div className="fl-form-group">
-                    <label className="fl-label">Credential ID (Optional)</label>
-                    <input className="fl-input" value={cert.credentialId} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-cert-credential-${i}`}>Credential ID (Optional)</label>
+                    <input id={`fp-cert-credential-${i}`} className="fl-input" value={cert.credentialId} onChange={(e) => {
                       const newCert = [...certifications];
                       newCert[i].credentialId = e.target.value;
                       setCertifications(newCert);
                     }} placeholder="Credential ID or Serial Number" />
                   </div>
                   <div className="fl-form-group">
-                    <label className="fl-label">Certificate URL (Optional)</label>
-                    <input type="url" className="fl-input" value={cert.url} onChange={(e) => {
+                    <label className="fl-label" htmlFor={`fp-cert-url-${i}`}>Certificate URL (Optional)</label>
+                    <input id={`fp-cert-url-${i}`} type="url" className="fl-input" value={cert.url} onChange={(e) => {
                       const newCert = [...certifications];
                       newCert[i].url = e.target.value;
                       setCertifications(newCert);
@@ -697,8 +714,9 @@ const FreelancerProfile = () => {
             { key: 'website', label: 'Website', Icon: Globe },
           ].map(({ key, label, Icon }) => (
             <div key={key} className="fl-form-group">
-              <label className="fl-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Icon size={14} /> {label}</label>
+              <label className="fl-label" htmlFor={`fp-social-${key}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Icon size={14} /> {label}</label>
               <input
+                id={`fp-social-${key}`}
                 type="url"
                 className="fl-input"
                 value={editing ? socialLinks[key] || '' : profile?.socialLinks?.[key] || ''}

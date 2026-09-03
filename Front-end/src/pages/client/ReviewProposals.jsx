@@ -7,9 +7,10 @@ import { messagesAPI } from '../../api/messages';
 import { useClient } from '../../context/ClientContext';
 import {
   User, CheckCircle2, XCircle, Clock,
-  DollarSign, MessageSquare, ChevronLeft,
+  MessageSquare, ChevronLeft,
   Mail, Star, ExternalLink, Plus, X, Layers, Wallet
 } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import Modal from '../freelancer/components/Modal';
 import './ReviewProposals.css';
@@ -80,6 +81,7 @@ export default function ReviewProposals() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export default function ReviewProposals() {
       showToast('Proposal rejected.');
       await fetchProfile(); // Sync global state
       fetchData(); // Refresh local view
-    } catch (error) {
+    } catch {
       showToast('Failed to reject proposal.', 'error');
     } finally {
       setProcessingId(null);
@@ -239,7 +241,7 @@ export default function ReviewProposals() {
               <div className="rp-card__body">
                 <div className="rp-details">
                   <div className="rp-detail">
-                    <DollarSign size={16} />
+                    <PkrIcon size={16} />
                     <span>Bid: <strong>Rs. {prop.fixedPrice || prop.hourlyRate}{prop.hourlyRate ? '/hr' : ''}</strong></span>
                   </div>
                   <div className="rp-detail">

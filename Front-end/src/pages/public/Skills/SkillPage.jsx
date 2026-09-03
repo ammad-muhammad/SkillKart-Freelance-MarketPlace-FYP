@@ -3,8 +3,6 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Star, Users, TrendingUp, Layers, SlidersHorizontal, X, ArrowRight, Flame, ChevronRight } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { getSkillBySlug } from "../../../data/skills";
-import { getCategoryBySlug } from "../../../data/categories";
 import { gigsAPI } from "../../../api/gigs";
 import { publicAPI } from "../../../api/publicData";
 import { mapGig, mapFreelancer } from "../../../utils/gigMapper";
@@ -97,6 +95,10 @@ export default function SkillPage() {
     loadSkillData();
     return () => { active = false; };
   }, [skillSlug, categorySlug]);
+
+  useEffect(() => {
+    document.title = skill?.name ? `${skill.name} – SkillKart` : 'Skill – SkillKart';
+  }, [skill?.name]);
 
   /* ── Refs ── */
   const heroRef      = useRef(null);

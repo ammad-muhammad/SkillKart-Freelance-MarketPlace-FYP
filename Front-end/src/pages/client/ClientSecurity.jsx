@@ -143,7 +143,7 @@ const ClientSecurity = () => {
       });
       setOtpTimer(60);
       showToast('New code sent');
-    } catch (error) {
+    } catch {
       showToast('Failed to resend code', 'error');
     }
   };
@@ -241,7 +241,7 @@ const ClientSecurity = () => {
       await authAPI.requestPasswordReset({ email: forgotEmail });
       setForgotSent(true);
       showToast('OTP sent to your email!');
-    } catch (error) {
+    } catch {
       showToast('Failed to send reset link', 'error');
     } finally {
       setSaving(false);

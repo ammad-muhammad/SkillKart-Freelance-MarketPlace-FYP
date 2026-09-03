@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Select, { components } from 'react-select';
@@ -10,10 +10,9 @@ import {
     Search, Trash2, Sliders, Settings, Sparkles, X, Plus,
     Rocket, Github, Linkedin, Globe2
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { safeToast as toast } from "../../../utils/safeToast";
 import { clientsAPI } from "../../../api/clients";
 import { useAuth } from "../../../hooks/useAuth";
-import { useClient } from '../../../context/ClientContext';
 import { timezones, getCurrentTimezone } from "../../../utils/timezones";
 import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
@@ -28,14 +27,12 @@ const ClientOnboarding = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
-    const [searchCountry, setSearchCountry] = useState("");
     const [showDraftPrompt, setShowDraftPrompt] = useState(false);
     const [draftData, setDraftData] = useState(null);
     const [aiSuggestions, setAiSuggestions] = useState([]);
     const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
     const [cropTarget, setCropTarget] = useState(null); // { file, field } while the crop modal is open
     const { refreshAuth, user } = useAuth();
-    const { fetchProfile } = useClient();
 
 
 
@@ -137,6 +134,7 @@ const ClientOnboarding = () => {
                 syncDraft();
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally not re-syncing on every formData keystroke, only on step/prompt change
     }, [step, showDraftPrompt]); // Sync on step change for robustness
 
     useEffect(() => {
@@ -177,6 +175,7 @@ const ClientOnboarding = () => {
         if (step === 2 && formData.companyType !== 'Individual') {
             fetchAISuggestions();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchAISuggestions is recreated every render; only re-fire on step/companyType change
     }, [step, formData.companyType]);
 
     const handleRestoreDraft = () => {
@@ -223,18 +222,6 @@ const ClientOnboarding = () => {
             [field]: finalFile,
             [`${field}Url`]: URL.createObjectURL(finalFile)
         }));
-    };
-
-    const toggleMultiSelect = (field, item) => {
-        setFormData(prev => {
-            const current = prev[field] || [];
-            return {
-                ...prev,
-                [field]: current.includes(item)
-                    ? current.filter(i => i !== item)
-                    : [...current, item]
-            };
-        });
     };
 
     const nextStep = () => {
@@ -352,41 +339,7 @@ const ClientOnboarding = () => {
         return true;
     };
 
-    const progress = (step - 1) / 4 * 100;
     const options = useMemo(() => countryList().getData(), []);
-
-    const industryOptions = [
-        { value: 'Accounting & Finance', label: 'Accounting & Finance' },
-        { value: 'Advertising & PR', label: 'Advertising & PR' },
-        { value: 'Architecture & Design', label: 'Architecture & Design' },
-        { value: 'Automotive', label: 'Automotive' },
-        { value: 'Aviation & Aerospace', label: 'Aviation & Aerospace' },
-        { value: 'Banking', label: 'Banking' },
-        { value: 'Biotechnology', label: 'Biotechnology' },
-        { value: 'Construction', label: 'Construction' },
-        { value: 'Consulting', label: 'Consulting' },
-        { value: 'E-commerce', label: 'E-commerce' },
-        { value: 'Education & EdTech', label: 'Education & EdTech' },
-        { value: 'Energy & Utilities', label: 'Energy & Utilities' },
-        { value: 'Entertainment & Media', label: 'Entertainment & Media' },
-        { value: 'FinTech', label: 'FinTech' },
-        { value: 'Food & Beverage', label: 'Food & Beverage' },
-        { value: 'Gaming', label: 'Gaming' },
-        { value: 'Government & Public Sector', label: 'Government & Public Sector' },
-        { value: 'Healthcare & HealthTech', label: 'Healthcare & HealthTech' },
-        { value: 'Hospitality & Tourism', label: 'Hospitality & Tourism' },
-        { value: 'Human Resources', label: 'Human Resources' },
-        { value: 'Insurance', label: 'Insurance' },
-        { value: 'Legal', label: 'Legal' },
-        { value: 'Logistics & Supply Chain', label: 'Logistics & Supply Chain' },
-        { value: 'Manufacturing', label: 'Manufacturing' },
-        { value: 'Marketing', label: 'Marketing' },
-        { value: 'NGO & Non-profit', label: 'NGO & Non-profit' },
-        { value: 'Real Estate & PropTech', label: 'Real Estate & PropTech' },
-        { value: 'Retail', label: 'Retail' },
-        { value: 'Software & IT Services', label: 'Software & IT Services' },
-        { value: 'Telecommunications', label: 'Telecommunications' }
-    ];
 
     const languageOptions = useMemo(() => LANGUAGES.map(lang => ({ value: lang, label: lang })), []);
     const proficiencyOptions = useMemo(() => [
@@ -430,7 +383,7 @@ const ClientOnboarding = () => {
             background: "rgba(255, 255, 255, 0.98)",
             backdropFilter: "blur(12px)",
             border: "1px solid #e2e8f0",
-            borderRadius: "16px",
+            borderRadius: "12px",
             overflow: "hidden",
             boxShadow: "0 12px 30px rgba(4, 46, 76, 0.1)",
             padding: "8px",
@@ -539,13 +492,13 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__form-row">
                 <div className="onboarding__form-group">
-                    <label className="onboarding__label">Full Name*</label>
-                    <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} className="onboarding__input" placeholder="e.g. John Doe" />
+                    <label className="onboarding__label" htmlFor="ob-full-name">Full Name*</label>
+                    <input id="ob-full-name" type="text" name="fullName" required value={formData.fullName} onChange={handleChange} className="onboarding__input" placeholder="e.g. John Doe" />
                 </div>
 
                 <div className="onboarding__form-group">
-                    <label className="onboarding__label">Work Email*</label>
-                    <input type="email" name="workEmail" required value={formData.workEmail} onChange={handleChange} className="onboarding__input" placeholder="john@company.com" />
+                    <label className="onboarding__label" htmlFor="ob-work-email">Work Email*</label>
+                    <input id="ob-work-email" type="email" name="workEmail" required value={formData.workEmail} onChange={handleChange} className="onboarding__input" placeholder="john@company.com" />
                 </div>
             </div>
 
@@ -590,18 +543,19 @@ const ClientOnboarding = () => {
             {formData.companyType !== 'Individual' && formData.companyType !== '' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="onboarding__form-row">
                     <div className="onboarding__form-group" style={{ flex: 1 }}>
-                        <label className="onboarding__label">Company Name</label>
-                        <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="onboarding__input" placeholder="Acme Inc." />
+                        <label className="onboarding__label" htmlFor="ob-company-name">Company Name</label>
+                        <input id="ob-company-name" type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="onboarding__input" placeholder="Acme Inc." />
                     </div>
                 </motion.div>
             )}
 
             <div className="onboarding__form-row">
                 <div className="onboarding__form-group">
-                    <label className="onboarding__label">Phone Number (Optional)</label>
+                    <label className="onboarding__label" htmlFor="ob-phone">Phone Number (Optional)</label>
                     <div style={{ position: 'relative' }}>
                         <Phone size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
                         <input
+                            id="ob-phone"
                             type="tel"
                             name="phone"
                             value={formData.phone}
@@ -613,10 +567,11 @@ const ClientOnboarding = () => {
                     </div>
                 </div>
                 <div className="onboarding__form-group">
-                    <label className="onboarding__label">Website (Optional)</label>
+                    <label className="onboarding__label" htmlFor="ob-website">Website (Optional)</label>
                     <div style={{ position: 'relative' }}>
                         <Globe2 size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
                         <input
+                            id="ob-website"
                             type="url"
                             name="companyWebsite"
                             value={formData.companyWebsite}
@@ -634,8 +589,9 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__form-row">
                 <div className="onboarding__form-group">
-                    <label className="onboarding__label">Country*</label>
+                    <label className="onboarding__label" htmlFor="ob-country">Country*</label>
                     <Select
+                        inputId="ob-country"
                         options={options}
                         value={formData.country ? options.find(opt => opt.label === formData.country) : null}
                         onChange={(val) => setFormData(p => ({ ...p, country: val ? val.label : '' }))}
@@ -651,9 +607,10 @@ const ClientOnboarding = () => {
                     />
                 </div>
                 <div className="onboarding__form-group">
-                    <label className="onboarding__label">Timezone / Base Location</label>
+                    <label className="onboarding__label" htmlFor="ob-timezone">Timezone / Base Location</label>
                     <div style={{ position: 'relative' }}>
                         <Select
+                            inputId="ob-timezone"
                             options={timezones}
                             value={formData.timezone ? timezones.find(t => t.label === formData.timezone) : null}
                             onChange={(val) => setFormData(p => ({ ...p, timezone: val ? val.label : '' }))}
@@ -673,10 +630,11 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__form-row">
                 <div className="onboarding__form-group" style={{ flex: 0.5 }}>
-                    <label className="onboarding__label">LinkedIn Profile (Optional)</label>
+                    <label className="onboarding__label" htmlFor="ob-linkedin">LinkedIn Profile (Optional)</label>
                     <div style={{ position: 'relative' }}>
                         <Linkedin size={16} style={{ position: 'absolute', left: '12px', top: '18px', color: '#94a3b8' }} />
                         <input
+                            id="ob-linkedin"
                             type="text"
                             value={formData.socialLinks.linkedin}
                             onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, linkedin: e.target.value } }))}
@@ -779,15 +737,23 @@ const ClientOnboarding = () => {
                     <label className="onboarding__label">Your Executive Role</label>
                     <div className="onboarding__tags">
                         {['Founder', 'Product Lead', 'CTO', 'Engineering Manager', 'Marketing Head', 'Design Director'].map(r => (
-                            <div key={r} className={`onboarding__tag ${formData.role === r ? 'onboarding__tag--active' : ''}`} onClick={() => setFormData(p => ({ ...p, role: r }))}>{r}</div>
+                            <div
+                                key={r}
+                                className={`onboarding__tag ${formData.role === r ? 'onboarding__tag--active' : ''}`}
+                                onClick={() => setFormData(p => ({ ...p, role: r }))}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFormData(p => ({ ...p, role: r })); } }}
+                            >{r}</div>
                         ))}
                     </div>
                 </div>
             )}
 
             <div className="onboarding__form-group">
-                <label className="onboarding__label">Bio / About Yourself*</label>
+                <label className="onboarding__label" htmlFor="ob-bio">Bio / About Yourself*</label>
                 <textarea
+                    id="ob-bio"
                     name="bio"
                     required
                     value={formData.bio}
@@ -824,8 +790,9 @@ const ClientOnboarding = () => {
                     {formData.languages.map((lang, idx) => (
                         <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'end', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e5edf5' }}>
                             <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
-                                <label className="onboarding__label" style={{ fontSize: '12px', marginBottom: '4px' }}>Language</label>
+                                <label className="onboarding__label" htmlFor={`ob-lang-${idx}`} style={{ fontSize: '12px', marginBottom: '4px' }}>Language</label>
                                 <Select
+                                    inputId={`ob-lang-${idx}`}
                                     options={languageOptions}
                                     value={lang.language ? { value: lang.language, label: lang.language } : null}
                                     onChange={(selected) => {
@@ -840,8 +807,9 @@ const ClientOnboarding = () => {
                                 />
                             </div>
                             <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
-                                <label className="onboarding__label" style={{ fontSize: '12px', marginBottom: '4px' }}>Proficiency</label>
+                                <label className="onboarding__label" htmlFor={`ob-prof-${idx}`} style={{ fontSize: '12px', marginBottom: '4px' }}>Proficiency</label>
                                 <Select
+                                    inputId={`ob-prof-${idx}`}
                                     options={proficiencyOptions}
                                     value={proficiencyOptions.find(o => o.value.toLowerCase() === (lang.proficiency || 'fluent').toLowerCase()) || proficiencyOptions[2]}
                                     onChange={(selected) => {
@@ -914,7 +882,14 @@ const ClientOnboarding = () => {
                 <label className="onboarding__label">Engagement Type</label>
                 <div className="onboarding__tags">
                     {['One-time Project', 'Monthly Retainer', 'Full-time Dedicated', 'Part-time Support'].map(t => (
-                        <div key={t} className={`onboarding__tag ${formData.hiringFrequency === t ? 'onboarding__tag--active' : ''}`} onClick={() => setFormData(p => ({ ...p, hiringFrequency: t }))}>{t}</div>
+                        <div
+                            key={t}
+                            className={`onboarding__tag ${formData.hiringFrequency === t ? 'onboarding__tag--active' : ''}`}
+                            onClick={() => setFormData(p => ({ ...p, hiringFrequency: t }))}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFormData(p => ({ ...p, hiringFrequency: t })); } }}
+                        >{t}</div>
                     ))}
                 </div>
             </div>
@@ -925,10 +900,10 @@ const ClientOnboarding = () => {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="onboarding__form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <label className="onboarding__label">Technical Complexity Awareness</label>
+                    <label className="onboarding__label" htmlFor="ob-tech-understanding">Technical Complexity Awareness</label>
                     <span style={{ color: 'var(--onboard-accent-primary)', fontWeight: '700' }}>{formData.technicalUnderstanding}/10</span>
                 </div>
-                <input type="range" name="technicalUnderstanding" min="1" max="10" value={formData.technicalUnderstanding} onChange={handleChange} className="onboarding__slider" style={{ background: `linear-gradient(to right, var(--onboard-accent-primary, #0052cc) ${((formData.technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((formData.technicalUnderstanding - 1) / 9) * 100}%)` }} />
+                <input id="ob-tech-understanding" type="range" name="technicalUnderstanding" min="1" max="10" value={formData.technicalUnderstanding} onChange={handleChange} className="onboarding__slider" style={{ background: `linear-gradient(to right, var(--onboard-accent-primary, #0052cc) ${((formData.technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((formData.technicalUnderstanding - 1) / 9) * 100}%)` }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: 'var(--onboard-text-secondary)' }}>
                     <span>Conceptual</span>
                     <span>Deep Tech</span>

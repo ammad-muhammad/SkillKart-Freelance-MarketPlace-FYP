@@ -15,8 +15,8 @@
   align-items: center;
   gap: 8px;
   background: #f4f6f9;
-  border: 1.5px solid #dde5ef;
-  border-radius: 8px;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 10px;
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -39,7 +39,7 @@
 .fsel--open .fsel__trigger {
   border-color: #042E4C;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(4, 46, 76, 0.1);
+  box-shadow: 0 0 0 4px rgba(4, 46, 76, 0.08);
 }
 
 /* Active state — when a non-default option is selected */
@@ -71,7 +71,7 @@
   left: 0;
   min-width: 100%;
   background: #fff;
-  border: 1.5px solid #dde5ef;
+  border: 1px solid rgba(183, 201, 226, 0.4);
   border-radius: 12px;
   box-shadow:
     0 8px 24px rgba(4, 46, 76, 0.12),
@@ -93,8 +93,8 @@
   width: 13px;
   height: 13px;
   background: #fff;
-  border-left: 1.5px solid #dde5ef;
-  border-top: 1.5px solid #dde5ef;
+  border-left: 1px solid rgba(183, 201, 226, 0.4);
+  border-top: 1px solid rgba(183, 201, 226, 0.4);
   transform: rotate(45deg);
   border-radius: 2px 0 0 0;
 }

@@ -54,6 +54,11 @@
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   transition: background 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .fl-modal__close:hover {
   background: #f0f4f8;

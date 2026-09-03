@@ -11,7 +11,7 @@ import {
   ChevronLeft, Star, ShoppingBag, Clock, RefreshCw,
   CheckCircle2, Tag, MessageCircle, User
 } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../../utils/safeToast';
 import './GigDetail.css';
 
 const TIER_ORDER = ['basic', 'standard', 'premium'];
@@ -49,6 +49,10 @@ export default function GigDetail() {
     fetchGig();
     return () => { active = false; };
   }, [id]);
+
+  useEffect(() => {
+    document.title = gig?.title ? `${gig.title} – SkillKart` : 'Gig Details – SkillKart';
+  }, [gig?.title]);
 
   const handleContact = async () => {
     if (!user) {

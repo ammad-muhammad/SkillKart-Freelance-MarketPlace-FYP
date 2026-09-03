@@ -1,5 +1,7 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, DollarSign, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers, Wallet } from 'lucide-react';
+import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers, Wallet } from 'lucide-react';
+import PkrIcon from '../../Components/common/PkrIcon';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
@@ -122,24 +124,32 @@ const ClientProjects = () => {
   // Milestone-style: one week's estimate locks automatically at hire time —
   // this is for topping up once the running balance runs low.
   const lockHourly = async (contractId) => {
+    if (actioning) return;
+    setActioning(true);
     try {
       await paymentsAPI.lockHourlyContract(contractId);
       showToast('Escrow locked from your wallet balance! Any unpaid logged hours were just settled.', 'success');
       await fetchProfile();
     } catch (err) {
       showToast(err.response?.data?.message || 'Could not lock escrow for this contract.', 'error');
+    } finally {
+      setActioning(false);
     }
   };
 
   // Fund a fixed-price milestone (100% lock, wallet-only) once the client is
   // ready to start the next phase. Milestone 1 funds automatically at hire.
   const fundNextMilestone = async (milestoneId) => {
+    if (actioning) return;
+    setActioning(true);
     try {
       await paymentsAPI.fundMilestone(milestoneId);
       showToast('Milestone funded from your wallet balance! The freelancer can start this phase now.', 'success');
       await fetchProfile();
     } catch (err) {
       showToast(err.response?.data?.message || 'Could not fund this milestone.', 'error');
+    } finally {
+      setActioning(false);
     }
   };
 
@@ -154,20 +164,6 @@ const ClientProjects = () => {
       await fetchProfile();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to request revision', 'error');
-    } finally {
-      setActioning(false);
-    }
-  };
-
-  const completeContract = async (projId, contractId) => {
-    try {
-      if (!window.confirm('Are you sure you want to end this contract?')) return;
-      setActioning(true);
-      await contractsAPI.endContract(contractId);
-      showToast('Contract ended successfully', 'success');
-      fetchProfile(true);
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to end contract', 'error');
     } finally {
       setActioning(false);
     }
@@ -456,7 +452,7 @@ const ClientProjects = () => {
                         Escrow locked: <strong>Rs. {(proj.hourlyEscrow?.lockedBalance || 0).toFixed(2)}</strong>
                         {(proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 && ' — running low'}
                       </span>
-                      <button className="cl-btn cl-btn--outline cl-btn--sm" style={{ marginLeft: 'auto' }} onClick={() => lockHourly(proj.contractId)}>
+                      <button className="cl-btn cl-btn--outline cl-btn--sm" style={{ marginLeft: 'auto' }} onClick={() => lockHourly(proj.contractId)} disabled={actioning}>
                         <CreditCard size={14} style={{ marginRight: '6px' }} /> Top Up Escrow
                       </button>
                     </div>
@@ -493,7 +489,7 @@ const ClientProjects = () => {
               <div className="cl-proj-card__footer">
                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
-                    <DollarSign size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> Budget: <strong>{proj.budget?.min === proj.budget?.max ? `Rs. ${proj.budget?.min || 0}` : `Rs. ${proj.budget?.min || 0}–${proj.budget?.max || 0}`}</strong>
+                    <PkrIcon size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> Budget: <strong>{proj.budget?.min === proj.budget?.max ? `Rs. ${proj.budget?.min || 0}` : `Rs. ${proj.budget?.min || 0}–${proj.budget?.max || 0}`}</strong>
                   </span>
                   <span style={{ fontSize: '0.82rem', color: 'var(--color-text-mid)' }}>
                     ⏱ {proj.duration}
@@ -524,7 +520,7 @@ const ClientProjects = () => {
                         the initial week's lock happens automatically at hire time. */}
                     {proj.status === 'in-progress' && proj.source !== 'gig' && proj.contractType === 'fixed' && proj.currentMilestone && (
                       proj.currentMilestone.status === 'pending_funding' ? (
-                        <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundNextMilestone(proj.currentMilestone._id)}>
+                        <button className="cl-btn cl-btn--outline cl-btn--sm" onClick={() => fundNextMilestone(proj.currentMilestone._id)} disabled={actioning}>
                           <CreditCard size={14} style={{ marginRight: '6px' }} /> Fund Milestone {proj.currentMilestone.order} (Rs. {proj.currentMilestone.amount})
                         </button>
                       ) : proj.currentMilestone.status === 'disputed' ? (
@@ -624,8 +620,9 @@ const ClientProjects = () => {
             <div className="cl-edit-form__scroll" style={{ paddingRight: '0.75rem', marginRight: '-0.75rem' }}>
               <div className="cl-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
                 <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
-                  <label className="cl-label">Project Title *</label>
+                  <label className="cl-label" htmlFor="cp-edit-title">Project Title *</label>
                   <input
+                    id="cp-edit-title"
                     className={`cl-input${editErrors.title ? ' cl-input--error' : ''}`}
                     value={editingProject.title}
                     onChange={e => { setField({ title: e.target.value }); clearEditError('title'); }}
@@ -690,8 +687,9 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Experience Level</label>
+                  <label className="cl-label" htmlFor="cp-edit-experience">Experience Level</label>
                   <ComboSelect
+                    id="cp-edit-experience"
                     options={EXPERIENCE_OPTIONS}
                     value={editingProject.experienceLevel}
                     onChange={val => setField({ experienceLevel: val })}
@@ -718,8 +716,9 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Min Budget (PKR) *</label>
+                  <label className="cl-label" htmlFor="cp-edit-budget-min">Min Budget (PKR) *</label>
                   <input
+                    id="cp-edit-budget-min"
                     type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.min}
                     onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
@@ -728,8 +727,9 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Max Budget (PKR) *</label>
+                  <label className="cl-label" htmlFor="cp-edit-budget-max">Max Budget (PKR) *</label>
                   <input
+                    id="cp-edit-budget-max"
                     type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.max}
                     onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
@@ -738,8 +738,9 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Duration</label>
+                  <label className="cl-label" htmlFor="cp-edit-duration">Duration</label>
                   <input
+                    id="cp-edit-duration"
                     className="cl-input"
                     placeholder="e.g. 1-3 months"
                     value={editingProject.duration}
@@ -748,8 +749,9 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group">
-                  <label className="cl-label">Deadline</label>
+                  <label className="cl-label" htmlFor="cp-edit-deadline">Deadline</label>
                   <input
+                    id="cp-edit-deadline"
                     type="date" className={`cl-input${editErrors.deadline ? ' cl-input--error' : ''}`}
                     value={editingProject.deadline}
                     onChange={e => { setField({ deadline: e.target.value }); clearEditError('deadline'); }}
@@ -766,8 +768,9 @@ const ClientProjects = () => {
                 </div>
 
                 <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
-                  <label className="cl-label">Full Description *</label>
+                  <label className="cl-label" htmlFor="cp-edit-description">Full Description *</label>
                   <textarea
+                    id="cp-edit-description"
                     className={`cl-textarea${editErrors.description ? ' cl-input--error' : ''}`}
                     value={editingProject.description}
                     onChange={e => { setField({ description: e.target.value }); clearEditError('description'); }}
@@ -843,8 +846,9 @@ const ClientProjects = () => {
             {!reviewing.isCompleted ? (
               <>
                 <div className="cl-form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="cl-label">Need changes? Describe what to revise (optional for accept)</label>
+                  <label className="cl-label" htmlFor="cp-revision-note">Need changes? Describe what to revise (optional for accept)</label>
                   <textarea
+                    id="cp-revision-note"
                     className="cl-textarea"
                     rows={3}
                     placeholder="e.g. Please adjust the colour scheme and fix the mobile layout…"
@@ -910,23 +914,22 @@ const ClientProjects = () => {
         </p>
         <form onSubmit={handleRequestEnd}>
           <div style={{ marginBottom: '1rem' }}>
-            <label className="cl-label">Reason for ending</label>
-            <select className="cl-input" value={endReason} onChange={e => setEndReason(e.target.value)} required>
-              <option value="Work completed">Work completed</option>
-              <option value="Mutual agreement">Mutual agreement</option>
-              <option value="Client no longer requires work">Client no longer requires work</option>
-              <option value="Freelancer unavailable">Freelancer unavailable</option>
-              <option value="Communication issues">Communication issues</option>
-              <option value="Other">Other</option>
-            </select>
+            <label className="cl-label" htmlFor="cp-end-reason">Reason for ending</label>
+            <CustomSelect
+              id="cp-end-reason"
+              value={endReason}
+              onChange={setEndReason}
+              options={['Work completed', 'Mutual agreement', 'Client no longer requires work', 'Freelancer unavailable', 'Communication issues', 'Other']}
+            />
           </div>
           {endReason === 'Other' && (
             <div style={{ marginBottom: '1rem' }}>
-              <label className="cl-label">Additional Details</label>
-              <textarea 
-                className="cl-input" 
-                rows="3" 
-                value={endDetails} 
+              <label className="cl-label" htmlFor="cp-end-details">Additional Details</label>
+              <textarea
+                id="cp-end-details"
+                className="cl-input"
+                rows="3"
+                value={endDetails}
                 onChange={e => setEndDetails(e.target.value)}
                 placeholder="Please explain..."
                 required
@@ -947,22 +950,24 @@ const ClientProjects = () => {
         </p>
         <form onSubmit={handleRaiseDispute}>
           <div style={{ marginBottom: '1rem' }}>
-            <label className="cl-label">Dispute Reason</label>
-            <input 
-              className="cl-input" 
-              type="text" 
-              value={disputeReason} 
+            <label className="cl-label" htmlFor="cp-dispute-reason">Dispute Reason</label>
+            <input
+              id="cp-dispute-reason"
+              className="cl-input"
+              type="text"
+              value={disputeReason}
               onChange={e => setDisputeReason(e.target.value)} 
               placeholder="e.g. Freelancer stopped communicating"
               required 
             />
           </div>
           <div style={{ marginBottom: '1rem' }}>
-            <label className="cl-label">Description (Optional)</label>
-            <textarea 
-              className="cl-input" 
-              rows="3" 
-              value={disputeDesc} 
+            <label className="cl-label" htmlFor="cp-dispute-desc">Description (Optional)</label>
+            <textarea
+              id="cp-dispute-desc"
+              className="cl-input"
+              rows="3"
+              value={disputeDesc}
               onChange={e => setDisputeDesc(e.target.value)}
               placeholder="Provide more details for the admin..."
             />

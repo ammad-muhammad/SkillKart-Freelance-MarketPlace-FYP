@@ -6,8 +6,9 @@ import {
   MessageSquareCode, Calculator, HelpCircle, Search, FileEdit, Zap,
   Code, Globe, Smartphone, Palette, PenTool, BrainCircuit, Database,
   BarChart3, Megaphone, FileText, Video, Music, Camera, Cloud, Server,
-  ShieldCheck, Briefcase, DollarSign, Cpu, Layers, Wrench, LayoutGrid,
+  ShieldCheck, Briefcase, Cpu, Layers, Wrench, LayoutGrid,
 } from 'lucide-react';
+import PkrIcon from '../PkrIcon';
 import { useAuth } from '../../../hooks/useAuth';
 import { skillsAPI } from '../../../api/skills';
 import { warn } from "../../../utils/logger";
@@ -35,7 +36,7 @@ const CATEGORY_ICON_RULES = [
   [/photo|camera/, Camera],
   [/audio|music|voice|sound|podcast/, Music],
   [/security|cyber|pentest/, ShieldCheck],
-  [/finance|account|invest|legal|tax/, DollarSign],
+  [/finance|account|invest|legal|tax/, PkrIcon],
   [/business|consult|management|strategy/, Briefcase],
   [/engineer|architecture|cad|hardware/, Cpu],
   [/wordpress|cms|plugin|no-code/, Wrench],
@@ -229,7 +230,7 @@ export default function Navbar({ alwaysSticky = false }) {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [alwaysSticky]);
 
   /* ── Trigger animation every time sticky reveal occurs ── */
   useEffect(() => {

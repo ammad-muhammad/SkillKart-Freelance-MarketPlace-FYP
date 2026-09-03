@@ -47,7 +47,7 @@ export const checkBackend = async (backendUrl = import.meta.env.VITE_API_URL.rep
     // Backend health might be at /health (outside /api/v1)
     const res = await axios.get(`${backendUrl}/health`, { timeout: 2000 });
     return res.status === 200;
-  } catch (err) {
+  } catch {
     return false;
   }
 };

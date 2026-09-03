@@ -1,17 +1,17 @@
 // src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/auth';
 import { tokenManager } from '../utils/tokenManager';
 import { normalizeAuthUser } from '../utils/user';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../utils/safeToast';
 import { log } from "../utils/logger";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const inactivityTimeout = useRef(null);
@@ -36,6 +36,10 @@ export const AuthProvider = ({ children }) => {
         clearTimeout(inactivityTimeout.current);
       }
     };
+    // Mount-only: checkAuth/setupSecurityFeatures are plain functions redefined
+    // every render, not stable useCallback refs — adding them here would re-run
+    // this setup (re-attaching all the window/document listeners) on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setupSecurityFeatures = () => {
@@ -100,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       try {
         await authAPI.getCurrentUser();
         lastCheckedAuth.current = now;
-      } catch (error) {
+      } catch {
         logout('Session invalid after reconnection');
       }
     }
@@ -122,7 +126,7 @@ export const AuthProvider = ({ children }) => {
       try {
         await authAPI.getCurrentUser();
         lastCheckedAuth.current = now;
-      } catch (error) {
+      } catch {
         logout('Session expired');
       }
     }
@@ -310,6 +314,11 @@ export const AuthProvider = ({ children }) => {
     // the user to /unauthorized.
     refreshAuth: () => checkAuth(true),
     refreshUser
+    // The handler functions below are plain (non-useCallback) closures redefined
+    // every render, but they only ever read `user`/refs — never anything else
+    // that changes independently — so memoizing on [user, loading] alone is safe
+    // and avoids handing consumers a new `value` object (and re-render) every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [user, loading]);
 
   return (

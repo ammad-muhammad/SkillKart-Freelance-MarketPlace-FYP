@@ -9,10 +9,12 @@ const { auditLog } = require('../../utils/adminAudit');
 const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 const { finalizeJobCompletion } = require('../../services/jobCompletion.service');
 const { getEscrowReleaseDays } = require('../../services/milestone.service');
+const { parsePagination } = require('../../utils/helpers');
 
 const getDisputes = async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status } = req.query;
+    const { page, limit } = parsePagination(req.query);
     const filter = { 'dispute.status': { $exists: true } };
     if (status) filter['dispute.status'] = status;
 
@@ -60,12 +62,12 @@ const getDisputes = async (req, res) => {
     const merged = [...hourlyDisputes, ...milestoneDisputes]
       .sort((a, b) => new Date(b.dispute?.raisedAt || 0) - new Date(a.dispute?.raisedAt || 0));
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const paged = merged.slice(skip, skip + parseInt(limit));
+    const skip = (page - 1) * limit;
+    const paged = merged.slice(skip, skip + limit);
 
     return res.status(200).json({
       success: true, disputes: paged,
-      pagination: { total: merged.length, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(merged.length / parseInt(limit)) }
+      pagination: { total: merged.length, page, limit, pages: Math.ceil(merged.length / limit) }
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load disputes' });

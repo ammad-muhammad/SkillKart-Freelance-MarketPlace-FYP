@@ -9,6 +9,12 @@ const notifications = require('../services/notification.service');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Only content fields are ever taken from the body at creation — `stats`
+// (views/orders/rating rollups) is never client-settable, same rule as
+// createJob's CREATABLE_JOB_FIELDS whitelist.
+const CREATABLE_GIG_FIELDS = ['title', 'shortDescription', 'fullDescription', 'category', 'subcategory', 'skills', 'pricing', 'media', 'faqs'];
+const GIG_CREATE_STATUSES = ['draft', 'active'];
+
 /**
  * Create Gig.
  * Skill-gated: the freelancer must have passed (verified) at least one skill
@@ -32,8 +38,18 @@ const createGig = asyncHandler(async (req, res) => {
     });
   }
 
+  const fields = {};
+  for (const key of CREATABLE_GIG_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(gigData, key)) {
+      fields[key] = gigData[key];
+    }
+  }
+  if (GIG_CREATE_STATUSES.includes(gigData.status)) {
+    fields.status = gigData.status;
+  }
+
   const gig = new Gig({
-    ...gigData,
+    ...fields,
     freelancerId
   });
 
@@ -72,7 +88,14 @@ const updateGig = asyncHandler(async (req, res) => {
     });
   }
 
-  Object.assign(gig, updates);
+  // Only content + status fields are editable — freelancerId (ownership) and
+  // stats (views/orders/rating rollups) are never client-settable.
+  const UPDATABLE_GIG_FIELDS = [...CREATABLE_GIG_FIELDS, 'status'];
+  for (const key of UPDATABLE_GIG_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(updates, key)) {
+      gig[key] = updates[key];
+    }
+  }
   await gig.save();
 
   // Trigger background suggestion flow for unrecognized skills

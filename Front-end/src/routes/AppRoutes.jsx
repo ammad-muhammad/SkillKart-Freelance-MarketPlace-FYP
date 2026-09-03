@@ -94,7 +94,6 @@ import PublicFreelancerProfile from "../pages/public/FreelancerProfile/PublicFre
 import PublicClientProfile from "../pages/public/ClientProfile/PublicClientProfile";
 
 import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
-import Onboarding from "../pages/public/Onboarding/Onboarding";
 import FreelancerOnboarding from "../pages/public/FreelancerOnboarding/FreelancerOnboarding";
 // AI Tools
 import BuddyAI from "../pages/public/AiTools/BuddyAI";
@@ -207,7 +206,6 @@ const AppRoutes = () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/onboarding" element={<Onboarding />} />
             <Route
               path="/freelancer/onboarding"
               element={

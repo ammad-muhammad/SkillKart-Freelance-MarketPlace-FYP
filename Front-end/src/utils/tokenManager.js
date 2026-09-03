@@ -1,6 +1,27 @@
 const ACCESS_TOKEN_KEY = 'at';
 const REFRESH_TOKEN_KEY = 'rt';
 
+// Lightweight obfuscation for the refresh token at rest in localStorage — not
+// real encryption (the key ships in the same JS bundle, so it can't stop an
+// attacker who already has code execution via XSS), but it does stop the
+// much more common case of a casual script/extension that just greps
+// Web Storage for anything JWT-shaped. Real damage limitation comes from
+// pairing this with a short-lived token + tokenVersion invalidation on
+// password change (see Backend auth.service.js), not from obfuscation alone.
+const OBFUSCATION_KEY = 'skillkart-rt-v1';
+const xorObfuscate = (str, key) => {
+  const xored = str.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length))).join('');
+  return btoa(xored);
+};
+const xorDeobfuscate = (encoded, key) => {
+  try {
+    const xored = atob(encoded);
+    return xored.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length))).join('');
+  } catch {
+    return null;
+  }
+};
+
 class TokenManager {
   constructor() {
     this.accessToken = null;
@@ -49,9 +70,8 @@ class TokenManager {
       // deep-link reload) does NOT destroy the session. sessionStorage is wiped
       // on reload/tab-close, which was bouncing users back to /login after OTP.
       // On reload, checkAuth() mints a fresh access token from this.
-      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-      // Keep a sessionStorage copy too for backward compat with any reader.
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      // Stored obfuscated (see xorObfuscate doc comment above) rather than raw.
+      localStorage.setItem(REFRESH_TOKEN_KEY, xorObfuscate(refreshToken, OBFUSCATION_KEY));
     }
 
     this.scheduleTokenRefresh();
@@ -67,9 +87,15 @@ class TokenManager {
   }
 
   getRefreshToken() {
-    // Prefer the durable localStorage copy (survives reloads); fall back to the
-    // sessionStorage copy for any session written before this change.
-    return localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    const stored = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!stored) return null;
+    const deobfuscated = xorDeobfuscate(stored, OBFUSCATION_KEY);
+    // A valid JWT has two dots — if de-obfuscation produces garbage (e.g. a
+    // raw, pre-obfuscation token from a session written before this change),
+    // fall back to treating the stored value as already-plaintext so
+    // existing sessions aren't force-logged-out by this change.
+    if (deobfuscated && deobfuscated.split('.').length === 3) return deobfuscated;
+    return stored.split('.').length === 3 ? stored : null;
   }
 
   clearTokens() {
@@ -108,7 +134,33 @@ class TokenManager {
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
-    return refreshToken;
+
+    // Deliberately a raw fetch() rather than importing api/client.js's axios
+    // instance: that module imports tokenManager (for attaching the auth
+    // header / handling 401s), so importing it back here would create a
+    // circular dependency between the two modules.
+    const baseURL = import.meta.env.VITE_API_URL;
+    const res = await fetch(`${baseURL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) throw new Error('Token refresh failed');
+
+    const body = await res.json();
+    const newAccessToken = body?.data?.accessToken;
+    const newRefreshToken = body?.data?.refreshToken;
+    if (!newAccessToken) throw new Error('Token refresh response missing accessToken');
+
+    this.accessToken = newAccessToken;
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
+    // The backend rotates the refresh token on every use — the old one is
+    // invalidated server-side, so the new one MUST replace it here or the
+    // next refresh attempt will fail (treated as reuse of a rotated token).
+    if (newRefreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, xorObfuscate(newRefreshToken, OBFUSCATION_KEY));
+    }
+    return newAccessToken;
   }
 
   hasValidToken() {

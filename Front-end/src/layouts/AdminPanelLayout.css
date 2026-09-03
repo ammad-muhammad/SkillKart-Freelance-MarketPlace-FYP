@@ -664,6 +664,7 @@
 }
 .admin-layout .ap-select { cursor: pointer; appearance: none; }
 .admin-layout .ap-textarea { resize: vertical; min-height: 100px; }
+.admin-layout .ap-flex1 { flex: 1; }
 
 /* ─── Modal ──────────────────────────────────────────────────── */
 .admin-layout .ap-modal-overlay {
@@ -704,8 +705,8 @@
   letter-spacing: -0.02em;
 }
 .admin-layout .ap-modal-close {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   background: var(--ap-bg-elevated);
   border: 1px solid var(--ap-border);
   border-radius: var(--ap-radius-sm);

@@ -1,7 +1,7 @@
 const FreelancerProfile = require('../models/FreelancerProfile');
 const User = require('../models/User');
 const Review = require('../models/Review');
-const { uploadProfilePicture, uploadPortfolioImage } = require('../services/upload.service');
+const { uploadProfilePicture, uploadPortfolioImage, cleanupOrphanedAsset } = require('../services/upload.service');
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
@@ -9,6 +9,7 @@ const { applyUsernameUpdate } = require('../utils/username');
 const { syncFreelancerVerification } = require('../services/verification.service');
 const { getAIProvider } = require('../services/ai');
 const { getConnectedBalance } = require('../services/stripe.service');
+const { stripHtml } = require('../utils/sanitizeInput');
 
 // Simple in-memory cache for semantic skill expansion
 const skillExpansionCache = new Map();
@@ -34,47 +35,54 @@ const calculateCompletion = (profile, user = {}) => {
   return Math.round((score / total) * 100);
 };
 
+// Per-skill ancestor lookup shared by both enrichment passes below — pulled
+// out so both loops can run their per-name work concurrently (Promise.all)
+// instead of one taxonomy round-trip at a time.
+const professionAncestorsFor = async (taxonomy, name) => {
+  const node = await taxonomy.resolveCanonical(name);
+  if (!node) return [];
+  const ancestors = await taxonomy.getAncestors(node._id, 4);
+  return ancestors.filter(a => a.type === 'profession').map(a => a.name);
+};
+
 const enrichFreelancerProfile = async (profileObj) => {
   if (!profileObj) return null;
   const taxonomy = require('../services/taxonomy.service');
   const skillNames = (profileObj.skills || []).map(s => typeof s === 'object' ? s.name : s).filter(Boolean);
-  
-  // 1. Infer categories and professions dynamically
-  const inferredCategories = await taxonomy.inferCategories(skillNames);
-  
-  // Get all ancestors of type 'profession'
-  const professionsSet = new Set();
-  for (const name of skillNames) {
-    const node = await taxonomy.resolveCanonical(name);
-    if (node) {
-      const ancestors = await taxonomy.getAncestors(node._id, 4);
-      ancestors.filter(a => a.type === 'profession').forEach(a => professionsSet.add(a.name));
-    }
-  }
-  const inferredProfessions = [...professionsSet];
-  
-  // 2. Propagate verification status/scores to parent categories and professions
   const verifiedSkillNames = (profileObj.skills || [])
     .filter(s => typeof s === 'object' && s.isVerified)
     .map(s => s.name);
-    
+
+  // Every per-name taxonomy lookup below hits the same resolve/ancestor
+  // caches — pre-warming once up front means the concurrent calls that
+  // follow are cache hits instead of a stampede of identical cold queries.
+  await taxonomy.warmResolveCache([...new Set([...skillNames, ...verifiedSkillNames])]);
+
+  const [inferredCategories, professionsPerSkill, impactsAndProfessions] = await Promise.all([
+    taxonomy.inferCategories(skillNames),
+    Promise.all(skillNames.map((name) => professionAncestorsFor(taxonomy, name))),
+    Promise.all(verifiedSkillNames.map(async (name) => {
+      const [impact, professions] = await Promise.all([
+        taxonomy.getCertificationImpact(name),
+        professionAncestorsFor(taxonomy, name)
+      ]);
+      return { categories: impact.categories, professions };
+    }))
+  ]);
+
+  const inferredProfessions = [...new Set(professionsPerSkill.flat())];
   const verifiedCategoriesSet = new Set();
   const verifiedProfessionsSet = new Set();
-  for (const name of verifiedSkillNames) {
-    const impact = await taxonomy.getCertificationImpact(name);
-    impact.categories.forEach(c => verifiedCategoriesSet.add(c));
-    const node = await taxonomy.resolveCanonical(name);
-    if (node) {
-      const ancestors = await taxonomy.getAncestors(node._id, 4);
-      ancestors.filter(a => a.type === 'profession').forEach(a => verifiedProfessionsSet.add(a.name));
-    }
-  }
-  
+  impactsAndProfessions.forEach(({ categories, professions }) => {
+    categories.forEach((c) => verifiedCategoriesSet.add(c));
+    professions.forEach((p) => verifiedProfessionsSet.add(p));
+  });
+
   profileObj.inferredCategories = inferredCategories;
   profileObj.inferredProfessions = inferredProfessions;
   profileObj.verifiedCategories = [...verifiedCategoriesSet];
   profileObj.verifiedProfessions = [...verifiedProfessionsSet];
-  
+
   return profileObj;
 };
 
@@ -117,40 +125,60 @@ const getProfile = asyncHandler(async (req, res) => {
   });
 });
 
+// Explicit whitelist to prevent mass assignment — never let a client write
+// server-controlled fields (walletBalance, rating, totalEarnings, Stripe
+// linkage, verification status, admin wallet-freeze flags, savedJobs) via
+// this endpoint. Mirrors the same pattern already used in
+// client.controller.js's updateProfile.
+const FREELANCER_PROFILE_ALLOWED_FIELDS = [
+  'bio', 'title', 'coverPhoto', 'phone', 'hourlyRate', 'skills',
+  'portfolioLinks', 'education', 'certifications', 'languages',
+  'availability', 'timezone', 'socialLinks', 'experienceLevel',
+  'notificationSettings', 'securitySettings'
+];
+
 /**
  * Update freelancer profile
  */
 const updateProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const updates = { ...req.body };
+  const rawUpdates = { ...req.body };
 
   const user = await User.findById(userId);
   if (!user) throw new NotFoundError('User not found');
 
-  if (updates.username !== undefined && updates.username !== null && String(updates.username).trim() !== '') {
-    await applyUsernameUpdate(user, updates.username);
+  if (rawUpdates.username !== undefined && rawUpdates.username !== null && String(rawUpdates.username).trim() !== '') {
+    await applyUsernameUpdate(user, rawUpdates.username);
     await user.save();
   }
-  delete updates.username;
-  
+
+  const updates = {};
+  FREELANCER_PROFILE_ALLOWED_FIELDS.forEach(field => {
+    if (rawUpdates[field] !== undefined) updates[field] = rawUpdates[field];
+  });
+  if (updates.bio !== undefined) updates.bio = stripHtml(updates.bio);
+
   let profile = await FreelancerProfile.findOne({ userId });
-  
-  // Handle skills transformation if they come as strings
+
+  // Handle skills transformation if they come as strings — and, for
+  // object-shaped entries, always re-derive verification fields from the
+  // freelancer's existing record rather than trusting client-supplied
+  // isVerified/verificationScore (skill verification is only ever set by
+  // the skill-test flow, never by a profile edit).
   if (updates.skills && Array.isArray(updates.skills)) {
     const transformedSkills = updates.skills.map(skill => {
-      if (typeof skill === 'string') {
-        const existing = profile?.skills?.find(s => s.name === skill);
-        return existing ? {
-          name: existing.name,
-          level: existing.level,
-          isVerified: existing.isVerified,
-          verificationScore: existing.verificationScore,
-          lastTestedAt: existing.lastTestedAt,
-          expiresAt: existing.expiresAt
-        } : { name: skill, level: 'Beginner', isVerified: false };
-      }
-      return skill;
-    });
+      const name = typeof skill === 'string' ? skill : skill?.name;
+      const level = typeof skill === 'string' ? 'Beginner' : (skill?.level || 'Beginner');
+      const existing = profile?.skills?.find(s => s.name === name);
+      return existing ? {
+        name: existing.name,
+        level,
+        isVerified: existing.isVerified,
+        verificationScore: existing.verificationScore,
+        lastTestedAt: existing.lastTestedAt,
+        expiresAt: existing.expiresAt
+      } : { name, level, isVerified: false };
+    }).filter(s => s.name);
     updates.skills = transformedSkills;
   }
 
@@ -159,9 +187,9 @@ const updateProfile = asyncHandler(async (req, res) => {
   } else {
     profile.set(updates);
   }
-  
+
   profile.profileCompletion = calculateCompletion(profile, user);
-  
+
   await profile.save();
 
   // Trigger background suggestion flow for unrecognized skills
@@ -181,19 +209,32 @@ const updateProfile = asyncHandler(async (req, res) => {
  */
 const submitOnboardingProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const updates = req.body;
-  
+  const rawUpdates = req.body;
+
+  const updates = {};
+  FREELANCER_PROFILE_ALLOWED_FIELDS.forEach(field => {
+    if (rawUpdates[field] !== undefined) updates[field] = rawUpdates[field];
+  });
+  if (updates.bio !== undefined) updates.bio = stripHtml(updates.bio);
+
   let profile = await FreelancerProfile.findOne({ userId });
-  
-  // Handle skills transformation if they come as strings
+
+  // Handle skills transformation if they come as strings — never trust a
+  // client-supplied isVerified/verificationScore for object-shaped entries.
   if (updates.skills && Array.isArray(updates.skills)) {
     updates.skills = updates.skills.map(skill => {
-      if (typeof skill === 'string') {
-        const existing = profile?.skills?.find(s => s.name === skill);
-        return existing || { name: skill, level: 'Beginner', isVerified: false };
-      }
-      return skill;
-    });
+      const name = typeof skill === 'string' ? skill : skill?.name;
+      const level = typeof skill === 'string' ? 'Beginner' : (skill?.level || 'Beginner');
+      const existing = profile?.skills?.find(s => s.name === name);
+      return existing ? {
+        name: existing.name,
+        level,
+        isVerified: existing.isVerified,
+        verificationScore: existing.verificationScore,
+        lastTestedAt: existing.lastTestedAt,
+        expiresAt: existing.expiresAt
+      } : { name, level, isVerified: false };
+    }).filter(s => s.name);
   }
 
   if (!profile) {
@@ -255,28 +296,46 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
 /**
  * Get freelancer by ID (public)
  */
+// Public profile — only fields meant for anonymous/visitor viewing. Never
+// spread the raw profile document here: it also carries phone,
+// securitySettings, notificationSettings, walletBalance, totalEarnings,
+// stripeAccountId, savedJobs, and admin wallet-freeze fields, none of which
+// should ever reach an unauthenticated request.
+const PUBLIC_FREELANCER_FIELDS = [
+  'userId', 'bio', 'title', 'coverPhoto', 'hourlyRate', 'skills',
+  'portfolioLinks', 'portfolio', 'education', 'certifications', 'languages',
+  'availability', 'timezone', 'socialLinks', 'experienceLevel',
+  'profileCompletion', 'rating', 'completedProjects', 'verificationStatus',
+  'inferredCategories', 'inferredProfessions', 'verifiedCategories', 'verifiedProfessions'
+];
+
 const getFreelancerById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   const profile = await FreelancerProfile.findOne({ userId: id })
-    .populate('userId', 'firstName lastName email profilePicture rating');
-  
+    .populate('userId', 'firstName lastName profilePicture')
+    .lean();
+
   if (!profile) {
     throw new NotFoundError('Freelancer not found');
   }
 
-  const profileObj = profile.toObject();
-  await enrichFreelancerProfile(profileObj);
+  await enrichFreelancerProfile(profile);
+
+  const publicProfile = {};
+  PUBLIC_FREELANCER_FIELDS.forEach((field) => {
+    if (profile[field] !== undefined) publicProfile[field] = profile[field];
+  });
 
   // Fetch reviews targeting this freelancer
   const reviews = await Review.find({ revieweeId: id, type: 'client_to_freelancer' })
     .populate('reviewerId', 'firstName lastName profilePicture')
     .sort({ createdAt: -1 })
     .limit(10);
-  
+
   sendSuccess(res, {
     message: 'Freelancer retrieved successfully',
-    data: { profile: profileObj, reviews }
+    data: { profile: publicProfile, reviews }
   });
 });
 
@@ -361,8 +420,16 @@ const searchFreelancers = asyncHandler(async (req, res) => {
     FreelancerProfile.countDocuments(query)
   ]);
   
+  // Pre-warm the resolve cache once for every skill name across this whole
+  // page before enriching each profile concurrently — without this, the
+  // per-profile enrichments below race to cold-resolve the same overlapping
+  // skill names in parallel (the original N+1 storm this endpoint was slow
+  // from: ~13s cold for a full page of results).
+  const allSkillNames = profiles.flatMap(p => (p.skills || []).map(s => typeof s === 'object' ? s.name : s).filter(Boolean));
+  await require('../services/taxonomy.service').warmResolveCache(allSkillNames);
+
   const enrichedProfiles = await Promise.all(profiles.map(p => enrichFreelancerProfile(p)));
-  
+
   sendPaginated(res, {
     data: enrichedProfiles,
     page,
@@ -408,10 +475,15 @@ const updatePortfolioItem = asyncHandler(async (req, res) => {
   if (!item) {
     throw new NotFoundError('Portfolio item not found');
   }
-  
+
+  const previousImages = Array.isArray(item.images) ? [...item.images] : [];
   Object.assign(item, updates);
   await profile.save();
-  
+
+  const nextImages = Array.isArray(item.images) ? item.images : [];
+  const removedImages = previousImages.filter((url) => !nextImages.includes(url));
+  removedImages.forEach((url) => cleanupOrphanedAsset(userId, url));
+
   sendSuccess(res, {
     message: 'Portfolio item updated',
     data: { profile }
@@ -429,10 +501,12 @@ const deletePortfolioItem = asyncHandler(async (req, res) => {
   if (!profile) {
     throw new NotFoundError('Profile not found');
   }
-  
+
+  const removedImages = profile.portfolio.id(itemId)?.images || [];
   profile.portfolio.pull(itemId);
   await profile.save();
-  
+  removedImages.forEach((url) => cleanupOrphanedAsset(userId, url));
+
   sendSuccess(res, {
     message: 'Portfolio item deleted'
   });
@@ -469,8 +543,10 @@ const uploadAvatar = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
+  const previousUrl = (await User.findById(userId).select('profilePicture').lean())?.profilePicture;
   const fileUpload = await uploadProfilePicture(userId, req.file);
   const user = await User.findByIdAndUpdate(userId, { profilePicture: fileUpload.url }, { new: true });
+  cleanupOrphanedAsset(userId, previousUrl);
 
   // Recalculate profile completion
   const profile = await FreelancerProfile.findOne({ userId });

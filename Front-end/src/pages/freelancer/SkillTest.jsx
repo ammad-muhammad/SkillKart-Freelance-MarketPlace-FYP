@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ChevronRight, CheckCircle2, AlertCircle, Award, ShieldAlert, Eye, Maximize2, Ban, Camera, CameraOff, Clock } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { safeToast as toast } from '../../utils/safeToast';
 import { skillTestAPI } from '../../api/skillTest';
 import { useFreelancer } from '../../context/FreelancerContext';
 import useAntiCheat from './useAntiCheat';
@@ -29,12 +29,24 @@ const CAMERA_VIOLATION_TYPE = {
 };
 
 const PER_QUESTION_SECONDS = 20;
+// Written-answer questions need more time to type than an MCQ click —
+// applies unconditionally (demo and real, easy mode or not).
+const TEXT_QUESTION_SECONDS = 30;
 
 // The actual question count is only known once the AI generates the test
 // (after "Start Test" is clicked), but the rules screen must show an
 // upfront time estimate — mirrors the counts in skillTest.controller.js's
 // generateTest (20 for a single-skill test, 50 for the baseline mixed test).
 const estimateQuestionCount = (specificSkill) => (specificSkill ? 20 : 50);
+
+// skillTest.controller.js targets ~80% MCQ / ~20% text — used only to give
+// the rules screen a realistic upfront estimate before the real mix is known.
+const estimateTotalSeconds = (specificSkill) => {
+  const count = estimateQuestionCount(specificSkill);
+  const mcqCount = Math.round(count * 0.8);
+  const textCount = count - mcqCount;
+  return mcqCount * PER_QUESTION_SECONDS + textCount * TEXT_QUESTION_SECONDS;
+};
 
 const formatDuration = (totalSeconds) => {
   const minutes = Math.floor(totalSeconds / 60);
@@ -67,6 +79,9 @@ const SkillTest = () => {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [skills, setSkills] = useState([]);
+  // Testing-only: backend sets this from SKILL_TEST_EASY_MODE — when true, the
+  // correct MCQ answer is highlighted below so a tester can breeze through.
+  const [easyMode, setEasyMode] = useState(false);
   const [warning, setWarning] = useState(null);   // 1st-violation warning text
   const [abortReason, setAbortReason] = useState('');
   const [attemptId, setAttemptId] = useState(0);  // bumped each (re)start → resets strikes
@@ -152,6 +167,7 @@ const SkillTest = () => {
 
       setQuestions(qList);
       setSkills(sList);
+      setEasyMode(Boolean(testData?.easyMode));
       setCurrentIndex(0);
       setAnswers({});
       setSelectedOptionIndex({});
@@ -244,14 +260,16 @@ const SkillTest = () => {
   const handleSubmitRef = useRef(() => {});
   useEffect(() => { handleSubmitRef.current = handleSubmit; });
 
-  // Per-question 20s countdown: whether answered or not, time running out
-  // advances to the next question — or, on the last question, submits the
-  // whole test automatically. Resets on every question/attempt change; there
-  // is no way back to a question once its timer has moved on.
+  // Per-question countdown (20s for MCQs, 30s for written answers): whether
+  // answered or not, time running out advances to the next question — or, on
+  // the last question, submits the whole test automatically. Resets on every
+  // question/attempt change; there is no way back to a question once its
+  // timer has moved on.
   useEffect(() => {
     if (phase !== 'testing' || !questions.length || result || submitting) return undefined;
 
-    setTimeLeft(PER_QUESTION_SECONDS);
+    const duration = questions[currentIndex]?.type === 'text' ? TEXT_QUESTION_SECONDS : PER_QUESTION_SECONDS;
+    setTimeLeft(duration);
     let fired = false;
 
     const interval = setInterval(() => {
@@ -273,7 +291,7 @@ const SkillTest = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [currentIndex, phase, attemptId, questions.length, result, submitting]);
+  }, [currentIndex, phase, attemptId, questions, result, submitting]);
 
   // Make sure we never leave the browser stuck in fullscreen on unmount.
   useEffect(() => () => exitFullscreen(), [exitFullscreen]);
@@ -378,8 +396,8 @@ const SkillTest = () => {
             <div className="st-total-time">
               <Clock size={18} />
               <span>
-                Total test time: <strong>~{formatDuration(estimateQuestionCount(specificSkill) * PER_QUESTION_SECONDS)}</strong>
-                {' '}({estimateQuestionCount(specificSkill)} questions × {PER_QUESTION_SECONDS}s each)
+                Total test time: <strong>~{formatDuration(estimateTotalSeconds(specificSkill))}</strong>
+                {' '}({estimateQuestionCount(specificSkill)} questions — most MCQ)
               </span>
             </div>
 
@@ -388,7 +406,7 @@ const SkillTest = () => {
               <li><Eye size={18} /><span><strong>Do not switch tabs, minimize, or leave the window.</strong> The first time you do, you get one warning.</span></li>
               <li><Ban size={18} /><span>A <strong>second</strong> violation (or exiting full-screen) <strong>cancels the test</strong> for cheating — you restart from question 1 with new questions.</span></li>
               <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. Keep your face visible and alone in frame — repeated issues (no face, another person, looking away) will also cancel the test.</span></li>
-              <li><Clock size={18} /><span>Each question has a <strong>{PER_QUESTION_SECONDS}-second timer</strong>. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
+              <li><Clock size={18} /><span>Each question has a timer — <strong>{PER_QUESTION_SECONDS}s for multiple-choice</strong>, <strong>{TEXT_QUESTION_SECONDS}s for written-answer</strong> questions. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
               <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
               <li><CheckCircle2 size={18} /><span>You need <strong>80%</strong> overall to be verified as an Expert for the skill.</span></li>
             </ul>
@@ -505,18 +523,30 @@ const SkillTest = () => {
             <div className="st-input-wrap">
               {currentQuestion.type === 'mcq' && currentQuestion.options ? (
                 <div className="st-mcq-options">
-                  {currentQuestion.options.map((opt, idx) => (
-                    <label key={idx} className={`st-mcq-option ${selectedOptionIndex[currentIndex] === idx ? 'selected' : ''}`}>
-                      <input
-                        type="radio"
-                        name={`question-${currentIndex}`}
-                        value={opt}
-                        checked={selectedOptionIndex[currentIndex] === idx}
-                        onChange={() => handleAnswerChange(opt, idx)}
-                      />
-                      <span>{opt}</span>
-                    </label>
-                  ))}
+                  {easyMode && (
+                    <div className="st-easy-mode-banner">
+                      <ShieldAlert size={16} />
+                      <span>Testing mode: correct answer highlighted below.</span>
+                    </div>
+                  )}
+                  {currentQuestion.options.map((opt, idx) => {
+                    const isAnswer = easyMode && opt === currentQuestion.correctAnswer;
+                    const classes = ['st-mcq-option'];
+                    if (selectedOptionIndex[currentIndex] === idx) classes.push('selected');
+                    if (isAnswer) classes.push('st-mcq-option--answer');
+                    return (
+                      <label key={idx} className={classes.join(' ')}>
+                        <input
+                          type="radio"
+                          name={`question-${currentIndex}`}
+                          value={opt}
+                          checked={selectedOptionIndex[currentIndex] === idx}
+                          onChange={() => handleAnswerChange(opt, idx)}
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               ) : (
                 <>

@@ -203,6 +203,26 @@
   background: rgba(59, 130, 246, 0.05);
 }
 
+/* Testing-only: highlights the correct option when SKILL_TEST_EASY_MODE=true */
+.st-mcq-option--answer {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.st-easy-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  border: 1px solid #22c55e;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.08);
+  color: #15803d;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .st-mcq-option input[type="radio"] {
   width: 18px;
   height: 18px;

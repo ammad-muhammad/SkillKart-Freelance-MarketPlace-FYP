@@ -459,6 +459,11 @@
   color: var(--color-text-light);
   cursor: pointer;
   transition: color 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cl-modal__close:hover { color: #ef4444; }

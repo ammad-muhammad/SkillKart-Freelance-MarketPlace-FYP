@@ -5,7 +5,6 @@ import {
   Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award, Link,
   User, Upload, Globe2
 } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
 import { timezones, getCurrentTimezone } from "../../utils/timezones";
 import ComboSelect from "../common/ComboSelect/ComboSelect";
 import AiGenerateText from "../common/AiSuggest/AiGenerateText";
@@ -99,8 +98,6 @@ const CustomDropdown = ({ value, onChange, placeholder = "Select an option", opt
 
 /* ── Step Component ───────────────────────────────────────────── */
 const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => {
-  const { user } = useAuth();
-  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -113,7 +110,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
         timezone: getCurrentTimezone()?.label || ''
       }));
     }
-  }, []);
+  }, [formData.timezone, setFormData]);
 
   return (
     <motion.div

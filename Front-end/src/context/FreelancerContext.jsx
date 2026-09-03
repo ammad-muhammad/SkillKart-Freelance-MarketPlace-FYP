@@ -10,6 +10,7 @@ import { log } from "../utils/logger";
 
 const FreelancerContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFreelancer = () => {
   const ctx = useContext(FreelancerContext);
   if (!ctx) throw new Error('useFreelancer must be used inside FreelancerProvider');
@@ -210,11 +211,11 @@ export const FreelancerProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    // Deliberately depend on primitive user fields, not `user` itself — the
+    // object reference can change without these values changing and would
+    // over-fire this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.role, user?.id, user?._id, authLoading, fetchFreelancerData]);
-
-  const fetchProfile = async () => {
-    await fetchFreelancerData();
-  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -394,7 +395,7 @@ export const FreelancerProvider = ({ children }) => {
       await fetchFreelancerData();
       showToast('Gig status updated!');
       return { success: true };
-    } catch (error) {
+    } catch {
       showToast('Failed to update gig status', 'error');
       return { success: false };
     } finally {
@@ -408,7 +409,7 @@ export const FreelancerProvider = ({ children }) => {
       await fetchFreelancerData();
       showToast(res.data?.message || 'Saved jobs updated!', 'success');
       return true;
-    } catch (error) {
+    } catch {
       showToast('Failed to save project', 'error');
       return false;
     }
@@ -421,7 +422,7 @@ export const FreelancerProvider = ({ children }) => {
       await fetchFreelancerData();
       showToast('Portfolio item added! 🚀');
       return true;
-    } catch (error) {
+    } catch {
       showToast('Failed to add portfolio item', 'error');
       return false;
     } finally {
@@ -436,7 +437,7 @@ export const FreelancerProvider = ({ children }) => {
       await fetchFreelancerData();
       showToast('Portfolio item updated!');
       return true;
-    } catch (error) {
+    } catch {
       showToast('Failed to update portfolio item', 'error');
       return false;
     } finally {
@@ -451,7 +452,7 @@ export const FreelancerProvider = ({ children }) => {
       await fetchFreelancerData();
       showToast('Portfolio item removed.', 'info');
       return true;
-    } catch (error) {
+    } catch {
       showToast('Failed to delete portfolio item', 'error');
       return false;
     } finally {

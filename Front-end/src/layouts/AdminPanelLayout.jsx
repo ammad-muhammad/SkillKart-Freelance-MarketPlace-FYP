@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import GlobalSearch from '../Components/adminPanel/GlobalSearch';

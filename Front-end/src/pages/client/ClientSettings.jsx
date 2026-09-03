@@ -192,12 +192,12 @@ const ClientSettings = () => {
         <h3 className="cl-section-title"><Tag size={18} style={{ marginRight: '8px' }} /> Account Information</h3>
         <div className="cl-form-grid">
           <div className="cl-form-group">
-            <label className="cl-label">Current Username</label>
-            <input className="cl-input" value={profile?.personalInfo?.username || ""} disabled />
+            <label className="cl-label" htmlFor="cs-current-username">Current Username</label>
+            <input id="cs-current-username" className="cl-input" value={profile?.personalInfo?.username || ""} disabled />
           </div>
           <div className="cl-form-group">
-            <label className="cl-label">New Username</label>
-            <input className={`cl-input${errors.newUsername ? ' cl-input--error' : ''}`} value={account.newUsername}
+            <label className="cl-label" htmlFor="cs-new-username">New Username</label>
+            <input id="cs-new-username" className={`cl-input${errors.newUsername ? ' cl-input--error' : ''}`} value={account.newUsername}
               onChange={(e) => setAccount((p) => ({ ...p, newUsername: e.target.value }))} />
             {errors.newUsername && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.newUsername}</span>}
           </div>
@@ -210,13 +210,13 @@ const ClientSettings = () => {
 
         <div className="cl-form-grid">
           <div className="cl-form-group">
-            <label className="cl-label">Current Email</label>
-            <input className="cl-input" value={profile?.personalInfo?.email || ""} disabled />
+            <label className="cl-label" htmlFor="cs-current-email">Current Email</label>
+            <input id="cs-current-email" className="cl-input" value={profile?.personalInfo?.email || ""} disabled />
           </div>
           {!isSupabaseUser && (
             <div className="cl-form-group">
-              <label className="cl-label">New Email</label>
-              <input type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
+              <label className="cl-label" htmlFor="cs-new-email">New Email</label>
+              <input id="cs-new-email" type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
                 onChange={(e) => setAccount((p) => ({ ...p, newEmail: e.target.value }))} />
               {errors.newEmail && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.newEmail}</span>}
             </div>
@@ -234,14 +234,14 @@ const ClientSettings = () => {
             <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-primary)' }}><RefreshCw size={16} style={{ marginRight: '6px' }} /> Recovery Options</h4>
             <div className="cl-form-grid">
               <div className="cl-form-group">
-                <label className="cl-label">Recovery Email</label>
-                <input type="email" className={`cl-input${errors.recoveryEmail ? ' cl-input--error' : ''}`} value={account.recoveryEmail}
+                <label className="cl-label" htmlFor="cs-recovery-email">Recovery Email</label>
+                <input id="cs-recovery-email" type="email" className={`cl-input${errors.recoveryEmail ? ' cl-input--error' : ''}`} value={account.recoveryEmail}
                   onChange={(e) => setAccount((p) => ({ ...p, recoveryEmail: e.target.value }))} />
                 {errors.recoveryEmail && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.recoveryEmail}</span>}
               </div>
               <div className="cl-form-group">
-                <label className="cl-label">Recovery Phone</label>
-                <input className={`cl-input${errors.recoveryPhone ? ' cl-input--error' : ''}`} value={account.recoveryPhone}
+                <label className="cl-label" htmlFor="cs-recovery-phone">Recovery Phone</label>
+                <input id="cs-recovery-phone" className={`cl-input${errors.recoveryPhone ? ' cl-input--error' : ''}`} value={account.recoveryPhone}
                   onChange={(e) => setAccount((p) => ({ ...p, recoveryPhone: e.target.value }))} />
                 {errors.recoveryPhone && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.recoveryPhone}</span>}
               </div>
@@ -312,6 +312,7 @@ const ClientSettings = () => {
             <div className="cl-form-group">
               <input
                 className="cl-input"
+                aria-label="6-digit confirmation code"
                 placeholder="6-digit code"
                 value={deleteOtp}
                 onChange={e => setDeleteOtp(e.target.value)}
@@ -333,6 +334,7 @@ const ClientSettings = () => {
         <div className="cl-form-group">
           <input
             className="cl-input"
+            aria-label="Enter OTP"
             placeholder="Enter OTP"
             value={emailOtp}
             onChange={(e) => setEmailOtp(e.target.value)}
@@ -356,6 +358,7 @@ const ClientSettings = () => {
         <div className="cl-form-group">
           <input
             className="cl-input"
+            aria-label="Enter OTP"
             placeholder="Enter OTP"
             value={recoveryEmailOtp}
             onChange={(e) => setRecoveryEmailOtp(e.target.value)}
