@@ -67,6 +67,16 @@ const createJobValidation = [
     .isLength({ max: 50 }).withMessage('Duration too long'),
 
   body('deadline')
+    .custom((value, { req }) => {
+      // A draft can be saved incomplete; a job going live (status defaults
+      // to 'open' when omitted — see createJob) must have a deadline.
+      if (!value && req.body.status !== 'draft') {
+        throw new Error('Deadline is required');
+      }
+      return true;
+    }),
+
+  body('deadline')
     .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid deadline format')
     .custom((value) => {
@@ -128,7 +138,21 @@ const updateJobValidation = [
 
   body('deadline')
     .optional()
-    .isISO8601().withMessage('Invalid deadline format')
+    .isISO8601().withMessage('Invalid deadline format'),
+
+  // Publishing a draft (status: 'open') requires a deadline. The request may
+  // not include `deadline` at all if it was already set earlier, so check
+  // the persisted job when the body itself doesn't carry one.
+  body('deadline')
+    .custom(async (value, { req }) => {
+      if (req.body.status !== 'open' || value) return true;
+      const Job = require('../models/Job');
+      const job = await Job.findById(req.params.id).select('deadline');
+      if (!job?.deadline) {
+        throw new Error('Deadline is required before publishing');
+      }
+      return true;
+    })
 ];
 
 // Get job validation
