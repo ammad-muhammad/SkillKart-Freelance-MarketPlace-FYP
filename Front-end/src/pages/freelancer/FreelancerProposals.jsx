@@ -50,9 +50,9 @@ export default function FreelancerProposals() {
 
   // Status badge for the underlying job (work stage), shown on accepted props.
   const workStage = (status) => {
-    if (status === 'in-progress') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Settings size={14} /> In Progress</span>, color: '#2563eb' };
-    if (status === 'delivered') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Package size={14} /> Delivered — awaiting review</span>, color: '#d97706' };
-    if (status === 'completed') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><CheckCircle2 size={14} /> Completed</span>, color: '#16a34a' };
+    if (status === 'in-progress') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Settings size={14} /> In Progress</span>, color: 'var(--color-info)' };
+    if (status === 'delivered') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Package size={14} /> Delivered — awaiting review</span>, color: 'var(--color-warning)' };
+    if (status === 'completed') return { label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><CheckCircle2 size={14} /> Completed</span>, color: 'var(--color-success)' };
     return null;
   };
 
@@ -131,7 +131,7 @@ export default function FreelancerProposals() {
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
                       onClick={() => handleWithdraw(prop._id)}
-                      style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                      style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
                     >
                       Withdraw
                     </button>
@@ -160,20 +160,13 @@ export default function FreelancerProposals() {
         .fl-prop-card__meta { font-size: 0.8rem; color: var(--color-text-light); margin-top: 0.2rem; }
         .fl-prop-card__details { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
         .fl-prop-card__detail { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--color-text-mid); }
-        .fl-prop-card__response { background: #f8fafc; border: 1px solid #e5edf5; padding: 0.75rem 1rem; border-radius: 10px; margin-top: 1rem; }
+        .fl-prop-card__response { background: var(--color-secondary); border: 1px solid rgba(183, 201, 226, 0.35); padding: 0.75rem 1rem; border-radius: 10px; margin-top: 1rem; }
         .fl-prop-card__response strong { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-light); margin-bottom: 0.3rem; }
-        .fl-prop-card__response p { font-size: 0.875rem; color: #475569; line-height: 1.5; }
-        .fl-prop-card__footer { border-top: 1px solid #f1f5f9; padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .fl-prop-card__response p { font-size: 0.875rem; color: var(--color-text-mid); line-height: 1.5; }
+        .fl-prop-card__footer { border-top: 1px solid rgba(183, 201, 226, 0.2); padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; }
         .fl-prop-card__btns { display: flex; gap: 0.75rem; }
         .fl-work-stage { margin-top: 0.85rem; font-weight: 700; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.25rem; }
-        .fl-revision-note { font-weight: 500; font-size: 0.8rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.4rem 0.6rem; }
-        .fl-deliver-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 4000; padding: 1rem; }
-        .fl-deliver-modal { background: #fff; width: 100%; max-width: 520px; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(4,46,76,0.3); }
-        .fl-deliver-modal__head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #eef2f7; }
-        .fl-deliver-modal__head h3 { font-size: 1rem; font-weight: 700; color: var(--color-primary); }
-        .fl-deliver-modal__head button { background: none; border: none; cursor: pointer; color: #64748b; }
-        .fl-deliver-modal__body { padding: 1.25rem; }
-        .fl-deliver-modal__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid #eef2f7; }
+        .fl-revision-note { font-weight: 500; font-size: 0.8rem; color: var(--color-warning); background: var(--color-warning-tint); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 8px; padding: 0.4rem 0.6rem; }
       `}</style>
     </div>
   );

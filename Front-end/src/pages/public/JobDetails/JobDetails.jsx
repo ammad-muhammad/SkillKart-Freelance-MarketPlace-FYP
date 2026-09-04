@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { jobsAPI } from '../../../api/jobs';
 import { proposalsAPI } from '../../../api/proposals';
+import { freelancersAPI } from '../../../api/freelancers';
 import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
@@ -75,7 +76,7 @@ function AttachmentCard({ url, index }) {
 export default function JobDetails() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { savedProjects, toggleSavedProject } = useFreelancer();
+  const { savedProjects, toggleSavedProject, profile, refreshProfile } = useFreelancer();
   const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -214,15 +215,43 @@ export default function JobDetails() {
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to submit proposal.';
       const gate = error.response?.data?.errors;
-      // Skill-gating block (403): route the freelancer to the skill test.
+      // Skill-gating block (403): route the freelancer to the right skill test.
       if (error.response?.status === 403 && gate?.skillTestRequired) {
-        toast.error(msg);
         setShowApplyModal(false);
-        // Route to the baseline skill test (covers their unverified profile
-        // skills). A per-skill ?skill= test requires the skill already be on
-        // their profile, so we avoid forcing it here.
-        if (window.confirm('You must pass the skill test for this project’s required skills before applying. Take the test now?')) {
-          navigate('/freelancer/skill-test');
+
+        // A per-skill ?skill= test only works for a skill already listed on
+        // the freelancer's profile (generateTest 400s otherwise). Find one of
+        // the job's required skills (or its category) that's already on their
+        // profile — verified or not — and send them straight to that test.
+        const candidates = [...(gate.requiredSkills || []), gate.category].filter(Boolean);
+        const myProfileSkillNames = (profile?.verifiedSkills || []).map((s) => s.name?.toLowerCase());
+        const matchedSkill = candidates.find((c) => myProfileSkillNames.includes(c.toLowerCase()));
+
+        if (matchedSkill) {
+          toast.error(msg);
+          if (window.confirm(`You must pass the skill test for "${matchedSkill}" before applying. Take the test now?`)) {
+            navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}`);
+          }
+        } else if (candidates[0]) {
+          // None of the required skills are on their profile at all — a test
+          // can't be generated for a skill they don't have listed yet (that's
+          // what caused the old loop: retaking a baseline test of unrelated
+          // skills can never satisfy this gate). Add it to their profile
+          // (unverified, same as any profile-edit skill add) and take them
+          // straight to its test instead.
+          const skillLabel = candidates[0];
+          if (window.confirm(`This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`)) {
+            try {
+              const existingSkillNames = profile?.skills || [];
+              await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
+              await refreshProfile();
+              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}`);
+            } catch (addErr) {
+              toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
+            }
+          }
+        } else {
+          toast.error(msg);
         }
       } else {
         toast.error(msg);

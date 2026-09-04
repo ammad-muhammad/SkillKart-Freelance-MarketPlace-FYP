@@ -8,10 +8,12 @@
   top: 0; left: 0;
   width: 265px;
   height: 100vh;
-  background: linear-gradient(180deg, #042E4C 0%, #063d5c 60%, #0a4a73 100%);
+  background: linear-gradient(180deg, var(--color-primary) 0%, #063d5c 60%, var(--color-primary-light) 100%);
   display: flex;
   flex-direction: column;
-  z-index: 1200;
+  /* Above .cl-mobile-header (1300) so the in-panel close button is reachable
+     on mobile — otherwise the fixed top bar physically covers it. */
+  z-index: 1400;
   overflow-y: auto;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 4px 0 24px rgba(4, 46, 76, 0.25);
@@ -29,7 +31,7 @@
   font-family: var(--font-heading);
   font-size: 1.35rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-white);
   letter-spacing: 0.03em;
 }
 .cl-sidebar__close {
@@ -40,7 +42,7 @@
   border-radius: 6px;
   transition: background 0.2s;
 }
-.cl-sidebar__close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.cl-sidebar__close:hover { background: rgba(255,255,255,0.12); color: var(--color-white); }
 
 /* ── Avatar ── */
 .cl-sidebar__avatar-wrap {
@@ -53,9 +55,9 @@
   position: relative;
   width: 46px; height: 46px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #b7c9e2, #0a4a73);
+  background: linear-gradient(135deg, var(--color-accent), var(--color-primary-light));
   display: flex; align-items: center; justify-content: center;
-  font-size: 1rem; font-weight: 700; color: #fff;
+  font-size: 1rem; font-weight: 700; color: var(--color-white);
   flex-shrink: 0; overflow: hidden;
   border: 2px solid rgba(183,201,226,0.5);
 }
@@ -63,12 +65,12 @@
 .cl-sidebar__online-dot {
   position: absolute; bottom: 1px; right: 1px;
   width: 10px; height: 10px;
-  background: #34d399;
-  border-radius: 50%; border: 2px solid #042E4C;
+  background: var(--color-success);
+  border-radius: 50%; border: 2px solid var(--color-primary);
 }
 .cl-sidebar__user-info { min-width: 0; }
 .cl-sidebar__name {
-  font-size: 0.875rem; font-weight: 700; color: #fff;
+  font-size: 0.875rem; font-weight: 700; color: var(--color-white);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cl-sidebar__role {
@@ -87,7 +89,7 @@
   gap: 0.35rem;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #B7C9E2;
+  color: var(--color-accent);
   background: rgba(183,201,226,0.12);
   border: 1px solid rgba(183,201,226,0.25);
   padding: 0.22rem 0.65rem;
@@ -116,13 +118,13 @@
 }
 .cl-sidebar__link:hover {
   background: rgba(183,201,226,0.12);
-  color: #fff;
+  color: var(--color-white);
   transform: translateX(3px);
 }
 .cl-sidebar__link--active {
   background: rgba(183,201,226,0.2);
-  color: #fff; font-weight: 700;
-  border-left: 3px solid #B7C9E2;
+  color: var(--color-white); font-weight: 700;
+  border-left: 3px solid var(--color-accent);
 }
 .cl-sidebar__icon {
   font-size: 1rem; flex-shrink: 0;
@@ -142,7 +144,7 @@
   color: rgba(255,255,255,0.6);
   transition: all 0.2s ease;
 }
-.cl-sidebar__logout:hover { background: rgba(239,68,68,0.18); color: #fca5a5; }
+.cl-sidebar__logout:hover { background: rgba(220,38,38,0.18); color: #fca5a5; } /* light red deliberately kept for legibility on the dark sidebar */
 
 /* ── Mobile Header Bar ── */
 .cl-mobile-header {
@@ -152,7 +154,7 @@
   left: 0;
   right: 0;
   height: 60px;
-  background: #042E4C;
+  background: var(--color-primary);
   z-index: 1300;
   align-items: center;
   padding: 0 1rem;
@@ -163,7 +165,7 @@
   font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-white);
   margin-left: 0.75rem;
 }
 
@@ -181,7 +183,7 @@
   display: block;
   width: 22px;
   height: 2px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 2px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: center;
@@ -215,6 +217,7 @@
   .cl-mobile-header { display: flex; }
   .cl-hamburger { display: flex; }
   .cl-overlay { display: block; }
+  .cl-sidebar__close { display: flex; }
 }
 
 /* ── Sidebar notification badge ── */
@@ -227,8 +230,8 @@
   height: 20px;
   padding: 0 5px;
   border-radius: 10px;
-  background: #ef4444;
-  color: #fff;
+  background: var(--color-error);
+  color: var(--color-white);
   font-size: 0.68rem;
   font-weight: 800;
   display: inline-flex;
@@ -238,7 +241,6 @@
   animation: cl-notif-pulse 2s ease-in-out infinite;
 }
 @keyframes cl-notif-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
 }
-

@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-modal, 3000);
   padding: 1rem;
 }
 
@@ -30,18 +30,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.1rem 1.4rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(183, 201, 226, 0.35);
 }
 .icm-header h3 {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-dark);
 }
 .icm-close {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-light);
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
@@ -51,7 +51,7 @@
   min-width: 44px;
   min-height: 44px;
 }
-.icm-close:hover:not(:disabled) { background: #f1f5f9; }
+.icm-close:hover:not(:disabled) { background: var(--color-secondary); }
 .icm-close:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .icm-crop-area {
@@ -66,11 +66,11 @@
   align-items: center;
   gap: 10px;
   padding: 1rem 1.4rem;
-  color: #64748b;
+  color: var(--color-text-light);
 }
 .icm-zoom-slider {
   flex: 1;
-  accent-color: #3b82f6;
+  accent-color: var(--color-primary);
 }
 
 .icm-actions {
@@ -94,16 +94,16 @@
 
 .icm-btn--ghost {
   background: #fff;
-  color: #334155;
-  border: 1px solid #e2e8f0;
+  color: var(--color-text-mid);
+  border: 1px solid rgba(183, 201, 226, 0.35);
 }
-.icm-btn--ghost:hover:not(:disabled) { background: #f8fafc; }
+.icm-btn--ghost:hover:not(:disabled) { background: var(--color-secondary); }
 
 .icm-btn--primary {
-  background: #3b82f6;
+  background: var(--color-primary);
   color: #fff;
 }
-.icm-btn--primary:hover:not(:disabled) { background: #2563eb; }
+.icm-btn--primary:hover:not(:disabled) { background: var(--color-primary-dark); }
 
 @media (max-width: 480px) {
   .icm-actions { justify-content: stretch; }

@@ -5,7 +5,7 @@ import { useClient } from '../../context/ClientContext';
 import { jobsAPI } from '../../api/jobs';
 import { uploadJobAttachment, validateFile } from '../../utils/uploadHelper';
 import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
-import Stepper from '../freelancer/components/Stepper';
+import Stepper from '../../Components/common/Stepper/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
@@ -132,8 +132,9 @@ const PostProject = () => {
       if (!form.summary.trim()) e.summary = 'Short summary is required';
     }
     if (stepNum === 2) {
-      if (form.budget.min < 0) e.budgetMin = 'Minimum budget must be zero or more';
-      if (form.budget.max < form.budget.min) e.budgetMax = 'Maximum budget must be greater than or equal to minimum';
+      if (!form.budget.min || form.budget.min <= 0) e.budgetMin = 'Minimum budget must be greater than zero';
+      if (!form.budget.max || form.budget.max <= 0) e.budgetMax = 'Maximum budget must be greater than zero';
+      else if (form.budget.max < form.budget.min) e.budgetMax = 'Maximum budget must be greater than or equal to minimum';
       if (form.deadline) {
         const d = new Date(form.deadline);
         if (Number.isNaN(d.getTime()) || d <= new Date()) e.deadline = 'Deadline must be a future date';
@@ -573,8 +574,8 @@ const PostProject = () => {
               rel="noopener noreferrer"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem',
-                fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none',
-                background: '#eef2ff', padding: '6px 12px', borderRadius: '8px',
+                fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none',
+                background: 'rgba(4, 46, 76, 0.06)', padding: '6px 12px', borderRadius: '8px',
               }}
             >
               <Bot size={14} style={{ marginRight: '6px' }} /> Not sure what to pay? Estimate a fair budget →
@@ -899,7 +900,7 @@ const PostProject = () => {
                 </div>
               )}
 
-              <div className="cl-review-details" style={{ background: 'rgba(37, 99, 235, 0.06)', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div className="cl-review-details" style={{ background: 'var(--color-info-tint)', borderRadius: '8px', padding: '0.75rem 1rem' }}>
                 <p className="cl-review-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', margin: 0 }}>
                   <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
                   {form.projectType === 'fixed' ? (

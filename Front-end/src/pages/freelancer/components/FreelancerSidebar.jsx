@@ -21,7 +21,8 @@ import {
   Settings,
   Lock,
   CheckCircle2,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import './FreelancerSidebar.css';
 
@@ -72,7 +73,7 @@ const FreelancerSidebar = () => {
         {/* Brand */}
         <div className="fl-sidebar__brand">
           <span className="fl-sidebar__logo">SkillKart</span>
-          <button className="fl-sidebar__close" onClick={() => setOpen(false)} aria-label="Close menu">✕</button>
+          <button className="fl-sidebar__close" onClick={() => setOpen(false)} aria-label="Close menu"><X size={16} /></button>
         </div>
 
         {/* Avatar */}
@@ -91,7 +92,7 @@ const FreelancerSidebar = () => {
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fullName}</span>
               {profile.verificationStatus === 'verified' && (
                 <span className="fl-verified-badge" style={{ flexShrink: 0 }} title="Verified Expert">
-                  <CheckCircle2 size={14} color="var(--fl-accent-primary)" style={{ marginLeft: 4 }} />
+                  <CheckCircle2 size={14} color="var(--color-accent)" style={{ marginLeft: 4 }} />
                 </span>
               )}
             </p>

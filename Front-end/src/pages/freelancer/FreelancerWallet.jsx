@@ -129,14 +129,14 @@ export default function FreelancerWallet() {
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {profile?.stripeOnboardingComplete ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#ecfdf5', color: '#10b981', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', border: '1px solid #34d399' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--color-success-tint)', color: 'var(--color-success)', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', border: '1px solid rgba(5, 150, 105, 0.4)' }}>
               <CheckCircle2 size={18} /> Stripe Connected
             </div>
           ) : (
             <button 
               className="fl-btn fl-btn--primary" 
               onClick={handleConnectStripe}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 4px 6px -1px rgba(4, 46, 76, 0.2)', color: '#fff' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 4px 6px -1px rgba(4, 46, 76, 0.2)', color: 'var(--color-white)' }}
             >
               Connect Stripe
             </button>
@@ -161,7 +161,7 @@ export default function FreelancerWallet() {
           <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
             <PkrIcon size={24} />
           </div>
-          <div className="fl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
+          <div className="fl-stat-card__value" style={{ background: 'var(--color-white)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available for Withdrawal</div>
         </div>
 
@@ -169,7 +169,7 @@ export default function FreelancerWallet() {
           <div className="fl-stat-card__bg">
             <Wallet size={100} />
           </div>
-          <div className="fl-stat-card__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+          <div className="fl-stat-card__icon" style={{ background: 'var(--color-warning-tint)', color: 'var(--color-warning)' }}>
             <Wallet size={24} />
           </div>
           <div className="fl-stat-card__value">Rs. {activeEscrow.toLocaleString()}</div>
@@ -179,7 +179,7 @@ export default function FreelancerWallet() {
           <div className="fl-stat-card__bg">
             <CheckCircle2 size={100} />
           </div>
-          <div className="fl-stat-card__icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+          <div className="fl-stat-card__icon" style={{ background: 'var(--color-success-tint)', color: 'var(--color-success)' }}>
             <CheckCircle2 size={24} />
           </div>
           <div className="fl-stat-card__value">Rs. {totalEarned.toLocaleString()}</div>
@@ -212,7 +212,7 @@ export default function FreelancerWallet() {
                 </thead>
                 <tbody>
                   {transactions.map(tx => (
-                    <tr key={tx._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                    <tr key={tx._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--color-secondary)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                       <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {new Date(tx.createdAt).toLocaleDateString()}
                       </td>
@@ -222,17 +222,17 @@ export default function FreelancerWallet() {
                       <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {tx.isWithdrawal ? (tx.method === 'stripe' ? 'Stripe Connect' : tx.method) : `${tx.clientId?.firstName} ${tx.clientId?.lastName}`}
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: tx.isWithdrawal ? '#ef4444' : '#10b981' }}>
+                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: tx.isWithdrawal ? 'var(--color-error)' : 'var(--color-success)' }}>
                         {tx.isWithdrawal ? '- PKR ' : '+ PKR '}{tx.isWithdrawal ? tx.amount?.toLocaleString() : (tx.status === 'released' ? tx.freelancerPayout?.toLocaleString() : tx.totalAmount?.toLocaleString())}
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {tx.isWithdrawal ? (
                           tx.status === 'completed' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                               <ArrowDownToLine size={14} /> Completed
                             </span>
                           ) : tx.status === 'processing' || tx.status === 'pending' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#3b82f6', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(59, 130, 246, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-info)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-info-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                               <Clock size={14} /> Processing
                             </span>
                           ) : (
@@ -240,11 +240,11 @@ export default function FreelancerWallet() {
                           )
                         ) : (
                           tx.status === 'released' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                               <CheckCircle2 size={14} /> Released
                             </span>
                           ) : tx.status === 'deposit_paid' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#f59e0b', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-warning)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-warning-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                               <Clock size={14} /> Escrow (50%)
                             </span>
                           ) : (
@@ -276,14 +276,14 @@ export default function FreelancerWallet() {
           >
             <div className="fl-modal__header" style={{ borderBottom: 'none', padding: '0', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1.75rem', fontWeight: '800', background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', color: 'transparent', margin: 0 }}>Withdraw Funds</h3>
-              <button className="fl-modal__close" onClick={closeWithdrawModal} disabled={withdrawing} aria-label="Close" style={{ background: '#f1f5f9', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+              <button className="fl-modal__close" onClick={closeWithdrawModal} disabled={withdrawing} aria-label="Close" style={{ background: 'var(--color-secondary)', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', color: 'var(--color-text-mid)' }}>&times;</button>
             </div>
             
             <div className="fl-modal__body" style={{ padding: '0' }}>
               <div className="fl-form-group">
-                <label className="fl-label" style={{ fontWeight: '600', color: '#334155', marginBottom: '0.5rem', display: 'block' }}>Amount to Withdraw (PKR)</label>
+                <label className="fl-label" style={{ fontWeight: '600', color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Amount to Withdraw (PKR)</label>
                 <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontWeight: '700', color: '#94a3b8', fontSize: '1.1rem' }}>Rs.</span>
+                  <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontWeight: '700', color: 'var(--color-text-light)', fontSize: '1.1rem' }}>Rs.</span>
                   <input
                     type="number"
                     className="fl-input"
@@ -291,27 +291,27 @@ export default function FreelancerWallet() {
                     max={walletBalance}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    style={{ paddingLeft: '50px', fontSize: '1.25rem', height: '56px', borderRadius: '16px', border: '2px solid #e2e8f0', transition: 'all 0.3s', fontWeight: '600', color: '#0f172a', width: '100%', boxSizing: 'border-box' }}
+                    style={{ paddingLeft: '50px', fontSize: '1.25rem', height: '56px', borderRadius: '16px', border: '2px solid rgba(183, 201, 226, 0.5)', transition: 'all 0.3s', fontWeight: '600', color: 'var(--color-text-dark)', width: '100%', boxSizing: 'border-box' }}
                     placeholder="0.00"
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem' }}>
-                  <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>Available: PKR {walletBalance.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', fontWeight: '500' }}>Available: PKR {walletBalance.toLocaleString()}</span>
                   <button type="button" onClick={() => setWithdrawAmount(walletBalance)} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}>Withdraw All</button>
                 </div>
               </div>
               
               <div className="fl-form-group" style={{ marginTop: '2rem' }}>
-                <label className="fl-label" style={{ fontWeight: '600', color: '#334155', marginBottom: '0.5rem', display: 'block' }}>Withdrawal Method</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '16px', border: '2px solid #e2e8f0', transition: 'border-color 0.3s' }}>
+                <label className="fl-label" style={{ fontWeight: '600', color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Withdrawal Method</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--color-secondary)', padding: '1rem 1.25rem', borderRadius: '16px', border: '2px solid rgba(183, 201, 226, 0.5)', transition: 'border-color 0.3s' }}>
                   <div style={{ width: '42px', height: '42px', background: '#635bff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '1.2rem', boxShadow: '0 4px 6px -1px rgba(99, 91, 255, 0.3)' }}>
                     S
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '1rem' }}>Stripe Connect</div>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.1rem' }}>Direct to Bank Account</div>
+                    <div style={{ fontWeight: '700', color: 'var(--color-text-dark)', fontSize: '1rem' }}>Stripe Connect</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginTop: '0.1rem' }}>Direct to Bank Account</div>
                   </div>
-                  <div style={{ color: '#10b981', background: '#d1fae5', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ color: 'var(--color-success)', background: 'var(--color-success-tint)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   </div>
                 </div>
@@ -338,7 +338,7 @@ export default function FreelancerWallet() {
                 className="fl-btn fl-btn--primary" 
                 disabled={!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing}
                 onClick={executeWithdraw}
-                style={{ flex: 2, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 10px 15px -3px rgba(4, 46, 76, 0.25)', color: '#fff', cursor: (!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing) ? 'not-allowed' : 'pointer', opacity: (!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing) ? 0.6 : 1 }}
+                style={{ flex: 2, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 10px 15px -3px rgba(4, 46, 76, 0.25)', color: 'var(--color-white)', cursor: (!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing) ? 'not-allowed' : 'pointer', opacity: (!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing) ? 0.6 : 1 }}
               >
                 {withdrawing ? 'Processing...' : 'Confirm Withdrawal'}
               </button>

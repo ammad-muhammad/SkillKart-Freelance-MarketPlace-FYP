@@ -125,26 +125,26 @@ const ClientProfile = () => {
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
-      background: "#fff",
+      background: "var(--color-white)",
       borderColor: state.isFocused ? "var(--color-primary)" : "#d1d9e6",
       borderRadius: "12px",
       minHeight: "48px",
-      color: "#0f172a",
+      color: "var(--color-text-dark)",
       fontSize: "0.875rem",
       fontFamily: "var(--font-body)",
       boxShadow: state.isFocused ? "0 0 0 4px rgba(4,46,76,0.08)" : "none",
       transition: "all 0.2s ease",
       cursor: "pointer",
       "&:hover": {
-        borderColor: state.isFocused ? "var(--color-primary)" : "#b7c9e2"
+        borderColor: state.isFocused ? "var(--color-primary)" : "var(--color-accent)"
       }
     }),
     menu: (base) => ({
       ...base,
-      background: "#fff",
-      border: "1px solid #e2e8f0",
+      background: "var(--color-white)",
+      border: "1px solid rgba(183, 201, 226, 0.35)",
       borderRadius: "12px",
-      boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
+      boxShadow: "0 10px 25px rgba(4, 46, 76, 0.12)",
       zIndex: 9999
     }),
     menuList: (base) => ({
@@ -166,9 +166,9 @@ const ClientProfile = () => {
       background: state.isSelected
         ? "var(--color-primary)"
         : state.isFocused
-          ? "rgba(37, 99, 235, 0.05)"
+          ? "rgba(4, 46, 76, 0.06)"
           : "transparent",
-      color: state.isSelected ? "#fff" : "#334155",
+      color: state.isSelected ? "var(--color-white)" : "var(--color-text-dark)",
       cursor: "pointer",
       borderRadius: "8px",
       margin: "2px 0",
@@ -178,16 +178,16 @@ const ClientProfile = () => {
     }),
     singleValue: (base) => ({
       ...base,
-      color: "#334155",
+      color: "var(--color-text-dark)",
       fontWeight: "500"
     }),
     placeholder: (base) => ({
       ...base,
-      color: "#94a3b8"
+      color: "var(--color-text-light)"
     }),
     dropdownIndicator: (base) => ({
       ...base,
-      color: "#94a3b8"
+      color: "var(--color-text-light)"
     }),
     indicatorSeparator: () => ({ display: "none" })
   };
@@ -431,7 +431,7 @@ const ClientProfile = () => {
                 <div className="cl-logo-box">
                   {(editing ? form.companyLogo : profile?.personalInfo?.companyLogo) ? (
                     <img src={editing ? form.companyLogo : profile?.personalInfo?.companyLogo} alt="logo" />
-                  ) : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}><Building2 size={32} /></span>}
+                  ) : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-light)' }}><Building2 size={32} /></span>}
                 </div>
                 {editing && (
                   <>
@@ -447,10 +447,10 @@ const ClientProfile = () => {
             {/* Cover Photo */}
             <div>
               <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Cover Photo</p>
-              <div className="cl-logo-box" style={{ width: '160px', border: '1px dashed #cbd5e1' }}>
+              <div className="cl-logo-box" style={{ width: '160px', border: '1px dashed rgba(183, 201, 226, 0.6)' }}>
                 {(editing ? form.coverPhoto : profile?.personalInfo?.coverPhoto) ? (
                   <img src={editing ? form.coverPhoto : profile?.personalInfo?.coverPhoto} alt="cover" style={{ objectFit: 'cover' }} />
-                ) : <span style={{ fontSize: '1.5rem', color: '#94a3b8' }}><ImageIcon size={24} /></span>}
+                ) : <span style={{ fontSize: '1.5rem', color: 'var(--color-text-light)' }}><ImageIcon size={24} /></span>}
               </div>
               {editing && (
                 <>
@@ -470,7 +470,7 @@ const ClientProfile = () => {
                 {data.companyType === 'Individual' ? (
                   <><User size={16} /> Individual Client</>
                 ) : (
-                  <><Building2 size={16} /> {data.companyName || 'No Company'} <span style={{ color: '#cbd5e1' }}>•</span> {data.industry || 'No Industry Specified'}</>
+                  <><Building2 size={16} /> {data.companyName || 'No Company'} <span style={{ color: 'rgba(183, 201, 226, 0.6)' }}>•</span> {data.industry || 'No Industry Specified'}</>
                 )}
               </div>
               <div className="cl-prof-header-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.85rem', color: 'var(--color-text-mid)' }}>
@@ -579,7 +579,7 @@ const ClientProfile = () => {
                 menuPortalTarget={document.body}
               />
             ) : (
-              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+              <div className="cl-input" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}>
                 {profile?.personalInfo?.companyType || 'N/A'}
               </div>
             )}
@@ -618,14 +618,14 @@ const ClientProfile = () => {
                   <div style={{ marginTop: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Sparkles size={13} style={{ color: '#eab308' }} /> AI Recommended:
+                        <Sparkles size={13} style={{ color: 'var(--color-warning)' }} /> AI Recommended:
                       </span>
-                      {fetchingSuggestions && <span style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>analyzing profile...</span>}
+                      {fetchingSuggestions && <span style={{ fontSize: '11px', color: 'var(--color-text-mid)', fontStyle: 'italic' }}>analyzing profile...</span>}
                       {!fetchingSuggestions && (
                         <button 
                           type="button" 
                           onClick={fetchAISuggestions}
-                          style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-info)', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
                         >
                           re-analyze
                         </button>
@@ -651,13 +651,13 @@ const ClientProfile = () => {
                           </button>
                         ))
                       ) : (
-                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>Provide company info or bio details to trigger recommendations.</span>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-light)' }}>Provide company info or bio details to trigger recommendations.</span>
                       )}
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                <div className="cl-input" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}>
                   {Array.isArray(profile?.personalInfo?.industry)
                     ? (profile.personalInfo.industry.join(', ') || 'N/A')
                     : (profile?.personalInfo?.industry || 'N/A')}
@@ -684,7 +684,7 @@ const ClientProfile = () => {
                 menuPortalTarget={document.body}
               />
             ) : (
-              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+              <div className="cl-input" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}>
                 {profile?.personalInfo?.location || 'N/A'}
               </div>
             )}
@@ -707,7 +707,7 @@ const ClientProfile = () => {
                 menuPortalTarget={document.body}
               />
             ) : (
-              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+              <div className="cl-input" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}>
                 {profile?.personalInfo?.timezone || 'N/A'}
               </div>
             )}
@@ -717,7 +717,7 @@ const ClientProfile = () => {
           <div className="cl-form-group">
             <label className="cl-label" htmlFor="cp-linkedin">LinkedIn Profile (Optional)</label>
             <div style={{ position: 'relative' }}>
-              <div style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }}><Building2 size={16} /></div>
+              <div style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--color-text-light)' }}><Building2 size={16} /></div>
               <input
                 id="cp-linkedin"
                 type="text"
@@ -763,7 +763,7 @@ const ClientProfile = () => {
                 menuPortalTarget={document.body}
               />
             ) : (
-              <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+              <div className="cl-input" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}>
                 {profile?.personalInfo?.isNewToHiring === 'Yes' ? 'Fresh Client (First time hiring)' : profile?.personalInfo?.isNewToHiring === 'No' ? 'Experienced (I have hired before)' : 'N/A'}
               </div>
             )}
@@ -787,7 +787,7 @@ const ClientProfile = () => {
                   ))}
                 </div>
               ) : (
-                <div className="cl-input" style={{ background: '#f8fafc', color: 'var(--color-text-mid)' }}>
+                <div className="cl-input" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}>
                   {profile?.personalInfo?.role || 'N/A'}
                 </div>
               )}
@@ -843,7 +843,7 @@ const ClientProfile = () => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {languages.map((lang, idx) => (
-            <div key={idx} style={{ display: 'grid', gridTemplateColumns: editing ? '1fr 1fr auto' : '1fr 1fr', gap: '1rem', alignItems: 'end', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e5edf5' }}>
+            <div key={idx} style={{ display: 'grid', gridTemplateColumns: editing ? '1fr 1fr auto' : '1fr 1fr', gap: '1rem', alignItems: 'end', background: 'var(--color-secondary)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(183, 201, 226, 0.35)' }}>
               <div className="cl-form-group" style={{ marginBottom: 0 }}>
                 <label className="cl-label" htmlFor={`cp-lang-${idx}`}>Language</label>
                 {editing ? (
@@ -861,7 +861,7 @@ const ClientProfile = () => {
                     classNamePrefix="skillkart-select"
                     menuPortalTarget={document.body}
                   />
-                ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? lang : (lang?.language || 'Unknown')}</div>}
+                ) : <div className="cl-tag" style={{ background: 'var(--color-white)' }}>{typeof lang === 'string' ? lang : (lang?.language || 'Unknown')}</div>}
               </div>
               <div className="cl-form-group" style={{ marginBottom: 0 }}>
                 <label className="cl-label" htmlFor={`cp-prof-${idx}`}>Proficiency</label>
@@ -880,12 +880,12 @@ const ClientProfile = () => {
                     classNamePrefix="skillkart-select"
                     menuPortalTarget={document.body}
                   />
-                ) : <div className="cl-tag" style={{ background: '#fff' }}>{typeof lang === 'string' ? 'fluent' : (lang?.proficiency || 'fluent')}</div>}
+                ) : <div className="cl-tag" style={{ background: 'var(--color-white)' }}>{typeof lang === 'string' ? 'fluent' : (lang?.proficiency || 'fluent')}</div>}
               </div>
               {editing && (
                 <button 
                   className="cl-btn cl-btn--ghost cl-btn--sm" 
-                  style={{ color: '#ef4444', height: '42px', border: '1px solid #fee2e2', background: '#fef2e2', width: 'auto' }}
+                  style={{ color: 'var(--color-error)', height: '42px', border: '1px solid rgba(220, 38, 38, 0.25)', background: 'var(--color-error-tint)', width: 'auto' }}
                   onClick={() => setLanguages(languages.filter((_, i) => i !== idx))}
                 >
                   <Trash2 size={16} />
@@ -893,7 +893,7 @@ const ClientProfile = () => {
               )}
             </div>
           ))}
-          {languages.length === 0 && <p style={{ fontSize: '0.85rem', color: '#ef4444' }}><AlertTriangle size={12} /> No languages added. At least one is required.</p>}
+          {languages.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--color-error)' }}><AlertTriangle size={12} /> No languages added. At least one is required.</p>}
           {editing && errors.languages && <span className="cl-error"><AlertTriangle size={12} /> {errors.languages}</span>}
         </div>
       </div>
@@ -971,9 +971,9 @@ const ClientProfile = () => {
                 value={technicalUnderstanding}
                 onChange={(e) => setTechnicalUnderstanding(parseInt(e.target.value))}
                 className="onboarding__slider"
-                style={{ background: `linear-gradient(to right, var(--color-primary, #042E4C) ${((technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((technicalUnderstanding - 1) / 9) * 100}%)`, width: '100%' }}
+                style={{ background: `linear-gradient(to right, var(--color-primary) ${((technicalUnderstanding - 1) / 9) * 100}%, rgba(183, 201, 226, 0.35) ${((technicalUnderstanding - 1) / 9) * 100}%)`, width: '100%' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-mid)' }}>
                 <span>Conceptual</span>
                 <span>Deep Tech</span>
               </div>
@@ -982,7 +982,7 @@ const ClientProfile = () => {
             <div>
               <p className="cl-label" style={{ marginBottom: '0.5rem' }}>Technical Complexity Awareness</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ flex: 1, height: '8px', background: 'rgba(183, 201, 226, 0.35)', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ width: `${(profile?.preferences?.technicalUnderstanding || 5) * 10}%`, height: '100%', background: 'var(--color-primary)' }} />
                 </div>
                 <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{profile?.preferences?.technicalUnderstanding || 5}/10</span>
@@ -1038,13 +1038,13 @@ const ClientProfile = () => {
           width: 80px; height: 80px; border-radius: 50%;
           background: var(--gradient-primary);
           display: flex; align-items: center; justify-content: center;
-          font-size: 1.8rem; font-weight: 800; color: #fff;
+          font-size: 1.8rem; font-weight: 800; color: var(--color-white);
           border: 3px solid rgba(183,201,226,0.5); overflow: hidden;
         }
         .cl-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
         .cl-logo-box {
           width: 80px; height: 80px; border-radius: 14px;
-          background: #f0f4f8; border: 2px solid #e5edf5;
+          background: var(--color-secondary); border: 2px solid rgba(183, 201, 226, 0.35);
           display: flex; align-items: center; justify-content: center;
           overflow: hidden;
         }
@@ -1089,7 +1089,7 @@ const ClientProfile = () => {
           width: 100%;
           height: 8px;
           border-radius: 6px;
-          background: #e2e8f0;
+          background: rgba(183, 201, 226, 0.35);
           outline: none;
           transition: background 0.3s;
         }
@@ -1101,7 +1101,7 @@ const ClientProfile = () => {
           border-radius: 50%;
           background: var(--color-primary);
           cursor: pointer;
-          border: 2px solid #fff;
+          border: 2px solid var(--color-white);
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
           transition: transform 0.1s;
         }

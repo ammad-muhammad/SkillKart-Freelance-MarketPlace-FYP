@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { ClientProvider, useClient } from '../context/ClientContext';
 import ClientSidebar from '../pages/client/components/ClientSidebar';
-import ToastStack from '../pages/freelancer/components/ToastStack';
+import ToastStack from '../Components/common/ToastStack/ToastStack';
 import './ClientLayout.css';
 
 const ClientLayoutInner = () => {

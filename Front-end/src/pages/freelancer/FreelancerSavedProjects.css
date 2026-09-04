@@ -27,7 +27,7 @@
     padding: 6rem 2rem;
     background: white;
     border-radius: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(183, 201, 226, 0.35);
 }
 
 .fsp-empty__icon {
@@ -39,7 +39,7 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 1rem;
-    color: var(--color-text);
+    color: var(--color-text-dark);
 }
 
 .fsp-empty__text {
@@ -72,7 +72,7 @@
 .fsp-card {
     background: white;
     border-radius: 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(183, 201, 226, 0.35);
     padding: 1.5rem;
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
@@ -81,7 +81,7 @@
 
 .fsp-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-md);
 }
 
 .fsp-card__header {
@@ -90,17 +90,6 @@
     align-items: center;
     margin-bottom: 1.25rem;
 }
-
-.fsp-card__badge {
-    padding: 0.35rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.fsp-card__badge--active { background: #e6fffa; color: #0694a2; }
-.fsp-card__badge--urgent { background: #fff5f5; color: #e53e3e; }
 
 .fsp-card__remove {
     background: none;
@@ -115,8 +104,8 @@
 }
 
 .fsp-card__remove:hover {
-    background: var(--bg-hover);
-    color: #ef4444;
+    background: rgba(183, 201, 226, 0.15);
+    color: var(--color-error);
 }
 
 .fsp-card__body {
@@ -127,7 +116,7 @@
     font-size: 1.15rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
-    color: var(--color-text);
+    color: var(--color-text-dark);
 }
 
 .fsp-card__desc {
@@ -150,8 +139,8 @@
 
 .fsp-card__meta-item {
     font-size: 0.85rem;
-    color: var(--color-text);
-    background: var(--bg-hover);
+    color: var(--color-text-dark);
+    background: rgba(183, 201, 226, 0.15);
     padding: 0.4rem 0.8rem;
     border-radius: 0.5rem;
     display: flex;
@@ -168,11 +157,11 @@
 
 .fsp-card__tag {
     font-size: 0.75rem;
-    background: #f8fafc;
-    color: #475569;
+    background: var(--color-secondary);
+    color: var(--color-text-mid);
     padding: 0.3rem 0.7rem;
     border-radius: 0.5rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(183, 201, 226, 0.35);
 }
 
 .fsp-card__footer {
@@ -205,12 +194,12 @@
 
 .fsp-card__btn:not(.fsp-card__btn--primary) {
     background: white;
-    color: var(--color-text);
-    border: 1px solid var(--border-color);
+    color: var(--color-text-dark);
+    border: 1px solid rgba(183, 201, 226, 0.35);
 }
 
 .fsp-card__btn:not(.fsp-card__btn--primary):hover {
-    background: var(--bg-hover);
+    background: rgba(183, 201, 226, 0.15);
     border-color: var(--color-text-mid);
 }
 

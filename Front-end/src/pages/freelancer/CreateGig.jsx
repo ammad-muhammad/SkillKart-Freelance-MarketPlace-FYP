@@ -4,7 +4,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import { FileText, AlignLeft, Image as ImageIcon, Rocket, Save, CheckCircle2, XCircle, Star, Zap, Crown, X, Plus } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
-import Stepper from './components/Stepper';
+import Stepper from '../../Components/common/Stepper/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';

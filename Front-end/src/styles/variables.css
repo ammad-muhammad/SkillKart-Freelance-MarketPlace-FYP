@@ -31,6 +31,16 @@
   --color-white: #FFFFFF;
   --color-black: #000000;
 
+  /* ── Semantic State Colors (dashboards) ── */
+  --color-success: #059669;
+  --color-success-tint: rgba(5, 150, 105, 0.12);
+  --color-warning: #d97706;
+  --color-warning-tint: rgba(217, 119, 6, 0.12);
+  --color-error: #dc2626;
+  --color-error-tint: rgba(220, 38, 38, 0.12);
+  --color-info: #2563eb;
+  --color-info-tint: rgba(37, 99, 235, 0.12);
+
   /* ── Gradients ── */
   --gradient-primary: linear-gradient(135deg, #042E4C 0%, #0a4a73 60%, #1a6fa8 100%);
   --gradient-hero: linear-gradient(160deg, #021e33 0%, #042E4C 40%, #0a4a73 100%);
@@ -40,6 +50,8 @@
   /* ── Typography ── */
   --font-body: 'Lato', sans-serif;
   --font-heading: 'Roboto Slab', serif;
+  /* Client/Freelancer dashboards use one family only (Lato) — see CLAUDE.md UI audit */
+  --font-dashboard: 'Lato', sans-serif;
 
   --fs-xs: 0.75rem;
   /* 12px */

@@ -324,9 +324,9 @@ const SkillTest = () => {
             </div>
           ) : (
             <div className="st-result-failed">
-              <CheckCircle2 size={80} style={{ color: result.level === 'Intermediate' ? '#f59e0b' : '#64748b' }} />
+              <CheckCircle2 size={80} style={{ color: result.level === 'Intermediate' ? 'var(--color-warning)' : 'var(--color-text-mid)' }} />
               <h1>Skill Ranking: {result.level}</h1>
-              <div className="st-score-ring" style={{ borderColor: result.level === 'Intermediate' ? '#f59e0b' : '#94a3b8' }}>
+              <div className="st-score-ring" style={{ borderColor: result.level === 'Intermediate' ? 'var(--color-warning)' : 'var(--color-text-light)' }}>
                 <span className="st-score-val">{result.score.toFixed(0)}%</span>
                 <span className="st-score-label">Score</span>
               </div>
@@ -355,7 +355,7 @@ const SkillTest = () => {
       <div className="st-result-container">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="st-result-card">
           <div className="st-result-failed">
-            <Ban size={80} style={{ color: '#ef4444' }} />
+            <Ban size={80} style={{ color: 'var(--color-error)' }} />
             <h1>Cheating Detected</h1>
             <p className="st-result-desc">
               {abortReason || 'Suspicious activity was detected during the test.'} As a result, this attempt
@@ -363,7 +363,7 @@ const SkillTest = () => {
               with a brand-new set of questions.
             </p>
             {cameraError && (
-              <p className="st-result-desc" style={{ color: '#b91c1c', fontWeight: 600 }}>
+              <p className="st-result-desc" style={{ color: 'var(--color-error)', fontWeight: 600 }}>
                 Camera required — please allow camera access or use a device with a working camera before restarting.
               </p>
             )}

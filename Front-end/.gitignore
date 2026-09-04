@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Playwright visual-QA output (may contain screenshots of authenticated pages)
+qa-screenshots/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

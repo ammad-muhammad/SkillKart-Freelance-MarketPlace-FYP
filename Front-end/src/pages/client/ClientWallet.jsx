@@ -133,7 +133,7 @@ export default function ClientWallet() {
           <div className="cl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}>
             <PkrIcon size={24} />
           </div>
-          <div className="cl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
+          <div className="cl-stat-card__value" style={{ background: 'var(--color-white)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {walletBalance.toLocaleString()}</div>
           <div className="cl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Available Wallet Balance</div>
         </div>
 
@@ -141,7 +141,7 @@ export default function ClientWallet() {
           <div className="cl-stat-card__bg">
             <Wallet size={100} />
           </div>
-          <div className="cl-stat-card__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+          <div className="cl-stat-card__icon" style={{ background: 'var(--color-warning-tint)', color: 'var(--color-warning)' }}>
             <Wallet size={24} />
           </div>
           <div className="cl-stat-card__value">Rs. {activeEscrow.toLocaleString()}</div>
@@ -176,7 +176,7 @@ export default function ClientWallet() {
                 </thead>
                 <tbody>
                   {payments.map(payment => (
-                    <tr key={payment._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                    <tr key={payment._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--color-secondary)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                       <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {new Date(payment.createdAt).toLocaleDateString()}
                       </td>
@@ -186,16 +186,16 @@ export default function ClientWallet() {
                       <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
                         {payment.type === 'wallet_deposit' ? 'Self' : (payment.freelancerId ? `${payment.freelancerId.firstName} ${payment.freelancerId.lastName}` : 'N/A')}
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: payment.type === 'wallet_deposit' ? '#10b981' : '#ef4444' }}>
+                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: payment.type === 'wallet_deposit' ? 'var(--color-success)' : 'var(--color-error)' }}>
                         {payment.type === 'wallet_deposit' ? '+' : '-'}Rs. {payment.totalAmount?.toLocaleString()}
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {payment.status === 'released' ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                             <CheckCircle2 size={14} /> Paid in Full
                           </span>
                         ) : payment.status === 'deposit_paid' ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#f59e0b', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-warning)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-warning-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                             <Clock size={14} /> Escrow Active (50%)
                           </span>
                         ) : (
