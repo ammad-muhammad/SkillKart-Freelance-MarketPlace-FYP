@@ -7,29 +7,31 @@ import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { contractsAPI } from '../../api/contracts';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
-import Modal from './components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import { deliveriesAPI } from '../../api/deliveries';
 import { timeTrackingAPI } from '../../api/timeTracking';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
+import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
+import Button from '../../Components/common/Button/Button';
 import './FreelancerDashboard.css';
 
 const STAGES = {
-  'active': { label: 'In Progress', color: '#2563eb' },
-  'in-progress': { label: 'In Progress', color: '#2563eb' },
-  'in_revision': { label: 'In Revision', color: '#b45309' },
-  delivered: { label: 'Delivered — awaiting review', color: '#d97706' },
-  completed: { label: 'Completed', color: '#16a34a' },
-  cancelled: { label: 'Cancelled', color: '#64748b' },
+  'active': { label: 'In Progress', tone: 'info' },
+  'in-progress': { label: 'In Progress', tone: 'info' },
+  'in_revision': { label: 'In Revision', tone: 'warning' },
+  delivered: { label: 'Delivered — awaiting review', tone: 'warning' },
+  completed: { label: 'Completed', tone: 'success' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' },
 };
 
 // Escrow status → freelancer-facing label.
 const ESCROW = {
-  deposit_pending: { label: 'Awaiting deposit', color: '#b45309' },
-  deposit_paid: { label: 'Deposit funded', color: '#2563eb' },
-  released: { label: 'Paid in full', color: '#16a34a' },
-  refunded: { label: 'Refunded', color: '#64748b' },
+  deposit_pending: { label: 'Awaiting deposit', color: 'var(--color-warning)' },
+  deposit_paid: { label: 'Deposit funded', color: 'var(--color-info)' },
+  released: { label: 'Paid in full', color: 'var(--color-success)' },
+  refunded: { label: 'Refunded', color: 'var(--color-text-mid)' },
 };
 
 export default function FreelancerWork() {
@@ -181,12 +183,12 @@ export default function FreelancerWork() {
         <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
           <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}><Wallet size={100} /></div>
           <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}><Wallet size={24} /></div>
-          <div className="fl-stat-card__value" style={{ background: '#ffffff', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {totalEarned.toLocaleString()}</div>
+          <div className="fl-stat-card__value" style={{ background: 'var(--color-white)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {totalEarned.toLocaleString()}</div>
           <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total earned from completed contracts</div>
         </div>
         <div className="fl-stat-card">
           <div className="fl-stat-card__bg"><Briefcase size={100} /></div>
-          <div className="fl-stat-card__icon" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}><Briefcase size={24} /></div>
+          <div className="fl-stat-card__icon" style={{ background: 'var(--color-info-tint)', color: 'var(--color-info)' }}><Briefcase size={24} /></div>
           <div className="fl-stat-card__value">{activeCount}</div>
           <div className="fl-stat-card__label">Active contracts in progress</div>
         </div>
@@ -202,7 +204,7 @@ export default function FreelancerWork() {
       ) : (
         <div className="fl-card-list">
           {contracts.map((c) => {
-            const stage = STAGES[c.status] || { label: c.status, color: '#64748b' };
+            const stage = STAGES[c.status] || { label: c.status, tone: 'neutral' };
             const escrow = c.payment ? ESCROW[c.payment.status] : null;
             
             const isFixed = c.type === 'fixed';
@@ -229,7 +231,7 @@ export default function FreelancerWork() {
                       {c.clientId && ` · ${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`}
                     </p>
                   </div>
-                  <span className="fl-contract__stage" style={{ color: stage.color }}>{stage.label}</span>
+                  <StatusBadge tone={stage.tone}>{stage.label}</StatusBadge>
                 </div>
 
                 <div className="fl-contract__money">
@@ -240,44 +242,44 @@ export default function FreelancerWork() {
                   )}
                   {isFixed && escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
                   {isFixed && c.payment?.status === 'released' && (
-                    <span style={{ color: '#16a34a' }}>You received: <strong>Rs. {Number(c.payment.freelancerPayout).toLocaleString()}</strong></span>
+                    <span style={{ color: 'var(--color-success)' }}>You received: <strong>Rs. {Number(c.payment.freelancerPayout).toLocaleString()}</strong></span>
                   )}
                 </div>
 
                 {/* Pending Banners */}
                 {c.dispute && c.dispute.status === 'pending' && (
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ background: 'var(--color-error-tint)', border: '1px solid rgba(220, 38, 38, 0.25)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <AlertTriangle size={18} style={{ marginRight: '8px' }} /> Contract under Dispute
                     </h4>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-error)' }}>
                       This contract has been escalated to Admin review. Reason: {c.dispute.reason}.
                     </p>
                   </div>
                 )}
 
                 {isHourly && c.endRequest && c.endRequest.status === 'pending' && (
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                  <div style={{ background: 'var(--color-success-tint)', border: '1px solid rgba(5, 150, 105, 0.25)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                     {String(c.endRequest.requestedBy) === String(user?._id) ? (
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534', display: 'flex', alignItems: 'center' }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center' }}>
                         <Clock size={14} style={{ marginRight: '4px' }} /> Waiting for the client to approve your request to end this contract.
                       </p>
                     ) : (
                       <>
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534', display: 'flex', alignItems: 'center' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-success)', display: 'flex', alignItems: 'center' }}>
                           <StopCircle size={18} style={{ marginRight: '8px' }} /> Client has requested to end this contract
                         </h4>
-                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#15803d' }}>
-                          Reason: {c.endRequest.reason} 
+                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--color-success)' }}>
+                          Reason: {c.endRequest.reason}
                           {c.endRequest.additionalDetails && <span> - {c.endRequest.additionalDetails}</span>}
                         </p>
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                          <button className="fl-btn fl-btn--sm" style={{ background: '#16a34a', color: '#fff' }} onClick={() => handleRespondEnd(c._id, 'approve')} disabled={delivering}>
+                          <Button variant="success" size="sm" onClick={() => handleRespondEnd(c._id, 'approve')} disabled={delivering}>
                             Approve & End Contract
-                          </button>
-                          <button className="fl-btn fl-btn--sm fl-btn--ghost" onClick={() => handleRespondEnd(c._id, 'reject')} disabled={delivering}>
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleRespondEnd(c._id, 'reject')} disabled={delivering}>
                             Reject Request
-                          </button>
+                          </Button>
                         </div>
                       </>
                     )}
@@ -285,34 +287,34 @@ export default function FreelancerWork() {
                 )}
 
                 {isHourly && (
-                  <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                  <div style={{ background: 'var(--color-secondary)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(183, 201, 226, 0.35)', fontSize: '0.85rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       {['completed', 'cancelled'].includes(c.status) ? (
-                        <span style={{ color: '#64748b', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> Contract has ended</span>
+                        <span style={{ color: 'var(--color-text-mid)', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> Contract has ended</span>
                       ) : timerActive ? (
-                        <span style={{ color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
-                          <CheckCircle2 size={14} style={{ marginRight: '4px' }} /> You are currently working 
+                        <span style={{ color: 'var(--color-success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+                          <CheckCircle2 size={14} style={{ marginRight: '4px' }} /> You are currently working
                           <LiveTimer startedAt={c.timer?.startedAt} hourlyRate={c.hourlyRate} prefix=" (" suffix=")" />
                         </span>
                       ) : (
-                        <span style={{ color: '#64748b', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> You are not tracking time</span>
+                        <span style={{ color: 'var(--color-text-mid)', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> You are not tracking time</span>
                       )}
                     </div>
                     <div style={{ color: 'var(--color-text-mid)' }}>
                       <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Total logged: <strong>{Math.floor((c.totalDuration || 0) / 3600000)}h {Math.floor(((c.totalDuration || 0) % 3600000) / 60000)}m</strong>
-                      {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {(((c.totalDuration || 0) / 3600000) * c.hourlyRate).toFixed(2)})</span>}
+                      {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: 'var(--color-success)', fontSize: '0.9em' }}>(Rs. {(((c.totalDuration || 0) / 3600000) * c.hourlyRate).toFixed(2)})</span>}
                       {c.lastTimeLog && (
-                        <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid #cbd5e1' }}>
+                        <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid rgba(183, 201, 226, 0.5)' }}>
                           Last session: <strong>{Math.floor(c.lastTimeLog.duration / 3600000)}h {Math.floor((c.lastTimeLog.duration % 3600000) / 60000)}m</strong>
-                          {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.9em' }}>(Rs. {((c.lastTimeLog.duration / 3600000) * c.hourlyRate).toFixed(2)})</span>}
+                          {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: 'var(--color-success)', fontSize: '0.9em' }}>(Rs. {((c.lastTimeLog.duration / 3600000) * c.hourlyRate).toFixed(2)})</span>}
                           {' '}({new Date(c.lastTimeLog.endTime).toLocaleDateString()})
                         </span>
                       )}
                     </div>
                     {!['completed', 'cancelled'].includes(c.status) && (
-                      <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #e2e8f0' }}>
-                        <Wallet size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? '#dc2626' : '#059669' }} />
-                        <span style={{ color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? '#dc2626' : 'var(--color-text-mid)' }}>
+                      <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(183, 201, 226, 0.35)' }}>
+                        <Wallet size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-success)' }} />
+                        <span style={{ color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-text-mid)' }}>
                           Client's escrow lock: <strong>Rs. {(c.hourlyEscrow?.lockedBalance || 0).toFixed(2)}</strong>
                           {(c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 && ' — running low, ask the client to top up so new time logs get paid'}
                         </span>
@@ -322,20 +324,20 @@ export default function FreelancerWork() {
                 )}
 
                 {isFixed && Array.isArray(c.milestones) && c.milestones.length > 0 && (
-                  <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                  <div style={{ background: 'var(--color-secondary)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(183, 201, 226, 0.35)', fontSize: '0.85rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--color-text-mid)' }}>
                       <Layers size={14} /> Escrow Milestones ({c.milestones.filter(m => m.status === 'released').length}/{c.milestones.length} released)
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                       {c.milestones.map((m) => {
-                        const bg = m.status === 'released' ? '#dcfce7'
-                          : m.status === 'disputed' ? '#fee2e2'
-                          : m._id === currentMilestone?._id ? '#dbeafe'
-                          : '#f1f5f9';
-                        const fg = m.status === 'released' ? '#166534'
-                          : m.status === 'disputed' ? '#b91c1c'
-                          : m._id === currentMilestone?._id ? '#1d4ed8'
-                          : '#475569';
+                        const bg = m.status === 'released' ? 'var(--color-success-tint)'
+                          : m.status === 'disputed' ? 'var(--color-error-tint)'
+                          : m._id === currentMilestone?._id ? 'var(--color-info-tint)'
+                          : 'var(--color-secondary)';
+                        const fg = m.status === 'released' ? 'var(--color-success)'
+                          : m.status === 'disputed' ? 'var(--color-error)'
+                          : m._id === currentMilestone?._id ? 'var(--color-info)'
+                          : 'var(--color-text-mid)';
                         return (
                           <span key={m._id} style={{ background: bg, color: fg, padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.78rem' }}>
                             {m.order}. {m.title} — Rs. {m.amount} ({m.status.replace('_', ' ')})
@@ -344,7 +346,7 @@ export default function FreelancerWork() {
                       })}
                     </div>
                     {currentMilestone?.status === 'funded' && (
-                      <p style={{ margin: '0.5rem 0 0', color: '#16a34a', fontWeight: 600 }}>
+                      <p style={{ margin: '0.5rem 0 0', color: 'var(--color-success)', fontWeight: 600 }}>
                         <CheckCircle2 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Escrow Funded 100% — safe to work on Milestone {currentMilestone.order}!
                       </p>
                     )}
@@ -385,9 +387,9 @@ export default function FreelancerWork() {
                   {isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && (
                     <>
                       {timerActive ? (
-                        <button className="fl-btn fl-btn--sm" style={{ background: '#ef4444', color: '#fff', borderColor: '#ef4444' }} onClick={() => toggleTimer(c._id, true)} disabled={tracking[c._id]}>
-                          <Square size={14} /> Stop Timer
-                        </button>
+                        <Button variant="danger" size="sm" icon={<Square size={14} />} onClick={() => toggleTimer(c._id, true)} disabled={tracking[c._id]}>
+                          Stop Timer
+                        </Button>
                       ) : (
                         <button
                           className="fl-btn fl-btn--primary fl-btn--sm"
@@ -402,7 +404,7 @@ export default function FreelancerWork() {
                       {c.endRequest?.status !== 'pending' && c.dispute?.status !== 'pending' && (
                         <button
                           className="fl-btn fl-btn--sm fl-btn--ghost"
-                          style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          style={{ color: 'var(--color-error)', borderColor: 'rgba(220, 38, 38, 0.35)', display: 'flex', alignItems: 'center', gap: '4px' }}
                           onClick={() => setEndRequestModal({ contractId: c._id })}
                         >
                           <StopCircle size={14} /> End Contract
@@ -416,7 +418,7 @@ export default function FreelancerWork() {
                   ) && (
                     <button
                       className="fl-btn fl-btn--sm fl-btn--ghost"
-                      style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => setDisputeModal({ contractId: c._id })}
                     >
                       <AlertTriangle size={14} /> Dispute
@@ -465,7 +467,7 @@ export default function FreelancerWork() {
 
       {/* End Request Modal */}
       <Modal open={!!endRequestModal} title="End Hourly Contract" onClose={() => setEndRequestModal(null)}>
-        <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+        <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
           This will send a request to the client to mutually end this hourly contract.
         </p>
         <form onSubmit={handleRequestEnd}>
@@ -500,7 +502,7 @@ export default function FreelancerWork() {
 
       {/* Dispute Modal */}
       <Modal open={!!disputeModal} title="Raise Dispute (Force End)" onClose={() => setDisputeModal(null)}>
-        <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+        <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
           If you and the client cannot agree, you can raise a dispute. The contract will be locked, and our Admin will review the case.
         </p>
         <form onSubmit={handleRaiseDispute}>
@@ -546,22 +548,24 @@ export default function FreelancerWork() {
         .fl-contract__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
         .fl-contract__title { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
         .fl-contract__meta { font-size: var(--fs-sm); color: var(--color-text-mid); margin-top: var(--space-1); }
-        .fl-contract__stage { font-weight: var(--fw-bold); font-size: var(--fs-sm); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); background: rgba(0,0,0,0.03); }
         .fl-contract__money { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--color-text-mid); align-items: center; background: var(--color-secondary); padding: 0.8rem 1rem; border-radius: var(--radius-md); }
         .fl-contract__money span { display: inline-flex; align-items: center; gap: 0.4rem; }
         .fl-contract__escrow { font-weight: var(--fw-bold); }
-        .fl-contract__revision { font-size: var(--fs-sm); color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 0.75rem 1rem; }
+        .fl-contract__revision { font-size: var(--fs-sm); color: var(--color-warning); background: var(--color-warning-tint); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: var(--radius-md); padding: 0.75rem 1rem; }
         .fl-contract__footer { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--color-secondary); padding-top: 1rem; }
-        .fl-contract__hint { font-size: var(--fs-sm); color: #b45309; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: var(--fw-medium); }
-        
-        .fl-deliver-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 4000; padding: 1rem; }
+        .fl-contract__hint { font-size: var(--fs-sm); color: var(--color-warning); display: inline-flex; align-items: center; gap: 0.4rem; font-weight: var(--fw-medium); }
+
+        /* Above .fl-toast-stack (--z-toast: 4000) previously shared the same
+           value — a toast could render behind this modal. Route through the
+           shared --z-modal token like every other full-screen overlay. */
+        .fl-deliver-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: var(--z-modal, 3000); padding: 1rem; }
         .fl-deliver-modal { background: var(--color-bg); width: 100%; max-width: 600px; border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 24px 60px rgba(4,46,76,0.3); }
         .fl-deliver-modal__head { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--color-secondary); }
         .fl-deliver-modal__head h3 { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
         .fl-deliver-modal__head button { background: none; border: none; cursor: pointer; color: var(--color-text-light); transition: color 0.2s; }
         .fl-deliver-modal__head button:hover { color: var(--color-primary); }
         .fl-deliver-modal__body { padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-        .fl-deliver-modal__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid var(--color-secondary); background: #f8fafc; }
+        .fl-deliver-modal__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid var(--color-secondary); background: var(--color-secondary); }
       `}</style>
     </div>
   );

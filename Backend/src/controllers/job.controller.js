@@ -107,12 +107,27 @@ const updateJob = asyncHandler(async (req, res) => {
     job.status = 'open';
   }
 
-  // Apply only whitelisted content fields.
+  // Apply only whitelisted content fields. `budget` is merged (not replaced)
+  // so a partial update — e.g. only { budget: { max } } — can't silently
+  // wipe out the other side of the range.
   for (const key of EDITABLE_JOB_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(req.body, key)) {
-      job[key] = key === 'description' ? stripHtml(req.body[key]) : req.body[key];
+      if (key === 'budget' && req.body.budget && typeof req.body.budget === 'object') {
+        const existing = job.budget?.toObject ? job.budget.toObject() : (job.budget || {});
+        job.budget = { ...existing, ...req.body.budget };
+      } else {
+        job[key] = key === 'description' ? stripHtml(req.body[key]) : req.body[key];
+      }
     }
   }
+
+  // The validator only cross-checks min/max within the same request body —
+  // re-check against the merged (persisted + incoming) result so a
+  // max-only or min-only patch can't leave an inverted range.
+  if (job.budget && job.budget.min != null && job.budget.max != null && job.budget.max < job.budget.min) {
+    throw new BadRequestError('Maximum budget must be greater than minimum budget');
+  }
+
   await job.save();
 
   // Trigger background suggestion flow for unrecognized skills

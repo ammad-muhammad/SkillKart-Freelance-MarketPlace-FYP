@@ -3,7 +3,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen, Package, Loader } from 'lucide-react';
-import Modal from './components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import './FreelancerDashboard.css';
@@ -134,7 +134,7 @@ const FreelancerPortfolio = () => {
           <div className="fl-empty-message">
             <div className="fl-empty-icon"><FolderOpen size={48} /></div>
             <h3>Your Portfolio is Empty</h3>
-            <p style={{ color: '#64748b', marginBottom: '1.5rem', maxWidth: '400px', marginInline: 'auto' }}>
+            <p style={{ color: 'var(--color-text-mid)', marginBottom: '1.5rem', maxWidth: '400px', marginInline: 'auto' }}>
               Adding projects with descriptions and images helps you get noticed by clients.
             </p>
             <button className="fl-btn fl-btn--primary" onClick={handleOpenAdd}>Add Your First Project</button>
@@ -198,9 +198,9 @@ const FreelancerPortfolio = () => {
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 required 
-                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '1rem', background: '#f8fafc', transition: 'all 0.2s' }}
-                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
-                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '1rem', background: 'var(--color-secondary)', transition: 'all 0.2s' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = 'var(--color-white)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = 'var(--color-secondary)'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -212,9 +212,9 @@ const FreelancerPortfolio = () => {
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 required 
-                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: '#f8fafc', resize: 'vertical', transition: 'all 0.2s' }}
-                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
-                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: 'var(--color-secondary)', resize: 'vertical', transition: 'all 0.2s' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = 'var(--color-white)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = 'var(--color-secondary)'; e.target.style.boxShadow = 'none'; }}
               />
               <AiGenerateText
                 className="fl-ai-generate"
@@ -232,9 +232,9 @@ const FreelancerPortfolio = () => {
                 placeholder="https://..."
                 value={formData.url}
                 onChange={(e) => setFormData({...formData, url: e.target.value})}
-                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: '#f8fafc', transition: 'all 0.2s' }}
-                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
-                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: 'var(--color-secondary)', transition: 'all 0.2s' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = 'var(--color-white)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = 'var(--color-secondary)'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
             
@@ -343,7 +343,7 @@ const FreelancerPortfolio = () => {
         .fl-gig-card__banner {
           height: 190px;
           position: relative;
-          background: #f8fafc;
+          background: var(--color-secondary);
           overflow: hidden;
         }
 
@@ -384,7 +384,7 @@ const FreelancerPortfolio = () => {
         .fl-action-btn {
           width: 40px; height: 40px;
           border-radius: 12px;
-          background: #fff;
+          background: var(--color-white);
           border: none;
           display: flex;
           align-items: center;
@@ -397,15 +397,15 @@ const FreelancerPortfolio = () => {
         .fl-action-btn:hover {
           transform: scale(1.1);
           background: var(--color-primary);
-          color: #fff;
+          color: var(--color-white);
         }
 
         .fl-action-btn--delete:hover {
-          background: #dc2626;
+          background: var(--color-error);
         }
 
         .fl-p-card__link-btn {
-          background: #fff;
+          background: var(--color-white);
           color: var(--color-primary);
           padding: 0.6rem 1.25rem;
           border-radius: 100px;
@@ -419,7 +419,7 @@ const FreelancerPortfolio = () => {
         .fl-p-card__link-btn:hover {
           transform: scale(1.05);
           background: var(--color-primary);
-          color: #fff;
+          color: var(--color-white);
         }
 
         .fl-gig-card__body {
@@ -467,41 +467,41 @@ const FreelancerPortfolio = () => {
 
         /* Mini Gig Section Enhancement */
         .fl-service-gigs-section {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background: var(--color-secondary);
+          border: 1px solid rgba(183, 201, 226, 0.35);
           padding: 2.5rem;
           border-radius: 32px;
         }
 
         .fl-section-header { margin-bottom: 2rem; }
         .fl-section-title { font-size: 1.5rem; font-weight: 800; color: var(--color-primary); }
-        .fl-section-sub { font-size: 0.9rem; color: #64748b; }
+        .fl-section-sub { font-size: 0.9rem; color: var(--color-text-mid); }
 
         .fl-empty-message {
           padding: 5rem 2rem;
           text-align: center;
-          background: #fff;
+          background: var(--color-white);
           border-radius: 32px;
-          border: 2px dashed #e2e8f0;
+          border: 2px dashed rgba(183, 201, 226, 0.35);
         }
 
         .fl-empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
 
         .fl-p-upload-zone {
-          border: 2px dashed #cbd5e1;
+          border: 2px dashed rgba(183, 201, 226, 0.6);
           border-radius: var(--radius-xl);
           height: 180px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f8fafc;
+          background: var(--color-secondary);
           transition: all 0.2s;
           overflow: hidden;
         }
 
         .fl-p-upload-zone:hover {
           border-color: var(--color-primary);
-          background: #f0f4f8;
+          background: var(--color-secondary);
         }
 
         .fl-p-upload-zone img {

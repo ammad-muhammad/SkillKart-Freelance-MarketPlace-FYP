@@ -18,7 +18,7 @@ import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
-import Modal from './components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import './FreelancerDashboard.css';
 
 const MAX_BIO = 600;
@@ -223,20 +223,20 @@ const FreelancerProfile = () => {
             <div style={{ position: 'absolute', bottom: '1rem', right: '1rem' }}>
               <button 
                 className="fl-btn" 
-                style={{ 
-                  background: '#ffffff', 
-                  color: '#042E4C', 
+                style={{
+                  background: 'var(--color-white)',
+                  color: 'var(--color-primary)',
                   border: '1px solid rgba(4,46,76,0.2)',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '0.4rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
-                }} 
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#042E4C'; e.currentTarget.style.color = '#ffffff'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#042E4C'; }}
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-white)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-white)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
                 onClick={() => coverRef.current?.click()}
               >
                 <Camera size={14} /> Change Cover
@@ -657,7 +657,7 @@ const FreelancerProfile = () => {
             {profile.portfolio.slice(0, 3).map((item, i) => (
               <div key={item._id || i} className="fl-mini-p-card">
                 <div className="fl-mini-p-card__img">
-                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} /> : <span><ImageIcon size={24} color="#94a3b8" /></span>}
+                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} /> : <span><ImageIcon size={24} color="var(--color-text-light)" /></span>}
                 </div>
                 <div className="fl-mini-p-card__info">
                   <h4 className="fl-mini-p-card__title">{item.title}</h4>
@@ -736,8 +736,8 @@ const FreelancerProfile = () => {
           gap: 1rem;
         }
         .fl-mini-p-card {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background: var(--color-secondary);
+          border: 1px solid rgba(183, 201, 226, 0.35);
           border-radius: 12px;
           overflow: hidden;
           display: flex;
@@ -746,7 +746,7 @@ const FreelancerProfile = () => {
         }
         .fl-mini-p-card__img {
           height: 100px;
-          background: #edf2f7;
+          background: rgba(183, 201, 226, 0.2);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -755,46 +755,46 @@ const FreelancerProfile = () => {
         .fl-mini-p-card__img img { width: 100%; height: 100%; object-fit: cover; }
         .fl-mini-p-card__info { padding: 0.75rem; }
         .fl-mini-p-card__title { font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.25rem; }
-        .fl-mini-p-card__desc { font-size: 0.75rem; color: #64748b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        
+        .fl-mini-p-card__desc { font-size: 0.75rem; color: var(--color-text-mid); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
         .fl-mini-p-card--more {
           display: flex; align-items: center; justify-content: center;
-          background: var(--gradient-primary); color: #fff;
+          background: var(--gradient-primary); color: var(--color-white);
           font-weight: 700; text-decoration: none;
         }
         .fl-mini-p-card--more:hover { transform: scale(1.02); opacity: 0.9; }
-        
+
         .fl-link-row { display: flex; gap: 0.5rem; align-items: center; }
-        .fl-divider { height: 1px; background: #edf2f7; }
-        .fl-no-data { text-align: center; color: #94a3b8; font-size: 0.9rem; }
+        .fl-divider { height: 1px; background: rgba(183, 201, 226, 0.2); }
+        .fl-no-data { text-align: center; color: var(--color-text-light); font-size: 0.9rem; }
 
         .fl-nested-list { display: flex; flexDirection: column; gap: 1.25rem; }
-        .fl-nested-item { 
-          padding: 1.25rem; 
-          background: #f8fafc; 
-          border-radius: 16px; 
-          border: 1px solid #e2e8f0; 
+        .fl-nested-item {
+          padding: 1.25rem;
+          background: var(--color-secondary);
+          border-radius: 16px;
+          border: 1px solid rgba(183, 201, 226, 0.35);
         }
         .fl-display-item { display: flex; gap: 1rem; }
-        .fl-display-item__icon { 
-          width: 40px; height: 40px; 
-          border-radius: 10px; 
-          background: #fff; 
-          border: 1px solid #e2e8f0; 
-          display: flex; align-items: center; justify-content: center; 
+        .fl-display-item__icon {
+          width: 40px; height: 40px;
+          border-radius: 10px;
+          background: var(--color-white);
+          border: 1px solid rgba(183, 201, 226, 0.35);
+          display: flex; align-items: center; justify-content: center;
           color: var(--color-primary);
           flex-shrink: 0;
         }
         .fl-display-item__content { flex: 1; }
-        .fl-display-item__title { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
-        .fl-display-item__subtitle { font-size: 0.9rem; font-weight: 500; color: #475569; margin-bottom: 6px; }
-        .fl-display-item__date { 
-          font-size: 0.8rem; color: #64748b; 
-          display: flex; align-items: center; gap: 4px; 
+        .fl-display-item__title { font-size: 1rem; font-weight: 700; color: var(--color-text-dark); margin-bottom: 2px; }
+        .fl-display-item__subtitle { font-size: 0.9rem; font-weight: 500; color: var(--color-text-mid); margin-bottom: 6px; }
+        .fl-display-item__date {
+          font-size: 0.8rem; color: var(--color-text-mid);
+          display: flex; align-items: center; gap: 4px;
           margin-bottom: 8px;
         }
         .fl-display-item__meta-row { display: flex; gap: 1rem; }
-        .fl-display-item__text { font-size: 0.875rem; color: #475569; line-height: 1.5; margin: 0; }
+        .fl-display-item__text { font-size: 0.875rem; color: var(--color-text-mid); line-height: 1.5; margin: 0; }
 
         .fl-section-title { display: flex; align-items: center; gap: 10px; }
         .fl-form-row { display: flex; gap: 1rem; }
@@ -870,7 +870,7 @@ const FreelancerProfile = () => {
           width: 90px; height: 90px; border-radius: 50%;
           background: var(--gradient-primary);
           display: flex; align-items: center; justify-content: center;
-          font-size: 2rem; font-weight: 800; color: #fff;
+          font-size: 2rem; font-weight: 800; color: var(--color-white);
           border: 3px solid rgba(183,201,226,0.5); overflow: hidden;
         }
         .fl-profile-hero__avatar img { width: 100%; height: 100%; object-fit: cover; }

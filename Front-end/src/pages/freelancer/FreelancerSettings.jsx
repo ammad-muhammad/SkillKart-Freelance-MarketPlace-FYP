@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api/auth';
 import { freelancersAPI } from '../../api/freelancers';
 import { Tag, Mail, Shield, AlertTriangle } from 'lucide-react';
-import Modal from './components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import './FreelancerDashboard.css';
 
 const FreelancerSettings = () => {
@@ -195,7 +195,7 @@ const FreelancerSettings = () => {
               onChange={(e) => set('username', e.target.value)}
               placeholder="Enter new username"
             />
-            {usernameError && <p className="text-red-500 text-xs mt-1">{usernameError}</p>}
+            {usernameError && <p className="fl-error" style={{ marginTop: '0.25rem' }}>{usernameError}</p>}
           </div>
         </div>
         <div className="fl-actions">
@@ -297,7 +297,7 @@ const FreelancerSettings = () => {
 
       {/* Danger Zone */}
       <div className="fl-card">
-        <h3 className="fl-section-title" style={{ color: '#dc2626', borderColor: '#fecaca', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertTriangle size={18} /> Danger Zone</h3>
+        <h3 className="fl-section-title" style={{ color: 'var(--color-error)', borderColor: 'rgba(220, 38, 38, 0.3)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertTriangle size={18} /> Danger Zone</h3>
         <div className="fl-danger-zone">
           <p className="fl-danger-zone__title">Deactivate Account</p>
           <p className="fl-danger-zone__desc">
@@ -316,7 +316,7 @@ const FreelancerSettings = () => {
               Deactivating your account will hide your profile from clients and other freelancers.
               <strong> You cannot deactivate if you have active in-progress jobs.</strong>
             </p>
-            <p style={{ marginBottom: '1.25rem', color: '#dc2626', fontWeight: 600 }}>
+            <p style={{ marginBottom: '1.25rem', color: 'var(--color-error)', fontWeight: 600 }}>
               Are you sure you want to deactivate your account?
             </p>
             <div className="fl-actions" style={{ marginTop: 0 }}>

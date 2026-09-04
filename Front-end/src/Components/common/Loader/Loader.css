@@ -31,10 +31,10 @@
 }
 
 .sk-loader-text {
-  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-family: var(--font-heading);
   font-size: 1.125rem;
   font-weight: 500;
-  color: var(--color-text-main, #334155);
+  color: var(--color-text-dark);
   letter-spacing: 0.5px;
   margin: 0;
   animation: sk-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;

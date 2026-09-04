@@ -10,10 +10,10 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.3rem 0.7rem;
-  border: 1px solid #c7d2fe;
+  border: 1px solid rgba(4, 46, 76, 0.2);
   border-radius: 999px;
-  background: linear-gradient(135deg, #eef2ff, #f5f3ff);
-  color: #4338ca;
+  background: linear-gradient(135deg, rgba(4, 46, 76, 0.06), rgba(4, 46, 76, 0.03));
+  color: var(--color-primary);
   font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
@@ -21,14 +21,14 @@
   white-space: nowrap;
 }
 .ai-gen__btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e0e7ff, #ede9fe);
-  border-color: #a5b4fc;
+  background: linear-gradient(135deg, rgba(4, 46, 76, 0.1), rgba(4, 46, 76, 0.06));
+  border-color: rgba(4, 46, 76, 0.35);
 }
 .ai-gen__btn:active:not(:disabled) { transform: translateY(1px); }
 .ai-gen__btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .ai-gen__error {
   font-size: 0.72rem;
-  color: #b91c1c;
+  color: var(--color-error);
   font-weight: 600;
 }

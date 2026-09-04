@@ -92,7 +92,7 @@ export default function NotificationsPage() {
           {items.length > 0 && (
             <button 
               className="np-markall" 
-              style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }} 
+              style={{ background: 'var(--color-error-tint)', color: 'var(--color-error)', border: '1px solid rgba(220, 38, 38, 0.2)' }} 
               onClick={clearAll}
             >
               <Trash2 size={16} /> Clear all

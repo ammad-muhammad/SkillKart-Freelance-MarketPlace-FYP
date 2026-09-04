@@ -4,7 +4,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
 import { validatePassword } from '../../utils/validation';
 import { Key, Save, Shield, Bell, Lock, AlertCircle } from 'lucide-react';
-import Modal from './components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import './FreelancerDashboard.css';
 import { log } from "../../utils/logger";
 
@@ -254,7 +254,7 @@ const FreelancerSecurity = () => {
                     className="fl-pw-strength__bar"
                     style={{
                       width: `${Math.min(100, pwForm.newPassword.length * 10)}%`,
-                      background: pwForm.newPassword.length >= 12 ? '#10b981' : pwForm.newPassword.length >= 8 ? '#f59e0b' : '#ef4444'
+                      background: pwForm.newPassword.length >= 12 ? 'var(--color-success)' : pwForm.newPassword.length >= 8 ? 'var(--color-warning)' : 'var(--color-error)'
                     }}
                   />
                   <span className="fl-pw-strength__label">
@@ -395,11 +395,9 @@ const FreelancerSecurity = () => {
         </Modal>
 
       <style>{`
-        .fl-input--error { border-color: #ef4444 !important; }
-        .fl-error { font-size: 0.75rem; color: #ef4444; margin-top: 0.25rem; font-weight: 600; }
         .fl-pw-strength { margin-top: 0.4rem; }
         .fl-pw-strength__bar {
-          height: 4px; border-radius: 999px; background: #ef4444;
+          height: 4px; border-radius: 999px; background: var(--color-error);
           transition: width 0.3s, background 0.3s; margin-bottom: 0.25rem;
         }
         .fl-pw-strength__label { font-size: 0.72rem; font-weight: 700; color: var(--color-text-mid); }

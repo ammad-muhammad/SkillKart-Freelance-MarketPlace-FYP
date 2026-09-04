@@ -23,13 +23,14 @@ const createJobValidation = [
 
   body('budget.min')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Minimum budget must be positive'),
+    .isFloat({ min: 1 }).withMessage('Minimum budget must be greater than zero'),
 
   body('budget.max')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Maximum budget must be positive')
+    .isFloat({ min: 1 }).withMessage('Maximum budget must be greater than zero')
     .custom((value, { req }) => {
-      if (req.body.budget?.min && value < req.body.budget.min) {
+      const min = req.body.budget?.min;
+      if (min !== undefined && min !== null && value < min) {
         throw new Error('Maximum budget must be greater than minimum budget');
       }
       return true;
@@ -101,6 +102,25 @@ const updateJobValidation = [
     .optional()
     .trim()
     .isLength({ min: 50, max: 5000 }).withMessage('Description must be 50-5000 characters'),
+
+  body('budget')
+    .optional()
+    .isObject().withMessage('Budget must be an object'),
+
+  body('budget.min')
+    .optional()
+    .isFloat({ min: 1 }).withMessage('Minimum budget must be greater than zero'),
+
+  body('budget.max')
+    .optional()
+    .isFloat({ min: 1 }).withMessage('Maximum budget must be greater than zero')
+    .custom((value, { req }) => {
+      const min = req.body.budget?.min;
+      if (min !== undefined && min !== null && value < min) {
+        throw new Error('Maximum budget must be greater than minimum budget');
+      }
+      return true;
+    }),
 
   // NOTE: `status` is intentionally NOT accepted here. Project status is driven
   // only by the gated lifecycle endpoints (accept proposal, deliver,

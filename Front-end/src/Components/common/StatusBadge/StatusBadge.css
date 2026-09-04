@@ -1,0 +1,21 @@
+/* Shared dashboard StatusBadge — see UI_UX_AUDIT_PLAN.md §4.7 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: var(--radius-full, 9999px);
+  font-family: var(--font-dashboard, var(--font-body));
+  font-size: var(--fs-xs, 0.75rem);
+  font-weight: var(--fw-bold, 700);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.status-badge--success { background: var(--color-success-tint); color: var(--color-success); }
+.status-badge--warning { background: var(--color-warning-tint); color: var(--color-warning); }
+.status-badge--error   { background: var(--color-error-tint);   color: var(--color-error); }
+.status-badge--info    { background: var(--color-info-tint);    color: var(--color-info); }
+.status-badge--neutral { background: var(--color-secondary);    color: var(--color-text-mid); }
