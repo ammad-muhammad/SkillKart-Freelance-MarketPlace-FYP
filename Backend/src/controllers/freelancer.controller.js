@@ -93,10 +93,21 @@ const getProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   
   let profile = await FreelancerProfile.findOne({ userId });
-  
+
   if (!profile) {
-    // Create empty profile
-    profile = await FreelancerProfile.create({ userId });
+    // Create empty profile. A fresh signup can fire this from several
+    // components at once (onboarding form, dashboard shell, etc.) — the
+    // first request past the findOne above wins the create; any concurrent
+    // request racing it hits the unique userId index instead of a 500.
+    try {
+      profile = await FreelancerProfile.create({ userId });
+    } catch (err) {
+      if (err.code === 11000) {
+        profile = await FreelancerProfile.findOne({ userId });
+      } else {
+        throw err;
+      }
+    }
   }
 
   // Always sync verification details before returning profile
