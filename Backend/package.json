@@ -11,6 +11,7 @@
     "seed:demo:small": "node scripts/seedDemoData.js --small",
     "gmail:token": "node scripts/generateGmailToken.js",
     "migrate:hourly-escrow": "node scripts/migrateHourlyEscrow.js",
+    "migrate:skill-verification": "node scripts/backfillSkillVerification.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint src/**/*.js",
     "format": "prettier --write \"src/**/*.js\""

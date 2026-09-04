@@ -32,7 +32,7 @@ const createProposal = asyncHandler(async (req, res) => {
   }
 
   // Need the job's required skills + category + budget to gate the application.
-  const job = await Job.findById(proposalData.jobId).select('skills category clientId title budget status contractId');
+  const job = await Job.findById(proposalData.jobId).select('skills category experienceLevel clientId title budget status contractId');
   if (!job) {
     throw new NotFoundError('Job not found');
   }
@@ -56,15 +56,19 @@ const createProposal = asyncHandler(async (req, res) => {
     }
   }
 
-  const gate = await checkSkillGate(freelancerId, job.skills, job.category);
+  const gate = await checkSkillGate(freelancerId, job.skills, job.category, job.experienceLevel);
   if (!gate.allowed) {
+    const levelLabel = { entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[job.experienceLevel];
     return sendError(res, {
       statusCode: 403,
-      message: 'You need to pass the skill test for this project’s required skills before you can apply. Verify at least one of them to continue.',
+      message: levelLabel
+        ? `This project requires ${levelLabel}-level verification in at least one of its required skills before you can apply.`
+        : 'You need to pass the skill test for this project’s required skills before you can apply. Verify at least one of them to continue.',
       errors: {
         skillTestRequired: true,
         requiredSkills: job.skills || [],
         category: job.category || '',
+        requiredLevel: job.experienceLevel || '',
         verifiedSkills: gate.verifiedSkills,
       },
     });
