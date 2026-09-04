@@ -28,12 +28,14 @@ const syncFreelancerVerification = async (userId) => {
   const hasPortfolio = !!(profile.portfolio && profile.portfolio.length >= 1);
   const profileCompleted = hasBio && hasTitle && hasSkills && hasPortfolio;
 
-  // 4. All Skill Tests Passed (Min 50% score requirement)
+  // 4. All Skill Tests Passed
   // Logic: User must have at least one skill AND all existing skills must be tested
   // OR at least all added skills during onboarding must be verified.
-  // Rule: each verified skill must score >= 50%.
-  const allSkillTestsPassed = profile.skills.length > 0 && 
-                               profile.skills.every(s => s.isVerified && s.verificationScore >= 50);
+  // Rule: each skill must be verified (skillTest.controller.js's SKILL_VERIFICATION_THRESHOLD,
+  // currently 25%) — isVerified already encodes that score floor plus non-expiry, so don't
+  // re-check verificationScore against a separate (stale) threshold here.
+  const allSkillTestsPassed = profile.skills.length > 0 &&
+                               profile.skills.every(s => s.isVerified);
 
   // Update verification details
   profile.verificationDetails = {
