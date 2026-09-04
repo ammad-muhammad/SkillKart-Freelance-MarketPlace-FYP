@@ -127,15 +127,21 @@ const PostProject = () => {
     if (stepNum === 1) {
       if (!form.title.trim()) e.title = 'Project title is required';
       else if (form.title.trim().length < 5) e.title = 'Title must be at least 5 characters';
+      else if (form.title.trim().length > 100) e.title = 'Title must be under 100 characters';
       if (!JOB_CATEGORIES.includes(form.category)) e.category = 'Please select a valid category';
       if (!form.skills.length) e.skills = 'Add at least one required skill';
+      else if (form.skills.some((s) => s.trim().length < 2 || s.trim().length > 50)) {
+        e.skills = 'Each skill must be 2-50 characters';
+      }
       if (!form.summary.trim()) e.summary = 'Short summary is required';
     }
     if (stepNum === 2) {
-      if (!form.budget.min || form.budget.min <= 0) e.budgetMin = 'Minimum budget must be greater than zero';
-      if (!form.budget.max || form.budget.max <= 0) e.budgetMax = 'Maximum budget must be greater than zero';
+      if (!form.budget.min || form.budget.min < 1) e.budgetMin = 'Minimum budget must be at least 1';
+      if (!form.budget.max || form.budget.max < 1) e.budgetMax = 'Maximum budget must be at least 1';
       else if (form.budget.max < form.budget.min) e.budgetMax = 'Maximum budget must be greater than or equal to minimum';
-      if (form.deadline) {
+      if (!form.deadline) {
+        e.deadline = 'Deadline is required';
+      } else {
         const d = new Date(form.deadline);
         if (Number.isNaN(d.getTime()) || d <= new Date()) e.deadline = 'Deadline must be a future date';
       }
@@ -143,6 +149,8 @@ const PostProject = () => {
     if (stepNum === 3) {
       if (descriptionText.length < 50) {
         e.fullDescription = 'Full description must be at least 50 characters (or expand your summary)';
+      } else if (descriptionText.length > 5000) {
+        e.fullDescription = 'Full description must be under 5000 characters';
       }
     }
     return e;
@@ -616,11 +624,12 @@ const PostProject = () => {
                 />
               </div>
               <div className="cl-form-group">
-                <label className="cl-label">Proposed Deadline</label>
+                <label className="cl-label">Proposed Deadline *</label>
                 <input
                   type="date"
                   className={`cl-input${errors.deadline ? ' cl-input--error' : ''}`}
                   value={form.deadline}
+                  min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
                   onChange={(e) => { updateForm({ deadline: e.target.value }); clearError('deadline'); }}
                 />
                 <FieldError message={errors.deadline} />
