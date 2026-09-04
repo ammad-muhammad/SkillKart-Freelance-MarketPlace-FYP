@@ -229,7 +229,13 @@ export default function JobDetails() {
 
         if (matchedSkill) {
           toast.error(msg);
-          if (window.confirm(`You must pass the skill test for "${matchedSkill}" before applying. Take the test now?`)) {
+          // gate.requiredLevel ('entry'|'intermediate'|'expert') means the freelancer
+          // already has this skill verified but not at a high enough level — retaking
+          // for a better score is what unlocks it, same test/skill either way.
+          const levelNote = gate.requiredLevel
+            ? ` This project needs ${{ entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[gate.requiredLevel]}-level verification.`
+            : '';
+          if (window.confirm(`You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`)) {
             navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}`);
           }
         } else if (candidates[0]) {

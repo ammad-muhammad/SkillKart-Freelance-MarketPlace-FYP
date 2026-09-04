@@ -7,6 +7,14 @@ const { BadRequestError, NotFoundError } = require('../utils/apiError');
 const { syncFreelancerVerification } = require('../services/verification.service');
 const { isEasyMode } = require('../utils/skillTestDifficulty');
 
+// Minimum per-skill score to be marked isVerified (unlocks applying to jobs/
+// gigs gated on that skill — see utils/skillGating.js). Deliberately low: it
+// only needs to filter out near-zero/random-guess attempts, not gate on
+// expertise — Beginner/Intermediate/Expert should all count as "gave the
+// test and showed real understanding". The separate 80%/50% breakpoints
+// below are just the descriptive level rank, not a gating threshold.
+const SKILL_VERIFICATION_THRESHOLD = 25;
+
 // LLMs reliably write the correct option first when generating MCQs, so
 // without reshuffling, "A" ends up correct almost every time. correctAnswer
 // is matched by its text everywhere downstream (not by index), so shuffling
@@ -220,13 +228,17 @@ const submitTest = asyncHandler(async (req, res) => {
   for (const skill in skillScores) {
     const avg = skillScores[skill].total / skillScores[skill].count;
     const percentage = avg * 100;
-    
+
+    // "Verified" (unlocks job/gig applications gated on this skill) just
+    // means the freelancer actually attempted and cleared a sanity floor —
+    // it is NOT the same as the "Expert" rank badge below. A near-zero score
+    // (e.g. random guessing on MCQs) stays unverified; Beginner/Intermediate/
+    // Expert all verify.
     let level = 'Beginner';
-    let isVerified = false;
-    
+    const isVerified = percentage >= SKILL_VERIFICATION_THRESHOLD;
+
     if (percentage >= 80) {
       level = 'Expert';
-      isVerified = true;
     } else if (percentage >= 50) {
       level = 'Intermediate';
     }
@@ -281,14 +293,21 @@ const submitTest = asyncHandler(async (req, res) => {
     await syncFreelancerVerification(userId);
   }
 
+  const overallVerified = totalScore >= SKILL_VERIFICATION_THRESHOLD;
+  const scoreMsg = totalScore.toFixed(1);
+  const message = overallPassed
+    ? `Congratulations! You are now a Verified Expert with a score of ${scoreMsg}%.`
+    : overallVerified
+      ? `Test completed. You've been ranked as ${overallLevel} (${scoreMsg}%) and are now verified for this skill — you can apply to work that requires it. Score 80% to also earn the Expert badge.`
+      : `Test completed with a score of ${scoreMsg}%, which is too low to verify this skill. Retake the test and score at least ${SKILL_VERIFICATION_THRESHOLD}% to unlock applying to work that requires it.`;
+
   sendSuccess(res, {
-    message: overallPassed 
-      ? `Congratulations! You are now a Verified Expert with a score of ${totalScore.toFixed(1)}%.` 
-      : `Test completed. You've been ranked as ${overallLevel} (${totalScore.toFixed(1)}%). Score 80% to reach Expert status.`,
+    message,
     data: {
       score: totalScore,
       level: overallLevel,
       passed: overallPassed,
+      verified: overallVerified,
       skillScores: skillResults, // Passing this if frontend wants to use it later
       attemptId: pendingTest._id
     }

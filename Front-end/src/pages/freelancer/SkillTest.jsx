@@ -324,18 +324,23 @@ const SkillTest = () => {
             </div>
           ) : (
             <div className="st-result-failed">
-              <CheckCircle2 size={80} style={{ color: result.level === 'Intermediate' ? 'var(--color-warning)' : 'var(--color-text-mid)' }} />
+              <CheckCircle2 size={80} style={{ color: result.verified ? 'var(--color-success)' : 'var(--color-error)' }} />
               <h1>Skill Ranking: {result.level}</h1>
-              <div className="st-score-ring" style={{ borderColor: result.level === 'Intermediate' ? 'var(--color-warning)' : 'var(--color-text-light)' }}>
+              <div className="st-score-ring" style={{ borderColor: result.verified ? 'var(--color-success)' : 'var(--color-error)' }}>
                 <span className="st-score-val">{result.score.toFixed(0)}%</span>
                 <span className="st-score-label">Score</span>
               </div>
               <p className="st-result-desc">
                 You've been ranked as <strong>{result.level}</strong>.
-                {result.level === 'Intermediate'
-                  ? " You're very close! Reach 80% to earn the Expert badge."
-                  : " Take some time to improve your skills and retake the test for a better ranking."}
+                {result.verified
+                  ? " This skill is now verified — you can apply to work that requires it. Reach 80% to also earn the Expert badge."
+                  : " That score is too low to verify this skill. Retake the test and score higher to unlock applying to work that requires it."}
               </p>
+              {result.verified && (
+                <div className="st-skill-badges">
+                  {skills.map(s => <span key={s} className="st-badge">Verified {s}</span>)}
+                </div>
+              )}
               <button onClick={() => { setResult(null); setPhase('rules'); }} className="st-btn-retry">
                 Retake to Improve Ranking
               </button>
@@ -408,7 +413,7 @@ const SkillTest = () => {
               <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. Keep your face visible and alone in frame — repeated issues (no face, another person, looking away) will also cancel the test.</span></li>
               <li><Clock size={18} /><span>Each question has a timer — <strong>{PER_QUESTION_SECONDS}s for multiple-choice</strong>, <strong>{TEXT_QUESTION_SECONDS}s for written-answer</strong> questions. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
               <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
-              <li><CheckCircle2 size={18} /><span>You need <strong>80%</strong> overall to be verified as an Expert for the skill.</span></li>
+              <li><CheckCircle2 size={18} /><span>Score at least <strong>25%</strong> to verify this skill and unlock applying to work that requires it. Reach <strong>80%</strong> to also earn the Expert badge.</span></li>
             </ul>
 
             <div className="st-camera-preview">
