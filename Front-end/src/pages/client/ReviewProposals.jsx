@@ -12,10 +12,13 @@ import {
 } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
-import Modal from '../freelancer/components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
+import Button from '../../Components/common/Button/Button';
+import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import './ReviewProposals.css';
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const STATUS_TONE = { pending: 'warning', accepted: 'success', rejected: 'error' };
 
 export default function ReviewProposals() {
   const { jobId } = useParams();
@@ -233,9 +236,9 @@ export default function ReviewProposals() {
                     </div>
                   </div>
                 </div>
-                <div className={`rp-status rp-status--${prop.status}`}>
+                <StatusBadge tone={STATUS_TONE[prop.status] || 'neutral'}>
                   {prop.status.toUpperCase()}
-                </div>
+                </StatusBadge>
               </div>
 
               <div className="rp-card__body">
@@ -260,33 +263,39 @@ export default function ReviewProposals() {
                 <div className="rp-actions">
                   {prop.status === 'pending' ? (
                     <>
-                      <button 
-                        className="rp-btn rp-btn--accept"
+                      <Button
+                        variant="success"
+                        size="sm"
+                        icon={<CheckCircle2 size={18} />}
                         onClick={() => handleAcceptClick(prop._id)}
                         disabled={!!processingId || job?.status !== 'open'}
                       >
-                        <CheckCircle2 size={18} /> Accept
-                      </button>
-                      <button 
-                        className="rp-btn rp-btn--reject"
+                        Accept
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={<XCircle size={18} />}
                         onClick={() => handleReject(prop._id)}
                         disabled={!!processingId || job?.status !== 'open'}
                       >
-                        <XCircle size={18} /> Reject
-                      </button>
+                        Reject
+                      </Button>
                     </>
                   ) : (
                     <span className="rp-responded">
                       {prop.respondedAt ? `Responded on ${new Date(prop.respondedAt).toLocaleDateString()}` : 'Auto-rejected'}
                     </span>
                   )}
-                  <button
-                    className="rp-btn rp-btn--ghost"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<MessageSquare size={18} />}
                     onClick={() => handleMessage(prop)}
                     disabled={messagingId === prop._id}
                   >
-                    <MessageSquare size={18} /> {messagingId === prop._id ? 'Opening…' : 'Message'}
-                  </button>
+                    {messagingId === prop._id ? 'Opening…' : 'Message'}
+                  </Button>
                 </div>
                 <Link to={`/freelancers/${prop.freelancerId?._id}`} className="rp-link">
                   View Profile <ExternalLink size={14} />
@@ -327,7 +336,7 @@ export default function ReviewProposals() {
             />
 
             {!isHourlyJob && (
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#f8fafc' }}>
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: '10px', border: '1.5px solid rgba(183, 201, 226, 0.35)', background: 'var(--color-secondary)' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', marginBottom: splitMilestones ? '0.9rem' : 0 }}>
                   <input type="checkbox" checked={splitMilestones} onChange={(e) => setSplitMilestones(e.target.checked)} />
                   <Layers size={15} /> Split into milestones (Rs. {agreedPrice} total)
@@ -365,7 +374,7 @@ export default function ReviewProposals() {
                     <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addMilestoneRow} style={{ marginTop: '0.25rem' }}>
                       <Plus size={14} style={{ marginRight: '4px' }} /> Add Milestone
                     </button>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: '0.75rem', color: milestonesTotal === agreedPrice ? '#16a34a' : '#dc2626' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: '0.75rem', color: milestonesTotal === agreedPrice ? 'var(--color-success)' : 'var(--color-error)' }}>
                       Total: Rs. {milestonesTotal} / Rs. {agreedPrice} {milestonesTotal === agreedPrice ? '✓' : ''}
                     </p>
                   </>
@@ -404,7 +413,7 @@ export default function ReviewProposals() {
         >
           <div className="cl-modal__body" style={{ padding: '0.5rem 0 0 0' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <Wallet size={28} style={{ flexShrink: 0, color: '#2563eb' }} />
+              <Wallet size={28} style={{ flexShrink: 0, color: 'var(--color-info)' }} />
               <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-mid)' }}>
                 {topUpModal.contractType === 'hourly'
                   ? "Accepting this proposal locks one week's estimated cost from your wallet so the freelancer can start logging time."
@@ -414,13 +423,13 @@ export default function ReviewProposals() {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ flex: 1, padding: '0.85rem', borderRadius: '10px', background: '#f8fafc', border: '1.5px solid #e2e8f0' }}>
+              <div style={{ flex: 1, padding: '0.85rem', borderRadius: '10px', background: 'var(--color-secondary)', border: '1.5px solid rgba(183, 201, 226, 0.35)' }}>
                 <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', color: 'var(--color-text-mid)', fontWeight: 600 }}>NEEDED</p>
                 <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Rs. {topUpModal.required}</p>
               </div>
-              <div style={{ flex: 1, padding: '0.85rem', borderRadius: '10px', background: '#fef2f2', border: '1.5px solid #fecaca' }}>
-                <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', color: '#b91c1c', fontWeight: 600 }}>YOUR BALANCE</p>
-                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#b91c1c' }}>Rs. {topUpModal.available}</p>
+              <div style={{ flex: 1, padding: '0.85rem', borderRadius: '10px', background: 'var(--color-error-tint)', border: '1.5px solid rgba(220, 38, 38, 0.25)' }}>
+                <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', color: 'var(--color-error)', fontWeight: 600 }}>YOUR BALANCE</p>
+                <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-error)' }}>Rs. {topUpModal.available}</p>
               </div>
             </div>
 

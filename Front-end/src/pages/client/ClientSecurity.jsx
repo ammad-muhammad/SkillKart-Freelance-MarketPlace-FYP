@@ -5,15 +5,15 @@ import { LogOut } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { authAPI } from '../../api/auth';
 import { validatePassword } from '../../utils/validation';
-import Modal from '../freelancer/components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import './ClientDashboard.css';
 import { log } from "../../utils/logger";
 
 const strengthLabel = (score) => {
-  if (score <= 1) return { text: 'Weak', color: '#ef4444' };
-  if (score === 2) return { text: 'Fair', color: '#f59e0b' };
-  if (score === 3) return { text: 'Good', color: '#3b82f6' };
-  return { text: 'Strong', color: '#10b981' };
+  if (score <= 1) return { text: 'Weak', color: 'var(--color-error)' };
+  if (score === 2) return { text: 'Fair', color: 'var(--color-warning)' };
+  if (score === 3) return { text: 'Good', color: 'var(--color-info)' };
+  return { text: 'Strong', color: 'var(--color-success)' };
 };
 
 const getStrength = (pwd) => {
@@ -318,7 +318,7 @@ const ClientSecurity = () => {
                       {[1,2,3,4].map((i) => (
                         <div key={i} style={{
                           height: '4px', flex: 1, borderRadius: '99px',
-                          background: i <= strength ? strengthInfo.color : '#e5edf5',
+                          background: i <= strength ? strengthInfo.color : 'rgba(183, 201, 226, 0.35)',
                           transition: 'background 0.3s'
                         }} />
                       ))}
@@ -388,7 +388,7 @@ const ClientSecurity = () => {
 
       {/* Danger Zone */}
       <div className="cl-card">
-        <h3 className="cl-section-title" style={{ color: '#dc2626' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
+        <h3 className="cl-section-title" style={{ color: 'var(--color-error)' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button className="cl-btn cl-btn--ghost" onClick={handleLogoutAll} disabled={loggingOutAll}>
             <LogOut size={16} /> {loggingOutAll ? 'Signing out…' : 'Logout from All Devices'}
@@ -441,7 +441,7 @@ const ClientSecurity = () => {
               Deactivating your account will hide your profile from freelancers and the public.
               <strong> You cannot deactivate if you have open or active jobs.</strong>
             </p>
-            <p style={{ marginBottom: '1.25rem', color: '#dc2626', fontWeight: 600 }}>
+            <p style={{ marginBottom: '1.25rem', color: 'var(--color-error)', fontWeight: 600 }}>
               Are you sure you want to deactivate your account?
             </p>
             <div className="cl-actions" style={{ marginTop: 0 }}>

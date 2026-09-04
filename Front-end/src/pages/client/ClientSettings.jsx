@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import { authAPI } from '../../api/auth';
-import Modal from '../freelancer/components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import { clientsAPI } from '../../api/clients';
 
 const ClientSettings = () => {
@@ -283,7 +283,7 @@ const ClientSettings = () => {
 
       {/* Danger Zone */}
       <div className="cl-card">
-        <h3 className="cl-section-title" style={{ color: '#dc2626' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
+        <h3 className="cl-section-title" style={{ color: 'var(--color-error)' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
         <div className="cl-danger-zone">
           <div className="cl-danger-zone__title">Delete Account</div>
           <div className="cl-danger-zone__desc">

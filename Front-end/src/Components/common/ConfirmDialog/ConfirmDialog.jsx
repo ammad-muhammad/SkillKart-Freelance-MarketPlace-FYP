@@ -1,9 +1,10 @@
-import Modal from '../../../pages/freelancer/components/Modal';
+import Modal from '../Modal/Modal';
+import Button from '../Button/Button';
 
 /**
  * Shared confirmation dialog built on the accessible Modal.
- * Standardizes the "Are you sure?" pattern across the app with self-contained
- * button styling (no dependency on client/freelancer CSS prefixes).
+ * Standardizes the "Are you sure?" pattern across the app using the shared
+ * Button component (no more one-off inline button styling).
  *
  * Props:
  *  - open, title, message (string | node)
@@ -12,15 +13,6 @@ import Modal from '../../../pages/freelancer/components/Modal';
  *  - loading: disables buttons + shows a busy label
  *  - onConfirm / onClose
  */
-const btnBase = {
-  padding: '0.6rem 1.15rem',
-  borderRadius: '10px',
-  fontWeight: 700,
-  fontSize: '0.875rem',
-  cursor: 'pointer',
-  border: 'none',
-};
-
 const ConfirmDialog = ({
   open,
   title = 'Are you sure?',
@@ -34,28 +26,23 @@ const ConfirmDialog = ({
 }) => (
   <Modal open={open} title={title} onClose={loading ? () => {} : onClose} danger={danger}>
     {typeof message === 'string'
-      ? <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-mid, #475569)', lineHeight: 1.6 }}>{message}</p>
+      ? <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-mid)', lineHeight: 1.6 }}>{message}</p>
       : message}
     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-      <button
+      <Button
+        variant={danger ? 'danger' : 'primary'}
         onClick={onConfirm}
-        disabled={loading}
-        style={{
-          ...btnBase,
-          background: danger ? '#dc2626' : 'var(--color-primary, #042e4c)',
-          color: '#fff',
-          opacity: loading ? 0.6 : 1,
-        }}
+        loading={loading}
       >
-        {loading ? 'Working…' : confirmLabel}
-      </button>
-      <button
+        {confirmLabel}
+      </Button>
+      <Button
+        variant="ghost"
         onClick={onClose}
         disabled={loading}
-        style={{ ...btnBase, background: '#f1f5f9', color: 'var(--color-text-dark, #1e293b)' }}
       >
         {cancelLabel}
-      </button>
+      </Button>
     </div>
   </Modal>
 );

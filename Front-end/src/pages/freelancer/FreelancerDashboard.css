@@ -21,7 +21,7 @@
 
 /* ── Card ── */
 .fl-card {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 16px;
   padding: 1.75rem;
   box-shadow: 0 2px 12px rgba(4, 46, 76, 0.07);
@@ -38,7 +38,7 @@
   color: var(--color-primary);
   margin-bottom: 1.25rem;
   padding-bottom: 0.6rem;
-  border-bottom: 2px solid #f0f4f8;
+  border-bottom: 2px solid rgba(183, 201, 226, 0.35);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -77,7 +77,7 @@
   font-size: 0.875rem;
   font-family: var(--font-body);
   color: var(--color-text-dark);
-  background: #fff;
+  background: var(--color-white);
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
 }
@@ -90,7 +90,7 @@
 }
 .fl-input:disabled,
 .fl-textarea:disabled {
-  background: #f8fafc;
+  background: var(--color-secondary);
   cursor: not-allowed;
   color: var(--color-text-light);
 }
@@ -99,6 +99,9 @@
   resize: vertical;
   min-height: 100px;
 }
+
+.fl-input--error { border-color: var(--color-error) !important; background: var(--color-error-tint) !important; }
+.fl-error { font-size: 0.72rem; color: var(--color-error); margin-top: 0.25rem; font-weight: 600; display: block; }
 
 .fl-char-count {
   font-size: 0.72rem;
@@ -131,7 +134,7 @@
 
 .fl-btn--primary {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-white);
   border-color: var(--color-primary);
 }
 .fl-btn--primary:hover:not(:disabled) {
@@ -148,23 +151,23 @@
 }
 .fl-btn--outline:hover:not(:disabled) {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-white);
 }
 
 .fl-btn--ghost {
-  background: #f0f4f8;
+  background: var(--color-secondary);
   color: var(--color-text-mid);
   border-color: transparent;
 }
 .fl-btn--ghost:hover:not(:disabled) {
-  background: #e5edf5;
+  background: rgba(183, 201, 226, 0.35);
   color: var(--color-text-dark);
 }
 
 .fl-btn--danger {
-  background: #dc2626;
-  color: #fff;
-  border-color: #dc2626;
+  background: var(--color-error);
+  color: var(--color-white);
+  border-color: var(--color-error);
 }
 .fl-btn--danger:hover:not(:disabled) {
   background: #b91c1c;
@@ -185,7 +188,7 @@
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255,255,255,0.5);
-  border-top-color: #fff;
+  border-top-color: var(--color-white);
   border-radius: 50%;
   animation: fl-spin 0.7s linear infinite;
   margin-left: 0.4rem;
@@ -200,7 +203,9 @@
   margin-top: 1.5rem;
 }
 
-/* ── Status Badge ── */
+/* ── Status Badge ──
+   Single status vocabulary shared with StatusBadge's tone mapping used
+   elsewhere (ClientProjects, FreelancerWork, etc.): success/warning/neutral. */
 .fl-badge {
   display: inline-flex;
   align-items: center;
@@ -212,9 +217,9 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.fl-badge--active { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.fl-badge--paused { background: rgba(245, 158, 11, 0.12); color: #d97706; }
-.fl-badge--draft  { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
+.fl-badge--active { background: var(--color-success-tint); color: var(--color-success); }
+.fl-badge--paused { background: var(--color-warning-tint); color: var(--color-warning); }
+.fl-badge--draft  { background: rgba(183, 201, 226, 0.2); color: var(--color-text-mid); }
 
 /* ── Toggle ── */
 .fl-toggle {
@@ -222,204 +227,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  background: #f8fafc;
+  background: var(--color-secondary);
   border-radius: 12px;
-  border: 1px solid #e5edf5;
-}
-.fl-toggle__info { flex: 1; }
-.fl-toggle__label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-dark);
-  display: block;
-}
-.fl-toggle__desc {
-  font-size: 0.78rem;
-  color: var(--color-text-light);
-  margin-top: 2px;
-}
-.fl-toggle__switch {
-  position: relative;
-  width: 46px;
-  height: 26px;
-  background: #d1d9e6;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.25s;
-  flex-shrink: 0;
-}
-.fl-toggle__switch--on { background: var(--color-primary); }
-.fl-toggle__switch--loading {
-  opacity: 0.55;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-.fl-toggle__switch::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-}
-.fl-toggle__switch--on::after { transform: translateX(20px); }
-
-/* ── Stat Card ── */
-.fl-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2rem;
-}
-
-.fl-stat-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 1.5rem;
   border: 1px solid rgba(183, 201, 226, 0.35);
-  box-shadow: 0 2px 12px rgba(4, 46, 76, 0.06);
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.fl-stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(4, 46, 76, 0.12);
-}
-.fl-stat-card__icon {
-  font-size: 1.8rem;
-  margin-bottom: 0.6rem;
-}
-.fl-stat-card__value {
-  font-family: var(--font-heading);
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--color-primary);
-  line-height: 1;
-  margin-bottom: 0.25rem;
-}
-.fl-stat-card__label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.fl-stat-card__bg {
-  position: absolute;
-  right: -10px;
-  top: -10px;
-  font-size: 4.5rem;
-  opacity: 0.05;
-  pointer-events: none;
-}
-
-/* ── Divider ── */
-.fl-divider {
-  height: 1px;
-  background: #e5edf5;
-  margin: 1.5rem 0;
-}
-
-/* ── Spinner ── */
-@keyframes fl-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── Danger Zone ── */
-.fl-danger-zone {
-  border: 1.5px solid #fecaca;
-  border-radius: 12px;
-  padding: 1.25rem;
-  background: #fff5f5;
-}
-.fl-danger-zone__title {
-  color: #dc2626;
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-}
-.fl-danger-zone__desc {
-}
-
-.fl-btn--ghost {
-  background: #f0f4f8;
-  color: var(--color-text-mid);
-  border-color: transparent;
-}
-.fl-btn--ghost:hover:not(:disabled) {
-  background: #e5edf5;
-  color: var(--color-text-dark);
-}
-
-.fl-btn--danger {
-  background: #dc2626;
-  color: #fff;
-  border-color: #dc2626;
-}
-.fl-btn--danger:hover:not(:disabled) {
-  background: #b91c1c;
-  border-color: #b91c1c;
-  transform: translateY(-1px);
-}
-
-.fl-btn--sm { padding: 0.42rem 0.85rem; font-size: 0.8rem; border-radius: 8px; }
-
-.fl-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.fl-btn--loading::after {
-  content: '';
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255,255,255,0.5);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: fl-spin 0.7s linear infinite;
-  margin-left: 0.4rem;
-}
-
-/* ── Action Row ── */
-.fl-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1.5rem;
-}
-
-/* ── Status Badge ── */
-.fl-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.22rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.fl-badge--active { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.fl-badge--paused { background: rgba(245, 158, 11, 0.12); color: #d97706; }
-.fl-badge--draft  { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
-
-/* ── Toggle ── */
-.fl-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e5edf5;
 }
 .fl-toggle__info { flex: 1; }
 .fl-toggle__label {
@@ -456,7 +266,7 @@
   left: 3px;
   width: 20px;
   height: 20px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 50%;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
@@ -474,7 +284,7 @@
 /* ── Divider ── */
 .fl-divider {
   height: 1px;
-  background: #e5edf5;
+  background: rgba(183, 201, 226, 0.35);
   margin: 1.5rem 0;
 }
 
@@ -485,20 +295,20 @@
 
 /* ── Danger Zone ── */
 .fl-danger-zone {
-  border: 1.5px solid #fecaca;
+  border: 1.5px solid rgba(220, 38, 38, 0.25);
   border-radius: 12px;
   padding: 1.25rem;
-  background: #fff5f5;
+  background: var(--color-error-tint);
 }
 .fl-danger-zone__title {
-  color: #dc2626;
+  color: var(--color-error);
   font-weight: 700;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
 }
 .fl-danger-zone__desc {
   font-size: 0.82rem;
-  color: #991b1b;
+  color: var(--color-error);
   margin-bottom: 1rem;
 }
 
@@ -553,7 +363,7 @@
 
 /* ── Stat Card (Wallet & Dashboards) ── */
 .fl-stat-card {
-  background: linear-gradient(145deg, #ffffff, #f8faff);
+  background: linear-gradient(145deg, var(--color-white), #f8faff);
   border-radius: 20px;
   padding: 1.75rem;
   display: flex;
@@ -609,7 +419,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, rgba(26, 111, 168, 0.1), rgba(26, 111, 168, 0.03));
+  background: rgba(4, 46, 76, 0.06);
   color: var(--color-primary);
   transition: all 0.3s ease;
   z-index: 1;
@@ -618,15 +428,15 @@
 .fl-stat-card:hover .fl-stat-card__icon {
   transform: scale(1.1) rotate(5deg);
   background: var(--gradient-primary);
-  color: #fff;
-  box-shadow: 0 8px 15px rgba(26, 111, 168, 0.2);
+  color: var(--color-white);
+  box-shadow: 0 8px 15px rgba(4, 46, 76, 0.2);
 }
 
 .fl-stat-card__value {
   font-family: var(--font-heading);
   font-size: 2.2rem;
   font-weight: 800;
-  background: linear-gradient(90deg, var(--color-primary), #0a4f80);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1.1;
@@ -637,7 +447,7 @@
 .fl-stat-card__label {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--color-text-mid);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   z-index: 1;
@@ -671,14 +481,6 @@
   color: var(--color-text-light);
 }
 
-.fl-contract__stage {
-  font-weight: 700;
-  font-size: 0.85rem;
-  background: #f1f5f9;
-  padding: 0.25rem 0.65rem;
-  border-radius: 6px;
-}
-
 .fl-contract__money {
   display: flex;
   gap: 1rem;
@@ -686,7 +488,7 @@
   font-size: 0.9rem;
   color: var(--color-text-mid);
   padding: 0.75rem;
-  background: #f8fafc;
+  background: var(--color-secondary);
   border-radius: 8px;
 }
 
@@ -695,18 +497,20 @@
   font-size: 0.85rem;
 }
 
+/* Same "attention needed" concept as FreelancerProposals.jsx's
+   .fl-revision-note — kept on the same warning tone instead of error-red. */
 .fl-contract__revision {
   padding: 0.75rem 1rem;
-  background: #fef2f2;
-  border-left: 3px solid #ef4444;
-  color: #991b1b;
+  background: var(--color-warning-tint);
+  border-left: 3px solid var(--color-warning);
+  color: var(--color-warning);
   font-size: 0.9rem;
   border-radius: 0 8px 8px 0;
 }
 
 .fl-contract__hint {
   font-size: 0.85rem;
-  color: #d97706;
+  color: var(--color-warning);
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -719,16 +523,18 @@
   flex-wrap: wrap;
   gap: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgba(183, 201, 226, 0.2);
 }
 
-/* ── Modal & Popups ── */
+/* ── Modal & Popups ──
+   Hand-rolled modal used by pages that don't yet consume the shared Modal
+   component. Shares the same z-index token as every other overlay. */
 .fl-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(4, 46, 76, 0.6);
   backdrop-filter: blur(4px);
-  z-index: 9999;
+  z-index: var(--z-modal, 3000);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -736,13 +542,13 @@
 }
 
 .fl-modal {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 16px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
 }
@@ -751,7 +557,7 @@
 
 .fl-modal__header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(183, 201, 226, 0.2);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -779,7 +585,7 @@
   justify-content: center;
 }
 
-.fl-modal__close:hover { color: #ef4444; }
+.fl-modal__close:hover { color: var(--color-error); }
 
 .fl-modal__body, .fl-modal__content {
   padding: 1.5rem;
@@ -790,11 +596,11 @@
 
 .fl-modal__footer {
   padding: 1.25rem 1.5rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgba(183, 201, 226, 0.2);
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  background: #f8fafc;
+  background: var(--color-secondary);
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
 }
@@ -827,21 +633,10 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.fl-tag--alt {
-  background: rgba(4, 46, 76, 0.08); /* var(--color-primary) tint */
-  color: var(--color-primary);
-  border: 1px solid rgba(4, 46, 76, 0.15);
-}
-
-.fl-tag--alt:hover {
-  background: rgba(4, 46, 76, 0.12);
-}
-
 /* ════════════════════════════════════════════════════════════════
    Mobile typography — placed at end of file so it wins the cascade
-   over the earlier duplicate .fl-stat-card__value rule (2.2rem).
-   Scales down the largest type so big currency values and headings
-   fit comfortably on phones.
+   over the base .fl-stat-card__value rule (2.2rem). Scales down the
+   largest type so big currency values and headings fit on phones.
    ════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   .fl-page-title      { font-size: 1.35rem; }

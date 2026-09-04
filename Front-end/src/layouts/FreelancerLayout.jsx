@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { FreelancerProvider, useFreelancer } from '../context/FreelancerContext';
 import FreelancerSidebar from '../pages/freelancer/components/FreelancerSidebar';
-import ToastStack from '../pages/freelancer/components/ToastStack';
+import ToastStack from '../Components/common/ToastStack/ToastStack';
 import './FreelancerLayout.css';
 
 const FreelancerLayoutInner = () => {

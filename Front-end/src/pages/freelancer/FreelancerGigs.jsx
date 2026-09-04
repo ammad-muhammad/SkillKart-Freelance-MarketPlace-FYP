@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
-import Modal from './components/Modal';
+import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
@@ -462,7 +462,7 @@ const FreelancerGigs = () => {
                       <button 
                         type="button"
                         onClick={() => setFormData(p => ({ ...p, media: { ...p.media, images: p.media.images.filter((_, idx) => idx !== i) } }))}
-                        style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', transition: 'transform 0.2s' }}
+                        style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,0.9)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', transition: 'transform 0.2s' }}
                         onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
                         onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                       >
@@ -518,9 +518,9 @@ const FreelancerGigs = () => {
             <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Frequently Asked Questions</h4>
             <div className="fl-faqs-edit-list">
               {formData.faqs.map((faq, i) => (
-                <div key={i} className="fl-faq-edit-item" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #e2e8f0' }}>
+                <div key={i} className="fl-faq-edit-item" style={{ background: 'var(--color-secondary)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid rgba(183, 201, 226, 0.35)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>FAQ #{i + 1}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-mid)' }}>FAQ #{i + 1}</span>
                     <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => removeFaq(i)}>
                       <Trash2 size={12} />
                     </button>
@@ -646,7 +646,7 @@ const FreelancerGigs = () => {
       <style>{`
         .fl-gig-tabs {
           display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
-          background: #fff; padding: 0.35rem;
+          background: var(--color-white); padding: 0.35rem;
           border-radius: 12px; border: 1px solid rgba(183,201,226,0.35);
           width: fit-content;
         }
@@ -655,8 +655,8 @@ const FreelancerGigs = () => {
           font-size: 0.82rem; font-weight: 600; color: var(--color-text-mid);
           transition: all 0.2s;
         }
-        .fl-gig-tab:hover { background: #f0f4f8; color: var(--color-text-dark); }
-        .fl-gig-tab--active { background: var(--color-primary); color: #fff; }
+        .fl-gig-tab:hover { background: var(--color-secondary); color: var(--color-text-dark); }
+        .fl-gig-tab--active { background: var(--color-primary); color: var(--color-white); }
         
         .fl-gig-grid {
           display: grid;
@@ -756,18 +756,18 @@ const FreelancerGigs = () => {
         /* Edit Form Styles */
         .fl-edit-section-title { 
           font-size: 0.8rem; font-weight: 800; color: var(--color-primary); 
-          text-transform: uppercase; border-bottom: 2px solid #f1f5f9; 
+          text-transform: uppercase; border-bottom: 2px solid rgba(183, 201, 226, 0.2);
           padding-bottom: 0.5rem; margin-bottom: 1.25rem; 
         }
         .fl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
         .fl-pricing-edit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
         @media (max-width: 800px) { .fl-pricing-edit-grid { grid-template-columns: 1fr; } }
         
-        .fl-tier-edit { 
-          background: #ffffff; 
-          padding: 1.5rem; 
-          border-radius: 16px; 
-          border: 1px solid #e2e8f0; 
+        .fl-tier-edit {
+          background: var(--color-white);
+          padding: 1.5rem;
+          border-radius: 16px;
+          border: 1px solid rgba(183, 201, 226, 0.35);
           box-shadow: 0 4px 12px rgba(4, 46, 76, 0.03);
           position: relative;
           overflow: hidden;
@@ -776,43 +776,46 @@ const FreelancerGigs = () => {
         .fl-tier-edit:hover {
           box-shadow: 0 8px 24px rgba(4, 46, 76, 0.08);
           transform: translateY(-2px);
-          border-color: #cbd5e1;
+          border-color: rgba(183, 201, 226, 0.6);
         }
-        
+
         .fl-tier-edit::before {
           content: '';
           position: absolute;
           top: 0; left: 0; right: 0;
           height: 5px;
         }
-        .fl-tier-edit--basic { border-color: #f1e2d3; }
-        .fl-tier-edit--basic::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
-        .fl-tier-edit--standard { border-color: #e2e8f0; }
-        .fl-tier-edit--standard::before { background: linear-gradient(90deg, #64748b, #94a3b8); }
-        .fl-tier-edit--premium { border-color: #fef3c7; }
-        .fl-tier-edit--premium::before { background: linear-gradient(90deg, #059669, #34d399); } /* changed to emerald/green for premium distinction, or we can use purple */
+        /* Tier progression uses one brand-navy family (light → dark) instead of
+           unrelated amber/gray/green hues, so Basic/Standard/Premium read as a
+           depth scale rather than three arbitrary colors. */
+        .fl-tier-edit--basic { border-color: rgba(183, 201, 226, 0.5); }
+        .fl-tier-edit--basic::before { background: linear-gradient(90deg, var(--color-accent), var(--color-primary-light)); }
+        .fl-tier-edit--standard { border-color: rgba(10, 74, 115, 0.3); }
+        .fl-tier-edit--standard::before { background: var(--color-primary-light); }
+        .fl-tier-edit--premium { border-color: rgba(4, 46, 76, 0.35); }
+        .fl-tier-edit--premium::before { background: var(--gradient-primary); }
 
-        .fl-tier-edit__label { 
+        .fl-tier-edit__label {
           display: inline-block;
-          font-size: 0.75rem; 
-          font-weight: 800; 
-          margin-bottom: 1.5rem; 
+          font-size: 0.75rem;
+          font-weight: 800;
+          margin-bottom: 1.5rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
           padding: 0.4rem 0.9rem;
           border-radius: 20px;
         }
-        .fl-tier-edit--basic .fl-tier-edit__label { background: #fffbeb; color: #d97706; }
-        .fl-tier-edit--standard .fl-tier-edit__label { background: #f8fafc; color: #475569; }
-        .fl-tier-edit--premium .fl-tier-edit__label { background: #ecfdf5; color: #059669; }
-        
+        .fl-tier-edit--basic .fl-tier-edit__label { background: rgba(183, 201, 226, 0.25); color: var(--color-text-mid); }
+        .fl-tier-edit--standard .fl-tier-edit__label { background: rgba(10, 74, 115, 0.1); color: var(--color-primary-light); }
+        .fl-tier-edit--premium .fl-tier-edit__label { background: rgba(4, 46, 76, 0.1); color: var(--color-primary); }
+
         .fl-form-group { margin-bottom: 1.25rem; }
         .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.5rem; }
         .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field), .fl-form-group textarea {
-          width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #e2e8f0;
-          font-size: 0.9rem; transition: all 0.2s; background: #f8fafc;
+          width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(183, 201, 226, 0.35);
+          font-size: 0.9rem; transition: all 0.2s; background: var(--color-secondary);
         }
-        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: #fff; }
+        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: var(--color-white); }
         
         .fl-empty-message { text-align: center; padding: 4rem 2rem; }
         @media (max-width: 600px) {

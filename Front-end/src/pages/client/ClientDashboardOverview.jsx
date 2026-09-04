@@ -90,7 +90,7 @@ const ClientDashboardOverview = () => {
 
       {/* Quick Actions */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Quick Actions</h3>
+        <h3 className="cl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'var(--color-primary-light)'}} /> Quick Actions</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/client/projects/create" className="cl-btn cl-btn--primary"><PlusSquare size={16} style={{ marginRight: 6 }} /> Post New Project</Link>
           <Link to="/browse-freelancers" className="cl-btn cl-btn--outline"><Search size={16} style={{ marginRight: 6 }} /> Find Freelancers</Link>
@@ -102,7 +102,7 @@ const ClientDashboardOverview = () => {
 
       {/* Recent Projects */}
       <div className="cl-card">
-        <h3 className="cl-section-title"><FolderOpen size={16} style={{display:'inline',verticalAlign:'middle',color:'#1a6fa8'}} /> Recent Projects</h3>
+        <h3 className="cl-section-title"><FolderOpen size={16} style={{display:'inline',verticalAlign:'middle',color:'var(--color-primary-light)'}} /> Recent Projects</h3>
         {recentProjects.length === 0 ? (
           <p style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>
             No projects yet.{' '}
@@ -137,7 +137,7 @@ const ClientDashboardOverview = () => {
                 </div>
                 <div className="cl-recent-proj__right">
                   <span className={`cl-badge cl-badge--${p.status.replace(' ', '-')}`}>
-                    {p.status === 'open' ? <><CheckCircle2 size={12} style={{color:'#16a34a', marginRight: 4}} /> Open</> : p.status === 'in-progress' ? 'In Progress' : <><CheckCircle2 size={12} style={{marginRight: 4}}/> Completed</>}
+                    {p.status === 'open' ? <><CheckCircle2 size={12} style={{color:'var(--color-success)', marginRight: 4}} /> Open</> : p.status === 'in-progress' ? 'In Progress' : <><CheckCircle2 size={12} style={{marginRight: 4}}/> Completed</>}
                   </span>
                   {!isGig && (
                     <div className="cl-recent-proj__action">
@@ -157,7 +157,7 @@ const ClientDashboardOverview = () => {
           width: 72px; height: 72px; border-radius: 50%;
           background: var(--gradient-primary);
           display: flex; align-items: center; justify-content: center;
-          font-size: 1.5rem; font-weight: 800; color: #fff;
+          font-size: 1.5rem; font-weight: 800; color: var(--color-white);
           flex-shrink: 0; border: 3px solid rgba(183,201,226,0.5); overflow: hidden;
         }
         .cl-dash-hero__avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -172,29 +172,29 @@ const ClientDashboardOverview = () => {
         }
         .cl-recent-proj {
           display: flex; justify-content: space-between; align-items: center;
-          padding: 1rem 1.25rem; border-radius: 16px; border: 1px solid rgba(4,46,76,0.06); background: #ffffff;
+          padding: 1rem 1.25rem; border-radius: 16px; border: 1px solid rgba(4,46,76,0.06); background: var(--color-white);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
         }
         .cl-recent-proj:hover {
           transform: translateY(-3px) scale(1.01);
           box-shadow: 0 10px 25px -5px rgba(4,46,76,0.08);
-          border-color: rgba(26,111,168,0.2);
+          border-color: rgba(10,74,115,0.2);
         }
         .cl-recent-proj__left {
           display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;
         }
         .cl-recent-proj__icon-wrapper {
           width: 44px; height: 44px; border-radius: 12px;
-          background: linear-gradient(135deg, rgba(26, 111, 168, 0.08), rgba(26, 111, 168, 0.02));
+          background: linear-gradient(135deg, rgba(10, 74, 115, 0.08), rgba(10, 74, 115, 0.02));
           display: flex; align-items: center; justify-content: center;
           color: var(--color-primary); flex-shrink: 0;
           transition: all 0.3s ease;
         }
         .cl-recent-proj:hover .cl-recent-proj__icon-wrapper {
-          background: var(--gradient-primary); color: #fff;
+          background: var(--gradient-primary); color: var(--color-white);
           transform: rotate(-5deg) scale(1.05);
-          box-shadow: 0 6px 15px rgba(26, 111, 168, 0.25);
+          box-shadow: 0 6px 15px rgba(10, 74, 115, 0.25);
         }
         .cl-recent-proj__info { flex: 1; min-width: 0; }
         .cl-recent-proj__title {
@@ -207,10 +207,10 @@ const ClientDashboardOverview = () => {
           display: flex; align-items: center; gap: 0.4rem;
           margin: 0;
         }
-        .cl-recent-proj__dot { color: #cbd5e1; }
+        .cl-recent-proj__dot { color: rgba(183, 201, 226, 0.6); }
         .cl-recent-proj__right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
         .cl-recent-proj__action {
-          color: #94a3b8; transition: all 0.3s ease;
+          color: var(--color-text-light); transition: all 0.3s ease;
           display: flex; align-items: center;
         }
         .cl-recent-proj:hover .cl-recent-proj__action {
@@ -224,7 +224,7 @@ const ClientDashboardOverview = () => {
           min-height: 400px; gap: 1rem; color: var(--color-text-light);
         }
         .cl-loader {
-          width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: var(--color-primary);
+          width: 40px; height: 40px; border: 3px solid rgba(183, 201, 226, 0.35); border-top-color: var(--color-primary);
           border-radius: 50%; animation: cl-spin 1s linear infinite;
         }
         @keyframes cl-spin { to { transform: rotate(360deg); } }

@@ -2,7 +2,19 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { Link } from 'react-router-dom';
 import { Bookmark, X, Clock } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
+import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import './FreelancerSavedProjects.css';
+
+const STATUS_TONE = {
+    open: 'success',
+    active: 'success',
+    urgent: 'error',
+    'in-progress': 'info',
+    'in_progress': 'info',
+    completed: 'neutral',
+    closed: 'neutral',
+    cancelled: 'neutral',
+};
 
 export default function FreelancerSavedProjects() {
     const { savedProjects, toggleSavedProject, proposals } = useFreelancer();
@@ -31,9 +43,9 @@ export default function FreelancerSavedProjects() {
                     {savedProjects.map(project => (
                         <div key={project._id || project.id} className="fsp-card">
                             <div className="fsp-card__header">
-                                <span className={`fsp-card__badge fsp-card__badge--${(project.status || 'Active').toLowerCase()}`}>
+                                <StatusBadge tone={STATUS_TONE[(project.status || 'active').toLowerCase()] || 'neutral'}>
                                     {project.status || 'Active'}
-                                </span>
+                                </StatusBadge>
                                 <button 
                                     className="fsp-card__remove"
                                     onClick={() => toggleSavedProject(project)}
@@ -79,7 +91,7 @@ export default function FreelancerSavedProjects() {
 
                                     if (myProposal) {
                                         return (
-                                            <Link to="/freelancer/proposals" className="fsp-card__btn" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
+                                            <Link to="/freelancer/proposals" className="fsp-card__btn" style={{ background: 'var(--color-info-tint)', color: 'var(--color-info)', borderColor: 'rgba(37, 99, 235, 0.25)' }}>
                                                 Applied
                                             </Link>
                                         );
@@ -87,7 +99,7 @@ export default function FreelancerSavedProjects() {
 
                                     if (!isOpen) {
                                         return (
-                                            <span className="fsp-card__btn" style={{ background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}>
+                                            <span className="fsp-card__btn" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)', cursor: 'not-allowed' }}>
                                                 {project.status ? project.status.replace('-', ' ') : 'Unavailable'}
                                             </span>
                                         );
