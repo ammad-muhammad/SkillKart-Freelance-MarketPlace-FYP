@@ -546,6 +546,7 @@ function makeFreelancer(i, spec = {}) {
   const totalEarnings = spec.totalEarnings != null ? spec.totalEarnings
     : round2(completed * money(15000, 90000, 1000) * rand(0.6, 1.2));
   const walletBalance = spec.walletBalance != null ? spec.walletBalance : round2(totalEarnings * rand(0.02, 0.15));
+  const hasStripeConnected = verified && chance(0.7);
 
   const title = spec.title || pick(FREELANCER_TITLES[cluster]);
   const profile = new FreelancerProfile({
@@ -584,8 +585,14 @@ function makeFreelancer(i, spec = {}) {
     completedProjects: completed,
     totalEarnings,
     walletBalance,
-    stripeOnboardingComplete: verified && chance(0.7),
-    stripeAccountId: verified ? `acct_${username}${randInt(1000, 9999)}` : undefined,
+    // Never fabricate a real-looking `acct_...` id here — it's never actually
+    // created via the Stripe API, so it 404s ("No such account") the moment
+    // STRIPE_DUMMY=false points at a real (test-mode) key. Use the same
+    // `sim_acct_` prefix stripe.service.js already treats as "skip the real
+    // API call" so seeded demo accounts work under both dummy and live-test
+    // Stripe config; real onboarding still happens via Connect Stripe.
+    stripeOnboardingComplete: hasStripeConnected,
+    stripeAccountId: hasStripeConnected ? `sim_acct_${username}${randInt(1000, 9999)}` : undefined,
     verificationDetails: {
       emailVerified: isEmailVerified, onboardingCompleted: true,
       profileCompleted: true, allSkillTestsPassed: verified && tier === 'top',
