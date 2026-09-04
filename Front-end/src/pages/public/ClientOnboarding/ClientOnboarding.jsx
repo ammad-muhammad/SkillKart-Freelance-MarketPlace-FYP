@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Select, { components } from 'react-select';
@@ -32,6 +32,9 @@ const ClientOnboarding = () => {
     const [aiSuggestions, setAiSuggestions] = useState([]);
     const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
     const [cropTarget, setCropTarget] = useState(null); // { file, field } while the crop modal is open
+    const [errors, setErrors] = useState({});
+    const fieldRefs = useRef({});
+    const registerFieldRef = (name) => (el) => { fieldRefs.current[name] = el; };
     const { refreshAuth, user } = useAuth();
 
 
@@ -233,40 +236,61 @@ const ClientOnboarding = () => {
 
     const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
+    // Field order per step, used to pick which invalid field to scroll to first.
+    const STEP_FIELD_ORDER = {
+        1: ['fullName', 'workEmail', 'companyType', 'companyName', 'country'],
+        2: ['isNewToHiring', 'industryType', 'bio', 'languages'],
+        3: ['techStack', 'budgetRange', 'hiringFrequency'],
+        4: ['urgency'],
+        5: ['termsAccepted'],
+    };
+
     const validateStep = () => {
+        const newErrors = {};
+
         if (step === 1) {
-            if (!formData.fullName.trim()) { toast.warn("Full Name is required"); return false; }
-            if (!formData.workEmail.trim()) { toast.warn("Work Email is required"); return false; }
-            if (!formData.companyType) { toast.warn("Please select an Organization Type"); return false; }
+            if (!formData.fullName.trim()) newErrors.fullName = "Full Name is required";
+            if (!formData.workEmail.trim()) newErrors.workEmail = "Work Email is required";
+            if (!formData.companyType) newErrors.companyType = "Please select an Organization Type";
             if (formData.companyType !== 'Individual' && !formData.companyName.trim()) {
-                toast.warn("Company Name is required for businesses");
-                return false;
+                newErrors.companyName = "Company Name is required for businesses";
             }
+            if (!formData.country) newErrors.country = "Please select your Country";
         }
         if (step === 2) {
-            if (!formData.isNewToHiring) { toast.warn("Hiring Experience selection is required"); return false; }
-            if (formData.companyType !== 'Individual') {
-                if (!formData.industryType) { toast.warn("Please select your Industry"); return false; }
+            if (!formData.isNewToHiring) newErrors.isNewToHiring = "Hiring Experience selection is required";
+            if (formData.companyType !== 'Individual' && !formData.industryType) {
+                newErrors.industryType = "Please select your Industry";
             }
             if (!formData.bio || formData.bio.trim().length < 20) {
-                toast.warn("Please provide a descriptive Bio / About summary (minimum 20 characters)");
-                return false;
+                newErrors.bio = "Please provide a descriptive Bio / About summary (minimum 20 characters)";
             }
             if (!formData.languages || formData.languages.length === 0) {
-                toast.warn("Please select at least one language spoken / preferred");
-                return false;
+                newErrors.languages = "Please select at least one language spoken / preferred";
             }
         }
         if (step === 3) {
-            if (formData.techStack.length === 0) { toast.warn("Please add at least one required skill"); return false; }
-            if (!formData.budgetRange) { toast.warn("Please select a Budget Allocation"); return false; }
-            if (!formData.hiringFrequency) { toast.warn("Please select an Engagement Type"); return false; }
+            if (formData.techStack.length === 0) newErrors.techStack = "Please add at least one required skill";
+            if (!formData.budgetRange) newErrors.budgetRange = "Please select a Budget Allocation";
+            if (!formData.hiringFrequency) newErrors.hiringFrequency = "Please select an Engagement Type";
         }
         if (step === 4) {
-            if (!formData.urgency) { toast.warn("Please define your project urgency"); return false; }
+            if (!formData.urgency) newErrors.urgency = "Please define your project urgency";
         }
         if (step === 5 && !formData.termsAccepted) {
-            toast.warn("Please agree to the Terms & Conditions to proceed");
+            newErrors.termsAccepted = "Please agree to the Terms & Conditions to proceed";
+        }
+
+        setErrors(newErrors);
+
+        const order = STEP_FIELD_ORDER[step] || [];
+        const firstInvalidField = order.find((key) => newErrors[key]);
+        if (firstInvalidField) {
+            toast.warn(newErrors[firstInvalidField]);
+            const el = fieldRefs.current[firstInvalidField];
+            if (el?.scrollIntoView) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return false;
         }
         return true;
@@ -312,31 +336,6 @@ const ClientOnboarding = () => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const isStepValid = () => {
-        if (step === 1) {
-            const hasBasic = formData.fullName.trim() && formData.workEmail.trim() && formData.companyType && formData.country;
-            const validWebsite = !formData.companyWebsite || /^https?:\/\/.*/.test(formData.companyWebsite);
-            if (formData.companyType === 'Individual') return hasBasic && validWebsite;
-            return hasBasic && formData.companyName.trim() && validWebsite;
-        }
-        if (step === 2) {
-            if (formData.companyType === 'Individual') {
-                return formData.isNewToHiring && formData.bio.trim().length >= 20 && formData.languages.length > 0;
-            }
-            return formData.isNewToHiring && formData.industryType && formData.industryType.length > 0 && formData.bio.trim().length >= 20 && formData.languages.length > 0;
-        }
-        if (step === 3) {
-            return formData.techStack.length > 0 && formData.budgetRange && formData.hiringFrequency;
-        }
-        if (step === 4) {
-            return formData.urgency;
-        }
-        if (step === 5) {
-            return formData.termsAccepted;
-        }
-        return true;
     };
 
     const options = useMemo(() => countryList().getData(), []);
@@ -491,18 +490,20 @@ const ClientOnboarding = () => {
             )}
 
             <div className="onboarding__form-row">
-                <div className="onboarding__form-group">
+                <div className="onboarding__form-group" ref={registerFieldRef('fullName')}>
                     <label className="onboarding__label" htmlFor="ob-full-name">Full Name*</label>
                     <input id="ob-full-name" type="text" name="fullName" required value={formData.fullName} onChange={handleChange} className="onboarding__input" placeholder="e.g. John Doe" />
+                    {errors.fullName && <p className="onboarding__field-error">{errors.fullName}</p>}
                 </div>
 
-                <div className="onboarding__form-group">
+                <div className="onboarding__form-group" ref={registerFieldRef('workEmail')}>
                     <label className="onboarding__label" htmlFor="ob-work-email">Work Email*</label>
                     <input id="ob-work-email" type="email" name="workEmail" required value={formData.workEmail} onChange={handleChange} className="onboarding__input" placeholder="john@company.com" />
+                    {errors.workEmail && <p className="onboarding__field-error">{errors.workEmail}</p>}
                 </div>
             </div>
 
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('companyType')}>
                 <label className="onboarding__label">Organization Type*</label>
                 <div className="onboarding__choices">
                     {[
@@ -538,13 +539,15 @@ const ClientOnboarding = () => {
                         </div>
                     ))}
                 </div>
+                {errors.companyType && <p className="onboarding__field-error">{errors.companyType}</p>}
             </div>
 
             {formData.companyType !== 'Individual' && formData.companyType !== '' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="onboarding__form-row">
-                    <div className="onboarding__form-group" style={{ flex: 1 }}>
+                    <div className="onboarding__form-group" style={{ flex: 1 }} ref={registerFieldRef('companyName')}>
                         <label className="onboarding__label" htmlFor="ob-company-name">Company Name</label>
                         <input id="ob-company-name" type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="onboarding__input" placeholder="Acme Inc." />
+                        {errors.companyName && <p className="onboarding__field-error">{errors.companyName}</p>}
                     </div>
                 </motion.div>
             )}
@@ -588,7 +591,7 @@ const ClientOnboarding = () => {
             </div>
 
             <div className="onboarding__form-row">
-                <div className="onboarding__form-group">
+                <div className="onboarding__form-group" ref={registerFieldRef('country')}>
                     <label className="onboarding__label" htmlFor="ob-country">Country*</label>
                     <Select
                         inputId="ob-country"
@@ -605,6 +608,7 @@ const ClientOnboarding = () => {
                         menuPortalTarget={document.body}
                         menuPlacement="bottom"
                     />
+                    {errors.country && <p className="onboarding__field-error">{errors.country}</p>}
                 </div>
                 <div className="onboarding__form-group">
                     <label className="onboarding__label" htmlFor="ob-timezone">Timezone / Base Location</label>
@@ -655,7 +659,7 @@ const ClientOnboarding = () => {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.4 }}
         >
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('isNewToHiring')}>
                 <label className="onboarding__label">Hiring Experience*</label>
                 <div className="onboarding__choices">
                     {[
@@ -675,17 +679,19 @@ const ClientOnboarding = () => {
                         </div>
                     ))}
                 </div>
+                {errors.isNewToHiring && <p className="onboarding__field-error">{errors.isNewToHiring}</p>}
             </div>
 
             {formData.companyType !== 'Individual' && (
                 <div className="onboarding__form-row" style={{ display: 'block' }}>
-                    <div className="onboarding__form-group" style={{ flex: 1, marginBottom: '1.5rem' }}>
+                    <div className="onboarding__form-group" style={{ flex: 1, marginBottom: '1.5rem' }} ref={registerFieldRef('industryType')}>
                         <label className="onboarding__label">Industry*</label>
                         <IndustryInput
                             value={formData.industryType}
                             onChange={(val) => setFormData(p => ({ ...p, industryType: val }))}
                             placeholder="Type to search industry (e.g. software, design)..."
                         />
+                        {errors.industryType && <p className="onboarding__field-error">{errors.industryType}</p>}
 
 
                         <div className="onboarding__ai-suggestions" style={{ marginTop: '12px' }}>
@@ -750,7 +756,7 @@ const ClientOnboarding = () => {
                 </div>
             )}
 
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('bio')}>
                 <label className="onboarding__label" htmlFor="ob-bio">Bio / About Yourself*</label>
                 <textarea
                     id="ob-bio"
@@ -762,6 +768,7 @@ const ClientOnboarding = () => {
                     style={{ minHeight: '120px', resize: 'vertical' }}
                     placeholder="Describe your goals, team size, company mission, or what you plan to accomplish on SkillKart..."
                 />
+                {errors.bio && <p className="onboarding__field-error">{errors.bio}</p>}
                 <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '4px', fontWeight: '500' }}>
                     Introduce yourself and your organization to help top freelancers understand your requirements. (Min 20 characters)
                 </p>
@@ -773,7 +780,7 @@ const ClientOnboarding = () => {
                 />
             </div>
 
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('languages')}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <label className="onboarding__label" style={{ marginBottom: 0 }}>Languages Spoken / Preferred*</label>
                     <button
@@ -840,6 +847,7 @@ const ClientOnboarding = () => {
                         <p style={{ fontSize: '0.85rem', color: '#ef4444' }}>⚠ No languages added. At least one is required.</p>
                     )}
                 </div>
+                {errors.languages && <p className="onboarding__field-error">{errors.languages}</p>}
                 <p style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)', marginTop: '8px', fontWeight: '500' }}>
                     Select one or more languages you use to communicate with freelancers.
                 </p>
@@ -849,16 +857,17 @@ const ClientOnboarding = () => {
 
     const renderStep3 = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('techStack')}>
                 <label className="onboarding__label">Skills Required*</label>
-                <TagInput 
-                    tags={formData.techStack} 
-                    onChange={(tags) => setFormData(p => ({ ...p, techStack: tags }))} 
-                    placeholder="e.g. React, Node.js, Graphic Design..." 
+                <TagInput
+                    tags={formData.techStack}
+                    onChange={(tags) => setFormData(p => ({ ...p, techStack: tags }))}
+                    placeholder="e.g. React, Node.js, Graphic Design..."
                 />
+                {errors.techStack && <p className="onboarding__field-error">{errors.techStack}</p>}
             </div>
 
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('budgetRange')}>
                 <label className="onboarding__label">Budget Allocation</label>
                 <div className="onboarding__choices">
                     {[
@@ -876,9 +885,10 @@ const ClientOnboarding = () => {
                         </div>
                     ))}
                 </div>
+                {errors.budgetRange && <p className="onboarding__field-error">{errors.budgetRange}</p>}
             </div>
 
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('hiringFrequency')}>
                 <label className="onboarding__label">Engagement Type</label>
                 <div className="onboarding__tags">
                     {['One-time Project', 'Monthly Retainer', 'Full-time Dedicated', 'Part-time Support'].map(t => (
@@ -892,6 +902,7 @@ const ClientOnboarding = () => {
                         >{t}</div>
                     ))}
                 </div>
+                {errors.hiringFrequency && <p className="onboarding__field-error">{errors.hiringFrequency}</p>}
             </div>
         </motion.div>
     );
@@ -910,7 +921,7 @@ const ClientOnboarding = () => {
                 </div>
             </div>
 
-            <div className="onboarding__form-group">
+            <div className="onboarding__form-group" ref={registerFieldRef('urgency')}>
                 <label className="onboarding__label">Project Urgency</label>
                 <div className="onboarding__choices">
                     {[
@@ -928,6 +939,7 @@ const ClientOnboarding = () => {
                         </div>
                     ))}
                 </div>
+                {errors.urgency && <p className="onboarding__field-error">{errors.urgency}</p>}
             </div>
         </motion.div>
     );
@@ -972,7 +984,7 @@ const ClientOnboarding = () => {
                 </div>
             </div>
 
-            <div className="onboarding__form-group" style={{ marginTop: '24px' }}>
+            <div className="onboarding__form-group" style={{ marginTop: '24px' }} ref={registerFieldRef('termsAccepted')}>
                 <div
                     style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}
                 >
@@ -1002,6 +1014,7 @@ const ClientOnboarding = () => {
                         >Service Agreement</span> and understand that SkillKart ensures payment safety through Escrow.
                     </label>
                 </div>
+                {errors.termsAccepted && <p className="onboarding__field-error">{errors.termsAccepted}</p>}
             </div>
         </motion.div>
     );
@@ -1184,7 +1197,7 @@ const ClientOnboarding = () => {
                                     type="button"
                                     onClick={step === 5 ? handleFinish : nextStep}
                                     className="onboarding__btn-next"
-                                    disabled={isLoading || !isStepValid()}
+                                    disabled={isLoading}
                                 >
                                     {isLoading ? <div className="onboarding__loader" /> : (
                                         <>

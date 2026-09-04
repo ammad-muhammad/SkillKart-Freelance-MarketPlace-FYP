@@ -445,9 +445,12 @@ const stripeConnectCallback = asyncHandler(async (req, res) => {
   }
 
   const status = await checkAccountStatus(profile.stripeAccountId);
-  
-  const isTestMode = (process.env.STRIPE_SECRET_KEY || '').includes('sk_test_');
-  if (status.payouts_enabled || status.details_submitted || isTestMode) {
+
+  // Trust Stripe's own account status rather than short-circuiting on
+  // "any sk_test_ key" — that previously marked onboarding complete even
+  // when a real (non-simulated) Connect account had never actually
+  // finished the hosted onboarding form (no bank details, no capabilities).
+  if (status.payouts_enabled || status.details_submitted) {
     profile.stripeOnboardingComplete = true;
     if (!profile.verificationDetails) {
       profile.verificationDetails = {};
@@ -497,8 +500,19 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     // Instead, we trust the local walletBalance (already checked above) 
     // and rely on Stripe to throw an error if the actual converted balance is too low.
 
-    // Execute Real Stripe Payout
-    const payout = await createPayout(amount, profile.stripeAccountId, 'pkr');
+    // Execute Real Stripe Payout — a real (non-simulated) Connect account can
+    // still fail here (no bank/debit account attached, capabilities not yet
+    // active, unsupported payout currency) even after onboarding completed,
+    // so surface a friendly, actionable error instead of a raw 500.
+    let payout;
+    try {
+      payout = await createPayout(amount, profile.stripeAccountId, 'pkr');
+    } catch (err) {
+      console.error('Stripe payout failed:', err.message);
+      throw new BadRequestError(
+        `Stripe payout failed: ${err.message || 'your connected account may be missing a payout method.'} Please finish your Stripe onboarding (add a bank/debit account) and try again.`
+      );
+    }
 
     const withdrawal = await Withdrawal.create({
       userId: req.user._id,

@@ -72,11 +72,22 @@ const getProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   
   let profile = await ClientProfile.findOne({ userId });
-  
+
   if (!profile) {
-    profile = await ClientProfile.create({ userId });
+    // Same race as freelancer getProfile: a fresh signup can fire this from
+    // several components at once, so a concurrent create can lose to the
+    // unique userId index instead of a 500 — fall back to the winner's doc.
+    try {
+      profile = await ClientProfile.create({ userId });
+    } catch (err) {
+      if (err.code === 11000) {
+        profile = await ClientProfile.findOne({ userId });
+      } else {
+        throw err;
+      }
+    }
   }
-  
+
   sendSuccess(res, {
     message: 'Profile retrieved successfully',
     data: { profile }
