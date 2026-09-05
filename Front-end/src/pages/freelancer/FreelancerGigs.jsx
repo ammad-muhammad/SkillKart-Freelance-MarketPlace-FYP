@@ -380,7 +380,7 @@ const FreelancerGigs = () => {
                 />
                 <AiGenerateText
                   className="fl-ai-generate"
-                  fieldLabel="a short, catchy one-line gig description shown on gig cards in a freelance marketplace"
+                  fieldLabel="a freelancer's short, catchy one-line gig description (pitching their own service) shown on gig cards in a freelance marketplace"
                   getContext={() => ({ title: formData.title, category: formData.category, skills: formData.skills })}
                   getExistingText={() => formData.shortDescription}
                   onGenerated={(text) => setFormData({ ...formData, shortDescription: text.slice(0, 150) })}

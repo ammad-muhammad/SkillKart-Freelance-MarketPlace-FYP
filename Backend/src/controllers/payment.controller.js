@@ -7,7 +7,7 @@ const Withdrawal = require('../models/Withdrawal');
 const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
-const { createCheckoutSession, verifyCheckoutSession, createConnectAccount, createAccountLink, checkAccountStatus, createTransfer, createPayout, getConnectedBalance, getChargeIdFromPaymentIntent } = require('../services/stripe.service');
+const { createCheckoutSession, verifyCheckoutSession, createConnectAccount, createAccountLink, checkAccountStatus, createTransfer, createPayout, getConnectedBalance, getChargeIdFromPaymentIntent, isLive } = require('../services/stripe.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
 const { fundMilestoneFromWallet } = require('../services/milestone.service');
@@ -419,10 +419,16 @@ const connectStripeAccount = asyncHandler(async (req, res) => {
   if (!profile) throw new NotFoundError('Profile not found');
 
   let accountId = profile.stripeAccountId;
-  if (!accountId) {
+  // A simulated ID (created while STRIPE_DUMMY=true, before a real Stripe key
+  // was configured) doesn't exist in Stripe — reusing it against the live API
+  // throws "No such account". Fast-path check for the known fake prefix so we
+  // don't waste an API round trip on the common case.
+  const isStaleSimulatedId = accountId && accountId.startsWith('sim_acct_');
+  if (!accountId || (isLive() && isStaleSimulatedId)) {
     const account = await createConnectAccount(req.user.email || 'freelancer@example.com');
     accountId = account.id;
     profile.stripeAccountId = accountId;
+    profile.stripeOnboardingComplete = false;
     await profile.save();
   }
 
@@ -431,7 +437,26 @@ const connectStripeAccount = asyncHandler(async (req, res) => {
   const returnUrl = `${CLIENT_URL}/freelancer/wallet/stripe-callback`;
   const refreshUrl = `${CLIENT_URL}/freelancer/wallet`;
 
-  const link = await createAccountLink(accountId, refreshUrl, returnUrl);
+  let link;
+  try {
+    link = await createAccountLink(accountId, refreshUrl, returnUrl);
+  } catch (err) {
+    // A real-looking (non-"sim_acct_") id can still be stale — e.g. it was
+    // created under a different Stripe key (test vs live) than the one now
+    // configured, or the account was deleted from the Stripe dashboard.
+    // Self-heal by creating a fresh account rather than leaving the
+    // freelancer permanently stuck on "Connect Stripe".
+    const isMissingAccount = err.code === 'resource_missing' || /No such account/i.test(err.message || '');
+    if (!isMissingAccount) throw err;
+
+    const account = await createConnectAccount(req.user.email || 'freelancer@example.com');
+    accountId = account.id;
+    profile.stripeAccountId = accountId;
+    profile.stripeOnboardingComplete = false;
+    await profile.save();
+    link = await createAccountLink(accountId, refreshUrl, returnUrl);
+  }
+
   sendSuccess(res, { message: 'Stripe onboarding initiated', data: { url: link.url } });
 });
 

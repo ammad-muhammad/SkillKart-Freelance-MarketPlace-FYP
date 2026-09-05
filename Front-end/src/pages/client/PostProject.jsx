@@ -395,8 +395,8 @@ const PostProject = () => {
         skills: form.skills,
         experienceLevel: form.experienceLevel.toLowerCase(),
         budget: {
-          min: form.budget.min,
-          max: form.budget.max,
+          min: Number(form.budget.min) || 1,
+          max: Number(form.budget.max) || 1,
           type: form.projectType
         },
         duration: form.duration,
@@ -563,7 +563,7 @@ const PostProject = () => {
                 <FieldError message={errors.summary} />
                 <AiGenerateText
                   className="cl-ai-generate"
-                  fieldLabel="a one-sentence project summary for a freelance job listing"
+                  fieldLabel="a one-sentence project summary written by the client (the person hiring) for a freelance job listing — describing what they need done, not a freelancer's pitch for their own services"
                   getContext={() => ({ title: form.title, category: form.category, skills: form.skills })}
                   getExistingText={() => form.summary}
                   onGenerated={(text) => { updateForm({ summary: text }); clearError('summary'); }}
@@ -593,11 +593,20 @@ const PostProject = () => {
                 <label className="cl-label">Minimum Budget (PKR)</label>
                 <input
                   type="number"
+                  min={1}
                   className={`cl-input${errors.budgetMin ? ' cl-input--error' : ''}`}
                   value={form.budget.min}
                   onChange={(e) => {
-                    updateForm({ budget: { ...form.budget, min: Number(e.target.value) } });
+                    // Keep the raw string while typing — coercing to Number on every
+                    // keystroke turned "" (a cleared field) into 0, which re-rendered
+                    // the input as "0" and made it impossible to actually clear.
+                    updateForm({ budget: { ...form.budget, min: e.target.value } });
                     clearError('budgetMin');
+                  }}
+                  onBlur={(e) => {
+                    if (!e.target.value || Number(e.target.value) < 1) {
+                      updateForm({ budget: { ...form.budget, min: 1 } });
+                    }
                   }}
                 />
                 <FieldError message={errors.budgetMin} />
@@ -606,11 +615,17 @@ const PostProject = () => {
                 <label className="cl-label">Maximum Budget (PKR)</label>
                 <input
                   type="number"
+                  min={1}
                   className={`cl-input${errors.budgetMax ? ' cl-input--error' : ''}`}
                   value={form.budget.max}
                   onChange={(e) => {
-                    updateForm({ budget: { ...form.budget, max: Number(e.target.value) } });
+                    updateForm({ budget: { ...form.budget, max: e.target.value } });
                     clearError('budgetMax');
+                  }}
+                  onBlur={(e) => {
+                    if (!e.target.value || Number(e.target.value) < 1) {
+                      updateForm({ budget: { ...form.budget, max: 1 } });
+                    }
                   }}
                 />
                 <FieldError message={errors.budgetMax} />
@@ -671,7 +686,7 @@ const PostProject = () => {
                 />
                 <AiGenerateText
                   className="cl-ai-generate"
-                  fieldLabel="the key responsibilities section of a freelance job posting — what the hired freelancer will do"
+                  fieldLabel="the key responsibilities section of a freelance job posting, written by the client posting the job — a list of what the hired freelancer will do, not the freelancer's own words"
                   getContext={() => ({ title: form.title, category: form.category, skills: form.skills, description: form.fullDescription || form.summary })}
                   getExistingText={() => form.responsibilities}
                   onGenerated={(text) => updateForm({ responsibilities: text })}
@@ -688,7 +703,7 @@ const PostProject = () => {
                 />
                 <AiGenerateText
                   className="cl-ai-generate"
-                  fieldLabel="the deliverables section of a freelance job posting — what the final output/handoff will be"
+                  fieldLabel="the deliverables section of a freelance job posting, written by the client posting the job — what the final output/handoff will be"
                   getContext={() => ({ title: form.title, category: form.category, skills: form.skills, description: form.fullDescription || form.summary })}
                   getExistingText={() => form.deliverables}
                   onGenerated={(text) => updateForm({ deliverables: text })}

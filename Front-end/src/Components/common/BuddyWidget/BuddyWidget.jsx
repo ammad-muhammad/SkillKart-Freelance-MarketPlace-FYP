@@ -25,10 +25,19 @@ export default function BuddyWidget() {
   const guestUsed = () => Number(sessionStorage.getItem(GUEST_KEY) || 0);
   const guestRemaining = isAuthenticated ? Infinity : Math.max(0, GUEST_LIMIT - guestUsed());
 
-  // Hide the floating widget on auth screens + on the dedicated Buddy page and
-  // the real messaging pages (to avoid overlapping their UIs).
-  const HIDDEN_ON = ['/login', '/registration', '/role', '/otp-verification', '/forgot-password', '/auth/consent', '/ai/buddy', '/client/messages', '/freelancer/messages'];
-  const hidden = HIDDEN_ON.some((p) => location.pathname.startsWith(p));
+  // Buddy is a marketing/public-site tool only — never show it inside the
+  // client, freelancer, or admin dashboards (each has its own in-app UI it
+  // would otherwise overlap), nor on auth screens or the dedicated Buddy page
+  // which would just duplicate itself. Onboarding is public-layout, not a
+  // dashboard, so it's exempted from the dashboard-prefix hide.
+  const AUTH_SCREENS = ['/login', '/registration', '/role', '/otp-verification', '/forgot-password', '/auth/consent'];
+  const DASHBOARD_PREFIXES = ['/client', '/freelancer', '/admin', '/admin-panel'];
+  const ONBOARDING_EXCEPTIONS = ['/client/onboarding', '/freelancer/onboarding'];
+
+  const path = location.pathname;
+  const isDashboardRoute = !ONBOARDING_EXCEPTIONS.includes(path)
+    && DASHBOARD_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+  const hidden = path === '/ai/buddy' || isDashboardRoute || AUTH_SCREENS.some((p) => path.startsWith(p));
 
   useEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;

@@ -1,6 +1,6 @@
 import Loader from '../../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { jobsAPI } from '../../../api/jobs';
 import { proposalsAPI } from '../../../api/proposals';
 import { freelancersAPI } from '../../../api/freelancers';
@@ -78,6 +78,7 @@ export default function JobDetails() {
   const { user } = useAuth();
   const { savedProjects, toggleSavedProject, profile, refreshProfile } = useFreelancer();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -146,6 +147,19 @@ export default function JobDetails() {
     }
     setShowApplyModal(true);
   };
+
+  // Coming back from a required skill test (see the skill-gate handling in
+  // handleApply below) — reopen the Apply modal automatically instead of
+  // dropping the freelancer back on the job page with another click to make.
+  useEffect(() => {
+    if (!job || searchParams.get('openApply') !== '1') return;
+    handleApplyClick();
+    // Strip the param so a refresh/back-nav doesn't reopen the modal again.
+    const next = new URLSearchParams(searchParams);
+    next.delete('openApply');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job]);
 
   const handleApply = async (e) => {
     e.preventDefault();
@@ -236,7 +250,8 @@ export default function JobDetails() {
             ? ` This project needs ${{ entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[gate.requiredLevel]}-level verification.`
             : '';
           if (window.confirm(`You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`)) {
-            navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}`);
+            const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+            navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
           }
         } else if (candidates[0]) {
           // None of the required skills are on their profile at all — a test
@@ -251,7 +266,8 @@ export default function JobDetails() {
               const existingSkillNames = profile?.skills || [];
               await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
               await refreshProfile();
-              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}`);
+              const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
             } catch (addErr) {
               toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
             }

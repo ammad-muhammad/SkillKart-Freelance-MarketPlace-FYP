@@ -736,9 +736,10 @@ const ClientProjects = () => {
                   <label className="cl-label" htmlFor="cp-edit-budget-min">Min Budget (PKR) *</label>
                   <input
                     id="cp-edit-budget-min"
-                    type="number" className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
+                    type="number" min={1} className={`cl-input${editErrors.budgetMin ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.min}
                     onChange={e => { setField({ budget: { ...editingProject.budget, min: e.target.value } }); clearEditError('budgetMin'); }}
+                    onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setField({ budget: { ...editingProject.budget, min: 1 } }); }}
                   />
                   {editErrors.budgetMin && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMin}</span>}
                 </div>
@@ -747,9 +748,10 @@ const ClientProjects = () => {
                   <label className="cl-label" htmlFor="cp-edit-budget-max">Max Budget (PKR) *</label>
                   <input
                     id="cp-edit-budget-max"
-                    type="number" className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
+                    type="number" min={1} className={`cl-input${editErrors.budgetMax ? ' cl-input--error' : ''}`}
                     value={editingProject.budget.max}
                     onChange={e => { setField({ budget: { ...editingProject.budget, max: e.target.value } }); clearEditError('budgetMax'); }}
+                    onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setField({ budget: { ...editingProject.budget, max: 1 } }); }}
                   />
                   {editErrors.budgetMax && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {editErrors.budgetMax}</span>}
                 </div>

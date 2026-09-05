@@ -7,6 +7,7 @@ import PkrIcon from '../../Components/common/PkrIcon';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import { error as logError } from '../../utils/logger';
 import './FreelancerDashboard.css';
 
 // Human-readable labels for raw payment/withdrawal status enums, so the wallet
@@ -86,8 +87,9 @@ export default function FreelancerWallet() {
       if (res.data?.data?.url) {
         window.location.href = res.data.data.url;
       }
-    } catch {
-      toast.error('Failed to initiate Stripe connection.');
+    } catch (err) {
+      logError('Failed to initiate Stripe connection:', err);
+      toast.error(err.response?.data?.message || 'Failed to initiate Stripe connection.');
     }
   };
 

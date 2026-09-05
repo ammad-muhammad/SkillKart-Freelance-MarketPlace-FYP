@@ -96,7 +96,7 @@ export default function ShareStory() {
         onChange={(e) => setText(e.target.value)}
       />
       <AiGenerateText
-        fieldLabel="a short freelancer success story testimonial for a marketplace homepage"
+        fieldLabel="a short first-person testimonial written by the freelancer themselves, about their own success using SkillKart, for the marketplace homepage"
         getContext={() => ({ rating: `${rating}/5`, title: profile?.title, completedProjects: profile?.stats?.completedOrders, totalEarnings: profile?.totalEarnings })}
         getExistingText={() => text}
         onGenerated={(t) => setText(t.slice(0, MAX))}
