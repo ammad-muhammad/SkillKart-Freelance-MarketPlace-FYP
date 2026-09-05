@@ -25,9 +25,9 @@ const EMPTY_GIG = {
   skills: [],
   shortDescription: '',
   pricing: {
-    basic: { price: '', delivery: '', revisions: '' },
-    standard: { price: '', delivery: '', revisions: '' },
-    premium: { price: '', delivery: '', revisions: '' },
+    basic: { price: '', deliveryTime: '', revisions: '' },
+    standard: { price: '', deliveryTime: '', revisions: '' },
+    premium: { price: '', deliveryTime: '', revisions: '' },
   },
   fullDescription: '',
   faqs: [],
@@ -93,7 +93,7 @@ const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills })
       <span className="fl-char-count">{gig.shortDescription.length}/150</span>
       <AiGenerateText
         className="fl-ai-generate"
-        fieldLabel="a short, catchy one-line gig description shown on gig cards in a freelance marketplace"
+        fieldLabel="a freelancer's short, catchy one-line gig description (pitching their own service) shown on gig cards in a freelance marketplace"
         getContext={() => ({ title: gig.title, category: gig.category, skills: gig.skills })}
         getExistingText={() => gig.shortDescription}
         onGenerated={(text) => set('shortDescription', text.slice(0, 150))}
@@ -129,8 +129,8 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
         type="number"
         className="fl-input"
         min={1}
-        value={data.delivery}
-        onChange={(e) => onChange({ ...data, delivery: e.target.value })}
+        value={data.deliveryTime}
+        onChange={(e) => onChange({ ...data, deliveryTime: e.target.value })}
         placeholder="e.g. 7"
       />
     </div>
@@ -479,7 +479,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
               <p className="fl-review-pricing__tier-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>{icon} {label}</p>
               <p className="fl-review-pricing__tier-val">Rs. {gig.pricing[key].price || '—'}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
-                {gig.pricing[key].delivery || '—'} days · {gig.pricing[key].revisions || '—'} revisions
+                {gig.pricing[key].deliveryTime || '—'} days · {gig.pricing[key].revisions || '—'} revisions
               </p>
             </div>
           ))}
@@ -592,9 +592,13 @@ const CreateGig = () => {
 
   const validateStep = () => {
     if (step === 0) {
-      if (!gig.title.trim()) { showToast('Gig title is required.', 'error'); return false; }
+      // Mirror the backend's actual rules (Backend/src/validators/gig.validator.js)
+      // so a mismatch surfaces here, on the field, instead of a generic
+      // "Validation failed" toast when the final Publish call hits the API.
+      if (gig.title.trim().length < 5) { showToast('Gig title must be at least 5 characters.', 'error'); return false; }
       if (!gig.shortDescription.trim()) { showToast('Short description is required.', 'error'); return false; }
       if (!gig.category) { showToast('Please select a category.', 'error'); return false; }
+      if (gig.category.trim().length > 50) { showToast('Category name is too long (max 50 characters).', 'error'); return false; }
       if (!Array.isArray(gig.skills) || gig.skills.length === 0) {
         showToast('Add at least one skill.', 'error');
         return false;
@@ -609,16 +613,17 @@ const CreateGig = () => {
       // Any optional tier that's been started must also have a positive price.
       for (const tier of ['standard', 'premium']) {
         const t = gig.pricing[tier];
-        const started = t.price || t.delivery || t.revisions;
+        const started = t.price || t.deliveryTime || t.revisions;
         if (started && (!Number(t.price) || Number(t.price) <= 0)) {
           showToast(`The ${tier} package needs a valid price.`, 'error');
           return false;
         }
       }
     }
-    if (step === 2 && !gig.fullDescription.trim()) {
-      showToast('Full description is required.', 'error');
-      return false;
+    if (step === 2) {
+      const len = gig.fullDescription.trim().length;
+      if (len === 0) { showToast('Full description is required.', 'error'); return false; }
+      if (len < 50) { showToast(`Full description must be at least 50 characters (currently ${len}).`, 'error'); return false; }
     }
     return true;
   };

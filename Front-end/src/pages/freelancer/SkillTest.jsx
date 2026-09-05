@@ -64,6 +64,11 @@ const SkillTest = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const specificSkill = searchParams.get('skill');
+  // When arriving here because a proposal was blocked pending verification
+  // (JobDetails.jsx's skill-gate handling), this points back at that exact
+  // job (e.g. "/jobs/:id?openApply=1") so passing the test resumes applying
+  // instead of dropping the freelancer on the dashboard.
+  const returnTo = searchParams.get('returnTo');
   const { refreshProfile } = useFreelancer();
 
   const [phase, setPhase] = useState('rules');
@@ -102,7 +107,7 @@ const SkillTest = () => {
     onWarn: (reason) => {
       logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
       setWarning(reason);
-      toast.warn('Final warning: leaving the test again will cancel it.');
+      toast.warning('Final warning: leaving the test again will cancel it.');
     },
     onAbort: (reason) => {
       logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
@@ -128,7 +133,7 @@ const SkillTest = () => {
     onWarn: (reason) => {
       logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
       setWarning(reason);
-      toast.warn('Camera warning: repeated issues will cancel the test.');
+      toast.warning('Camera warning: repeated issues will cancel the test.');
     },
     onAbort: (reason) => {
       logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
@@ -318,8 +323,8 @@ const SkillTest = () => {
               <div className="st-skill-badges">
                 {skills.map(s => <span key={s} className="st-badge expert">Verified {s}</span>)}
               </div>
-              <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-finish">
-                Claim My Expert Profile
+              <button onClick={() => navigate(returnTo || '/freelancer/dashboard')} className="st-btn-finish">
+                {returnTo ? 'Continue to Proposal' : 'Claim My Expert Profile'}
               </button>
             </div>
           ) : (
@@ -344,8 +349,11 @@ const SkillTest = () => {
               <button onClick={() => { setResult(null); setPhase('rules'); }} className="st-btn-retry">
                 Retake to Improve Ranking
               </button>
-              <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
-                Continue to Dashboard
+              <button
+                onClick={() => navigate(result.verified && returnTo ? returnTo : '/freelancer/dashboard')}
+                className="st-btn-later"
+              >
+                {result.verified && returnTo ? 'Continue to Proposal' : 'Continue to Dashboard'}
               </button>
             </div>
           )}

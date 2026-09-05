@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
+const { NotFoundError } = require('../utils/apiError');
 
 /**
  * Create admin user
@@ -42,6 +43,10 @@ const resetUserPassword = asyncHandler(async (req, res) => {
   
   user.password = newPassword;
   user.lastPasswordChange = new Date();
+  // Same rule as the self-service change/reset paths (auth.service.js) — a
+  // password reset must invalidate any already-issued tokens (e.g. a stolen
+  // session this reset is meant to kill), or they'd remain valid regardless.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
   
   sendSuccess(res, {

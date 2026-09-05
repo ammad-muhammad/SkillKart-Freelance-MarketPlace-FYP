@@ -158,7 +158,7 @@ const TaxonomyAdmin = () => {
         description: reviewForm.description,
         aliases: reviewForm.aliases.split(',').map(s => s.trim()).filter(Boolean),
         synonyms: reviewForm.synonyms.split(',').map(s => s.trim()).filter(Boolean),
-        weight: reviewForm.weight,
+        weight: Number(reviewForm.weight) || 1.0,
         icon: reviewForm.icon,
         color: reviewForm.color,
         relationships: reviewForm.relationships
@@ -184,6 +184,9 @@ const TaxonomyAdmin = () => {
         ...newNode,
         aliases: newNode.aliases.split(',').map(s => s.trim()).filter(Boolean),
         synonyms: newNode.synonyms.split(',').map(s => s.trim()).filter(Boolean),
+        weight: Number(newNode.weight) || 1.0,
+        menuOrder: parseInt(newNode.menuOrder, 10) || 0,
+        displayPriority: parseInt(newNode.displayPriority, 10) || 0,
       };
       await adminAPI.createNode(formatted);
       showToast('Node created successfully!');
@@ -205,6 +208,9 @@ const TaxonomyAdmin = () => {
         ...editNode,
         aliases: typeof editNode.aliases === 'string' ? editNode.aliases.split(',').map(s => s.trim()).filter(Boolean) : editNode.aliases,
         synonyms: typeof editNode.synonyms === 'string' ? editNode.synonyms.split(',').map(s => s.trim()).filter(Boolean) : editNode.synonyms,
+        weight: Number(editNode.weight) || 1.0,
+        menuOrder: parseInt(editNode.menuOrder, 10) || 0,
+        displayPriority: parseInt(editNode.displayPriority, 10) || 0,
       };
       await adminAPI.updateNode(editNode._id, formatted);
       showToast('Node updated successfully!');
@@ -230,7 +236,7 @@ const TaxonomyAdmin = () => {
         from: selectedNode._id,
         to: relationForm.toId,
         type: relationForm.type,
-        weight: relationForm.weight,
+        weight: Number(relationForm.weight) || 1.0,
         note: relationForm.note
       });
       showToast('Relationship connected!');
@@ -410,8 +416,8 @@ const TaxonomyAdmin = () => {
                         step="0.05"
                         min="0"
                         max="1"
-                        value={editNode.weight} 
-                        onChange={e => setEditNode({ ...editNode, weight: parseFloat(e.target.value) })}
+                        value={editNode.weight}
+                        onChange={e => setEditNode({ ...editNode, weight: e.target.value })}
                       />
                     </div>
                   </div>
@@ -480,16 +486,16 @@ const TaxonomyAdmin = () => {
                       <label>Menu Order (Lower = First)</label>
                       <input 
                         type="number" 
-                        value={editNode.menuOrder ?? 0} 
-                        onChange={e => setEditNode({ ...editNode, menuOrder: parseInt(e.target.value) || 0 })}
+                        value={editNode.menuOrder ?? 0}
+                        onChange={e => setEditNode({ ...editNode, menuOrder: e.target.value })}
                       />
                     </div>
                     <div className="tax-form-group">
                       <label>Display Priority</label>
                       <input 
                         type="number" 
-                        value={editNode.displayPriority ?? 0} 
-                        onChange={e => setEditNode({ ...editNode, displayPriority: parseInt(e.target.value) || 0 })}
+                        value={editNode.displayPriority ?? 0}
+                        onChange={e => setEditNode({ ...editNode, displayPriority: e.target.value })}
                       />
                     </div>
                   </div>
@@ -611,7 +617,7 @@ const TaxonomyAdmin = () => {
                         max="1"
                         placeholder="Relation weight (e.g. 1.0)"
                         value={relationForm.weight}
-                        onChange={e => setRelationForm({ ...relationForm, weight: parseFloat(e.target.value) })}
+                        onChange={e => setRelationForm({ ...relationForm, weight: e.target.value })}
                       />
                       <input 
                         type="text" 
@@ -712,8 +718,8 @@ const TaxonomyAdmin = () => {
                         step="0.05"
                         min="0"
                         max="1"
-                        value={reviewForm.weight} 
-                        onChange={e => setReviewForm({ ...reviewForm, weight: parseFloat(e.target.value) })}
+                        value={reviewForm.weight}
+                        onChange={e => setReviewForm({ ...reviewForm, weight: e.target.value })}
                       />
                     </div>
                   </div>
@@ -776,16 +782,16 @@ const TaxonomyAdmin = () => {
                       <label>Menu Order (Lower = First)</label>
                       <input 
                         type="number" 
-                        value={reviewForm.menuOrder ?? 0} 
-                        onChange={e => setReviewForm({ ...reviewForm, menuOrder: parseInt(e.target.value) || 0 })}
+                        value={reviewForm.menuOrder ?? 0}
+                        onChange={e => setReviewForm({ ...reviewForm, menuOrder: e.target.value })}
                       />
                     </div>
                     <div className="tax-form-group">
                       <label>Display Priority</label>
                       <input 
                         type="number" 
-                        value={reviewForm.displayPriority ?? 0} 
-                        onChange={e => setReviewForm({ ...reviewForm, displayPriority: parseInt(e.target.value) || 0 })}
+                        value={reviewForm.displayPriority ?? 0}
+                        onChange={e => setReviewForm({ ...reviewForm, displayPriority: e.target.value })}
                       />
                     </div>
                   </div>
@@ -939,8 +945,8 @@ const TaxonomyAdmin = () => {
                     step="0.05"
                     min="0"
                     max="1"
-                    value={newNode.weight} 
-                    onChange={e => setNewNode({ ...newNode, weight: parseFloat(e.target.value) })}
+                    value={newNode.weight}
+                    onChange={e => setNewNode({ ...newNode, weight: e.target.value })}
                   />
                 </div>
               </div>
@@ -1008,16 +1014,16 @@ const TaxonomyAdmin = () => {
                   <label>Menu Order (Lower = First)</label>
                   <input 
                     type="number" 
-                    value={newNode.menuOrder ?? 0} 
-                    onChange={e => setNewNode({ ...newNode, menuOrder: parseInt(e.target.value) || 0 })}
+                    value={newNode.menuOrder ?? 0}
+                    onChange={e => setNewNode({ ...newNode, menuOrder: e.target.value })}
                   />
                 </div>
                 <div className="tax-form-group">
                   <label>Display Priority</label>
                   <input 
                     type="number" 
-                    value={newNode.displayPriority ?? 0} 
-                    onChange={e => setNewNode({ ...newNode, displayPriority: parseInt(e.target.value) || 0 })}
+                    value={newNode.displayPriority ?? 0}
+                    onChange={e => setNewNode({ ...newNode, displayPriority: e.target.value })}
                   />
                 </div>
               </div>

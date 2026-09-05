@@ -1,7 +1,22 @@
 const User = require('../models/User');
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
-const { NotFoundError } = require('../utils/apiError');
+const { NotFoundError, BadRequestError } = require('../utils/apiError');
+const { USER_ROLES } = require('../utils/constants');
+
+// Roles this marketplace-facing controller may assign. Deliberately excludes
+// 'superadmin' — that role has no real User document at all (see
+// auth.middleware.js's userId==='superadmin' synthetic-user short-circuit);
+// letting any admin/superadmin-role caller set it here would let them mint a
+// second, fully-functional superadmin account with a real _id. Mirrors the
+// isolated admin-panel's own ADMIN_ASSIGNABLE_ROLES (adminPanel/users.controller.js).
+const ASSIGNABLE_ROLES = [
+  USER_ROLES.ADMIN,
+  USER_ROLES.CONTENT_EDITOR,
+  USER_ROLES.FREELANCER,
+  USER_ROLES.CLIENT,
+  USER_ROLES.PUBLIC_VIEWER
+];
 
 /**
  * Get user by ID
@@ -64,11 +79,15 @@ const listUsers = asyncHandler(async (req, res) => {
  * Create user (Admin only)
  */
 const createUser = asyncHandler(async (req, res) => {
-  const userData = req.body;
-  
-  const user = new User(userData);
+  const { email, password, firstName, lastName, role, phone, isActive } = req.body;
+
+  if (!ASSIGNABLE_ROLES.includes(role)) {
+    throw new BadRequestError('Invalid or non-assignable role');
+  }
+
+  const user = new User({ email, password, firstName, lastName, role, phone, isActive });
   await user.save();
-  
+
   sendCreated(res, 'User created successfully', { user: user.toAuthJSON() });
 });
 
@@ -77,16 +96,25 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const updates = req.body;
-  
+
+  if (req.body.role !== undefined && !ASSIGNABLE_ROLES.includes(req.body.role)) {
+    throw new BadRequestError('Invalid or non-assignable role');
+  }
+
   const user = await User.findById(id);
   if (!user) {
     throw new NotFoundError('User not found');
   }
-  
-  Object.assign(user, updates);
+
+  // Explicit whitelist — matches updateUserValidation's own field set exactly.
+  // Anything else in req.body (permissions, tokenVersion, isBlocked, wallet
+  // fields, ...) is silently ignored rather than mass-assigned onto the doc.
+  const ALLOWED_FIELDS = ['firstName', 'lastName', 'phone', 'profilePicture', 'role'];
+  for (const field of ALLOWED_FIELDS) {
+    if (req.body[field] !== undefined) user[field] = req.body[field];
+  }
   await user.save();
-  
+
   sendSuccess(res, {
     message: 'User updated successfully',
     data: { user: user.toAuthJSON() }
@@ -176,12 +204,16 @@ const unblockUser = asyncHandler(async (req, res) => {
 const updateUserRole = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { role } = req.body;
-  
+
+  if (!ASSIGNABLE_ROLES.includes(role)) {
+    throw new BadRequestError('Invalid or non-assignable role');
+  }
+
   const user = await User.findById(id);
   if (!user) {
     throw new NotFoundError('User not found');
   }
-  
+
   user.role = role;
   await user.save();
   

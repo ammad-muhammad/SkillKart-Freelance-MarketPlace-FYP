@@ -14,7 +14,7 @@ const ContractHistory = require('../models/ContractHistory');
 const SystemSettings = require('../models/SystemSettings');
 const notifications = require('./notification.service');
 const { finalizeJobCompletion } = require('./jobCompletion.service');
-const { PLATFORM_FEE_RATE, round2 } = require('../utils/constants');
+const { getPlatformFeeRate, round2 } = require('../utils/constants');
 const { BadRequestError } = require('../utils/apiError');
 
 const DEFAULT_ESCROW_RELEASE_DAYS = 7;
@@ -72,7 +72,7 @@ async function fundMilestoneFromWallet({ milestone, job, contract, clientId, per
     totalAmount: milestone.amount,
     depositAmount: milestone.amount,
     finalAmount: milestone.amount,
-    feeRate: PLATFORM_FEE_RATE,
+    feeRate: await getPlatformFeeRate(),
     status: 'deposit_paid',
     depositPaidAt: new Date(),
     type: 'job_escrow',
@@ -112,6 +112,10 @@ async function fundMilestoneFromWallet({ milestone, job, contract, clientId, per
  * @returns {Promise<{payment, freelancerPayout}>}
  */
 async function releaseMilestone({ milestone, contract, job, auto = false }) {
+  if (milestone.status === 'disputed') {
+    throw new BadRequestError('This milestone has an unresolved dispute — resolve it before releasing escrow.');
+  }
+
   const payment = await Payment.findOne({ milestoneId: milestone._id, type: 'job_escrow' });
   if (!payment) throw new BadRequestError('No escrow payment found for this milestone');
   if (payment.status === 'released') return { payment, freelancerPayout: payment.freelancerPayout };
@@ -119,11 +123,20 @@ async function releaseMilestone({ milestone, contract, job, auto = false }) {
   const platformFee = round2(payment.totalAmount * payment.feeRate);
   const freelancerPayout = round2(payment.totalAmount - platformFee);
 
-  payment.platformFee = platformFee;
-  payment.freelancerPayout = freelancerPayout;
-  payment.status = 'released';
-  payment.releasedAt = new Date();
-  await payment.save();
+  // Atomically claim the release — a plain read-then-write (the status check
+  // above) would let two concurrent calls (a double-clicked "Approve", or the
+  // auto-release cron firing at the same moment as a manual approve) both
+  // pass that check and both credit the freelancer's wallet for the same
+  // milestone. This conditional update can only succeed once per payment.
+  const claimed = await Payment.findOneAndUpdate(
+    { _id: payment._id, status: { $ne: 'released' } },
+    { $set: { platformFee, freelancerPayout, status: 'released', releasedAt: new Date() } },
+    { new: true }
+  );
+  if (!claimed) {
+    const fresh = await Payment.findById(payment._id);
+    return { payment: fresh, freelancerPayout: fresh.freelancerPayout };
+  }
 
   await FreelancerProfile.updateOne(
     { userId: contract.freelancerId },
@@ -145,7 +158,7 @@ async function releaseMilestone({ milestone, contract, job, auto = false }) {
     notifications.onMilestoneAutoReleased(contract.clientId, { job, milestone });
   }
 
-  return { payment, freelancerPayout };
+  return { payment: claimed, freelancerPayout };
 }
 
 /**

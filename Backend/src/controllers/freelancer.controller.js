@@ -143,7 +143,7 @@ const getProfile = asyncHandler(async (req, res) => {
 // client.controller.js's updateProfile.
 const FREELANCER_PROFILE_ALLOWED_FIELDS = [
   'bio', 'title', 'coverPhoto', 'phone', 'hourlyRate', 'skills',
-  'portfolioLinks', 'education', 'certifications', 'languages',
+  'portfolio', 'portfolioLinks', 'education', 'certifications', 'languages',
   'availability', 'timezone', 'socialLinks', 'experienceLevel',
   'notificationSettings', 'securitySettings'
 ];
@@ -580,7 +580,16 @@ const toggleSavedJob = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
 
   let profile = await FreelancerProfile.findOne({ userId });
-  if (!profile) profile = await FreelancerProfile.create({ userId });
+  if (!profile) {
+    // See getProfile() above — a fresh signup can race this create from
+    // several components at once.
+    try {
+      profile = await FreelancerProfile.create({ userId });
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      profile = await FreelancerProfile.findOne({ userId });
+    }
+  }
 
   const index = profile.savedJobs.findIndex(id => String(id) === String(jobId));
   if (index === -1) {
@@ -606,7 +615,20 @@ const getSavedJobs = asyncHandler(async (req, res) => {
     populate: { path: 'clientId', select: 'firstName lastName profilePicture' }
   });
 
-  if (!profile) profile = await FreelancerProfile.create({ userId });
+  if (!profile) {
+    // See getProfile() above — a fresh signup can race this create from
+    // several components at once (this endpoint fires concurrently with
+    // getProfile() on the onboarding page's initial load).
+    try {
+      profile = await FreelancerProfile.create({ userId });
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      profile = await FreelancerProfile.findOne({ userId }).populate({
+        path: 'savedJobs',
+        populate: { path: 'clientId', select: 'firstName lastName profilePicture' }
+      });
+    }
+  }
 
   sendSuccess(res, { data: { savedJobs: profile.savedJobs } });
 });

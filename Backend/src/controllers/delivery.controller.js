@@ -8,7 +8,7 @@ const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/api
 const notifications = require('../services/notification.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const { approveMilestone, getEscrowReleaseDays } = require('../services/milestone.service');
-const { drawDownForTimeLog, refundRemainingHourlyEscrow } = require('../services/hourlyEscrow.service');
+const { drawDownForTimeLog, refundRemainingHourlyEscrow, getUnbilledAmount } = require('../services/hourlyEscrow.service');
 const TimeLog = require('../models/TimeLog');
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -181,6 +181,20 @@ const reviewDelivery = asyncHandler(async (req, res) => {
   // does — otherwise the remaining lock is stranded: unreachable by any
   // further time-tracking (blocked once status is 'completed') and never
   // refunded (that only happens via the end-request flow this bypasses).
+  //
+  // Guard BEFORE any write, same as respondEndContract: if the lock can't
+  // cover every still-pending logged hour, completing now strands that
+  // shortfall permanently (no dispute on a completed contract, no cron
+  // sweep of a completed contract) — block and ask the client to top up.
+  const unbilled = await getUnbilledAmount(contract);
+  const locked = contract.hourlyEscrow?.lockedBalance || 0;
+  if (unbilled > locked) {
+    throw new BadRequestError(
+      `The client's locked escrow (Rs. ${locked}) doesn't cover all logged, unbilled hours (Rs. ${unbilled}). The client must top up the escrow before this delivery can be accepted.`,
+      { insufficientBalance: true, required: unbilled, available: locked }
+    );
+  }
+
   contract.status = 'completed';
   contract.completedAt = new Date();
 

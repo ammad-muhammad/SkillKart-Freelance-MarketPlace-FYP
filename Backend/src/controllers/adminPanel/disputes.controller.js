@@ -9,7 +9,17 @@ const { auditLog } = require('../../utils/adminAudit');
 const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 const { finalizeJobCompletion } = require('../../services/jobCompletion.service');
 const { getEscrowReleaseDays } = require('../../services/milestone.service');
+const { refundRemainingHourlyEscrow, releaseRemainingHourlyEscrow, splitRemainingHourlyEscrow } = require('../../services/hourlyEscrow.service');
 const { parsePagination } = require('../../utils/helpers');
+
+// A 'split' resolution with no percentage (or one outside 1-99) previously
+// fell through to marking the dispute/milestone resolved with ZERO money
+// moved — real escrow funds landing in a terminal, unrecoverable state.
+// Validated once, before either resolution path claims the dispute.
+const isValidSplitPercentage = (splitPercentage) => {
+  const n = Number(splitPercentage);
+  return Number.isFinite(n) && n >= 1 && n <= 99;
+};
 
 const getDisputes = async (req, res) => {
   try {
@@ -165,6 +175,9 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
   if (!['release_freelancer', 'refund_client', 'split', 'resume', 'reject'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Invalid resolution action' });
   }
+  if (action === 'split' && !isValidSplitPercentage(splitPercentage)) {
+    return res.status(400).json({ success: false, message: 'A split resolution requires splitPercentage between 1 and 99' });
+  }
 
   // Atomic claim — only the request that actually flips 'pending' → 'resolved'
   // proceeds to move money. A concurrent second call (double-click, retry)
@@ -303,6 +316,9 @@ const resolveDispute = async (req, res) => {
     if (!['release_freelancer', 'refund_client', 'split', 'resume', 'reject'].includes(action)) {
       return res.status(400).json({ success: false, message: 'Invalid resolution action' });
     }
+    if (action === 'split' && !isValidSplitPercentage(splitPercentage)) {
+      return res.status(400).json({ success: false, message: 'A split resolution requires splitPercentage between 1 and 99' });
+    }
 
     // Atomic claim (see resolveMilestoneDispute) — only the request that
     // actually flips 'pending' → 'resolved' proceeds to move money.
@@ -315,56 +331,36 @@ const resolveDispute = async (req, res) => {
       return res.status(409).json({ success: false, message: 'No active dispute on this contract, or it was already resolved by another request' });
     }
     contract = claimed;
+    const job = await Job.findById(contract.jobId);
 
-    const payment = await Payment.findOne({ contractId });
+    // Hourly escrow is a running lock on the CONTRACT
+    // (contract.hourlyEscrow.lockedBalance), not a single Payment row — a
+    // contract accumulates one Payment per lock/top-up/invoice over its
+    // life, so `Payment.findOne({contractId})` here previously grabbed
+    // whichever one happened to be first (commonly the original, now
+    // partly-drawn-down lock) and paid out its full original `totalAmount`,
+    // creating money that was never actually still escrowed. These helpers
+    // settle the actual current `lockedBalance` instead, mirroring how a
+    // normal contract-end refund already works.
+    let freelancerPayout = 0;
+    const isFinancialAction = ['release_freelancer', 'refund_client', 'split'].includes(action);
 
-    // Apply resolution action
     switch (action) {
       case 'release_freelancer': {
-        // Release full escrow to freelancer
-        if (payment) {
-          const fee = round2(payment.totalAmount * (payment.feeRate || PLATFORM_FEE_RATE));
-          payment.platformFee = fee;
-          payment.freelancerPayout = round2(payment.totalAmount - fee);
-          payment.status = 'released';
-          payment.releasedAt = new Date();
-          await payment.save();
-        }
-        // Update freelancer wallet
-        await FreelancerProfile.updateOne(
-          { userId: contract.freelancerId },
-          { $inc: { walletBalance: payment ? payment.freelancerPayout : 0, totalEarnings: payment ? payment.freelancerPayout : 0 } }
-        );
+        const result = await releaseRemainingHourlyEscrow({ contract, job });
+        freelancerPayout = result.freelancerPayout;
         contract.status = 'completed';
         contract.completedAt = new Date();
         break;
       }
       case 'refund_client': {
-        if (payment) {
-          payment.status = 'refunded';
-          await payment.save();
-        }
-        // Refund client wallet
-        await ClientProfile.updateOne(
-          { userId: contract.clientId },
-          { $inc: { walletBalance: payment ? payment.depositAmount : 0 } }
-        );
+        await refundRemainingHourlyEscrow({ contract, job });
         contract.status = 'cancelled';
         break;
       }
       case 'split': {
-        if (payment && splitPercentage) {
-          const freelancerShare = round2(payment.totalAmount * (splitPercentage / 100));
-          const clientRefund    = round2(payment.totalAmount - freelancerShare);
-          const fee = round2(freelancerShare * (payment.feeRate || PLATFORM_FEE_RATE));
-          payment.status = 'released';
-          payment.platformFee = fee;
-          payment.freelancerPayout = round2(freelancerShare - fee);
-          payment.releasedAt = new Date();
-          await payment.save();
-          await FreelancerProfile.updateOne({ userId: contract.freelancerId }, { $inc: { walletBalance: payment.freelancerPayout } });
-          await ClientProfile.updateOne({ userId: contract.clientId }, { $inc: { walletBalance: clientRefund } });
-        }
+        const result = await splitRemainingHourlyEscrow({ contract, job, freelancerPercent: Number(splitPercentage) });
+        freelancerPayout = result.freelancerPayout;
         contract.status = 'completed';
         contract.completedAt = new Date();
         break;
@@ -377,6 +373,15 @@ const resolveDispute = async (req, res) => {
         // Dispute rejected — keep current state
         break;
       }
+    }
+
+    if (isFinancialAction && job && job.status !== 'completed' && ['completed'].includes(contract.status)) {
+      job.status = 'completed';
+      job.completedAt = new Date();
+      // releaseRemainingHourlyEscrow/splitRemainingHourlyEscrow already
+      // credited the freelancer's wallet/earnings above — only roll up
+      // completedProjects/totalSpent here.
+      await finalizeJobCompletion(job, { freelancerEarning: freelancerPayout, clientSpend: contract.hourlyEscrow?.totalLocked || 0, skipEarningsCredit: true });
     }
 
     await contract.save();

@@ -270,9 +270,24 @@ const searchUsersValidation = [
     .isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50')
 ];
 
+// Admin reset-any-user's-password validation — this route previously had no
+// validator at all, so an admin could set another user's password to an
+// empty string or a single character, bypassing every complexity rule
+// registration/self-service reset enforce.
+const resetUserPasswordValidation = [
+  param('id')
+    .isMongoId().withMessage('Invalid user ID format'),
+  body('newPassword')
+    .notEmpty().withMessage('New password is required')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain uppercase, lowercase, and number')
+];
+
 module.exports = {
   getUserByIdValidation,
   createUserValidation,
+  resetUserPasswordValidation,
   updateUserValidation,
   deleteUserValidation,
   blockUserValidation,

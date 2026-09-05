@@ -7,7 +7,8 @@ const { adminLoginLimiter, adminOtpLimiter, adminApiLimiter } = require('../midd
 const {
   loginSchema, verifyOtpSchema, suspendSchema,
   adjustWalletSchema, freezeWalletSchema,
-  resolveDisputeSchema, broadcastSchema,
+  resolveDisputeSchema, financialActionReasonSchema, broadcastSchema,
+  editJobSchema, editContractSchema, editProfileSchema,
   updateSettingSchema, resolveReportSchema,
   dismissReportSchema, hideReviewSchema,
   rejectWithdrawalSchema, paginationSchema
@@ -61,7 +62,7 @@ router.patch ('/users/:id/unsuspend',         requirePermission('users.write'), 
 router.delete('/users/:id',                   requirePermission('users.write'), usersCtrl.deleteUser);
 // Full profile management + direct verification grants
 router.get   ('/users/:id/profile',           usersCtrl.getUserProfile);
-router.patch ('/users/:id/profile',           requirePermission('users.write'), usersCtrl.updateProfile);
+router.patch ('/users/:id/profile',           editProfileSchema, requirePermission('users.write'), usersCtrl.updateProfile);
 router.patch ('/users/:id/avatar',            requirePermission('users.write'), usersCtrl.updateAvatar);
 router.patch ('/users/:id/verify-email',      requirePermission('users.write'), usersCtrl.setEmailVerified);
 router.patch ('/users/:id/skills/verify',     requirePermission('users.write'), usersCtrl.setSkillVerification);
@@ -78,7 +79,7 @@ router.get   ('/users/:id/activity',          usersCtrl.getUserActivity);
 router.get   ('/jobs',              paginationSchema, jobsCtrl.getJobs);
 router.get   ('/jobs/export',       jobsCtrl.exportJobs);
 router.get   ('/jobs/:id',          jobsCtrl.getJobById);
-router.patch ('/jobs/:id',          requirePermission('jobs.write'), jobsCtrl.editJob);
+router.patch ('/jobs/:id',          editJobSchema, requirePermission('jobs.write'), jobsCtrl.editJob);
 router.patch ('/jobs/:id/close',    requirePermission('jobs.write'), jobsCtrl.closeJob);
 router.patch ('/jobs/:id/reopen',   requirePermission('jobs.write'), jobsCtrl.reopenJob);
 router.delete('/jobs/:id',          requirePermission('jobs.write'), jobsCtrl.deleteJob);
@@ -87,8 +88,8 @@ router.delete('/jobs/:id',          requirePermission('jobs.write'), jobsCtrl.de
 router.get  ('/contracts',                     paginationSchema, contractsCtrl.getContracts);
 router.get  ('/contracts/export',              contractsCtrl.exportContracts);
 router.get  ('/contracts/:id',                 contractsCtrl.getContractById);
-router.post ('/contracts/:id/notes',           contractsCtrl.addContractNote);
-router.patch('/contracts/:id',                 requirePermission('contracts.write'), contractsCtrl.editContract);
+router.post ('/contracts/:id/notes',           requirePermission('contracts.write'), contractsCtrl.addContractNote);
+router.patch('/contracts/:id',                 editContractSchema, requirePermission('contracts.write'), contractsCtrl.editContract);
 router.patch('/contracts/:id/pause',           requirePermission('contracts.write'), contractsCtrl.pauseContract);
 router.patch('/contracts/:id/resume',          requirePermission('contracts.write'), contractsCtrl.resumeContract);
 router.patch('/contracts/:id/cancel',          requirePermission('contracts.write'), contractsCtrl.cancelContract);
@@ -105,8 +106,8 @@ router.get('/payments',            paginationSchema, financeCtrl.getPayments);
 router.get('/payments/summary',    financeCtrl.getPaymentSummary);
 router.get('/payments/export',     financeCtrl.exportPayments);
 router.get('/payments/:id',        financeCtrl.getPaymentById);
-router.post('/payments/:id/refund',  requirePermission('wallets.write'), financeCtrl.refundPayment);
-router.post('/payments/:id/release', requirePermission('wallets.write'), financeCtrl.releaseEscrow);
+router.post('/payments/:id/refund',  financialActionReasonSchema, requirePermission('wallets.write'), financeCtrl.refundPayment);
+router.post('/payments/:id/release', financialActionReasonSchema, requirePermission('wallets.write'), financeCtrl.releaseEscrow);
 
 // WALLETS
 router.get   ('/wallets',                    financeCtrl.getWallets);
@@ -144,7 +145,7 @@ router.post('/notifications/broadcast', broadcastSchema, requirePermission('noti
 // REPORTS
 router.get  ('/reports',              paginationSchema, modCtrl.getReports);
 router.get  ('/reports/:id',          modCtrl.getReportById);
-router.patch('/reports/:id/assign',   modCtrl.assignReport);
+router.patch('/reports/:id/assign',   requirePermission('reports.write'), modCtrl.assignReport);
 router.patch('/reports/:id/resolve',  resolveReportSchema, requirePermission('reports.write'), modCtrl.resolveReport);
 router.patch('/reports/:id/dismiss',  dismissReportSchema, requirePermission('reports.write'), modCtrl.dismissReport);
 

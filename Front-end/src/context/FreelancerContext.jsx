@@ -6,6 +6,7 @@ import { proposalsAPI } from '../api/proposals';
 import { useAuth } from '../hooks/useAuth';
 import { getUserId } from '../utils/user';
 import { tokenManager } from '../utils/tokenManager';
+import { extractApiError } from '../utils/apiError';
 import { log } from "../utils/logger";
 
 const FreelancerContext = createContext(null);
@@ -342,14 +343,18 @@ export const FreelancerProvider = ({ children }) => {
       showToast('Gig published successfully! 🎉');
       return { success: true, gig: res.data.data.gig };
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to publish gig';
       // Skill-gating block (403): surface the flag so the caller can route the
       // freelancer to the skill test instead of just showing an error toast.
       const gate = error.response?.data?.errors;
       if (error.response?.status === 403 && gate?.skillTestRequired) {
+        const message = error.response?.data?.message || 'Failed to publish gig';
         showToast(message, 'error');
         return { success: false, error: message, skillTestRequired: true, requiredSkills: gate.requiredSkills || [], category: gate.category || '' };
       }
+      // Prefer the specific field error (e.g. "Full description must be
+      // 50-5000 characters") over the generic "Validation failed" top-level
+      // message so the freelancer knows exactly what to fix before retrying.
+      const { message } = extractApiError(error);
       showToast(message, 'error');
       return { success: false, error: message };
     } finally {
@@ -365,7 +370,7 @@ export const FreelancerProvider = ({ children }) => {
       showToast('Gig updated successfully!');
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to update gig';
+      const { message } = extractApiError(error);
       showToast(message, 'error');
       return { success: false, error: message };
     } finally {

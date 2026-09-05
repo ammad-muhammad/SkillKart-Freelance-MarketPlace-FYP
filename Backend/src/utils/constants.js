@@ -425,13 +425,46 @@ const SUCCESS_MESSAGES = {
 // Single source of truth for the commission rate. Every money path (escrow
 // release, hourly invoice, dispute split/refund) MUST use this so the fee stays
 // consistent — previously the hourly-invoice path hardcoded 0.05 (a 10× bug).
-const PLATFORM_FEE_RATE = 0.005; // 0.5%
+const PLATFORM_FEE_RATE = 0.005; // 0.5% — fallback if the DB setting is missing/invalid
+
+/**
+ * Live platform fee rate — reads the admin-configurable SystemSettings value
+ * (key: 'platform_fee_rate', category 'fees', editable from the admin panel's
+ * generic Settings page), falling back to PLATFORM_FEE_RATE if the setting is
+ * missing or out of range. Every spot that LOCKS IN a fee rate on a new
+ * Payment (milestone funding, hourly lock, hourly draw-down/dispute payout)
+ * must call this rather than reading the bare constant, or the Settings
+ * page's control silently does nothing — same pattern as
+ * milestone.service.js's getEscrowReleaseDays().
+ */
+async function getPlatformFeeRate() {
+  const SystemSettings = require('../models/SystemSettings');
+  const setting = await SystemSettings.findOne({ key: 'platform_fee_rate' }).lean();
+  const rate = Number(setting?.value);
+  return Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : PLATFORM_FEE_RATE;
+}
+
+const MIN_WITHDRAWAL_AMOUNT = 5; // Rs. — fallback if the DB setting is missing/invalid
+
+/**
+ * Live withdrawal minimum — reads the admin-configurable SystemSettings value
+ * (key: 'withdrawal_min_amount'), same rationale/pattern as getPlatformFeeRate().
+ */
+async function getWithdrawalMinAmount() {
+  const SystemSettings = require('../models/SystemSettings');
+  const setting = await SystemSettings.findOne({ key: 'withdrawal_min_amount' }).lean();
+  const min = Number(setting?.value);
+  return Number.isFinite(min) && min > 0 ? min : MIN_WITHDRAWAL_AMOUNT;
+}
 
 // Round a monetary value to 2 decimal places (whole-currency-unit cents).
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 module.exports = {
   PLATFORM_FEE_RATE,
+  getPlatformFeeRate,
+  MIN_WITHDRAWAL_AMOUNT,
+  getWithdrawalMinAmount,
   round2,
   FEATURE_FLAGS,
   USER_ROLES,

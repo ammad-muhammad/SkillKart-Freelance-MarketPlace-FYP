@@ -15,7 +15,7 @@ const FreelancerProfile = require('../models/FreelancerProfile');
 const Payment = require('../models/Payment');
 const ContractHistory = require('../models/ContractHistory');
 const notifications = require('./notification.service');
-const { PLATFORM_FEE_RATE, round2 } = require('../utils/constants');
+const { getPlatformFeeRate, round2 } = require('../utils/constants');
 const { BadRequestError } = require('../utils/apiError');
 
 /**
@@ -71,7 +71,7 @@ async function lockHourlyEscrow({ contract, job, clientId, amount, performedBy, 
     totalAmount: lockAmount,
     depositAmount: lockAmount,
     finalAmount: lockAmount,
-    feeRate: PLATFORM_FEE_RATE,
+    feeRate: await getPlatformFeeRate(),
     status: 'deposit_paid',
     depositPaidAt: new Date(),
     stripe: { simulated: true }
@@ -112,15 +112,34 @@ async function drawDownForTimeLog({ timeLog, contract, job }) {
     return { amount: 0, payment: null };
   }
 
-  const lockedBalance = contract.hourlyEscrow?.lockedBalance || 0;
-  if (lockedBalance < amount) {
+  // Atomically draw down the lock — a plain read-then-write on
+  // contract.hourlyEscrow.lockedBalance (read here, contract.save() below)
+  // would let two concurrent draw-downs (e.g. a manual log and a timer-stop
+  // landing close together) both pass this check against the same stale
+  // in-memory value; whichever contract.save() lands last would silently
+  // clobber the other's decrement, understating how much has actually been
+  // drawn and letting the freelancer eventually get paid beyond what the
+  // client ever locked. This conditional update can only succeed if the lock
+  // still covers the amount at the moment it runs.
+  const Contract = require('../models/Contract');
+  const updatedContract = await Contract.findOneAndUpdate(
+    { _id: contract._id, 'hourlyEscrow.lockedBalance': { $gte: amount } },
+    { $inc: { 'hourlyEscrow.lockedBalance': -amount, 'hourlyEscrow.totalDrawn': amount } },
+    { new: true }
+  );
+  if (!updatedContract) {
+    const fresh = await Contract.findById(contract._id).select('hourlyEscrow').lean();
+    const lockedBalance = fresh?.hourlyEscrow?.lockedBalance || 0;
     throw new BadRequestError(
       `Escrow balance too low to bill this logged time (need Rs. ${amount}, have Rs. ${round2(lockedBalance)} locked).`,
       { insufficientBalance: true, required: amount, available: round2(lockedBalance), contractType: 'hourly' }
     );
   }
+  contract.hourlyEscrow.lockedBalance = updatedContract.hourlyEscrow.lockedBalance;
+  contract.hourlyEscrow.totalDrawn = updatedContract.hourlyEscrow.totalDrawn;
 
-  const platformFee = round2(amount * PLATFORM_FEE_RATE);
+  const feeRate = await getPlatformFeeRate();
+  const platformFee = round2(amount * feeRate);
   const freelancerPayout = round2(amount - platformFee);
 
   const payment = await Payment.create({
@@ -132,7 +151,7 @@ async function drawDownForTimeLog({ timeLog, contract, job }) {
     totalAmount: amount,
     depositAmount: amount,
     finalAmount: amount,
-    feeRate: PLATFORM_FEE_RATE,
+    feeRate,
     platformFee,
     freelancerPayout,
     status: 'released',
@@ -140,10 +159,6 @@ async function drawDownForTimeLog({ timeLog, contract, job }) {
     releasedAt: new Date(),
     stripe: { simulated: true }
   });
-
-  contract.hourlyEscrow.lockedBalance = round2(lockedBalance - amount);
-  contract.hourlyEscrow.totalDrawn = round2((contract.hourlyEscrow.totalDrawn || 0) + amount);
-  await contract.save();
 
   await FreelancerProfile.updateOne(
     { userId: contract.freelancerId },
@@ -177,16 +192,27 @@ async function getUnbilledAmount(contract) {
  * client when the contract ends (completed or cancelled).
  */
 async function refundRemainingHourlyEscrow({ contract, job }) {
-  const remaining = round2(contract.hourlyEscrow?.lockedBalance || 0);
+  // Atomically read-and-zero the lock — a plain read-then-write (read
+  // lockedBalance, later set it to 0 via contract.save()) would let two
+  // concurrent calls (e.g. a double-clicked "confirm end contract") both
+  // read the same non-zero balance and both credit the client's wallet for
+  // it before either save() lands. The $gt:0 guard means only the first
+  // caller can ever succeed; new:false returns the pre-update document so we
+  // still get the real amount that was locked.
+  const Contract = require('../models/Contract');
+  const before = await Contract.findOneAndUpdate(
+    { _id: contract._id, 'hourlyEscrow.lockedBalance': { $gt: 0 } },
+    { $set: { 'hourlyEscrow.lockedBalance': 0 } },
+    { new: false }
+  );
+  const remaining = round2(before?.hourlyEscrow?.lockedBalance || 0);
   if (remaining <= 0) return 0;
+  contract.hourlyEscrow.lockedBalance = 0;
 
   await ClientProfile.updateOne(
     { userId: contract.clientId },
     { $inc: { walletBalance: remaining } }
   );
-
-  contract.hourlyEscrow.lockedBalance = 0;
-  await contract.save();
 
   await ContractHistory.create({
     contractId: contract._id,
@@ -199,10 +225,147 @@ async function refundRemainingHourlyEscrow({ contract, job }) {
   return remaining;
 }
 
+/**
+ * Release whatever remains in an hourly contract's lock straight to the
+ * freelancer's wallet (minus platform fee) — used by admin dispute
+ * resolution's "release to freelancer" action. Unlike drawDownForTimeLog,
+ * this isn't tied to a specific TimeLog; it settles the contract's entire
+ * outstanding lock in one shot, since a dispute resolution is a final
+ * decision on the disputed funds, not a per-hour billing event.
+ */
+async function releaseRemainingHourlyEscrow({ contract, job }) {
+  // Atomic read-and-zero — see refundRemainingHourlyEscrow for why a plain
+  // read-then-write here would let a double-submitted dispute resolution
+  // credit the freelancer twice for the same locked funds.
+  const Contract = require('../models/Contract');
+  const before = await Contract.findOneAndUpdate(
+    { _id: contract._id, 'hourlyEscrow.lockedBalance': { $gt: 0 } },
+    { $set: { 'hourlyEscrow.lockedBalance': 0 } },
+    { new: false }
+  );
+  const remaining = round2(before?.hourlyEscrow?.lockedBalance || 0);
+  if (remaining <= 0) return { amount: 0, freelancerPayout: 0, payment: null };
+  contract.hourlyEscrow.lockedBalance = 0;
+
+  const feeRate = await getPlatformFeeRate();
+  const platformFee = round2(remaining * feeRate);
+  const freelancerPayout = round2(remaining - platformFee);
+
+  const payment = await Payment.create({
+    jobId: job?._id,
+    contractId: contract._id,
+    clientId: contract.clientId,
+    freelancerId: contract.freelancerId,
+    type: 'hourly_invoice',
+    totalAmount: remaining,
+    depositAmount: remaining,
+    finalAmount: remaining,
+    feeRate,
+    platformFee,
+    freelancerPayout,
+    status: 'released',
+    depositPaidAt: new Date(),
+    releasedAt: new Date(),
+    stripe: { simulated: true }
+  });
+
+  // lockedBalance is already zeroed atomically above; totalDrawn is a
+  // display/audit counter only, so a plain atomic $inc (no read needed) is
+  // enough — left untouched on the in-memory `contract` so the caller's
+  // later contract.save() (for contract.status) doesn't re-dirty and
+  // overwrite it with a stale value.
+  await Contract.updateOne({ _id: contract._id }, { $inc: { 'hourlyEscrow.totalDrawn': remaining } });
+
+  await FreelancerProfile.updateOne(
+    { userId: contract.freelancerId },
+    { $inc: { walletBalance: freelancerPayout, totalEarnings: Math.round(freelancerPayout) } }
+  );
+
+  await ContractHistory.create({
+    contractId: contract._id,
+    action: 'hourly_escrow_released',
+    newValue: { amount: remaining, freelancerPayout }
+  });
+
+  notifications.onPaymentReleased(contract.freelancerId, { job, amount: freelancerPayout });
+
+  return { amount: remaining, freelancerPayout, payment };
+}
+
+/**
+ * Split whatever remains in an hourly contract's lock between freelancer and
+ * client by percentage — used by admin dispute resolution's "split" action.
+ * `freelancerPercent` is validated by the caller (1-99) before this runs.
+ */
+async function splitRemainingHourlyEscrow({ contract, job, freelancerPercent }) {
+  // Atomic read-and-zero — see refundRemainingHourlyEscrow for why a plain
+  // read-then-write here would let a double-submitted dispute resolution
+  // double-pay both parties for the same locked funds.
+  const Contract = require('../models/Contract');
+  const before = await Contract.findOneAndUpdate(
+    { _id: contract._id, 'hourlyEscrow.lockedBalance': { $gt: 0 } },
+    { $set: { 'hourlyEscrow.lockedBalance': 0 } },
+    { new: false }
+  );
+  const remaining = round2(before?.hourlyEscrow?.lockedBalance || 0);
+  if (remaining <= 0) return { amount: 0, freelancerPayout: 0, clientRefund: 0, payment: null };
+  contract.hourlyEscrow.lockedBalance = 0;
+
+  const freelancerShare = round2(remaining * (freelancerPercent / 100));
+  const clientRefund = round2(remaining - freelancerShare);
+  const feeRate = await getPlatformFeeRate();
+  const platformFee = round2(freelancerShare * feeRate);
+  const freelancerPayout = round2(freelancerShare - platformFee);
+
+  const payment = await Payment.create({
+    jobId: job?._id,
+    contractId: contract._id,
+    clientId: contract.clientId,
+    freelancerId: contract.freelancerId,
+    type: 'hourly_invoice',
+    totalAmount: freelancerShare,
+    depositAmount: freelancerShare,
+    finalAmount: freelancerShare,
+    feeRate,
+    platformFee,
+    freelancerPayout,
+    status: 'released',
+    depositPaidAt: new Date(),
+    releasedAt: new Date(),
+    stripe: { simulated: true }
+  });
+
+  // Same rationale as releaseRemainingHourlyEscrow's tail: lockedBalance is
+  // already zeroed atomically above; totalDrawn is inc'd directly in the DB
+  // and left untouched in-memory so the caller's later contract.save() (for
+  // contract.status) can't clobber it with a stale value.
+  await Contract.updateOne({ _id: contract._id }, { $inc: { 'hourlyEscrow.totalDrawn': freelancerShare } });
+
+  await FreelancerProfile.updateOne(
+    { userId: contract.freelancerId },
+    { $inc: { walletBalance: freelancerPayout, totalEarnings: Math.round(freelancerPayout) } }
+  );
+  if (clientRefund > 0) {
+    await ClientProfile.updateOne({ userId: contract.clientId }, { $inc: { walletBalance: clientRefund } });
+  }
+
+  await ContractHistory.create({
+    contractId: contract._id,
+    action: 'hourly_escrow_split',
+    newValue: { amount: remaining, freelancerPayout, clientRefund }
+  });
+
+  notifications.onPaymentReleased(contract.freelancerId, { job, amount: freelancerPayout });
+
+  return { amount: remaining, freelancerPayout, clientRefund, payment };
+}
+
 module.exports = {
   estimateWeeklyLockAmount,
   lockHourlyEscrow,
   drawDownForTimeLog,
   getUnbilledAmount,
-  refundRemainingHourlyEscrow
+  refundRemainingHourlyEscrow,
+  releaseRemainingHourlyEscrow,
+  splitRemainingHourlyEscrow
 };
