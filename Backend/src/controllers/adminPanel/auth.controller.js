@@ -69,6 +69,30 @@ const seedDefaultSettings = async () => {
         { upsert: true, new: true }
       );
     }
+
+    // One-time correction for a legacy seed bug: platform_fee_rate and
+    // withdrawal_min_amount were originally seeded with values (0.05, 10)
+    // that never matched the real hardcoded constants they're now wired up
+    // to read (PLATFORM_FEE_RATE = 0.005, the Rs. 5 withdrawal floor) —
+    // $setOnInsert above only applies to brand-new rows, so any environment
+    // that already seeded these would otherwise be stuck on the old values
+    // forever. Only touch rows still holding the exact legacy value AND
+    // never edited by an admin (lastUpdatedBy unset) — a deliberate admin
+    // choice must never be silently reverted.
+    await SystemSettings.updateOne(
+      { key: 'platform_fee_rate', value: 0.05, lastUpdatedBy: { $exists: false } },
+      { $set: { value: 0.005 } }
+    );
+    await SystemSettings.updateOne(
+      { key: 'withdrawal_min_amount', value: 10, lastUpdatedBy: { $exists: false } },
+      { $set: { value: 5 } }
+    );
+    // Description text isn't admin-editable through the Settings UI (only
+    // `value` is), so it's always safe to refresh regardless of
+    // lastUpdatedBy — this just corrects stale copy from the old seed.
+    for (const setting of SystemSettings.DEFAULT_SETTINGS) {
+      await SystemSettings.updateOne({ key: setting.key }, { $set: { description: setting.description } });
+    }
   } catch (err) {
     console.error('[AdminAuth] Settings seed failed:', err.message);
   }

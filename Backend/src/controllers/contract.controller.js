@@ -7,7 +7,7 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const notifications = require('../services/notification.service');
-const { drawDownForTimeLog, refundRemainingHourlyEscrow } = require('../services/hourlyEscrow.service');
+const { drawDownForTimeLog, refundRemainingHourlyEscrow, getUnbilledAmount } = require('../services/hourlyEscrow.service');
 
 /**
  * Get contract details
@@ -325,18 +325,36 @@ const respondEndContract = asyncHandler(async (req, res) => {
   }
 
   if (action === 'approve') {
+    // Guard BEFORE any write: if the lock can't cover every still-pending
+    // logged hour, ending the contract now would strand that shortfall
+    // forever — once 'completed', raiseDispute rejects ("cannot dispute a
+    // completed contract") and the weekly cron only scans active/in_revision
+    // contracts, so there's no path left to ever collect it. Block instead,
+    // same philosophy as assertEscrowHasRoom blocking new time-logging when
+    // the lock is already dry.
+    if (contract.type === 'hourly') {
+      const unbilled = await getUnbilledAmount(contract);
+      const locked = contract.hourlyEscrow?.lockedBalance || 0;
+      if (unbilled > locked) {
+        throw new BadRequestError(
+          `The client's locked escrow (Rs. ${locked}) doesn't cover all logged, unbilled hours (Rs. ${unbilled}). The client must top up the escrow before this contract can end.`,
+          { insufficientBalance: true, required: unbilled, available: locked }
+        );
+      }
+    }
+
     contract.status = 'completed';
     contract.completedAt = Date.now();
     contract.endRequest.status = 'approved';
-    
+
     if (contract.timer && contract.timer.isActive) {
       contract.timer.isActive = false;
     }
 
-    // Settle any pending time logs against the locked escrow (oldest first —
-    // if the lock can't cover everything, whatever's left just stays
-    // 'pending' rather than being falsely marked paid), then refund whatever
-    // remains locked back to the client since the contract is now done.
+    // Settle any pending time logs against the locked escrow (oldest first),
+    // then refund whatever remains locked back to the client since the
+    // contract is now done. The guard above already confirmed the lock
+    // covers every pending log, so this loop can't stop early here.
     if (contract.type === 'hourly') {
       const TimeLog = require('../models/TimeLog');
       const job = await Job.findById(contract.jobId);

@@ -665,6 +665,33 @@ export const AuditLogsPage = () => {
 // ═══════════════════════════════════════════════════════════════
 // ANALYTICS
 // ═══════════════════════════════════════════════════════════════
+const CATEGORY_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'];
+
+// Client-side CSV export of the top-earners leaderboard — real data straight
+// from the table already on screen, no backend round-trip needed for what's
+// scoped to "export this report" (the button sits directly on that card).
+const exportLeaderboardCSV = (topFreelancers) => {
+  const rows = [
+    ['Freelancer', 'Email', 'Jobs Completed', 'Total Earnings (PKR)'],
+    ...(topFreelancers || []).map((f) => [
+      `${f.firstName || ''} ${f.lastName || ''}`.trim() || '—',
+      f.email || '—',
+      f.jobCount || 0,
+      f.totalEarnings || 0
+    ])
+  ];
+  const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `top-freelancers-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 export const AnalyticsPage = () => {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -672,27 +699,29 @@ export const AnalyticsPage = () => {
   const [activeBar, setActiveBar] = useState(null);
 
   useEffect(() => {
-    adminAnalytics.get().then(res => { setData(res?.analytics); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    adminAnalytics.get({ range: timeRange }).then(res => { setData(res?.analytics); setLoading(false); }).catch(() => setLoading(false));
+  }, [timeRange]);
 
   if (loading) return <AdminLoader message="Gathering platform intelligence & analytics…" />;
 
   // Calculate totals
-  const totalUsers = data?.usersByRole?.reduce((acc, r) => acc + (r.count || 0), 0) || 223;
-  const totalJobs = data?.jobsByStatus?.reduce((acc, j) => acc + (j.count || 0), 0) || 326;
-  const completedJobs = data?.jobsByStatus?.find(j => j._id === 'completed')?.count || 155;
-  const completionRate = totalJobs > 0 ? ((completedJobs / totalJobs) * 100).toFixed(1) : '86.4';
-  const totalRevenue = data?.revenueByMonth?.reduce((acc, r) => acc + (r.revenue || 0), 0) || 4850000;
-  const platformFees = Math.round(totalRevenue * 0.08);
+  const totalUsers = data?.usersByRole?.reduce((acc, r) => acc + (r.count || 0), 0) || 0;
+  const totalJobs = data?.jobsByStatus?.reduce((acc, j) => acc + (j.count || 0), 0) || 0;
+  const completedJobs = data?.jobsByStatus?.find(j => j._id === 'completed')?.count || 0;
+  const completionRate = totalJobs > 0 ? ((completedJobs / totalJobs) * 100).toFixed(1) : '0.0';
+  // Real gross transaction volume + platform fee revenue for the selected
+  // window, and real period-over-period deltas — the backend now computes
+  // both instead of the frontend fabricating "platform fees" as a flat 8%
+  // of a number that was already fee revenue mislabeled as gross volume.
+  const grossVolume = data?.window?.grossVolume || 0;
+  const platformFees = data?.window?.platformFees || 0;
+  const deltas = data?.deltas || {};
+  const fmtDelta = (pct) => `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct).toFixed(1)}%`;
 
-  // Mock category data for market share chart
-  const categories = [
-    { name: 'Web Development', count: 124, percentage: 38, color: '#3b82f6' },
-    { name: 'UI/UX & Product Design', count: 78, percentage: 24, color: '#8b5cf6' },
-    { name: 'AI & Data Science', count: 52, percentage: 16, color: '#10b981' },
-    { name: 'Mobile Apps (iOS/Android)', count: 42, percentage: 13, color: '#f59e0b' },
-    { name: 'Content & Copywriting', count: 30, percentage: 9, color: '#ec4899' },
-  ];
+  // Real category breakdown (job counts by category) for the market-share
+  // chart — replaces a previously fully hardcoded array of fabricated names.
+  const categories = (data?.categoryBreakdown || []).map((c, i) => ({ ...c, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }));
 
   return (
     <PageShell title="Analytics & Growth" desc="Comprehensive platform performance metrics, revenue analytics and user insights" icon="📊">
@@ -725,26 +754,26 @@ export const AnalyticsPage = () => {
         <div className="ap-stat-card" style={{ '--stat-accent': 'var(--ap-blue)' }}>
           <div className="ap-stat-top">
             <div>
-              <div className="ap-stat-label">Gross GMV Revenue</div>
-              <div className="ap-stat-value" style={{ fontSize: '1.6rem', marginTop: 4 }}>{fmt.currency(totalRevenue)}</div>
+              <div className="ap-stat-label">Gross Transaction Volume</div>
+              <div className="ap-stat-value" style={{ fontSize: '1.6rem', marginTop: 4 }}>{fmt.currency(grossVolume)}</div>
             </div>
             <div className="ap-stat-icon-wrap" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--ap-blue)' }}>💰</div>
           </div>
-          <div className="ap-stat-delta positive">
-            <span>↑ 18.4%</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>vs previous 30d</span>
+          <div className={`ap-stat-delta ${deltas.grossVolume >= 0 ? 'positive' : 'negative'}`}>
+            <span>{fmtDelta(deltas.grossVolume || 0)}</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>vs previous {timeRange}</span>
           </div>
         </div>
 
         <div className="ap-stat-card" style={{ '--stat-accent': 'var(--ap-green)' }}>
           <div className="ap-stat-top">
             <div>
-              <div className="ap-stat-label">Platform Fees (8%)</div>
+              <div className="ap-stat-label">Platform Fees</div>
               <div className="ap-stat-value" style={{ fontSize: '1.6rem', marginTop: 4, color: 'var(--ap-green)' }}>{fmt.currency(platformFees)}</div>
             </div>
             <div className="ap-stat-icon-wrap" style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--ap-green)' }}>📈</div>
           </div>
-          <div className="ap-stat-delta positive">
-            <span>↑ 22.1%</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>net revenue stream</span>
+          <div className={`ap-stat-delta ${deltas.platformFees >= 0 ? 'positive' : 'negative'}`}>
+            <span>{fmtDelta(deltas.platformFees || 0)}</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>vs previous {timeRange}</span>
           </div>
         </div>
 
@@ -756,8 +785,8 @@ export const AnalyticsPage = () => {
             </div>
             <div className="ap-stat-icon-wrap" style={{ background: 'rgba(139,92,246,0.1)', color: 'var(--ap-purple)' }}>👥</div>
           </div>
-          <div className="ap-stat-delta positive">
-            <span>↑ 14.8%</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>new registrations</span>
+          <div className={`ap-stat-delta ${deltas.newUsers >= 0 ? 'positive' : 'negative'}`}>
+            <span>{fmtDelta(deltas.newUsers || 0)}</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>new registrations ({data?.window?.newUsers || 0} this {timeRange})</span>
           </div>
         </div>
 
@@ -769,8 +798,8 @@ export const AnalyticsPage = () => {
             </div>
             <div className="ap-stat-icon-wrap" style={{ background: 'rgba(245,158,11,0.1)', color: 'var(--ap-yellow)' }}>⚡</div>
           </div>
-          <div className="ap-stat-delta positive">
-            <span>↑ 3.2%</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>{completedJobs} / {totalJobs} jobs</span>
+          <div className={`ap-stat-delta ${deltas.completionRate >= 0 ? 'positive' : 'negative'}`}>
+            <span>{fmtDelta(deltas.completionRate || 0)}</span> <span style={{ color: 'var(--ap-text-muted)', fontWeight: 400 }}>{completedJobs} / {totalJobs} jobs (all time)</span>
           </div>
         </div>
       </div>
@@ -808,8 +837,8 @@ export const AnalyticsPage = () => {
             </div>
 
             {data?.revenueByMonth?.map((r, index) => {
-              const maxRev = Math.max(...(data.revenueByMonth?.map(x => x.revenue) || [1]));
-              const heightPct = maxRev > 0 ? (r.revenue / maxRev) * 100 : 0;
+              const maxVol = Math.max(...(data.revenueByMonth?.map(x => x.grossVolume || 0) || [1]));
+              const heightPct = maxVol > 0 ? ((r.grossVolume || 0) / maxVol) * 100 : 0;
               const isHovered = activeBar === index;
 
               return (
@@ -846,8 +875,8 @@ export const AnalyticsPage = () => {
                       animation: 'apFadeIn 0.15s ease'
                     }}>
                       <div style={{ fontWeight: 700, color: 'var(--ap-text-primary)' }}>{r._id}</div>
-                      <div style={{ color: 'var(--ap-blue)', fontWeight: 600 }}>Volume: {fmt.currency(r.revenue)}</div>
-                      <div style={{ color: 'var(--ap-green)', fontWeight: 600 }}>Fee: {fmt.currency(Math.round(r.revenue * 0.08))}</div>
+                      <div style={{ color: 'var(--ap-blue)', fontWeight: 600 }}>Volume: {fmt.currency(r.grossVolume || 0)}</div>
+                      <div style={{ color: 'var(--ap-green)', fontWeight: 600 }}>Fee: {fmt.currency(r.revenue || 0)}</div>
                     </div>
                   )}
 
@@ -991,7 +1020,7 @@ export const AnalyticsPage = () => {
               Highest earning verified student talent across Pakistan
             </div>
           </div>
-          <button className="ap-btn ap-btn-secondary ap-btn-sm">Export Report</button>
+          <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => exportLeaderboardCSV(data?.topFreelancers)} disabled={!data?.topFreelancers?.length}>Export Report</button>
         </div>
 
         <div className="ap-table-wrap">

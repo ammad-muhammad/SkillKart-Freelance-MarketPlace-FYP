@@ -58,8 +58,8 @@ const resetPasswordSchema = [
 
 const adjustWalletSchema = [
   body('amount')
-    .isNumeric().withMessage('Amount must be a number')
-    .custom(v => v !== 0).withMessage('Amount cannot be zero'),
+    .isFloat({ min: -1000000, max: 1000000 }).withMessage('Amount must be between -1,000,000 and 1,000,000')
+    .custom(v => Number(v) !== 0).withMessage('Amount cannot be zero'),
   body('reason')
     .notEmpty().withMessage('Reason is required')
     .isLength({ min: 5, max: 500 }).withMessage('Reason must be 5–500 characters'),
@@ -86,9 +86,79 @@ const resolveDisputeSchema = [
   body('notes')
     .notEmpty().withMessage('Resolution notes are required')
     .isLength({ min: 10, max: 2000 }).withMessage('Notes must be 10–2000 characters'),
+  // Required (not optional) when action is 'split' — a split resolution with
+  // no percentage previously fell through to marking the dispute resolved
+  // with zero money moved, leaving real escrow funds stuck.
   body('splitPercentage')
-    .optional()
+    .if(body('action').equals('split'))
+    .notEmpty().withMessage('splitPercentage is required when action is "split"')
     .isFloat({ min: 1, max: 99 }).withMessage('Split percentage must be between 1 and 99'),
+  handleValidation
+];
+
+// ─── Job/Contract/Profile Edit Schemas ─────────────────────────────────────────
+// These sibling admin-panel edit endpoints had no numeric validation at all,
+// unlike every other financial admin action in this file (adjustWalletSchema,
+// resolveDisputeSchema) — an admin could save a job with a negative/inverted
+// budget or a contract with a zero/negative rate, desyncing the numbers shown
+// here from the real Milestone/hourlyEscrow amounts those records back.
+
+const editJobSchema = [
+  body('budget.min')
+    .optional({ nullable: true })
+    .isFloat({ min: 0 }).withMessage('Budget min must be a non-negative number'),
+  body('budget.max')
+    .optional({ nullable: true })
+    .isFloat({ min: 0 }).withMessage('Budget max must be a non-negative number'),
+  body('deadline')
+    .optional({ nullable: true })
+    .isISO8601().withMessage('Deadline must be a valid date'),
+  body().custom((value) => {
+    const min = value?.budget?.min;
+    const max = value?.budget?.max;
+    if (min != null && max != null && Number(max) < Number(min)) {
+      throw new Error('Budget max must be greater than or equal to budget min');
+    }
+    return true;
+  }),
+  handleValidation
+];
+
+const editContractSchema = [
+  body('fixedPrice')
+    .optional({ nullable: true })
+    .isFloat({ gt: 0 }).withMessage('Fixed price must be greater than 0'),
+  body('hourlyRate')
+    .optional({ nullable: true })
+    .isFloat({ gt: 0 }).withMessage('Hourly rate must be greater than 0'),
+  body('weeklyLimit')
+    .optional({ nullable: true })
+    .isFloat({ gt: 0 }).withMessage('Weekly hour limit must be greater than 0'),
+  handleValidation
+];
+
+const editProfileSchema = [
+  body('hourlyRate')
+    .optional({ nullable: true })
+    .isFloat({ gt: 0, max: 100000 }).withMessage('Hourly rate must be between 0 and 100,000'),
+  body('budgetRange.min')
+    .optional({ nullable: true })
+    .isFloat({ min: 0 }).withMessage('Budget range min must be non-negative'),
+  body('budgetRange.max')
+    .optional({ nullable: true })
+    .isFloat({ min: 0 }).withMessage('Budget range max must be non-negative'),
+  handleValidation
+];
+
+// ─── Payment Schemas ───────────────────────────────────────────────────────────
+
+// refundPayment/releaseEscrow are critical-severity financial actions (per
+// their own audit log entries) but, unlike every sibling admin action here,
+// had no schema at all — an empty/missing reason silently went through.
+const financialActionReasonSchema = [
+  body('reason')
+    .notEmpty().withMessage('Reason is required')
+    .isLength({ min: 5, max: 500 }).withMessage('Reason must be 5–500 characters'),
   handleValidation
 ];
 
@@ -175,6 +245,10 @@ module.exports = {
   adjustWalletSchema,
   freezeWalletSchema,
   resolveDisputeSchema,
+  financialActionReasonSchema,
+  editJobSchema,
+  editContractSchema,
+  editProfileSchema,
   broadcastSchema,
   updateSettingSchema,
   resolveReportSchema,

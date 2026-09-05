@@ -233,7 +233,7 @@ const FreelancerOnboardingForm = () => {
       const portfolio = formData.portfolio || [];
       if (portfolio.length === 0) {
         // Soft warning, do not add to newErrors
-        toast.warn("Portfolio/projects are required for profile verification and visibility.", { autoClose: 6000 });
+        toast.warning("Portfolio/projects are required for profile verification and visibility.", { autoClose: 6000 });
       }
       portfolio.forEach(item => {
         if (!item.title?.trim() || !item.description?.trim()) {
@@ -262,7 +262,7 @@ const FreelancerOnboardingForm = () => {
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
-      toast.warn("Please fix the highlighted fields.");
+      toast.warning("Please fix the highlighted fields.");
       return false;
     }
     return true;

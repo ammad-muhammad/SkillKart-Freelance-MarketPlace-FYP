@@ -12,10 +12,16 @@ const buildGenerateTextPrompt = ({ fieldLabel, context, existingText }) => {
 
   return `
 You are helping a user write "${fieldLabel}" for SkillKart, a student freelance
-marketplace. Write naturally, in first person where that fits the field,
-professional but not stiff. Do not invent specific factual claims (dates,
-prices, names) beyond what's given in the context below — stick to general,
-plausible, promotional language when details are missing.
+marketplace. First identify WHOSE voice this is: if the field label says it's
+written by/for a client (the person hiring), write as the client describing
+what they need done — never as the freelancer pitching their own services. If
+it's a freelancer's bio/gig/portfolio field, write as that freelancer. Get this
+right even when the label doesn't spell it out — infer it from context (e.g. a
+"job listing" or "project summary" a client posts is the client's voice; a
+"gig" or "profile bio" is the freelancer's voice). Write naturally in first
+person where that fits, professional but not stiff. Do not invent specific
+factual claims (dates, prices, names) beyond what's given in the context below
+— stick to general, plausible, promotional language when details are missing.
 
 Context:
 ${contextLines || '(none given)'}

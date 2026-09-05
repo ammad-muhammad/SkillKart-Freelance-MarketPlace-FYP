@@ -4,7 +4,7 @@ const adminController = require('../controllers/admin.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
-const { createUserValidation } = require('../validators/user.validator');
+const { createUserValidation, resetUserPasswordValidation } = require('../validators/user.validator');
 
 /**
  * All routes require authentication and admin role
@@ -37,6 +37,8 @@ router.post('/create-admin',
 
 // Reset any user's password
 router.put('/users/:id/password',
+  resetUserPasswordValidation,
+  validate,
   adminController.resetUserPassword
 );
 

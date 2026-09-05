@@ -5,6 +5,7 @@ const TimeLog = require('../../models/TimeLog');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 const { parsePagination } = require('../../utils/helpers');
+const { round2 } = require('../../utils/constants');
 
 const CONTRACT_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -211,11 +212,20 @@ const forceComplete = async (req, res) => {
     const job = contract.jobId ? await Job.findById(contract.jobId) : null;
     let released = 0;   // net amount paid out to the freelancer, for the admin-facing response
     let clientSpend = 0; // gross amount to roll up into ClientProfile.totalSpent
+    let strandedHourlyAmount = 0; // logged hours the lock couldn't cover — surfaced, not silently dropped
 
     if (contract.type === 'fixed') {
+      const disputedCount = await Milestone.countDocuments({ contractId: contract._id, status: 'disputed' });
+      if (disputedCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This contract has an unresolved milestone dispute — resolve it via the Disputes page before force-completing.'
+        });
+      }
+
       const milestones = await Milestone.find({
         contractId: contract._id,
-        status: { $in: ['funded', 'submitted', 'in_revision', 'disputed'] }
+        status: { $in: ['funded', 'submitted', 'in_revision'] }
       }).sort({ order: 1 });
       for (const milestone of milestones) {
         const { payment, freelancerPayout } = await releaseMilestone({ milestone, contract, job });
@@ -234,6 +244,19 @@ const forceComplete = async (req, res) => {
           break;
         }
       }
+      // Unlike the client-facing end-contract paths (which now block ending
+      // entirely if the lock can't cover every pending log), force-complete
+      // is a deliberate admin override — it's allowed to proceed regardless,
+      // but must not do so SILENTLY: any hours the lock couldn't cover are
+      // reported back so the admin can compensate the freelancer manually
+      // (e.g. a wallet adjustment) if warranted, rather than that money
+      // just vanishing with no record anyone was ever short.
+      const stillPending = await TimeLog.find({ contractId: contract._id, status: 'pending' }).select('duration').lean();
+      const strandedMs = stillPending.reduce((sum, log) => sum + (log.duration || 0), 0);
+      strandedHourlyAmount = round2((strandedMs / 3600000) * (contract.hourlyRate || 0));
+      if (strandedHourlyAmount > 0) {
+        console.warn(`[Contracts] forceComplete: Rs. ${strandedHourlyAmount} of logged hours could not be settled (escrow exhausted) on contract ${contract._id}`);
+      }
       await refundRemainingHourlyEscrow({ contract, job });
     }
 
@@ -250,13 +273,23 @@ const forceComplete = async (req, res) => {
       await finalizeJobCompletion(job, { clientSpend, skipEarningsCredit: true });
     }
 
-    recordHistory(contract._id, 'admin_force_complete', `[Admin] Force-completed. Released ${released} to freelancer. ${req.body.reason || ''}`.trim(), req.admin.email, { status: prev }, { status: 'completed', released });
+    const strandedNote = strandedHourlyAmount > 0
+      ? ` WARNING: Rs. ${strandedHourlyAmount} of logged hours could not be settled (escrow exhausted) — freelancer may need manual compensation.`
+      : '';
+    recordHistory(contract._id, 'admin_force_complete', `[Admin] Force-completed. Released ${released} to freelancer. ${req.body.reason || ''}`.trim() + strandedNote, req.admin.email, { status: prev }, { status: 'completed', released, strandedHourlyAmount });
     auditLog(req, {
       action: 'contract.force_complete', category: 'contract', resource: 'Contract',
-      resourceId: contract._id, previousValue: { status: prev }, newValue: { status: 'completed', released },
+      resourceId: contract._id, previousValue: { status: prev }, newValue: { status: 'completed', released, strandedHourlyAmount },
       notes: req.body.reason, severity: 'critical'
     });
-    return res.status(200).json({ success: true, message: 'Contract force-completed', released });
+    return res.status(200).json({
+      success: true,
+      message: strandedHourlyAmount > 0
+        ? `Contract force-completed. Rs. ${strandedHourlyAmount} of logged hours could not be settled (escrow exhausted) — consider a manual wallet adjustment for the freelancer.`
+        : 'Contract force-completed',
+      released,
+      strandedHourlyAmount
+    });
   } catch (err) {
     console.error('[Contracts] forceComplete error:', err);
     return res.status(500).json({ success: false, message: 'Failed to force-complete contract' });

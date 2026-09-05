@@ -390,7 +390,7 @@ export const AdjustWalletModal = ({ open, userId, onClose, onSaved }) => {
       </div>
       <div className="ap-form-group">
         <label className="ap-label">Amount (PKR)</label>
-        <input className="ap-input" type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" />
+        <input className="ap-input" type="number" min="0" max="1000000" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" />
       </div>
       <div className="ap-form-group">
         <label className="ap-label">Reason (required, min 5 chars)</label>
@@ -778,7 +778,7 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
           <div className="ap-form-group"><label className="ap-label">Professional title</label><input className="ap-input" value={form.title} onChange={e => set('title', e.target.value)} /></div>
           <div className="ap-form-group"><label className="ap-label">Bio</label><textarea className="ap-textarea" value={form.bio} onChange={e => set('bio', e.target.value)} style={{ minHeight: 90 }} /></div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Hourly rate (PKR)</label><input className="ap-input" type="number" value={form.hourlyRate} onChange={e => set('hourlyRate', e.target.value)} /></div>
+            <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Hourly rate (PKR)</label><input className="ap-input" type="number" min="1" max="100000" value={form.hourlyRate} onChange={e => set('hourlyRate', e.target.value)} /></div>
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Phone</label><input className="ap-input" value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
@@ -847,8 +847,8 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
             <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Timezone</label><input className="ap-input" value={form.timezone} onChange={e => set('timezone', e.target.value)} /></div>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Budget min (PKR)</label><input className="ap-input" type="number" value={form.budgetRange.min} onChange={e => setNested('budgetRange', 'min', e.target.value)} /></div>
-            <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Budget max (PKR)</label><input className="ap-input" type="number" value={form.budgetRange.max} onChange={e => setNested('budgetRange', 'max', e.target.value)} /></div>
+            <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Budget min (PKR)</label><input className="ap-input" type="number" min="0" value={form.budgetRange.min} onChange={e => setNested('budgetRange', 'min', e.target.value)} /></div>
+            <div className="ap-form-group" style={{ flex: 1 }}><label className="ap-label">Budget max (PKR)</label><input className="ap-input" type="number" min="0" value={form.budgetRange.max} onChange={e => setNested('budgetRange', 'max', e.target.value)} /></div>
           </div>
         </>
       )}
@@ -1216,11 +1216,11 @@ export const EditJobModal = ({ open, job, onClose, onSaved }) => {
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Budget min (PKR)</label>
-          <input className="ap-input" type="number" value={form.budgetMin ?? ''} onChange={e => set('budgetMin', e.target.value)} />
+          <input className="ap-input" type="number" min="0" value={form.budgetMin ?? ''} onChange={e => set('budgetMin', e.target.value)} />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Budget max (PKR)</label>
-          <input className="ap-input" type="number" value={form.budgetMax ?? ''} onChange={e => set('budgetMax', e.target.value)} />
+          <input className="ap-input" type="number" min="0" value={form.budgetMax ?? ''} onChange={e => set('budgetMax', e.target.value)} />
         </div>
       </div>
 
@@ -1506,15 +1506,15 @@ export const EditContractModal = ({ open, contract, onClose, onSaved }) => {
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Fixed price (PKR)</label>
-          <input className="ap-input" type="number" value={form.fixedPrice ?? ''} onChange={e => set('fixedPrice', e.target.value)} />
+          <input className="ap-input" type="number" min="1" value={form.fixedPrice ?? ''} onChange={e => set('fixedPrice', e.target.value)} />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Hourly rate (PKR)</label>
-          <input className="ap-input" type="number" value={form.hourlyRate ?? ''} onChange={e => set('hourlyRate', e.target.value)} />
+          <input className="ap-input" type="number" min="1" value={form.hourlyRate ?? ''} onChange={e => set('hourlyRate', e.target.value)} />
         </div>
         <div className="ap-form-group" style={{ flex: 1 }}>
           <label className="ap-label">Weekly hour limit</label>
-          <input className="ap-input" type="number" value={form.weeklyLimit ?? ''} onChange={e => set('weeklyLimit', e.target.value)} />
+          <input className="ap-input" type="number" min="1" value={form.weeklyLimit ?? ''} onChange={e => set('weeklyLimit', e.target.value)} />
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12 }}>

@@ -547,6 +547,9 @@ const updateSetting = async (req, res) => {
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 
+// Selectable overview windows for the Analytics page's date-range tabs.
+const ANALYTICS_RANGE_DAYS = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+
 const getAnalytics = async (req, res) => {
   try {
     const User = require('../../models/User');
@@ -554,12 +557,28 @@ const getAnalytics = async (req, res) => {
     const Contract = require('../../models/Contract');
     const Payment = require('../../models/Payment');
 
+    // Which window the frontend's date-range tabs selected — previously
+    // collected (setTimeRange) but never actually sent to this endpoint, so
+    // every tab showed the exact same all-time data.
+    const rangeKey = ANALYTICS_RANGE_DAYS[req.query.range] ? req.query.range : '30d';
+    const days = ANALYTICS_RANGE_DAYS[rangeKey];
+    const now = new Date();
+    const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const previousSince = new Date(since.getTime() - days * 24 * 60 * 60 * 1000);
+
     const [
       usersByRole,
       jobsByStatus,
       contractsByStatus,
       revenueByMonth,
-      topFreelancers
+      topFreelancers,
+      categoryBreakdown,
+      currentTotals,
+      previousTotals,
+      currentNewUsers,
+      previousNewUsers,
+      currentJobsWindow,
+      previousJobsWindow
     ] = await Promise.all([
       User.aggregate([
         { $match: { deletedAt: null } },
@@ -573,7 +592,7 @@ const getAnalytics = async (req, res) => {
       ]),
       Payment.aggregate([
         { $match: { status: 'released' } },
-        { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$releasedAt' } }, revenue: { $sum: '$platformFee' } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$releasedAt' } }, revenue: { $sum: '$platformFee' }, grossVolume: { $sum: '$totalAmount' } } },
         { $sort: { _id: 1 } },
         { $limit: 12 }
       ]),
@@ -585,17 +604,88 @@ const getAnalytics = async (req, res) => {
         { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
         { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
         { $project: { email: '$user.email', firstName: '$user.firstName', lastName: '$user.lastName', totalEarnings: 1, jobCount: 1 } }
+      ]),
+      // Real category breakdown for the market-share chart — replaces a
+      // previously fully hardcoded array of fabricated names/counts.
+      Job.aggregate([
+        { $match: { category: { $exists: true, $ne: null, $ne: '' } } },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]),
+      // Real gross transaction volume + platform fee revenue for the
+      // selected window — the frontend previously derived "platform fees"
+      // as a fabricated flat 8% of a number that was already the fee total
+      // mislabeled as gross revenue (the real fee rate is 0.5%, PLATFORM_FEE_RATE).
+      Payment.aggregate([
+        { $match: { status: 'released', releasedAt: { $gte: since } } },
+        { $group: { _id: null, grossVolume: { $sum: '$totalAmount' }, platformFees: { $sum: '$platformFee' } } }
+      ]),
+      Payment.aggregate([
+        { $match: { status: 'released', releasedAt: { $gte: previousSince, $lt: since } } },
+        { $group: { _id: null, grossVolume: { $sum: '$totalAmount' }, platformFees: { $sum: '$platformFee' } } }
+      ]),
+      // Real period-over-period deltas for the KPI cards — replaces four
+      // hardcoded "↑ 18.4% / 22.1% / 14.8% / 3.2%" strings that never
+      // changed regardless of what actually happened on the platform.
+      User.countDocuments({ deletedAt: null, createdAt: { $gte: since } }),
+      User.countDocuments({ deletedAt: null, createdAt: { $gte: previousSince, $lt: since } }),
+      Job.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: { _id: null, total: { $sum: 1 }, completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } } } }
+      ]),
+      Job.aggregate([
+        { $match: { createdAt: { $gte: previousSince, $lt: since } } },
+        { $group: { _id: null, total: { $sum: 1 }, completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } } } }
       ])
     ]);
+
+    const totalCategoryJobs = categoryBreakdown.reduce((sum, c) => sum + c.count, 0) || 1;
+    const categories = categoryBreakdown.map((c) => ({
+      name: c._id,
+      count: c.count,
+      percentage: Math.round((c.count / totalCategoryJobs) * 100)
+    }));
+
+    // One-decimal percent change; a zero prior-period baseline reads as
+    // "+100%" if there's any current activity, "0%" otherwise — there's no
+    // meaningful ratio to compute against zero.
+    const pctChange = (curr, prev) => {
+      if (!prev) return curr > 0 ? 100 : 0;
+      return Math.round(((curr - prev) / prev) * 1000) / 10;
+    };
+
+    const curr = currentTotals[0] || { grossVolume: 0, platformFees: 0 };
+    const prev = previousTotals[0] || { grossVolume: 0, platformFees: 0 };
+    const currJobs = currentJobsWindow[0] || { total: 0, completed: 0 };
+    const prevJobs = previousJobsWindow[0] || { total: 0, completed: 0 };
+    const currCompletionRate = currJobs.total > 0 ? (currJobs.completed / currJobs.total) * 100 : 0;
+    const prevCompletionRate = prevJobs.total > 0 ? (prevJobs.completed / prevJobs.total) * 100 : 0;
 
     return res.status(200).json({
       success: true,
       analytics: {
+        range: rangeKey,
         usersByRole,
         jobsByStatus,
         contractsByStatus,
         revenueByMonth,
-        topFreelancers
+        topFreelancers,
+        categoryBreakdown: categories,
+        window: {
+          grossVolume: curr.grossVolume,
+          platformFees: curr.platformFees,
+          newUsers: currentNewUsers,
+          completionRate: Math.round(currCompletionRate * 10) / 10,
+          completedJobs: currJobs.completed,
+          totalJobs: currJobs.total
+        },
+        deltas: {
+          grossVolume: pctChange(curr.grossVolume, prev.grossVolume),
+          platformFees: pctChange(curr.platformFees, prev.platformFees),
+          newUsers: pctChange(currentNewUsers, previousNewUsers),
+          completionRate: pctChange(currCompletionRate, prevCompletionRate)
+        }
       }
     });
   } catch (err) {

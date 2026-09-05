@@ -111,6 +111,18 @@ const refundPayment = async (req, res) => {
     if (existing.status === 'refunded') return res.status(400).json({ success: false, message: 'Payment already refunded' });
     if (existing.status === 'released') return res.status(400).json({ success: false, message: 'Cannot refund a released payment' });
 
+    // A milestone-linked payment must not be cancelled behind milestone.service.js's
+    // back — Milestone.status (which the client/freelancer UI and next-milestone
+    // funding both key off) would otherwise stay stuck at its old value forever
+    // even though the Payment now says 'refunded'.
+    if (existing.milestoneId) {
+      const Milestone = require('../../models/Milestone');
+      const milestone = await Milestone.findById(existing.milestoneId);
+      if (milestone && milestone.status === 'disputed') {
+        return res.status(400).json({ success: false, message: 'This milestone has an unresolved dispute — resolve it via the Disputes page instead.' });
+      }
+    }
+
     const refundAmount = round2(existing.depositAmount || existing.totalAmount);
     const prev = existing.status;
 
@@ -128,6 +140,13 @@ const refundPayment = async (req, res) => {
       { userId: payment.clientId },
       { $inc: { walletBalance: refundAmount } }
     );
+
+    // Keep the linked Milestone's own status in sync with the Payment it backs
+    // (mirrors adminPanel/disputes.controller.js's refund_client resolution).
+    if (payment.milestoneId) {
+      const Milestone = require('../../models/Milestone');
+      await Milestone.updateOne({ _id: payment.milestoneId }, { status: 'refunded' });
+    }
 
     // Cancel the linked contract if any
     if (payment.contractId) {
@@ -159,6 +178,36 @@ const releaseEscrow = async (req, res) => {
     if (existing.status === 'released') return res.status(400).json({ success: false, message: 'Payment already released' });
     if (existing.status === 'refunded') return res.status(400).json({ success: false, message: 'Cannot release a refunded payment' });
     if (!existing.freelancerId) return res.status(400).json({ success: false, message: 'No freelancer on this payment' });
+
+    // A milestone-linked payment must release through milestone.service.js —
+    // it's the only place allowed to move escrow money for a Milestone, and
+    // approveMilestone also advances Contract.currentMilestoneOrder / completes
+    // the contract, which this generic ledger action has no way to do itself.
+    // Crediting the freelancer's wallet directly here (the old behavior) left
+    // the Milestone frozen in its prior status forever — Payment said
+    // "released" but the state machine driving funding-the-next-milestone
+    // never agreed.
+    if (existing.milestoneId) {
+      const Milestone = require('../../models/Milestone');
+      const Contract = require('../../models/Contract');
+      const Job = require('../../models/Job');
+      const { approveMilestone } = require('../../services/milestone.service');
+
+      const milestone = await Milestone.findById(existing.milestoneId);
+      if (!milestone) return res.status(400).json({ success: false, message: 'Linked milestone not found' });
+      const contract = existing.contractId ? await Contract.findById(existing.contractId) : null;
+      if (!contract) return res.status(400).json({ success: false, message: 'Linked contract not found' });
+      const job = contract.jobId ? await Job.findById(contract.jobId) : null;
+
+      const { payment, freelancerPayout } = await approveMilestone({ milestone, contract, job });
+
+      auditLog(req, {
+        action: 'payment.release', category: 'payment', resource: 'Payment',
+        resourceId: payment._id, previousValue: { status: existing.status },
+        newValue: { status: 'released', payout: freelancerPayout }, notes: reason, severity: 'critical'
+      });
+      return res.status(200).json({ success: true, message: 'Milestone escrow released to freelancer', payout: freelancerPayout, fee: payment.platformFee });
+    }
 
     const fee = round2(existing.totalAmount * (existing.feeRate || PLATFORM_FEE_RATE));
     const payout = round2(existing.totalAmount - fee);

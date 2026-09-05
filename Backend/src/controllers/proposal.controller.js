@@ -245,6 +245,14 @@ const acceptProposal = asyncHandler(async (req, res) => {
   if (!isHourly) {
     const agreedPrice = round2(Number(proposal.fixedPrice) || 0);
     if (Array.isArray(milestones) && milestones.length > 0) {
+      // Every individual amount must be positive, not just the sum — a
+      // negative entry offset by an inflated positive one still sums
+      // correctly, but fundMilestoneFromWallet's atomic debit
+      // ($inc: walletBalance: -milestone.amount) would then CREDIT the
+      // client's wallet for that milestone instead of debiting it.
+      if (milestones.some((m) => !(Number(m.amount) > 0))) {
+        throw new BadRequestError('Each milestone amount must be greater than 0');
+      }
       const sum = round2(milestones.reduce((s, m) => s + (Number(m.amount) || 0), 0));
       if (sum !== agreedPrice) {
         throw new BadRequestError(`Milestone amounts must sum to the agreed price (Rs. ${agreedPrice}), got Rs. ${sum}`);

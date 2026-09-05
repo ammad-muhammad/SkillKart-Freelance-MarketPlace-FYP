@@ -12,10 +12,12 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 // unreachable), not a random app bug.
 const AI_OUT_OF_SERVICE_MSG = 'AI is temporarily out of service. Please try again in a moment.';
 
-// Is this request an AI request? (any /ai/* or /matchmaking endpoint)
+// Is this request an AI request? (any /ai/*, /matchmaking, or /skill-tests/*
+// endpoint — skill test generation/evaluation runs through the same
+// multi-provider AI router chain, just under a different URL prefix)
 const isAiRequest = (config) => {
   const url = config?.url || '';
-  return /(^|\/)ai(\/|$)/.test(url) || url.includes('/matchmaking');
+  return /(^|\/)ai(\/|$)/.test(url) || url.includes('/matchmaking') || url.includes('/skill-tests/');
 };
 
 // Did this failure come from the AI subsystem? True for AI endpoints, and for
