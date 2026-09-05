@@ -82,7 +82,7 @@ export default function FreelancerWallet() {
 
   const handleConnectStripe = async () => {
     try {
-      toast('Initiating Stripe connection...');
+      toast.info('Initiating Stripe connection...');
       const res = await paymentsAPI.connectStripe();
       if (res.data?.data?.url) {
         window.location.href = res.data.data.url;
@@ -99,7 +99,7 @@ export default function FreelancerWallet() {
       const res = await paymentsAPI.withdrawFunds(withdrawAmount, withdrawMethod);
       
       if (res.data?.data?.needs_onboarding) {
-        toast('Stripe onboarding required. Redirecting...');
+        toast.info('Stripe onboarding required. Redirecting...');
         const connectRes = await paymentsAPI.connectStripe();
         if (connectRes.data?.data?.url) {
           window.location.href = connectRes.data.data.url;
@@ -340,9 +340,9 @@ export default function FreelancerWallet() {
               </button>
               <button 
                 className="fl-btn fl-btn--primary" 
-                disabled={!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing}
+                disabled={!withdrawAmount || Number(withdrawAmount) < 5 || Number(withdrawAmount) > walletBalance || withdrawing}
                 onClick={executeWithdraw}
-                style={{ flex: 2, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 10px 15px -3px rgba(4, 46, 76, 0.25)', color: 'var(--color-white)', cursor: (!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing) ? 'not-allowed' : 'pointer', opacity: (!withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > walletBalance || withdrawing) ? 0.6 : 1 }}
+                style={{ flex: 2, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 10px 15px -3px rgba(4, 46, 76, 0.25)', color: 'var(--color-white)', cursor: (!withdrawAmount || Number(withdrawAmount) < 5 || Number(withdrawAmount) > walletBalance || withdrawing) ? 'not-allowed' : 'pointer', opacity: (!withdrawAmount || Number(withdrawAmount) < 5 || Number(withdrawAmount) > walletBalance || withdrawing) ? 0.6 : 1 }}
               >
                 {withdrawing ? 'Processing...' : 'Confirm Withdrawal'}
               </button>

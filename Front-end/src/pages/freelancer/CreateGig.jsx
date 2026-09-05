@@ -25,9 +25,9 @@ const EMPTY_GIG = {
   skills: [],
   shortDescription: '',
   pricing: {
-    basic: { price: '', delivery: '', revisions: '' },
-    standard: { price: '', delivery: '', revisions: '' },
-    premium: { price: '', delivery: '', revisions: '' },
+    basic: { price: '', deliveryTime: '', revisions: '' },
+    standard: { price: '', deliveryTime: '', revisions: '' },
+    premium: { price: '', deliveryTime: '', revisions: '' },
   },
   fullDescription: '',
   faqs: [],
@@ -129,8 +129,8 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
         type="number"
         className="fl-input"
         min={1}
-        value={data.delivery}
-        onChange={(e) => onChange({ ...data, delivery: e.target.value })}
+        value={data.deliveryTime}
+        onChange={(e) => onChange({ ...data, deliveryTime: e.target.value })}
         placeholder="e.g. 7"
       />
     </div>
@@ -479,7 +479,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
               <p className="fl-review-pricing__tier-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>{icon} {label}</p>
               <p className="fl-review-pricing__tier-val">Rs. {gig.pricing[key].price || '—'}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
-                {gig.pricing[key].delivery || '—'} days · {gig.pricing[key].revisions || '—'} revisions
+                {gig.pricing[key].deliveryTime || '—'} days · {gig.pricing[key].revisions || '—'} revisions
               </p>
             </div>
           ))}
@@ -613,7 +613,7 @@ const CreateGig = () => {
       // Any optional tier that's been started must also have a positive price.
       for (const tier of ['standard', 'premium']) {
         const t = gig.pricing[tier];
-        const started = t.price || t.delivery || t.revisions;
+        const started = t.price || t.deliveryTime || t.revisions;
         if (started && (!Number(t.price) || Number(t.price) <= 0)) {
           showToast(`The ${tier} package needs a valid price.`, 'error');
           return false;

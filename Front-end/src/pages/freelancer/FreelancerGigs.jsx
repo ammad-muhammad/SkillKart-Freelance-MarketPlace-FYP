@@ -111,9 +111,9 @@ const FreelancerGigs = () => {
     subcategory: '',
     skills: [],
     pricing: {
-      basic: { price: 0, delivery: 1, revisions: 1 },
-      standard: { price: 0, delivery: 1, revisions: 1 },
-      premium: { price: 0, delivery: 1, revisions: 1 }
+      basic: { price: 0, deliveryTime: 1, revisions: 1 },
+      standard: { price: 0, deliveryTime: 1, revisions: 1 },
+      premium: { price: 0, deliveryTime: 1, revisions: 1 }
     },
     media: { banner: null, images: [], videoLink: '', portfolioLinks: [] },
     faqs: []
@@ -144,19 +144,19 @@ const FreelancerGigs = () => {
       subcategory: gig.subcategory || '',
       skills: Array.isArray(gig.skills) ? gig.skills : [],
       pricing: {
-        basic: { 
+        basic: {
           price: gig.pricing?.basic?.price || 0,
-          delivery: gig.pricing?.basic?.delivery || 1,
+          deliveryTime: gig.pricing?.basic?.deliveryTime || 1,
           revisions: gig.pricing?.basic?.revisions || 1
         },
-        standard: { 
+        standard: {
           price: gig.pricing?.standard?.price || 0,
-          delivery: gig.pricing?.standard?.delivery || 1,
+          deliveryTime: gig.pricing?.standard?.deliveryTime || 1,
           revisions: gig.pricing?.standard?.revisions || 1
         },
-        premium: { 
+        premium: {
           price: gig.pricing?.premium?.price || 0,
-          delivery: gig.pricing?.premium?.delivery || 1,
+          deliveryTime: gig.pricing?.premium?.deliveryTime || 1,
           revisions: gig.pricing?.premium?.revisions || 1
         }
       },
@@ -578,12 +578,12 @@ const FreelancerGigs = () => {
                     <label>Delivery (days)</label>
                     <input 
                       type="number" 
-                      value={formData.pricing[tier].delivery}
+                      value={formData.pricing[tier].deliveryTime}
                       onChange={(e) => setFormData({
-                        ...formData, 
+                        ...formData,
                         pricing: {
                           ...formData.pricing,
-                          [tier]: { ...formData.pricing[tier], delivery: e.target.value }
+                          [tier]: { ...formData.pricing[tier], deliveryTime: e.target.value }
                         }
                       })}
                       required 

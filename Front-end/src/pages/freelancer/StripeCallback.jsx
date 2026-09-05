@@ -14,7 +14,7 @@ export default function StripeCallback() {
         if (res.data?.data?.stripeOnboardingComplete) {
           toast.success('Stripe account successfully connected!');
         } else {
-          toast('Stripe onboarding incomplete. You can try again from your wallet.');
+          toast.info('Stripe onboarding incomplete. You can try again from your wallet.');
         }
         navigate('/freelancer/wallet', { replace: true });
       } catch (err) {

@@ -211,7 +211,10 @@ const ClientProjects = () => {
 
   const handleRaiseDispute = async (e) => {
     e.preventDefault();
-    if (!disputeReason.trim()) return;
+    if (disputeReason.trim().length < 5) {
+      showToast('Dispute reason must be at least 5 characters.', 'error');
+      return;
+    }
     try {
       setActioning(true);
       await contractsAPI.raiseDispute(disputeModal.contractId, disputeReason, disputeDesc);

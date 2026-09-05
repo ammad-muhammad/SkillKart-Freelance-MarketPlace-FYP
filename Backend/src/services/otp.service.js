@@ -75,8 +75,19 @@ const resendOTP = async (email, purpose = 'email_verification') => {
       expiryMinutes: 10
     });
 
-    // Send OTP via email
-    await sendOTPEmail(email, otp, purpose);
+    // Send OTP via email. A provider hiccup here must not throw — this
+    // endpoint exists specifically so a user stuck on the OTP screen (e.g.
+    // because the first send failed) can recover; if the retry ALSO fails,
+    // they need a clean error response, not a 500, to actually see why.
+    try {
+      await sendOTPEmail(email, otp, purpose);
+    } catch (sendErr) {
+      console.error('[resendOTP] Email send failed:', sendErr.message);
+      return {
+        success: false,
+        message: 'Failed to send verification email. Please try again in a moment.'
+      };
+    }
 
     return {
       success: true,

@@ -107,7 +107,7 @@ const SkillTest = () => {
     onWarn: (reason) => {
       logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
       setWarning(reason);
-      toast.warn('Final warning: leaving the test again will cancel it.');
+      toast.warning('Final warning: leaving the test again will cancel it.');
     },
     onAbort: (reason) => {
       logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
@@ -133,7 +133,7 @@ const SkillTest = () => {
     onWarn: (reason) => {
       logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
       setWarning(reason);
-      toast.warn('Camera warning: repeated issues will cancel the test.');
+      toast.warning('Camera warning: repeated issues will cancel the test.');
     },
     onAbort: (reason) => {
       logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);

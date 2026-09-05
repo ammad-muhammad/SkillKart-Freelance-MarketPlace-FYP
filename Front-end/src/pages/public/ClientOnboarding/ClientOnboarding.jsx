@@ -286,7 +286,7 @@ const ClientOnboarding = () => {
         const order = STEP_FIELD_ORDER[step] || [];
         const firstInvalidField = order.find((key) => newErrors[key]);
         if (firstInvalidField) {
-            toast.warn(newErrors[firstInvalidField]);
+            toast.warning(newErrors[firstInvalidField]);
             const el = fieldRefs.current[firstInvalidField];
             if (el?.scrollIntoView) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });

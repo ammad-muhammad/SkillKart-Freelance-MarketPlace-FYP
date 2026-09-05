@@ -18,12 +18,27 @@ const createUser = asyncHandler(async (req, res) => {
     email, firstName, lastName, password, role
   });
 
-  await otpService.generateAndSendOTP(email, 'email_verification');
-  
+  // The account is already created at this point — an email-provider hiccup
+  // (e.g. an expired Gmail OAuth token) must not turn into a 500 that leaves
+  // the user stuck with a real account they can never verify (retrying
+  // registration would just hit a duplicate-email error). Let them proceed
+  // to the OTP screen either way; its "Resend Code" action gives the email
+  // provider another chance.
+  let otpSent = true;
+  try {
+    await otpService.generateAndSendOTP(email, 'email_verification');
+  } catch (err) {
+    otpSent = false;
+    console.error('[createUser] OTP send failed after account creation:', err.message);
+  }
+
   sendSuccess(res, {
-    message: 'User Created and OTP sent to your email',
-    data: { 
+    message: otpSent
+      ? 'User Created and OTP sent to your email'
+      : 'Account created, but we could not send your verification email right now — use "Resend Code" on the next screen.',
+    data: {
       user,
+      otpSent
     }
   });
 });

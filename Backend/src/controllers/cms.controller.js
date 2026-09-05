@@ -1,6 +1,7 @@
 const cmsService = require('../services/cms.service');
 const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
+const { NotFoundError } = require('../utils/apiError');
 
 /**
  * Create CMS page

@@ -138,7 +138,14 @@ const updateJobValidation = [
 
   body('deadline')
     .optional()
-    .isISO8601().withMessage('Invalid deadline format'),
+    .isISO8601().withMessage('Invalid deadline format')
+    .custom((value) => {
+      if (!value) return true;
+      if (new Date(value) <= new Date()) {
+        throw new Error('Deadline must be in the future');
+      }
+      return true;
+    }),
 
   // Publishing a draft (status: 'open') requires a deadline. The request may
   // not include `deadline` at all if it was already set earlier, so check

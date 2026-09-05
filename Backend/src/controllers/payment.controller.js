@@ -12,7 +12,7 @@ const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
 const { fundMilestoneFromWallet } = require('../services/milestone.service');
 const { estimateWeeklyLockAmount, lockHourlyEscrow, drawDownForTimeLog } = require('../services/hourlyEscrow.service');
-const { PLATFORM_FEE_RATE: FEE_RATE, round2 } = require('../utils/constants');
+const { PLATFORM_FEE_RATE: FEE_RATE, getPlatformFeeRate, getWithdrawalMinAmount, round2 } = require('../utils/constants');
 
 async function resolveAmount(job) {
   // If a contract exists, use its price
@@ -37,7 +37,17 @@ async function resolveAmount(job) {
 // Find or create the escrow record for a hired job.
 async function getOrCreatePayment(job) {
   let payment = await Payment.findOne({ jobId: job._id });
-  if (payment) return payment;
+  if (payment) {
+    // A milestone-linked Payment belongs to the new wallet-native escrow
+    // system (milestone.service.js), never this legacy 50/50 flow — even
+    // though both use Payment.type:'job_escrow'. Reusing it here would let a
+    // client pay through this flow AND fund/release the same milestone
+    // through the milestone endpoints, double-charging/double-paying.
+    if (payment.milestoneId) {
+      throw new BadRequestError('This project uses milestone-based escrow — use the milestone endpoints instead.');
+    }
+    return payment;
+  }
 
   const total = round2(await resolveAmount(job));
   const deposit = round2(total / 2);
@@ -51,7 +61,7 @@ async function getOrCreatePayment(job) {
     totalAmount: total,
     depositAmount: deposit,
     finalAmount: final,
-    feeRate: FEE_RATE,
+    feeRate: await getPlatformFeeRate(),
     status: 'deposit_pending',
     type: 'job_escrow'
   });
@@ -88,12 +98,14 @@ const startDeposit = asyncHandler(async (req, res) => {
     throw new BadRequestError('Deposit has already been paid for this project');
   }
 
-  // If client has enough balance in their wallet, deduct it directly
-  const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
-  if (clientProfile && clientProfile.walletBalance >= payment.depositAmount) {
-    clientProfile.walletBalance = round2(clientProfile.walletBalance - payment.depositAmount);
-    await clientProfile.save();
-
+  // Atomic conditional debit (see startFinal for why this can't be a plain
+  // read-then-write) — a double-click/retry must not debit the wallet twice.
+  const updatedClientProfile = await ClientProfile.findOneAndUpdate(
+    { userId: req.user._id, walletBalance: { $gte: payment.depositAmount } },
+    { $inc: { walletBalance: -payment.depositAmount } },
+    { new: true }
+  );
+  if (updatedClientProfile) {
     payment.status = 'deposit_paid';
     payment.depositPaidAt = new Date();
     payment.stripe.simulated = true;
@@ -143,15 +155,20 @@ const startFinal = asyncHandler(async (req, res) => {
 
   const payment = await Payment.findOne({ jobId: job._id, type: 'job_escrow' });
   if (!payment) throw new BadRequestError('No payment record — pay the deposit first');
+  if (payment.milestoneId) throw new BadRequestError('This project uses milestone-based escrow — use the milestone endpoints instead.');
   if (payment.status === 'deposit_pending') throw new BadRequestError('Pay the 50% deposit before the final payment');
   if (payment.status === 'released') throw new BadRequestError('This project has already been fully paid');
 
-  // If client has enough balance in their wallet, deduct it directly
-  const clientProfile = await ClientProfile.findOne({ userId: req.user._id });
-  if (clientProfile && clientProfile.walletBalance >= payment.finalAmount) {
-    clientProfile.walletBalance = round2(clientProfile.walletBalance - payment.finalAmount);
-    await clientProfile.save();
-
+  // Atomic conditional debit — a plain read-then-write here let two concurrent
+  // requests (double-click, network retry) both pass the balance check before
+  // either wrote, debiting the client's wallet only once instead of twice
+  // while both branches proceeded to mark the payment released.
+  const updatedClientProfile = await ClientProfile.findOneAndUpdate(
+    { userId: req.user._id, walletBalance: { $gte: payment.finalAmount } },
+    { $inc: { walletBalance: -payment.finalAmount } },
+    { new: true }
+  );
+  if (updatedClientProfile) {
     payment.platformFee = round2(payment.totalAmount * payment.feeRate);
     payment.freelancerPayout = round2(payment.totalAmount - payment.platformFee);
     payment.status = 'released';
@@ -218,6 +235,7 @@ const confirmPayment = asyncHandler(async (req, res) => {
 
   const payment = await Payment.findOne({ jobId: job._id });
   if (!payment) throw new BadRequestError('No payment record for this project');
+  if (payment.milestoneId) throw new BadRequestError('This project uses milestone-based escrow — use the milestone endpoints instead.');
 
   const expectedSession = phase === 'deposit' ? payment.stripe.depositSessionId : payment.stripe.finalSessionId;
   const verifyId = sessionId || expectedSession;
@@ -493,8 +511,9 @@ const stripeConnectCallback = asyncHandler(async (req, res) => {
  */
 const withdrawFunds = asyncHandler(async (req, res) => {
   const { amount, method } = req.body;
-  if (!amount || Number(amount) <= 0) {
-    throw new BadRequestError('Invalid withdrawal amount');
+  const minWithdrawal = await getWithdrawalMinAmount();
+  if (!amount || Number(amount) < minWithdrawal) {
+    throw new BadRequestError(`Minimum withdrawal amount is Rs. ${minWithdrawal}`);
   }
   
   const allowedMethods = ['bank_transfer', 'paypal', 'stripe'];
@@ -522,8 +541,24 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     // Note: We bypass manual stripeBalance checking because Stripe holds test
     // mode balances in USD while our app amounts are in PKR. Comparing them
     // directly (e.g. 100 USD vs 20000 PKR) fails incorrectly.
-    // Instead, we trust the local walletBalance (already checked above) 
+    // Instead, we trust the local walletBalance (already checked above)
     // and rely on Stripe to throw an error if the actual converted balance is too low.
+
+    // Reserve the funds atomically BEFORE calling Stripe. Two concurrent
+    // withdrawal requests can both pass the plain balance check above; if the
+    // debit happened only after createPayout(), both could reach that real,
+    // irreversible call and both would succeed — debiting the ledger only
+    // once afterward doesn't undo a second real payout. This conditional
+    // update lets at most one concurrent request past it, so at most one can
+    // ever reach createPayout() below.
+    const reserved = await FreelancerProfile.findOneAndUpdate(
+      { userId: req.user._id, walletBalance: { $gte: Number(amount) } },
+      { $inc: { walletBalance: -Number(amount) } },
+      { new: true }
+    );
+    if (!reserved) {
+      throw new BadRequestError('Insufficient funds available for withdrawal. A concurrent withdrawal may have just been processed — check your withdrawal history before retrying.');
+    }
 
     // Execute Real Stripe Payout — a real (non-simulated) Connect account can
     // still fail here (no bank/debit account attached, capabilities not yet
@@ -533,6 +568,11 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     try {
       payout = await createPayout(amount, profile.stripeAccountId, 'pkr');
     } catch (err) {
+      // The real payout never happened — refund the reservation.
+      await FreelancerProfile.findOneAndUpdate(
+        { userId: req.user._id },
+        { $inc: { walletBalance: Number(amount) } }
+      );
       console.error('Stripe payout failed:', err.message);
       throw new BadRequestError(
         `Stripe payout failed: ${err.message || 'your connected account may be missing a payout method.'} Please finish your Stripe onboarding (add a bank/debit account) and try again.`
@@ -547,24 +587,9 @@ const withdrawFunds = asyncHandler(async (req, res) => {
       transactionId: payout.id
     });
 
-    // Atomic conditional debit — two concurrent withdrawal requests (a
-    // double-click, or a client retry after a slow response) could otherwise
-    // both pass the balance check above before either writes, debiting the
-    // wallet only once instead of twice while creating two Withdrawal rows.
-    const updatedProfile = await FreelancerProfile.findOneAndUpdate(
-      { userId: req.user._id, walletBalance: { $gte: Number(amount) } },
-      { $inc: { walletBalance: -Number(amount) } },
-      { new: true }
-    );
-    if (!updatedProfile) {
-      // The payout already happened by this point — this only fires if a
-      // concurrent request won the race and drained the balance first.
-      throw new BadRequestError('Insufficient funds available for withdrawal. A concurrent withdrawal may have just been processed — check your withdrawal history before retrying.');
-    }
-
     notifications.onWithdrawalRequested(req.user._id, { amount, method });
 
-    return sendSuccess(res, { message: `Payout of PKR ${amount} to your bank account initiated!`, data: { withdrawal, walletBalance: updatedProfile.walletBalance } });
+    return sendSuccess(res, { message: `Payout of PKR ${amount} to your bank account initiated!`, data: { withdrawal, walletBalance: reserved.walletBalance } });
   }
 
   // Create Withdrawal Request first (For Bank/PayPal)

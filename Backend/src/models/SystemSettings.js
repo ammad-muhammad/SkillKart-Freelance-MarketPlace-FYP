@@ -41,9 +41,9 @@ const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 SystemSettings.DEFAULT_SETTINGS = [
   {
     key: 'platform_fee_rate',
-    value: 0.05,
+    value: 0.005,
     category: 'fees',
-    description: 'Platform fee percentage (e.g. 0.05 = 5%)',
+    description: 'Platform commission rate as a decimal (e.g. 0.005 = 0.5%), applied to milestone/hourly escrow payouts',
     valueType: 'number'
   },
   {
@@ -83,9 +83,9 @@ SystemSettings.DEFAULT_SETTINGS = [
   },
   {
     key: 'withdrawal_min_amount',
-    value: 10,
+    value: 5,
     category: 'fees',
-    description: 'Minimum withdrawal amount in USD',
+    description: 'Minimum withdrawal amount in Rs. (PKR)',
     valueType: 'number'
   },
   {
