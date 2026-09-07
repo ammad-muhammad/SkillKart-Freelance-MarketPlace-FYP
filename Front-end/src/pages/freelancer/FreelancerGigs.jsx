@@ -591,17 +591,19 @@ const FreelancerGigs = () => {
                   </div>
                   <div className="fl-form-group">
                     <label>Revisions</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
                       value={formData.pricing[tier].revisions}
                       onChange={(e) => setFormData({
-                        ...formData, 
+                        ...formData,
                         pricing: {
                           ...formData.pricing,
                           [tier]: { ...formData.pricing[tier], revisions: e.target.value }
                         }
                       })}
-                      required 
+                      required
                     />
                   </div>
                 </div>
