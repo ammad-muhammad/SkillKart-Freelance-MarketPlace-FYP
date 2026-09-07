@@ -138,11 +138,13 @@ const PricingTierCard = ({ tier, label, data, onChange }) => (
       <label className="fl-label" htmlFor={`cg-revisions-${tier}`}>Revisions</label>
       <input
         id={`cg-revisions-${tier}`}
-        type="text"
+        type="number"
         className="fl-input"
+        min={0}
+        max={100}
         value={data.revisions}
         onChange={(e) => onChange({ ...data, revisions: e.target.value })}
-        placeholder="e.g. 2 or Unlimited"
+        placeholder="e.g. 2"
       />
     </div>
   </div>
@@ -616,6 +618,16 @@ const CreateGig = () => {
         const started = t.price || t.deliveryTime || t.revisions;
         if (started && (!Number(t.price) || Number(t.price) <= 0)) {
           showToast(`The ${tier} package needs a valid price.`, 'error');
+          return false;
+        }
+      }
+      // Revisions, when provided, must match the backend's isInt({min:0,max:100}).
+      for (const tier of ['basic', 'standard', 'premium']) {
+        const raw = gig.pricing[tier].revisions;
+        if (raw === '' || raw === undefined || raw === null) continue;
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 0 || n > 100) {
+          showToast(`${tier[0].toUpperCase() + tier.slice(1)} revisions must be a whole number between 0 and 100.`, 'error');
           return false;
         }
       }

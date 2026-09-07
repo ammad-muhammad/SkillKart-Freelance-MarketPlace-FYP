@@ -17,7 +17,7 @@ const pricingTierValidation = (tier, required) => {
 
     body(`pricing.${tier}.revisions`)
       .optional()
-      .isInt({ min: 0, max: 100 }).withMessage(`${tier} revisions must be a non-negative integer`),
+      .isInt({ min: 0, max: 100 }).withMessage(`${tier} revisions must be a whole number between 0 and 100`),
 
     body(`pricing.${tier}.features`)
       .optional()
