@@ -365,7 +365,7 @@ export default function ReviewProposals() {
                           style={{ flex: 1, ...(!(Number(m.amount) > 0) ? { borderColor: 'var(--color-error)' } : {}) }}
                           placeholder="Amount"
                           min="1"
-                          step="1"
+                          step="0.01"
                           value={m.amount}
                           onChange={(e) => updateMilestoneRow(i, 'amount', e.target.value)}
                           onBlur={() => clampMilestoneAmount(i)}
