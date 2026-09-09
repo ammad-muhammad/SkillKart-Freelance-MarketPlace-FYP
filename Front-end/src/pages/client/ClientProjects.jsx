@@ -1,5 +1,5 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers, Wallet } from 'lucide-react';
+import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers, Wallet, Pause } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { useState } from 'react';
@@ -376,9 +376,10 @@ const ClientProjects = () => {
                   >
                     {proj.source === 'gig' ? <span><ShoppingBag size={14} style={{ marginRight: '6px' }} /> Gig Order</span> : <span><FileEdit size={14} style={{ marginRight: '6px' }} /> Custom Project</span>}
                   </span>
-                  <StatusBadge tone={PROJECT_STATUS_TONE[proj.status] || 'neutral'}>
+                  <StatusBadge tone={proj.status === 'in-progress' && proj.contractStatus === 'paused' ? 'warning' : (PROJECT_STATUS_TONE[proj.status] || 'neutral')}>
                     {proj.status === 'open' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> Open</span> :
                      proj.status === 'draft' ? <span><Folder size={14} style={{ marginRight: '6px' }} /> Draft</span> :
+                     proj.status === 'in-progress' && proj.contractStatus === 'paused' ? <span><Pause size={14} style={{ marginRight: '6px' }} /> Paused</span> :
                      proj.status === 'in-progress' && proj.contractStatus === 'delivered' ? <span><Package size={14} style={{ marginRight: '6px' }} /> Delivered — review needed</span> :
                      proj.status === 'in-progress' && proj.contractStatus === 'in_revision' ? <span><RefreshCw size={14} style={{ marginRight: '6px' }} /> In Revision</span> :
                      proj.status === 'in-progress' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> In Progress</span> :

@@ -239,7 +239,7 @@ export const UserDetailPage = () => {
                 </>}
                 {user.role === 'client' && <>
                   <InfoRow label="Company">{user.profile.companyName}</InfoRow>
-                  <InfoRow label="Industry">{user.profile.industry}</InfoRow>
+                  <InfoRow label="Industry">{Array.isArray(user.profile.industry) ? user.profile.industry.join(', ') : user.profile.industry}</InfoRow>
                   <InfoRow label="Wallet balance">{fmt.currency(user.profile.walletBalance)}</InfoRow>
                   <InfoRow label="Total spent">{fmt.currency(user.profile.totalSpent)}</InfoRow>
                   <InfoRow label="Funding flags">
