@@ -1409,9 +1409,9 @@ export const ContractDetailPage = () => {
                 <tbody>
                   {timeLogs.map(t => (
                     <tr key={t._id}>
-                      <td style={{ fontSize: '0.8rem' }}>{fmt.datetime(t.startedAt)}</td>
-                      <td style={{ fontSize: '0.8rem' }}>{t.durationMs != null ? `${Math.round(t.durationMs / 60000)} min` : '—'}</td>
-                      <td style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>{t.note || '—'}</td>
+                      <td style={{ fontSize: '0.8rem' }}>{fmt.datetime(t.startTime)}</td>
+                      <td style={{ fontSize: '0.8rem' }}>{fmt.duration(t.duration)}</td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--ap-text-muted)' }}>{t.notes || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

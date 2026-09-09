@@ -73,7 +73,7 @@ const getContractById = async (req, res) => {
       ContractHistory.find({ contractId: contract._id })
         .populate('performedBy', 'email firstName lastName')
         .sort({ createdAt: -1 }).lean(),
-      TimeLog.find({ contractId: contract._id }).sort({ startedAt: -1 }).lean(),
+      TimeLog.find({ contractId: contract._id }).sort({ startTime: -1 }).lean(),
       Payment.find({ contractId: contract._id }).sort({ createdAt: 1 }).lean(),
       Delivery.find({ contractId: contract._id }).sort({ version: -1 }).lean()
     ]);
