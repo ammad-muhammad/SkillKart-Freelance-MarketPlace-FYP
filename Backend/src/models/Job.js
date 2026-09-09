@@ -31,7 +31,8 @@ const jobSchema = new mongoose.Schema({
   gigId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gig' },
   gigTier: { type: String, enum: ['basic', 'standard', 'premium'] },
   statsRolledUp: { type: Boolean, default: false },
-  completedAt: Date
+  completedAt: Date,
+  deletedAt: Date // set by the admin panel's soft-delete (adminPanel/jobs.controller.js:deleteJob)
 }, { timestamps: true });
 
 jobSchema.index({ clientId: 1 });

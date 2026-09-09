@@ -401,6 +401,15 @@ const updateWithdrawalStatus = (newStatus) => async (req, res) => {
     if (req.body.referenceId) withdrawal.referenceId = req.body.referenceId;
     await withdrawal.save();
 
+    // The wallet was already debited when this withdrawal was first
+    // requested (see withdrawFunds in payment.controller.js) — rejecting or
+    // failing it after that must give the money back, or it just vanishes.
+    // Guarded so double-rejecting an already-cancelled/failed withdrawal
+    // (or moving a never-charged one) can't double-refund.
+    if (['cancelled', 'failed'].includes(newStatus) && !['cancelled', 'failed'].includes(prev)) {
+      await FreelancerProfile.updateOne({ userId: withdrawal.userId }, { $inc: { walletBalance: withdrawal.amount } });
+    }
+
     auditLog(req, {
       action: `withdrawal.${newStatus}`,
       category: 'withdrawal',

@@ -446,6 +446,9 @@ const withdrawProposal = asyncHandler(async (req, res) => {
   if (String(proposal.freelancerId) !== String(req.user._id)) {
     throw new ForbiddenError('You can only withdraw your own proposals');
   }
+  if (proposal.status === 'accepted') {
+    throw new BadRequestError('You cannot withdraw an accepted proposal — a contract already exists. Contact the client to end it.');
+  }
 
   proposal.status = 'withdrawn';
   await proposal.save();

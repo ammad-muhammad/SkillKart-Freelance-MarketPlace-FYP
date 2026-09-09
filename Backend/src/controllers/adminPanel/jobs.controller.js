@@ -16,12 +16,13 @@ const getJobs = async (req, res) => {
   try {
     const {
       search, status, type, clientId,
-      dateFrom, dateTo, budgetMin, budgetMax,
+      dateFrom, dateTo, budgetMin, budgetMax, showDeleted,
       sortBy = 'createdAt', order = 'desc'
     } = req.query;
     const { page, limit, skip } = parsePagination(req.query);
 
-    const filter = {};
+    // Same deleted/active toggle as the users list.
+    const filter = showDeleted === 'true' ? { deletedAt: { $ne: null } } : { deletedAt: null };
     if (status) filter.status = status;
     // Job budget is embedded as { min, max, type: 'fixed'|'hourly' } — `type`
     // filters on that nested budget type; the client link is `clientId`.
@@ -105,8 +106,16 @@ const editJob = async (req, res) => {
 
 const closeJob = async (req, res) => {
   try {
+    const Proposal = require('../../models/Proposal');
     const job = await Job.findByIdAndUpdate(req.params.id, { status: 'closed' }, { new: true });
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    // Same cascade the client-facing closeJob does — otherwise every
+    // still-pending proposal on this job is left dangling forever, and
+    // updateProposal/acceptProposal only catch it after the fact.
+    await Proposal.updateMany(
+      { jobId: job._id, status: 'pending' },
+      { $set: { status: 'rejected', clientResponse: 'Job closed', respondedAt: new Date() } }
+    );
     auditLog(req, { action: 'job.close', category: 'job', resource: 'Job', resourceId: job._id, severity: 'warning' });
     return res.status(200).json({ success: true, message: 'Job closed', job });
   } catch (err) {
@@ -116,8 +125,16 @@ const closeJob = async (req, res) => {
 
 const reopenJob = async (req, res) => {
   try {
-    const job = await Job.findByIdAndUpdate(req.params.id, { status: 'open' }, { new: true });
+    const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    // A job with a hired freelancer/active contract is not "unfilled work
+    // waiting for proposals" — reopening it would make it publicly show as
+    // open for new proposals while someone is actually already working on it.
+    if (job.contractId || job.hiredFreelancer || job.status === 'in-progress') {
+      return res.status(400).json({ success: false, message: 'This job has a hired freelancer/active contract — it cannot be reopened for new proposals.' });
+    }
+    job.status = 'open';
+    await job.save();
     auditLog(req, { action: 'job.reopen', category: 'job', resource: 'Job', resourceId: job._id });
     return res.status(200).json({ success: true, message: 'Job reopened', job });
   } catch (err) {
@@ -127,11 +144,22 @@ const reopenJob = async (req, res) => {
 
 const deleteJob = async (req, res) => {
   try {
+    const Proposal = require('../../models/Proposal');
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    if (job.deletedAt) return res.status(400).json({ success: false, message: 'Job already deleted' });
+    if (job.status === 'in-progress') {
+      return res.status(400).json({ success: false, message: 'This job has an active contract — cancel the contract (which handles any escrow) before deleting the job.' });
+    }
     job.status = 'cancelled';
     job.deletedAt = new Date();
     await job.save();
+    // Same cascade as close — a deleted job's pending proposals shouldn't
+    // dangle either.
+    await Proposal.updateMany(
+      { jobId: job._id, status: 'pending' },
+      { $set: { status: 'rejected', clientResponse: 'Job deleted', respondedAt: new Date() } }
+    );
     auditLog(req, { action: 'job.delete', category: 'job', resource: 'Job', resourceId: job._id, severity: 'warning' });
     return res.status(200).json({ success: true, message: 'Job soft-deleted' });
   } catch (err) {

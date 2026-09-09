@@ -36,6 +36,7 @@ router.get('/history', authenticate, paymentController.getMyPayments);
 // Wallet endpoints (Simulated balances)
 router.post('/wallet/checkout', authenticate, requireRole('client'), paymentController.checkoutWalletDeposit);
 router.post('/wallet/deposit', authenticate, requireRole('client'), paymentController.depositFunds);
+router.get('/wallet/withdraw-config', authenticate, requireRole('freelancer'), paymentController.getWithdrawalConfig);
 router.post('/wallet/withdraw', authenticate, requireRole('freelancer'), paymentController.withdrawFunds);
 
 // Stripe Connect Endpoints for Freelancers
