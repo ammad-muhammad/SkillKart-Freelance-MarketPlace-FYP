@@ -5,6 +5,7 @@ const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/api
 const { uploadJobAttachment: uploadJobAttachmentToCloud } = require('../services/upload.service');
 const { recommendJobCategory, recommendJobSubcategory } = require('../services/jobCategory.service');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
+const { recalculateRating } = require('../services/rating.service');
 const Payment = require('../models/Payment');
 const Proposal = require('../models/Proposal');
 const ClientProfile = require('../models/ClientProfile');
@@ -518,35 +519,7 @@ const reviewJob = asyncHandler(async (req, res) => {
   });
   await review.save();
 
-  // Recalculate average rating for reviewee
-  const allReviews = await Review.find({ revieweeId, type });
-  const avgRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
-
-  if (isClient) {
-    await FreelancerProfile.findOneAndUpdate(
-      { userId: revieweeId },
-      { rating: avgRating }
-    );
-  } else {
-    await ClientProfile.findOneAndUpdate(
-      { userId: revieweeId },
-      { rating: avgRating }
-    );
-  }
-
-  // Update Gig stats if applicable
-  if (isClient && job.source === 'gig' && job.gigId) {
-    const Gig = require('../models/Gig');
-    const gigJobs = await Job.find({ gigId: job.gigId }).select('_id').lean();
-    const gigJobIds = gigJobs.map(j => j._id);
-    const gigReviews = await Review.find({ jobId: { $in: gigJobIds }, type: 'client_to_freelancer' });
-    const gigAvgRating = gigReviews.length > 0 ? gigReviews.reduce((acc, r) => acc + r.rating, 0) / gigReviews.length : 0;
-    
-    await Gig.findByIdAndUpdate(job.gigId, {
-      'stats.rating': gigAvgRating,
-      'stats.reviewsCount': gigReviews.length
-    });
-  }
+  await recalculateRating({ revieweeId, type, jobId: id });
 
   sendSuccess(res, { message: 'Review submitted successfully', data: { review } });
 });

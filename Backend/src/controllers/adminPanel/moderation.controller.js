@@ -10,6 +10,7 @@ const ErrorLog = require('../../models/ErrorLog');
 const SystemSettings = require('../../models/SystemSettings');
 const { auditLog } = require('../../utils/adminAudit');
 const { parsePagination } = require('../../utils/helpers');
+const { recalculateRating } = require('../../services/rating.service');
 
 // ─── Chat Moderation ──────────────────────────────────────────────────────────
 
@@ -220,6 +221,10 @@ const hideReview = async (req, res) => {
     review.hiddenAt   = new Date();
     review.hiddenReason = reason;
     await review.save();
+    // Hiding an abusive/fake review must stop it counting toward the
+    // reviewee's score immediately, not just whenever their next unrelated
+    // review happens to trigger a recalculation.
+    await recalculateRating(review);
 
     auditLog(req, { action: 'review.hidden', category: 'review', resource: 'Review', resourceId: review._id, newValue: { reason }, severity: 'info' });
     return res.status(200).json({ success: true, message: 'Review hidden' });
@@ -238,6 +243,7 @@ const restoreReview = async (req, res) => {
     review.hiddenAt    = null;
     review.hiddenReason = null;
     await review.save();
+    await recalculateRating(review);
 
     auditLog(req, { action: 'review.restored', category: 'review', resource: 'Review', resourceId: review._id, severity: 'info' });
     return res.status(200).json({ success: true, message: 'Review restored' });
@@ -250,6 +256,7 @@ const deleteReview = async (req, res) => {
   try {
     const review = await Review.findByIdAndDelete(req.params.id);
     if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
+    if (!review.isHidden) await recalculateRating(review); // was already excluded if hidden — no change needed
     auditLog(req, { action: 'review.deleted', category: 'review', resource: 'Review', resourceId: req.params.id, severity: 'warning' });
     return res.status(200).json({ success: true, message: 'Review deleted' });
   } catch (err) {
