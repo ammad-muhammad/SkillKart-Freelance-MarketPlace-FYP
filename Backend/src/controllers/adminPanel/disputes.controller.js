@@ -89,18 +89,21 @@ const getDisputeById = async (req, res) => {
     const Delivery = require('../../models/Delivery');
     const Conversation = require('../../models/Conversation');
     const Message = require('../../models/Message');
+    const TimeLog = require('../../models/TimeLog');
+    const Gig = require('../../models/Gig');
 
     const contract = await Contract.findById(req.params.contractId)
       .populate('clientId', 'email firstName lastName profilePicture')
       .populate('freelancerId', 'email firstName lastName profilePicture')
-      .populate('jobId', 'title budget')
+      .populate('jobId', 'title budget source gigId gigTier')
       .lean();
 
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
 
-    // Full context for an informed decision: history, escrow, deliveries, and
-    // the complete chat (with attachments) between the two parties.
-    const [history, payment, deliveries, milestones] = await Promise.all([
+    // Full context for an informed decision: history, escrow, deliveries,
+    // logged hours (hourly contracts), and the complete chat (with
+    // attachments) between the two parties.
+    const [history, payment, deliveries, milestones, timeLogs] = await Promise.all([
       ContractHistory.find({ contractId: contract._id })
         .populate('performedBy', 'email firstName lastName')
         .sort({ createdAt: 1 }).lean(),
@@ -108,6 +111,9 @@ const getDisputeById = async (req, res) => {
       Delivery.find({ contractId: contract._id }).sort({ version: 1 }).lean(),
       contract.type === 'fixed'
         ? Milestone.find({ contractId: contract._id }).sort({ order: 1 }).lean()
+        : Promise.resolve([]),
+      contract.type === 'hourly'
+        ? TimeLog.find({ contractId: contract._id }).sort({ startTime: 1 }).lean()
         : Promise.resolve([])
     ]);
 
@@ -118,6 +124,14 @@ const getDisputeById = async (req, res) => {
     const disputedMilestone = milestones.find((m) => m.dispute?.status === 'pending');
     const milestonePayment = disputedMilestone
       ? await Payment.findOne({ milestoneId: disputedMilestone._id }).lean()
+      : null;
+
+    // Gig-sourced jobs only copy a title/description onto the Job at order
+    // time — the admin also needs the ordered tier's own price/delivery/
+    // revisions/features, and the Gig's original listing, to judge the
+    // dispute against what was actually promised.
+    const gig = (contract.jobId?.source === 'gig' && contract.jobId?.gigId)
+      ? await Gig.findById(contract.jobId.gigId).select('title shortDescription fullDescription pricing').lean()
       : null;
 
     // Find the conversation between the two parties and pull all messages.
@@ -145,6 +159,11 @@ const getDisputeById = async (req, res) => {
       // contract's first Payment row, which is ambiguous once there's more
       // than one milestone).
       milestones, disputedMilestone, milestonePayment,
+      // Hourly only: every logged time entry, for admins to weigh against the
+      // dispute reason.
+      timeLogs,
+      // Gig-sourced only: the ordered tier's terms + the gig's own listing.
+      gig,
       conversation: { id: conversationId, messages }
     });
   } catch (err) {

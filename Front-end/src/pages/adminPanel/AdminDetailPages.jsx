@@ -1699,7 +1699,7 @@ export const DisputeDetailPage = () => {
     <div><BackButton to="/admin-panel/disputes" label="Back to Disputes" /><AdminEmptyState icon="⚠️" title="Dispute not found" /></div>
   );
 
-  const { contract, payment, history = [], deliveries = [], conversation, milestones = [], disputedMilestone, milestonePayment } = payload;
+  const { contract, payment, history = [], deliveries = [], conversation, milestones = [], disputedMilestone, milestonePayment, timeLogs = [], gig } = payload;
   const messages = conversation?.messages || [];
   // Fixed-price disputes live on the milestone, not the contract.
   const dispute = (contract.type === 'fixed' ? disputedMilestone?.dispute : contract.dispute) || {};
@@ -1751,6 +1751,26 @@ export const DisputeDetailPage = () => {
               <InfoRow label="Milestones">{milestones.filter(m => m.status === 'released').length}/{milestones.length} released</InfoRow>
             </>
           )}
+          {contract.jobId?.source === 'gig' && (
+            <>
+              <InfoRow label="Source">🛍️ Gig order{contract.jobId?.gigTier ? ` — ${contract.jobId.gigTier} tier` : ''}</InfoRow>
+              {gig && (
+                <>
+                  <InfoRow label="Gig listing">{gig.title}</InfoRow>
+                  {contract.jobId?.gigTier && gig.pricing?.[contract.jobId.gigTier] && (
+                    <>
+                      <InfoRow label="Tier price">{fmt.currency(gig.pricing[contract.jobId.gigTier].price)}</InfoRow>
+                      <InfoRow label="Tier delivery time">{gig.pricing[contract.jobId.gigTier].deliveryTime || '—'}</InfoRow>
+                      <InfoRow label="Tier revisions">{gig.pricing[contract.jobId.gigTier].revisions ?? '—'}</InfoRow>
+                      {gig.pricing[contract.jobId.gigTier].features?.length > 0 && (
+                        <InfoRow label="Tier includes">{gig.pricing[contract.jobId.gigTier].features.join(', ')}</InfoRow>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          )}
           {effectivePayment ? (
             <>
               <InfoRow label="Escrow status"><StatusBadge status={effectivePayment.status} /></InfoRow>
@@ -1767,6 +1787,7 @@ export const DisputeDetailPage = () => {
           {[
             ['chat', `💬 Chat (${messages.length})`],
             ['deliveries', `📦 Deliveries (${deliveries.length})`],
+            ...(contract.type === 'hourly' ? [['timeLogs', `⏱ Time Logs (${timeLogs.length})`]] : []),
             ['history', `📜 Contract History (${history.length})`],
             ['payment', '💳 Payment']
           ].map(([k, label]) => (
@@ -1785,27 +1806,70 @@ export const DisputeDetailPage = () => {
         {ctxTab === 'deliveries' && (
           deliveries.length === 0 ? <AdminEmptyState icon="📦" title="No deliveries" /> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {deliveries.map(d => (
-                <div key={d._id} style={{ border: '1px solid var(--ap-border)', borderRadius: 8, padding: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                    <strong style={{ fontSize: '0.85rem' }}>Version {d.version}</strong>
-                    <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <StatusBadge status={d.status} />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{fmt.datetime(d.submittedAt || d.createdAt)}</span>
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.84rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{d.message}</div>
-                  {(d.files?.length > 0 || d.links?.length > 0) && (
-                    <div style={{ marginTop: 6, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      {d.files?.map((f, i) => <a key={`f${i}`} href={f} target="_blank" rel="noreferrer" style={{ fontSize: '0.76rem', color: 'var(--ap-text-link)' }}>📎 File {i + 1}</a>)}
-                      {d.links?.map((l, i) => <a key={`l${i}`} href={l} target="_blank" rel="noreferrer" style={{ fontSize: '0.76rem', color: 'var(--ap-text-link)' }}>🔗 Link {i + 1}</a>)}
+              {deliveries.map(d => {
+                // Which milestone this delivery was submitted against — lets an
+                // admin tell apart deliveries for the disputed milestone from
+                // an earlier, already-released one on the same contract.
+                const deliveryMilestone = contract.type === 'fixed'
+                  ? milestones.find(m => String(m._id) === String(d.milestoneId))
+                  : null;
+                return (
+                  <div key={d._id} style={{ border: '1px solid var(--ap-border)', borderRadius: 8, padding: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+                      <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '0.85rem' }}>Version {d.version}</strong>
+                        {deliveryMilestone && (
+                          <span
+                            className={`ap-badge ${String(deliveryMilestone._id) === String(disputedMilestone?._id) ? 'ap-badge-yellow' : 'ap-badge-blue'}`}
+                          >
+                            Milestone {deliveryMilestone.order}: {deliveryMilestone.title}
+                          </span>
+                        )}
+                      </span>
+                      <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <StatusBadge status={d.status} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{fmt.datetime(d.submittedAt || d.createdAt)}</span>
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div style={{ fontSize: '0.84rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{d.message}</div>
+                    {(d.files?.length > 0 || d.links?.length > 0) && (
+                      <div style={{ marginTop: 6, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {d.files?.map((f, i) => <a key={`f${i}`} href={f} target="_blank" rel="noreferrer" style={{ fontSize: '0.76rem', color: 'var(--ap-text-link)' }}>📎 File {i + 1}</a>)}
+                        {d.links?.map((l, i) => <a key={`l${i}`} href={l} target="_blank" rel="noreferrer" style={{ fontSize: '0.76rem', color: 'var(--ap-text-link)' }}>🔗 Link {i + 1}</a>)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )
         )}
+
+        {ctxTab === 'timeLogs' && (
+          timeLogs.length === 0 ? <AdminEmptyState icon="⏱" title="No time logged on this contract" /> : (
+            <div className="ap-table-wrap">
+              <table className="ap-table">
+                <thead>
+                  <tr><th>Date</th><th>Start</th><th>End</th><th>Duration</th><th>Source</th><th>Status</th><th>Notes</th></tr>
+                </thead>
+                <tbody>
+                  {timeLogs.map(t => (
+                    <tr key={t._id}>
+                      <td>{fmt.date(t.date)}</td>
+                      <td>{fmt.datetime(t.startTime)}</td>
+                      <td>{fmt.datetime(t.endTime)}</td>
+                      <td>{fmt.duration(t.duration)}</td>
+                      <td>{t.source}</td>
+                      <td><StatusBadge status={t.status} /></td>
+                      <td style={{ maxWidth: 280, whiteSpace: 'pre-wrap' }}>{t.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+
 
         {ctxTab === 'history' && (
           history.length === 0 ? <AdminEmptyState icon="📜" title="No contract history" /> : (
