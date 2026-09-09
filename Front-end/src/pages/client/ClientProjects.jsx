@@ -584,7 +584,10 @@ const ClientProjects = () => {
                     )}
                     {proj.dispute?.status !== 'pending' && (
                       (proj.contractType === 'hourly' && ['in-progress', 'active'].includes(proj.status)) ||
-                      (proj.contractType === 'fixed' && ['delivered', 'in_revision'].includes(proj.contractStatus) && !!proj.currentMilestone)
+                      // Fixed-price: disputable any time the project isn't fully done yet —
+                      // including while the freelancer is waiting on this milestone to be
+                      // funded, so a client who stalls on funding can still be disputed.
+                      (proj.contractType === 'fixed' && !['completed', 'cancelled'].includes(proj.contractStatus) && !!proj.currentMilestone)
                     ) && (
                       <button
                         className="cl-btn cl-btn--sm cl-btn--ghost"

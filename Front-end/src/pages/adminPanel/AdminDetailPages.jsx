@@ -242,6 +242,13 @@ export const UserDetailPage = () => {
                   <InfoRow label="Industry">{user.profile.industry}</InfoRow>
                   <InfoRow label="Wallet balance">{fmt.currency(user.profile.walletBalance)}</InfoRow>
                   <InfoRow label="Total spent">{fmt.currency(user.profile.totalSpent)}</InfoRow>
+                  <InfoRow label="Funding flags">
+                    {user.profile.fundingFlags?.length > 0 ? (
+                      <span className="ap-badge ap-badge-yellow" title={user.profile.fundingFlags.map(f => f.reason).filter(Boolean).join(' · ')}>
+                        ⚠️ {user.profile.fundingFlags.length} — never funded a disputed milestone
+                      </span>
+                    ) : 'None'}
+                  </InfoRow>
                 </>}
                 <InfoRow label="Wallet frozen">{user.profile.isFrozenWallet ? 'Yes' : 'No'}</InfoRow>
               </>
@@ -1630,13 +1637,23 @@ export const ReassignContractModal = ({ open, contractId, onClose, onSaved }) =>
 // ═══════════════════════════════════════════════════════════════
 // DISPUTE DETAIL / RESOLVE
 // ═══════════════════════════════════════════════════════════════
-const RESOLVE_ACTIONS = [
-  { value: 'release_freelancer', label: 'Release to Freelancer', desc: 'Release full escrow to the freelancer and complete the contract.' },
-  { value: 'refund_client',      label: 'Refund Client',         desc: 'Refund the deposit to the client and cancel the contract.' },
-  { value: 'split',              label: 'Split Escrow',          desc: 'Split escrow between both parties by a percentage.' },
-  { value: 'resume',             label: 'Resume Contract',       desc: 'Dismiss the dispute and set the contract back to active.' },
-  { value: 'reject',             label: 'Reject Dispute',        desc: 'Mark the dispute resolved with no financial change.' }
-];
+const RESOLVE_ACTIONS = {
+  release_freelancer: { value: 'release_freelancer', label: 'Release to Freelancer', desc: 'Release full escrow to the freelancer and complete the contract.' },
+  refund_client:      { value: 'refund_client',      label: 'Refund Client',         desc: 'Refund the deposit to the client and cancel the contract.' },
+  split:              { value: 'split',              label: 'Split Escrow',          desc: 'Split escrow between both parties by a percentage.' },
+  cancel_contract:    { value: 'cancel_contract',    label: 'Cancel Contract (Never Funded)', desc: 'No escrow was ever funded for this milestone — end the contract and flag the client for not funding it.' },
+  resume:             { value: 'resume',             label: 'Resume Contract',       desc: 'Dismiss the dispute and set the contract back to active.' },
+  reject:             { value: 'reject',             label: 'Reject Dispute',        desc: 'Mark the dispute resolved with no financial change.' }
+};
+
+// Fixed-price disputes can now be raised before a milestone is ever funded
+// (a client stalling on funding) — there's no escrow in that case, so the
+// release/refund/split actions don't apply; offer "Cancel Contract" instead.
+const getResolveActions = (contract, hasEscrow) => (
+  contract.type === 'fixed' && !hasEscrow
+    ? [RESOLVE_ACTIONS.cancel_contract, RESOLVE_ACTIONS.resume, RESOLVE_ACTIONS.reject]
+    : [RESOLVE_ACTIONS.release_freelancer, RESOLVE_ACTIONS.refund_client, RESOLVE_ACTIONS.split, RESOLVE_ACTIONS.resume, RESOLVE_ACTIONS.reject]
+);
 
 export const DisputeDetailPage = () => {
   const { contractId } = useParams();
@@ -1691,6 +1708,8 @@ export const DisputeDetailPage = () => {
   // milestone's own escrow record is the relevant one here, not the
   // contract's first Payment row (ambiguous once there's more than one).
   const effectivePayment = contract.type === 'fixed' ? milestonePayment : payment;
+  const resolveActions = getResolveActions(contract, !!effectivePayment);
+  const neverFunded = contract.type === 'fixed' && !effectivePayment;
 
   return (
     <div>
@@ -1738,7 +1757,7 @@ export const DisputeDetailPage = () => {
               <InfoRow label="Total held">{fmt.currency(effectivePayment.totalAmount, effectivePayment.currency)}</InfoRow>
               <InfoRow label="Deposit">{fmt.currency(effectivePayment.depositAmount, effectivePayment.currency)}</InfoRow>
             </>
-          ) : <InfoRow label="Escrow">No payment record</InfoRow>}
+          ) : <InfoRow label="Escrow">No payment record{neverFunded ? ' — this milestone was never funded' : ''}</InfoRow>}
         </Card>
       </div>
 
@@ -1820,7 +1839,7 @@ export const DisputeDetailPage = () => {
           <div className="ap-form-group" style={{ marginBottom: 16 }}>
             <label className="ap-label">Resolution action</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {RESOLVE_ACTIONS.map(a => (
+              {resolveActions.map(a => (
                 <label key={a.value} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 10, border: `1px solid ${action === a.value ? 'var(--ap-blue)' : 'var(--ap-border)'}`, borderRadius: 8, cursor: 'pointer' }}>
                   <input type="radio" name="resolve-action" value={a.value} checked={action === a.value} onChange={e => setAction(e.target.value)} style={{ marginTop: 3 }} />
                   <div>

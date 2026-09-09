@@ -172,11 +172,30 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
   // Validate the action BEFORE claiming the dispute — otherwise an invalid
   // action would still flip it to 'resolved' below and then bail out on the
   // switch's default case, permanently losing the ability to resolve it.
-  if (!['release_freelancer', 'refund_client', 'split', 'resume', 'reject'].includes(action)) {
+  if (!['release_freelancer', 'refund_client', 'split', 'cancel_contract', 'resume', 'reject'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Invalid resolution action' });
   }
   if (action === 'split' && !isValidSplitPercentage(splitPercentage)) {
     return res.status(400).json({ success: false, message: 'A split resolution requires splitPercentage between 1 and 99' });
+  }
+
+  // Disputes can now be raised before a milestone is ever funded (a client
+  // who stalls on funding), so there may be no escrow Payment to move money
+  // out of. Peek at that (read-only) BEFORE claiming the dispute, so a
+  // mismatched action — financial action with no escrow, or "cancel" when
+  // there actually IS funded escrow to resolve — gets rejected without
+  // burning the atomic claim below.
+  const isFinancialAction = ['release_freelancer', 'refund_client', 'split'].includes(action);
+  const pendingMilestone = await Milestone.findOne({ contractId: contract._id, 'dispute.status': 'pending' });
+  if (!pendingMilestone) {
+    return res.status(409).json({ success: false, message: 'No active milestone dispute on this contract, or it was already resolved by another request' });
+  }
+  const pendingPayment = await Payment.findOne({ milestoneId: pendingMilestone._id, type: 'job_escrow' });
+  if (isFinancialAction && !pendingPayment) {
+    return res.status(400).json({ success: false, message: 'This milestone was never funded — there is no escrow to release, refund, or split. Use "Cancel Contract" instead.' });
+  }
+  if (action === 'cancel_contract' && pendingPayment) {
+    return res.status(400).json({ success: false, message: 'This milestone has funded escrow — use release, refund, or split instead of cancelling.' });
   }
 
   // Atomic claim — only the request that actually flips 'pending' → 'resolved'
@@ -195,7 +214,6 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
   const totalMilestones = await Milestone.countDocuments({ contractId: contract._id });
   const isLastMilestone = milestone.order >= totalMilestones;
   let freelancerPayout = 0;
-  const isFinancialAction = ['release_freelancer', 'refund_client', 'split'].includes(action);
 
   switch (action) {
     case 'release_freelancer': {
@@ -246,6 +264,13 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       milestone.releasedAt = new Date();
       break;
     }
+    case 'cancel_contract': {
+      // Nothing was ever funded for this milestone — there's no escrow to
+      // move. End the contract/job outright rather than pretending a normal
+      // payout or refund happened.
+      milestone.status = 'cancelled';
+      break;
+    }
     case 'resume':
     case 'reject': {
       // Dismiss the dispute — put the milestone back to 'submitted' so the
@@ -274,6 +299,30 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       contract.status = 'active';
       contract.currentMilestoneOrder = milestone.order + 1;
     }
+  } else if (action === 'cancel_contract') {
+    contract.status = 'cancelled';
+    // Any later milestone this contract never got to is moot now — leaving
+    // them at 'pending_funding' would dangle under a cancelled contract.
+    await Milestone.updateMany(
+      { contractId: contract._id, _id: { $ne: milestone._id }, status: { $in: ['pending_funding', 'funded'] } },
+      { $set: { status: 'cancelled' } }
+    );
+    const job = await Job.findById(contract.jobId);
+    if (job && !['completed', 'cancelled'].includes(job.status)) {
+      job.status = 'cancelled';
+      await job.save();
+    }
+    // Flag the client so repeat non-funding is visible to admins later.
+    await ClientProfile.updateOne(
+      { userId: contract.clientId },
+      { $push: { fundingFlags: {
+        contractId: contract._id,
+        milestoneId: milestone._id,
+        reason: notes,
+        flaggedBy: req.admin.email,
+        flaggedAt: new Date()
+      } } }
+    );
   } else {
     contract.status = 'active'; // resume/reject just unfreezes the contract; same milestone is back under review
   }

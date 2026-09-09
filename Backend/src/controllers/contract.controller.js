@@ -419,10 +419,17 @@ const raiseDispute = asyncHandler(async (req, res) => {
   }
 
   if (contract.type === 'fixed') {
+    if (['completed', 'cancelled'].includes(contract.status)) {
+      throw new BadRequestError(`Cannot dispute a contract that is ${contract.status}`);
+    }
     const milestone = await Milestone.findOne({ contractId: contract._id, order: contract.currentMilestoneOrder });
     if (!milestone) throw new NotFoundError('No milestone found for this contract');
-    if (!['submitted', 'in_revision'].includes(milestone.status)) {
-      throw new BadRequestError(`Cannot dispute a milestone that is ${milestone.status} — there must be delivered work under review to dispute.`);
+    // Disputable at any stage up to release — including before the client has
+    // funded it at all, so a client who simply never funds the next (or last)
+    // milestone can't leave the freelancer with no recourse and the payment
+    // stuck in limbo.
+    if (['released', 'refunded', 'cancelled'].includes(milestone.status)) {
+      throw new BadRequestError(`Cannot dispute a milestone that is already ${milestone.status}.`);
     }
     if (milestone.dispute?.status === 'pending') {
       throw new BadRequestError('This milestone already has a pending dispute');
