@@ -122,6 +122,12 @@ const updateProposal = asyncHandler(async (req, res) => {
   if (proposal.status !== 'pending') {
     throw new ForbiddenError(`A "${proposal.status}" proposal can no longer be edited.`);
   }
+  // Can't edit once the job itself is no longer open (covers paths that don't
+  // bulk-reject pending proposals, e.g. auto-expiry or admin close/cancel).
+  const job = await Job.findById(proposal.jobId).select('status');
+  if (job && job.status !== 'open') {
+    throw new ForbiddenError('This job is no longer open, so the proposal can no longer be edited.');
+  }
 
   // Allow-list only
   for (const key of ['coverLetter', 'fixedPrice', 'hourlyRate', 'estimatedDeliveryTime', 'estimatedWeeklyHours', 'attachments']) {

@@ -4,17 +4,24 @@ import { Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  Clock, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag
+  Clock, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag, Edit2
 } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
+import Modal from '../../Components/common/Modal/Modal';
+import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import './FreelancerDashboard.css';
+
+const DELIVERY_OPTIONS = ['Less than 1 week', '1-2 weeks', '1 month', '3+ months'];
 
 export default function FreelancerProposals() {
   const { user } = useAuth();
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingProposal, setEditingProposal] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
 
   useEffect(() => {
@@ -45,6 +52,77 @@ export default function FreelancerProposals() {
       fetchProposals();
     } catch {
       toast.error('Failed to withdraw proposal.');
+    }
+  };
+
+  const openEdit = (prop) => {
+    setEditingProposal(prop);
+    setEditForm({
+      coverLetter: prop.coverLetter || '',
+      fixedPrice: prop.fixedPrice ?? '',
+      hourlyRate: prop.hourlyRate ?? '',
+      estimatedDeliveryTime: prop.estimatedDeliveryTime || '1-2 weeks',
+      estimatedWeeklyHours: prop.estimatedWeeklyHours ?? ''
+    });
+  };
+
+  const closeEdit = () => {
+    if (savingEdit) return;
+    setEditingProposal(null);
+    setEditForm(null);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingProposal || !editForm) return;
+
+    // Client-side validation mirroring the Apply form / backend rules.
+    const cover = editForm.coverLetter.trim();
+    if (cover.length < 100) {
+      toast.error(`Cover letter must be at least 100 characters (currently ${cover.length}).`);
+      return;
+    }
+    if (cover.length > 2000) {
+      toast.error('Cover letter must be at most 2000 characters.');
+      return;
+    }
+    const isHourly = editingProposal.jobId?.budget?.type === 'hourly';
+    const payload = { coverLetter: editForm.coverLetter };
+
+    if (isHourly) {
+      const rate = Number(editForm.hourlyRate);
+      if (!rate || rate <= 0) {
+        toast.error('Enter a valid hourly rate greater than 0.');
+        return;
+      }
+      const hrs = Number(editForm.estimatedWeeklyHours);
+      if (!hrs || hrs <= 0 || hrs > 168) {
+        toast.error('Enter a valid number of weekly hours (1-168).');
+        return;
+      }
+      payload.hourlyRate = rate;
+      payload.estimatedWeeklyHours = hrs;
+    } else {
+      const price = Number(editForm.fixedPrice);
+      if (!price || price <= 0) {
+        toast.error('Enter a valid fixed price greater than 0.');
+        return;
+      }
+      payload.fixedPrice = price;
+      payload.estimatedDeliveryTime = editForm.estimatedDeliveryTime;
+    }
+
+    setSavingEdit(true);
+    try {
+      await proposalsAPI.updateProposal(editingProposal._id, payload);
+      toast.success('Proposal updated.');
+      setEditingProposal(null);
+      setEditForm(null);
+      fetchProposals();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update proposal.');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -127,6 +205,14 @@ export default function FreelancerProposals() {
                   <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
                     View Project <ExternalLink size={14} />
                   </Link>
+                  {prop.status === 'pending' && prop.jobId?.status === 'open' && (
+                    <button
+                      className="fl-btn fl-btn--outline fl-btn--sm"
+                      onClick={() => openEdit(prop)}
+                    >
+                      <Edit2 size={14} /> Edit
+                    </button>
+                  )}
                   {prop.status === 'pending' && (
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
@@ -151,7 +237,91 @@ export default function FreelancerProposals() {
         </div>
       )}
 
+      <Modal open={!!editingProposal} title="Edit Proposal" onClose={closeEdit} size="md">
+        {editForm && (
+          <form onSubmit={handleEditSubmit}>
+            {editingProposal?.jobId?.budget?.type === 'hourly' ? (
+              <>
+                <div className="fl-form-group">
+                  <label>Hourly Rate (Rs./hr)</label>
+                  <input
+                    type="number"
+                    required
+                    className="fl-input"
+                    value={editForm.hourlyRate}
+                    onChange={e => setEditForm({ ...editForm, hourlyRate: e.target.value })}
+                    min="1"
+                    step="0.01"
+                  />
+                </div>
+                <div className="fl-form-group">
+                  <label>Estimated Weekly Hours</label>
+                  <input
+                    type="number"
+                    required
+                    className="fl-input"
+                    placeholder="e.g. 20"
+                    value={editForm.estimatedWeeklyHours}
+                    onChange={e => setEditForm({ ...editForm, estimatedWeeklyHours: e.target.value })}
+                    min="1"
+                    max="168"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="fl-form-group">
+                  <label>Fixed Price (PKR)</label>
+                  <input
+                    type="number"
+                    required
+                    className="fl-input"
+                    value={editForm.fixedPrice}
+                    onChange={e => setEditForm({ ...editForm, fixedPrice: e.target.value })}
+                    min="1"
+                    step="0.01"
+                  />
+                </div>
+                <div className="fl-form-group">
+                  <label>Estimated Delivery Time</label>
+                  <CustomSelect
+                    value={editForm.estimatedDeliveryTime}
+                    onChange={val => setEditForm({ ...editForm, estimatedDeliveryTime: val })}
+                    options={DELIVERY_OPTIONS}
+                  />
+                </div>
+              </>
+            )}
 
+            <div className="fl-form-group">
+              <label>Cover Letter</label>
+              <textarea
+                required
+                maxLength={2000}
+                rows={6}
+                className="fl-textarea"
+                value={editForm.coverLetter}
+                onChange={e => setEditForm({ ...editForm, coverLetter: e.target.value })}
+              />
+              <span
+                className="fl-char-count"
+                style={{ color: editForm.coverLetter.trim().length < 100 ? 'var(--color-error)' : 'var(--color-success)' }}
+              >
+                {editForm.coverLetter.trim().length < 100
+                  ? `${editForm.coverLetter.trim().length} / 100 min`
+                  : `${editForm.coverLetter.length} / 2000`}
+              </span>
+            </div>
+
+            <div className="fl-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)' }}>
+              <button type="button" className="fl-btn fl-btn--ghost" onClick={closeEdit} disabled={savingEdit}>Cancel</button>
+              <button type="submit" className="fl-btn fl-btn--primary" disabled={savingEdit}>
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       <style>{`
         .fl-prop-card { margin-bottom: 1rem; }
