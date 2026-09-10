@@ -3,6 +3,7 @@ import ProtectedRoute from '../hooks/ProtectedRoute';
 import { ClientProvider } from '../context/ClientContext';
 import { FreelancerProvider } from '../context/FreelancerContext';
 import ErrorBoundary from '../Components/common/ErrorBoundary/ErrorBoundary';
+import { isMobileApp } from '../utils/platform';
 
 // Layouts
 import PublicLayout from "../layouts/PublicLayout";
@@ -169,9 +170,16 @@ const AppRoutes = () => {
             <Route path="settings"     element={<SettingsPage />} />
           </Route>
 
-          {/* ================= PUBLIC ROUTES ================= */}
+          {/* ================= PUBLIC ROUTES =================
+              The mobile (Capacitor) build has NO public/marketing screens —
+              only the auth flow + the client/freelancer/admin-panel panels.
+              `isMobileApp()` is evaluated once per render, not per-route, so
+              this can't drift between routes; the excluded routes below
+              aren't just hidden from nav, they're never registered at all in
+              that build, so a stray deep-link to e.g. /browse-projects falls
+              through to the catch-all 404 instead of rendering. */}
           <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={isMobileApp() ? <Navigate to="/login" replace /> : <Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registration" element={<Registration />} />
             {/* Back-compat alias so any /register link resolves instead of 404ing */}
@@ -180,24 +188,6 @@ const AppRoutes = () => {
             <Route path="/auth/consent" element={<AuthConsent />} />
             <Route path="/otp-verification" element={<OTP />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/cookies" element={<CookiePolicy />} />
-            <Route path="/services-agreement" element={<ServicesAgreement />} />
-
-            <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
-            <Route path="/post-project" element={<PostProject />} />
-            <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
-            <Route path="/help" element={<HelpCenter />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/browse-projects" element={<BrowseProjects />} />
-            <Route path="/jobs/:id" element={<JobDetails />} />
-            <Route path="/gigs/:id" element={<GigDetail />} />
-            {/* //Sumair - working */}
-            {/* <Route path="/terms" element={<TermsAndConditions />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} /> */}
             <Route
               path="/client/onboarding"
               element={
@@ -214,16 +204,35 @@ const AppRoutes = () => {
                 </ProtectedRoute>
               }
             />
-            {/* <Route path="/about" element={<ProtectedRoute allowedRoles={['client']}><About /></ProtectedRoute>} /> Protected Route Example */}
-            {/* AI Tools */}
-            <Route path="/ai/buddy" element={<BuddyAI />} />
-            <Route path="/ai/cost-estimator" element={<CostEstimator />} />
-            {/* Skills / Category / Gig Pages */}
-            <Route path="/skills/:categorySlug" element={<CategoryPage />} />
-            <Route path="/skills/:categorySlug/:skillSlug" element={<SkillPage />} />
-            
-            <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
-            <Route path="/clients/:id" element={<PublicClientProfile />} />
+
+            {!isMobileApp() && (
+              <>
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/cookies" element={<CookiePolicy />} />
+                <Route path="/services-agreement" element={<ServicesAgreement />} />
+
+                <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
+                <Route path="/post-project" element={<PostProject />} />
+                <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
+                <Route path="/help" element={<HelpCenter />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/browse-projects" element={<BrowseProjects />} />
+                <Route path="/jobs/:id" element={<JobDetails />} />
+                <Route path="/gigs/:id" element={<GigDetail />} />
+                {/* AI Tools */}
+                <Route path="/ai/buddy" element={<BuddyAI />} />
+                <Route path="/ai/cost-estimator" element={<CostEstimator />} />
+                {/* Skills / Category / Gig Pages */}
+                <Route path="/skills/:categorySlug" element={<CategoryPage />} />
+                <Route path="/skills/:categorySlug/:skillSlug" element={<SkillPage />} />
+
+                <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
+                <Route path="/clients/:id" element={<PublicClientProfile />} />
+              </>
+            )}
           </Route>
 
           {/* Payment confirmation landing (Stripe success redirect). Standalone,
@@ -287,18 +296,23 @@ const AppRoutes = () => {
             <Route path="projects/:jobId/proposals" element={<ReviewProposals />} />
           </Route>
 
-          {/* ================= ADMIN ROUTES (marketplace taxonomy) ================= */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/admin/taxonomy" replace />} />
-            <Route path="taxonomy" element={<TaxonomyAdmin />} />
-          </Route>
+          {/* ================= ADMIN ROUTES (marketplace taxonomy) =================
+              Legacy content-editor tool, distinct from the isolated
+              /admin-panel/* system — not one of the three panels (admin
+              panel, freelancer, client) the mobile app ships with. */}
+          {!isMobileApp() && (
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/admin/taxonomy" replace />} />
+              <Route path="taxonomy" element={<TaxonomyAdmin />} />
+            </Route>
+          )}
 
           <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
           {/* 404 — directly linkable, and where unknown routes land */}
