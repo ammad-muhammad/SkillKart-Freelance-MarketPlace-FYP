@@ -8,6 +8,7 @@ const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const notifications = require('../services/notification.service');
 const { drawDownForTimeLog, refundRemainingHourlyEscrow, getUnbilledAmount } = require('../services/hourlyEscrow.service');
+const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 
 /**
  * Get contract details
@@ -374,8 +375,19 @@ const respondEndContract = asyncHandler(async (req, res) => {
     }
 
     await contract.save();
-    
-    await Job.findByIdAndUpdate(contract.jobId, { status: 'completed' });
+
+    // This action is hourly-only (guarded above), so hourlyEscrow.totalDrawn
+    // (the lifetime gross amount drawn from the client's lock) is always
+    // populated here.
+    const endedJob = await Job.findById(contract.jobId);
+    if (endedJob && endedJob.status !== 'completed') {
+      endedJob.status = 'completed';
+      endedJob.completedAt = new Date();
+      // Earnings were already credited per-timelog by drawDownForTimeLog
+      // above (and over the contract's earlier life) — this only rolls up
+      // completedProjects/totalSpent, which this path used to skip entirely.
+      await finalizeJobCompletion(endedJob, { clientSpend: contract.hourlyEscrow?.totalDrawn || 0, skipEarningsCredit: true });
+    }
 
     await ContractHistory.create({
       contractId: contract._id,
@@ -419,10 +431,17 @@ const raiseDispute = asyncHandler(async (req, res) => {
   }
 
   if (contract.type === 'fixed') {
+    if (['completed', 'cancelled'].includes(contract.status)) {
+      throw new BadRequestError(`Cannot dispute a contract that is ${contract.status}`);
+    }
     const milestone = await Milestone.findOne({ contractId: contract._id, order: contract.currentMilestoneOrder });
     if (!milestone) throw new NotFoundError('No milestone found for this contract');
-    if (!['submitted', 'in_revision'].includes(milestone.status)) {
-      throw new BadRequestError(`Cannot dispute a milestone that is ${milestone.status} — there must be delivered work under review to dispute.`);
+    // Disputable at any stage up to release — including before the client has
+    // funded it at all, so a client who simply never funds the next (or last)
+    // milestone can't leave the freelancer with no recourse and the payment
+    // stuck in limbo.
+    if (['released', 'refunded', 'cancelled'].includes(milestone.status)) {
+      throw new BadRequestError(`Cannot dispute a milestone that is already ${milestone.status}.`);
     }
     if (milestone.dispute?.status === 'pending') {
       throw new BadRequestError('This milestone already has a pending dispute');

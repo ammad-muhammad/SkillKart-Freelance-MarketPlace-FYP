@@ -417,7 +417,10 @@ export default function FreelancerWork() {
                   )}
                   {c.dispute?.status !== 'pending' && (
                     (isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status)) ||
-                    (isFixed && ['delivered', 'in_revision'].includes(c.status) && !!c.currentMilestone)
+                    // Fixed-price: disputable any time the project isn't fully done yet —
+                    // including while still waiting on the client to fund the next/last
+                    // milestone, so a stalling client can't leave this with no recourse.
+                    (isFixed && !['completed', 'cancelled'].includes(c.status) && !!c.currentMilestone)
                   ) && (
                     <button
                       className="fl-btn fl-btn--sm fl-btn--ghost"

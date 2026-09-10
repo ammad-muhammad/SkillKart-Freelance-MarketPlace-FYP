@@ -75,7 +75,17 @@ const clientProfileSchema = new mongoose.Schema({
   isFrozenWallet: { type: Boolean, default: false },
   walletFrozenBy: { type: String },       // Admin email
   walletFrozenAt: { type: Date },
-  walletFrozenReason: { type: String }
+  walletFrozenReason: { type: String },
+
+  // Raised whenever an admin cancels a contract because this client never
+  // funded a milestone under dispute — lets admins spot repeat offenders.
+  fundingFlags: [{
+    contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract' },
+    milestoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Milestone' },
+    reason: { type: String },
+    flaggedBy: { type: String }, // Admin email
+    flaggedAt: { type: Date, default: Date.now }
+  }]
 
 }, { timestamps: true });
 

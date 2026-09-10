@@ -49,6 +49,7 @@ export const paymentsAPI = {
   // Confirm a wallet deposit
   depositFunds: (sessionId) => client.post('/payments/wallet/deposit', { sessionId }),
   withdrawFunds: (amount, method) => client.post('/payments/wallet/withdraw', { amount, method }),
+  getWithdrawalConfig: () => client.get('/payments/wallet/withdraw-config'),
   
   // Stripe Connect
   connectStripe: () => client.post('/payments/stripe/connect'),

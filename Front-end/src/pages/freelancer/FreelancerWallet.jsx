@@ -35,6 +35,9 @@ export default function FreelancerWallet() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod] = useState('stripe');
   const [withdrawing, setWithdrawing] = useState(false);
+  // Admin-configurable — fetched so this can't drift from the backend's own
+  // enforced minimum (see payments.controller.js's getWithdrawalConfig).
+  const [minWithdrawal, setMinWithdrawal] = useState(5);
   const withdrawModalRef = useRef(null);
   const closeWithdrawModal = useCallback(() => { if (!withdrawing) setWithdrawModal(false); }, [withdrawing]);
   useFocusTrap(withdrawModalRef, withdrawModal, closeWithdrawModal);
@@ -59,6 +62,15 @@ export default function FreelancerWallet() {
       refreshProfile();
     }
   }, [loadHistory, refreshProfile]);
+
+  useEffect(() => {
+    paymentsAPI.getWithdrawalConfig()
+      .then(({ data }) => {
+        const min = data?.data?.minWithdrawal;
+        if (Number.isFinite(min)) setMinWithdrawal(min);
+      })
+      .catch((err) => console.error('Failed to load withdrawal config:', err));
+  }, []);
 
   const walletBalance = profile?.walletBalance || 0;
   const totalEarned = profile?.totalEarnings || 0;
@@ -291,7 +303,7 @@ export default function FreelancerWallet() {
                   <input
                     type="number"
                     className="fl-input"
-                    min="5"
+                    min={minWithdrawal}
                     max={walletBalance}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -340,9 +352,9 @@ export default function FreelancerWallet() {
               </button>
               <button 
                 className="fl-btn fl-btn--primary" 
-                disabled={!withdrawAmount || Number(withdrawAmount) < 5 || Number(withdrawAmount) > walletBalance || withdrawing}
+                disabled={!withdrawAmount || Number(withdrawAmount) < minWithdrawal || Number(withdrawAmount) > walletBalance || withdrawing}
                 onClick={executeWithdraw}
-                style={{ flex: 2, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 10px 15px -3px rgba(4, 46, 76, 0.25)', color: 'var(--color-white)', cursor: (!withdrawAmount || Number(withdrawAmount) < 5 || Number(withdrawAmount) > walletBalance || withdrawing) ? 'not-allowed' : 'pointer', opacity: (!withdrawAmount || Number(withdrawAmount) < 5 || Number(withdrawAmount) > walletBalance || withdrawing) ? 0.6 : 1 }}
+                style={{ flex: 2, borderRadius: '14px', height: '54px', fontWeight: '700', fontSize: '1rem', background: 'var(--gradient-primary)', border: 'none', boxShadow: '0 10px 15px -3px rgba(4, 46, 76, 0.25)', color: 'var(--color-white)', cursor: (!withdrawAmount || Number(withdrawAmount) < minWithdrawal || Number(withdrawAmount) > walletBalance || withdrawing) ? 'not-allowed' : 'pointer', opacity: (!withdrawAmount || Number(withdrawAmount) < minWithdrawal || Number(withdrawAmount) > walletBalance || withdrawing) ? 0.6 : 1 }}
               >
                 {withdrawing ? 'Processing...' : 'Confirm Withdrawal'}
               </button>

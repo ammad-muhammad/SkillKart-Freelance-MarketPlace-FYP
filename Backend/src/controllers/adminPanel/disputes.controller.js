@@ -89,18 +89,21 @@ const getDisputeById = async (req, res) => {
     const Delivery = require('../../models/Delivery');
     const Conversation = require('../../models/Conversation');
     const Message = require('../../models/Message');
+    const TimeLog = require('../../models/TimeLog');
+    const Gig = require('../../models/Gig');
 
     const contract = await Contract.findById(req.params.contractId)
       .populate('clientId', 'email firstName lastName profilePicture')
       .populate('freelancerId', 'email firstName lastName profilePicture')
-      .populate('jobId', 'title budget')
+      .populate('jobId', 'title budget source gigId gigTier')
       .lean();
 
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
 
-    // Full context for an informed decision: history, escrow, deliveries, and
-    // the complete chat (with attachments) between the two parties.
-    const [history, payment, deliveries, milestones] = await Promise.all([
+    // Full context for an informed decision: history, escrow, deliveries,
+    // logged hours (hourly contracts), and the complete chat (with
+    // attachments) between the two parties.
+    const [history, payment, deliveries, milestones, timeLogs] = await Promise.all([
       ContractHistory.find({ contractId: contract._id })
         .populate('performedBy', 'email firstName lastName')
         .sort({ createdAt: 1 }).lean(),
@@ -108,6 +111,9 @@ const getDisputeById = async (req, res) => {
       Delivery.find({ contractId: contract._id }).sort({ version: 1 }).lean(),
       contract.type === 'fixed'
         ? Milestone.find({ contractId: contract._id }).sort({ order: 1 }).lean()
+        : Promise.resolve([]),
+      contract.type === 'hourly'
+        ? TimeLog.find({ contractId: contract._id }).sort({ startTime: 1 }).lean()
         : Promise.resolve([])
     ]);
 
@@ -118,6 +124,14 @@ const getDisputeById = async (req, res) => {
     const disputedMilestone = milestones.find((m) => m.dispute?.status === 'pending');
     const milestonePayment = disputedMilestone
       ? await Payment.findOne({ milestoneId: disputedMilestone._id }).lean()
+      : null;
+
+    // Gig-sourced jobs only copy a title/description onto the Job at order
+    // time — the admin also needs the ordered tier's own price/delivery/
+    // revisions/features, and the Gig's original listing, to judge the
+    // dispute against what was actually promised.
+    const gig = (contract.jobId?.source === 'gig' && contract.jobId?.gigId)
+      ? await Gig.findById(contract.jobId.gigId).select('title shortDescription fullDescription pricing').lean()
       : null;
 
     // Find the conversation between the two parties and pull all messages.
@@ -145,6 +159,11 @@ const getDisputeById = async (req, res) => {
       // contract's first Payment row, which is ambiguous once there's more
       // than one milestone).
       milestones, disputedMilestone, milestonePayment,
+      // Hourly only: every logged time entry, for admins to weigh against the
+      // dispute reason.
+      timeLogs,
+      // Gig-sourced only: the ordered tier's terms + the gig's own listing.
+      gig,
       conversation: { id: conversationId, messages }
     });
   } catch (err) {
@@ -172,11 +191,30 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
   // Validate the action BEFORE claiming the dispute — otherwise an invalid
   // action would still flip it to 'resolved' below and then bail out on the
   // switch's default case, permanently losing the ability to resolve it.
-  if (!['release_freelancer', 'refund_client', 'split', 'resume', 'reject'].includes(action)) {
+  if (!['release_freelancer', 'refund_client', 'split', 'cancel_contract', 'resume', 'reject'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Invalid resolution action' });
   }
   if (action === 'split' && !isValidSplitPercentage(splitPercentage)) {
     return res.status(400).json({ success: false, message: 'A split resolution requires splitPercentage between 1 and 99' });
+  }
+
+  // Disputes can now be raised before a milestone is ever funded (a client
+  // who stalls on funding), so there may be no escrow Payment to move money
+  // out of. Peek at that (read-only) BEFORE claiming the dispute, so a
+  // mismatched action — financial action with no escrow, or "cancel" when
+  // there actually IS funded escrow to resolve — gets rejected without
+  // burning the atomic claim below.
+  const isFinancialAction = ['release_freelancer', 'refund_client', 'split'].includes(action);
+  const pendingMilestone = await Milestone.findOne({ contractId: contract._id, 'dispute.status': 'pending' });
+  if (!pendingMilestone) {
+    return res.status(409).json({ success: false, message: 'No active milestone dispute on this contract, or it was already resolved by another request' });
+  }
+  const pendingPayment = await Payment.findOne({ milestoneId: pendingMilestone._id, type: 'job_escrow' });
+  if (isFinancialAction && !pendingPayment) {
+    return res.status(400).json({ success: false, message: 'This milestone was never funded — there is no escrow to release, refund, or split. Use "Cancel Contract" instead.' });
+  }
+  if (action === 'cancel_contract' && pendingPayment) {
+    return res.status(400).json({ success: false, message: 'This milestone has funded escrow — use release, refund, or split instead of cancelling.' });
   }
 
   // Atomic claim — only the request that actually flips 'pending' → 'resolved'
@@ -195,7 +233,6 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
   const totalMilestones = await Milestone.countDocuments({ contractId: contract._id });
   const isLastMilestone = milestone.order >= totalMilestones;
   let freelancerPayout = 0;
-  const isFinancialAction = ['release_freelancer', 'refund_client', 'split'].includes(action);
 
   switch (action) {
     case 'release_freelancer': {
@@ -246,6 +283,13 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       milestone.releasedAt = new Date();
       break;
     }
+    case 'cancel_contract': {
+      // Nothing was ever funded for this milestone — there's no escrow to
+      // move. End the contract/job outright rather than pretending a normal
+      // payout or refund happened.
+      milestone.status = 'cancelled';
+      break;
+    }
     case 'resume':
     case 'reject': {
       // Dismiss the dispute — put the milestone back to 'submitted' so the
@@ -274,6 +318,30 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       contract.status = 'active';
       contract.currentMilestoneOrder = milestone.order + 1;
     }
+  } else if (action === 'cancel_contract') {
+    contract.status = 'cancelled';
+    // Any later milestone this contract never got to is moot now — leaving
+    // them at 'pending_funding' would dangle under a cancelled contract.
+    await Milestone.updateMany(
+      { contractId: contract._id, _id: { $ne: milestone._id }, status: { $in: ['pending_funding', 'funded'] } },
+      { $set: { status: 'cancelled' } }
+    );
+    const job = await Job.findById(contract.jobId);
+    if (job && !['completed', 'cancelled'].includes(job.status)) {
+      job.status = 'cancelled';
+      await job.save();
+    }
+    // Flag the client so repeat non-funding is visible to admins later.
+    await ClientProfile.updateOne(
+      { userId: contract.clientId },
+      { $push: { fundingFlags: {
+        contractId: contract._id,
+        milestoneId: milestone._id,
+        reason: notes,
+        flaggedBy: req.admin.email,
+        flaggedAt: new Date()
+      } } }
+    );
   } else {
     contract.status = 'active'; // resume/reject just unfreezes the contract; same milestone is back under review
   }

@@ -403,14 +403,27 @@ const depositFunds = asyncHandler(async (req, res) => {
     return sendSuccess(res, { message: 'Funds deposited successfully', data: { walletBalance: existingProfile.walletBalance } });
   }
 
+  // Atomic — folding the "not already processed" check into the filter
+  // itself (rather than the separate pre-check above, which only reduces
+  // the window, it doesn't close it) is what actually prevents a
+  // near-simultaneous webhook + frontend confirm call (or two retries) from
+  // both passing the check and both crediting the wallet for the same
+  // Stripe session.
   const profile = await ClientProfile.findOneAndUpdate(
-    { userId: req.user._id },
-    { 
+    { userId: req.user._id, processedSessions: { $ne: sessionId } },
+    {
       $inc: { walletBalance: amountDeposited },
       $addToSet: { processedSessions: sessionId }
     },
     { new: true }
   );
+  if (!profile) {
+    // Lost the race (or a genuinely repeated request) — this session's
+    // deposit already landed, so return the current balance rather than
+    // crediting it again.
+    const current = await ClientProfile.findOne({ userId: req.user._id });
+    return sendSuccess(res, { message: 'Funds deposited successfully', data: { walletBalance: current?.walletBalance || 0 } });
+  }
 
   const Payment = require('../models/Payment');
   await Payment.create({
@@ -507,6 +520,17 @@ const stripeConnectCallback = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /payments/wallet/withdraw-config — the current admin-configurable
+ * minimum withdrawal amount, so the freelancer wallet page can validate
+ * against the real value instead of a hardcoded guess that can drift out
+ * of sync if an admin raises SystemSettings.withdrawal_min_amount.
+ */
+const getWithdrawalConfig = asyncHandler(async (req, res) => {
+  const minWithdrawal = await getWithdrawalMinAmount();
+  sendSuccess(res, { data: { minWithdrawal } });
+});
+
+/**
  * Withdraw funds from wallet (Freelancer)
  */
 const withdrawFunds = asyncHandler(async (req, res) => {
@@ -592,14 +616,11 @@ const withdrawFunds = asyncHandler(async (req, res) => {
     return sendSuccess(res, { message: `Payout of PKR ${amount} to your bank account initiated!`, data: { withdrawal, walletBalance: reserved.walletBalance } });
   }
 
-  // Create Withdrawal Request first (For Bank/PayPal)
-  const withdrawal = await Withdrawal.create({
-    userId: req.user._id,
-    amount: Number(amount),
-    method
-  });
-
-  // Same atomic-debit guard as the Stripe branch above.
+  // Same atomic-debit guard as the Stripe branch above — reserve the funds
+  // BEFORE creating the Withdrawal record. Creating the record first (the
+  // previous order) could leave a real, admin-approvable Withdrawal row
+  // persisted with no matching debit behind it, if this conditional update
+  // then failed (e.g. a concurrent withdrawal already drained the balance).
   const updatedProfile = await FreelancerProfile.findOneAndUpdate(
     { userId: req.user._id, walletBalance: { $gte: Number(amount) } },
     { $inc: { walletBalance: -Number(amount) } },
@@ -607,6 +628,21 @@ const withdrawFunds = asyncHandler(async (req, res) => {
   );
   if (!updatedProfile) {
     throw new BadRequestError('Insufficient funds available for withdrawal. A concurrent withdrawal may have just been processed — check your withdrawal history before retrying.');
+  }
+
+  let withdrawal;
+  try {
+    withdrawal = await Withdrawal.create({
+      userId: req.user._id,
+      amount: Number(amount),
+      method
+    });
+  } catch (err) {
+    // The debit above already succeeded — if the record itself can't be
+    // created, refund it rather than leaving the money silently debited
+    // with no withdrawal to show for it.
+    await FreelancerProfile.findOneAndUpdate({ userId: req.user._id }, { $inc: { walletBalance: Number(amount) } });
+    throw err;
   }
 
   // Trigger notification
@@ -731,6 +767,7 @@ module.exports = {
   getMyPayments,
   checkoutWalletDeposit,
   depositFunds,
+  getWithdrawalConfig,
   withdrawFunds,
   connectStripeAccount,
   stripeConnectCallback,
