@@ -20,14 +20,15 @@ const isAiRequest = (config) => {
   return /(^|\/)ai(\/|$)/.test(url) || url.includes('/matchmaking') || url.includes('/skill-tests/');
 };
 
-// Did this failure come from the AI subsystem? True for AI endpoints, and for
-// any 503 (our backend returns 503 when every AI provider is down), and for
-// timeouts on AI calls (the long-running provider chain can time out).
+// Did this failure come from the AI subsystem? True only for actual AI
+// endpoints — a bare "any 503" check used to match here too, but 503 isn't
+// exclusive to the AI provider chain (e.g. a maintenance-mode or
+// dependency-unavailable response from an unrelated endpoint), which meant
+// any non-AI 503 anywhere in the app got mislabeled with the AI-specific
+// "out of service" copy instead of its real error message.
 const isAiFailure = (error) => {
   const cfg = error?.config;
-  if (isAiRequest(cfg)) return true;
-  if (error?.response?.status === 503) return true;
-  return false;
+  return isAiRequest(cfg);
 };
 
 const showToast = (message) => {
