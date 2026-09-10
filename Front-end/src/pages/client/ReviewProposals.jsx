@@ -32,7 +32,7 @@ export default function ReviewProposals() {
   const [welcomeModal, setWelcomeModal] = useState(null);
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [splitMilestones, setSplitMilestones] = useState(false);
-  const [milestones, setMilestones] = useState([{ title: '', amount: '' }]);
+  const [milestones, setMilestones] = useState([{ title: '', amount: 1 }]);
   // Set when accept fails with a structured insufficientBalance error —
   // drives the guided top-up modal instead of a plain error toast.
   const [topUpModal, setTopUpModal] = useState(null); // { required, available, contractType }
@@ -45,9 +45,12 @@ export default function ReviewProposals() {
     milestones.every((m) => m.title.trim() && Number(m.amount) > 0) && milestonesTotal === agreedPrice
   );
 
-  const addMilestoneRow = () => setMilestones((prev) => [...prev, { title: '', amount: '' }]);
+  const addMilestoneRow = () => setMilestones((prev) => [...prev, { title: '', amount: 1 }]);
   const removeMilestoneRow = (i) => setMilestones((prev) => prev.filter((_, idx) => idx !== i));
   const updateMilestoneRow = (i, key, val) => setMilestones((prev) => prev.map((m, idx) => (idx === i ? { ...m, [key]: val } : m)));
+  // Amount can be freely edited (including briefly empty while retyping), but
+  // never left at 0/blank/negative once the field loses focus.
+  const clampMilestoneAmount = (i) => setMilestones((prev) => prev.map((m, idx) => (idx === i && !(Number(m.amount) > 0) ? { ...m, amount: 1 } : m)));
 
   const handleMessage = async (prop) => {
     const freelancerId = prop.freelancerId?._id;
@@ -359,10 +362,13 @@ export default function ReviewProposals() {
                         <input
                           className="cl-input"
                           type="number"
-                          style={{ flex: 1 }}
+                          style={{ flex: 1, ...(!(Number(m.amount) > 0) ? { borderColor: 'var(--color-error)' } : {}) }}
                           placeholder="Amount"
+                          min="1"
+                          step="0.01"
                           value={m.amount}
                           onChange={(e) => updateMilestoneRow(i, 'amount', e.target.value)}
+                          onBlur={() => clampMilestoneAmount(i)}
                         />
                         {milestones.length > 1 && (
                           <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeMilestoneRow(i)} style={{ padding: '0.4rem' }}>

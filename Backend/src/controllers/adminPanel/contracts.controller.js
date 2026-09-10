@@ -73,7 +73,7 @@ const getContractById = async (req, res) => {
       ContractHistory.find({ contractId: contract._id })
         .populate('performedBy', 'email firstName lastName')
         .sort({ createdAt: -1 }).lean(),
-      TimeLog.find({ contractId: contract._id }).sort({ startedAt: -1 }).lean(),
+      TimeLog.find({ contractId: contract._id }).sort({ startTime: -1 }).lean(),
       Payment.find({ contractId: contract._id }).sort({ createdAt: 1 }).lean(),
       Delivery.find({ contractId: contract._id }).sort({ version: -1 }).lean()
     ]);
@@ -181,7 +181,104 @@ const transition = (newStatus, actionName, severity = 'warning') => async (req, 
 
 const pauseContract  = transition('paused', 'pause');
 const resumeContract = transition('active', 'resume', 'info');
-const cancelContract = transition('cancelled', 'cancel', 'critical');
+
+/**
+ * POST /contracts/:id/cancel — call off the contract and refund any
+ * outstanding escrow to the CLIENT (the mirror image of force-complete,
+ * which pays outstanding escrow to the freelancer). Never just flips
+ * `status` — that used to leave funded milestones / a locked hourly
+ * balance stranded forever, with no code path ever revisiting a
+ * cancelled contract to settle them, and left the Job showing
+ * 'in-progress' for a contract that was actually dead.
+ */
+const cancelContract = async (req, res) => {
+  try {
+    const Job = require('../../models/Job');
+    const Milestone = require('../../models/Milestone');
+    const ClientProfile = require('../../models/ClientProfile');
+    const { drawDownForTimeLog, refundRemainingHourlyEscrow } = require('../../services/hourlyEscrow.service');
+
+    const contract = await Contract.findById(req.params.id);
+    if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
+    if (['completed', 'cancelled'].includes(contract.status)) {
+      return res.status(400).json({ success: false, message: `Contract is already ${contract.status}` });
+    }
+
+    const job = contract.jobId ? await Job.findById(contract.jobId) : null;
+    let refunded = 0; // gross amount refunded to the client, for the admin-facing response
+
+    if (contract.type === 'fixed') {
+      const disputedCount = await Milestone.countDocuments({ contractId: contract._id, status: 'disputed' });
+      if (disputedCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This contract has an unresolved milestone dispute — resolve it via the Disputes page before cancelling.'
+        });
+      }
+
+      // Any milestone still holding escrow (funded, or delivered but not yet
+      // approved) gets refunded to the client rather than paid out — cancel
+      // means the deal is off, not that undelivered/unapproved work is good.
+      const milestones = await Milestone.find({
+        contractId: contract._id,
+        status: { $in: ['funded', 'submitted', 'in_revision'] }
+      }).sort({ order: 1 });
+      for (const milestone of milestones) {
+        const payment = await Payment.findOne({ milestoneId: milestone._id, type: 'job_escrow' });
+        if (payment && payment.status !== 'refunded') {
+          payment.status = 'refunded';
+          await payment.save();
+          await ClientProfile.updateOne({ userId: contract.clientId }, { $inc: { walletBalance: payment.totalAmount } });
+          refunded += payment.totalAmount;
+        }
+        milestone.status = 'refunded';
+        await milestone.save();
+      }
+      // Milestones never reached (still at their default, never funded) —
+      // nothing to refund, just close them out so none dangle under a
+      // cancelled contract.
+      await Milestone.updateMany(
+        { contractId: contract._id, status: 'pending_funding' },
+        { $set: { status: 'cancelled' } }
+      );
+    } else {
+      // Hourly: work already logged is real, verifiable work — settle it
+      // the same way force-complete does — then refund whatever's left of
+      // the lock. Cancelling doesn't erase hours already performed.
+      const pendingLogs = await TimeLog.find({ contractId: contract._id, status: 'pending' }).sort({ startTime: 1 });
+      for (const log of pendingLogs) {
+        try {
+          await drawDownForTimeLog({ timeLog: log, contract, job });
+        } catch (err) {
+          console.error(`[Contracts] cancelContract: could not settle time log ${log._id}: ${err.message}`);
+          break;
+        }
+      }
+      refunded = await refundRemainingHourlyEscrow({ contract, job });
+    }
+
+    const prev = contract.status;
+    contract.status = 'cancelled';
+    contract.completedAt = contract.completedAt || null;
+    await contract.save();
+
+    if (job && !['completed', 'cancelled'].includes(job.status)) {
+      job.status = 'cancelled';
+      await job.save();
+    }
+
+    recordHistory(contract._id, 'cancel', `[Admin] Contract cancelled. Refunded Rs. ${refunded} to client. ${req.body.reason || ''}`.trim(), req.admin.email, { status: prev }, { status: 'cancelled', refunded });
+    auditLog(req, {
+      action: 'contract.cancel', category: 'contract', resource: 'Contract',
+      resourceId: contract._id, previousValue: { status: prev }, newValue: { status: 'cancelled', refunded },
+      notes: req.body.reason, severity: 'critical'
+    });
+    return res.status(200).json({ success: true, message: `Contract cancelled. Rs. ${refunded} refunded to client.`, contract, refunded });
+  } catch (err) {
+    console.error('[Contracts] cancelContract error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to cancel contract' });
+  }
+};
 
 /**
  * POST /contracts/:id/force-complete — mark completed and release any

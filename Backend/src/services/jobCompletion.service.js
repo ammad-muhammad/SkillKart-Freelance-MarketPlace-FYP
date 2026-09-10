@@ -1,6 +1,5 @@
 const FreelancerProfile = require('../models/FreelancerProfile');
 const ClientProfile = require('../models/ClientProfile');
-const Gig = require('../models/Gig');
 
 /**
  * finalizeJobCompletion — runs the side-effects when a job becomes 'completed':
@@ -61,10 +60,9 @@ async function finalizeJobCompletion(job, opts = {}) {
     );
   }
 
-  // ── Gig order → bump the source gig's completed-order count ──
-  if (job.source === 'gig' && job.gigId) {
-    await Gig.updateOne({ _id: job.gigId }, { $inc: { 'stats.orders': 1 } });
-  }
+  // Gig order stats.orders is already incremented once, at order time
+  // (gig.controller.js's createGigOrder) — incrementing it again here on
+  // completion double-counted every finished gig order.
 
   job.statsRolledUp = true;
   await job.save();

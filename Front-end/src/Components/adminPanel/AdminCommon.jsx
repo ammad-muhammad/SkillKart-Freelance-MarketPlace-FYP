@@ -277,6 +277,14 @@ export const fmt = {
     return val != null ? `${c} ${Number(val).toLocaleString()}${suffix}` : '—';
   },
   number:   (n) => n != null ? Number(n).toLocaleString() : '—',
+  // TimeLog.duration is stored in milliseconds.
+  duration: (ms) => {
+    if (ms == null) return '—';
+    const totalMinutes = Math.round(ms / 60000);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  },
   percent:  (n) => n != null ? `${Number(n).toFixed(1)}%` : '—',
   relative: (d) => {
     if (!d) return '—';

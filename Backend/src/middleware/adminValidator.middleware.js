@@ -81,7 +81,7 @@ const freezeWalletSchema = [
 const resolveDisputeSchema = [
   body('action')
     .notEmpty().withMessage('Action is required')
-    .isIn(['release_freelancer', 'refund_client', 'split', 'resume', 'reject'])
+    .isIn(['release_freelancer', 'refund_client', 'split', 'cancel_contract', 'resume', 'reject'])
     .withMessage('Invalid resolve action'),
   body('notes')
     .notEmpty().withMessage('Resolution notes are required')

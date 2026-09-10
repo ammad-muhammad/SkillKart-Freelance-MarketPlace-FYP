@@ -12,10 +12,13 @@ const mongoose = require('mongoose');
  *                    → in_revision       (client requests changes) → submitted (resubmit)
  *                    → approved/released (client approves, or the 7-day
  *                                          auto-release cron fires)
- *                    → disputed          (either party raises a dispute while
- *                                          submitted; excluded from auto-release
- *                                          until an admin resolves it)
+ *                    → disputed          (either party raises a dispute at any
+ *                                          point before release; excluded from
+ *                                          auto-release until an admin resolves it)
  *                    → refunded          (dispute resolved in the client's favor)
+ *                    → cancelled         (dispute resolved as "client never
+ *                                          funded this milestone" — contract
+ *                                          ends, no money ever moved)
  *
  * A top-level collection (not embedded on Contract) so the auto-release cron
  * and the admin disputes list can query across all milestones cheaply, the
@@ -32,7 +35,7 @@ const milestoneSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['pending_funding', 'funded', 'submitted', 'in_revision', 'approved', 'disputed', 'released', 'refunded'],
+    enum: ['pending_funding', 'funded', 'submitted', 'in_revision', 'approved', 'disputed', 'released', 'refunded', 'cancelled'],
     default: 'pending_funding',
     index: true
   },

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, requirePermission } = require('../middleware/rbac.middleware');
+const { requireRole, requirePermission, requireHigherRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
 const {
   getUserByIdValidation,
@@ -86,6 +86,7 @@ router.get('/:id',
 // Create user
 router.post('/',
   requireRole('admin', 'superadmin'),
+  requireHigherRole,
   createUserValidation,
   validate,
   userController.createUser
@@ -94,6 +95,7 @@ router.post('/',
 // Update user
 router.put('/:id',
   requireRole('admin', 'superadmin'),
+  requireHigherRole,
   updateUserValidation,
   validate,
   userController.updateUser
@@ -126,6 +128,7 @@ router.put('/:id/unblock',
 // Update user role
 router.put('/:id/role',
   requireRole('admin', 'superadmin'),
+  requireHigherRole,
   updateUserRoleValidation,
   validate,
   userController.updateUserRole

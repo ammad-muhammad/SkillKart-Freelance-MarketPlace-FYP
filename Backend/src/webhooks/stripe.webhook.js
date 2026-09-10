@@ -38,17 +38,19 @@ router.post('/', async (req, res) => {
       const amountDeposited = (session.amount_total || 0) / 100;
       const userId = session.metadata?.userId;
       if (userId && amountDeposited > 0) {
-        // Idempotency check: don't double fund
-        const profile = await ClientProfile.findOne({ userId });
-        if (profile && !profile.processedSessions.includes(session.id)) {
-          await ClientProfile.findOneAndUpdate(
-            { userId },
-            { 
-              $inc: { walletBalance: amountDeposited },
-              $addToSet: { processedSessions: session.id }
-            }
-          );
-          
+        // Idempotency check folded into the update's filter, not a separate
+        // read-then-write — Stripe explicitly guarantees "at least once"
+        // webhook delivery (retries on timeout/non-2xx), and this can also
+        // race the frontend's own confirm call for the same session, so a
+        // plain findOne-then-update here could double-credit the wallet.
+        const updatedProfile = await ClientProfile.findOneAndUpdate(
+          { userId, processedSessions: { $ne: session.id } },
+          {
+            $inc: { walletBalance: amountDeposited },
+            $addToSet: { processedSessions: session.id }
+          }
+        );
+        if (updatedProfile) {
           // Create a Payment history record so it shows up in the UI
           await Payment.create({
             clientId: userId,
