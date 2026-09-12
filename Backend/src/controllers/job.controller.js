@@ -163,9 +163,14 @@ const getJobById = asyncHandler(async (req, res) => {
   }
 
   const proposalsCount = Array.isArray(job.proposals) ? job.proposals.length : 0;
-  let hasApplied = false;
+  // Own proposal only (never another freelancer's) — enough for the UI to
+  // show "Apply Now" / "Edit Proposal" / "Edit & Resubmit" / "Applied" and to
+  // prefill the edit form without a second round-trip.
+  let myProposal = null;
   if (req.user?.role === 'freelancer') {
-    hasApplied = await Proposal.exists({ jobId: job._id, freelancerId: req.user._id });
+    myProposal = await Proposal.findOne({ jobId: job._id, freelancerId: req.user._id })
+      .select('status canResubmit coverLetter fixedPrice hourlyRate estimatedDeliveryTime estimatedWeeklyHours attachments clientResponse')
+      .lean();
   }
 
   // Enrich with the poster's real client stats (rating, verification, and a live
@@ -186,7 +191,8 @@ const getJobById = asyncHandler(async (req, res) => {
   const jobObj = job.toObject();
   delete jobObj.proposals; // never expose the raw proposal id list either
   jobObj.proposalsCount = proposalsCount;
-  jobObj.hasApplied = !!hasApplied;
+  jobObj.hasApplied = !!myProposal;
+  jobObj.myProposal = myProposal;
   jobObj.clientStats = clientStats;
 
   sendSuccess(res, {

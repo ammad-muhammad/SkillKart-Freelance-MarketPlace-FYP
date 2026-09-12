@@ -378,7 +378,11 @@ const rejectProposalValidation = [
   body('reason')
     .optional()
     .trim()
-    .isLength({ max: 500 }).withMessage('Reason must not exceed 500 characters')
+    .isLength({ max: 500 }).withMessage('Reason must not exceed 500 characters'),
+
+  body('allowResubmit')
+    .optional()
+    .isBoolean().withMessage('allowResubmit must be a boolean')
 ];
 
 // Withdraw proposal validation
