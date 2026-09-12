@@ -16,7 +16,11 @@ const proposalSchema = new mongoose.Schema({
     index: true
   },
   clientResponse: String,
-  respondedAt: Date
+  respondedAt: Date,
+  // Set true only when the client rejects with "allow resubmit" checked —
+  // lets the freelancer edit this same proposal and send it back as pending
+  // instead of it being a dead end. Cleared as soon as it's used.
+  canResubmit: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Proposal', proposalSchema);

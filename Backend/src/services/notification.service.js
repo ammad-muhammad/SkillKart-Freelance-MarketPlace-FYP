@@ -59,11 +59,23 @@ const onProposalAccepted = (freelancerId, { job }) => notify(freelancerId, {
   jobId: job?._id,
 });
 
-const onProposalRejected = (freelancerId, { job }) => notify(freelancerId, {
+const onProposalRejected = (freelancerId, { job, canResubmit }) => notify(freelancerId, {
   type: TYPES.PROPOSAL_REJECTED,
-  title: 'Proposal not selected',
-  message: `Your proposal for "${job?.title || 'a project'}" wasn't selected this time.`,
+  title: canResubmit ? 'Proposal not selected — you can revise it' : 'Proposal not selected',
+  message: canResubmit
+    ? `Your proposal for "${job?.title || 'a project'}" wasn't selected, but the client is open to a revised resubmission.`
+    : `Your proposal for "${job?.title || 'a project'}" wasn't selected this time.`,
   link: '/freelancer/proposals',
+  jobId: job?._id,
+});
+
+// To the client: the freelancer edited a rejected-but-resubmittable
+// proposal and sent it back — it's pending review again.
+const onProposalResubmitted = (clientId, { job, freelancerName }) => notify(clientId, {
+  type: TYPES.PROPOSAL_RECEIVED,
+  title: 'Proposal resubmitted',
+  message: `${freelancerName || 'A freelancer'} revised and resubmitted their proposal for "${job?.title || 'your project'}".`,
+  link: `/client/projects/${job?._id}/proposals`,
   jobId: job?._id,
 });
 
@@ -195,6 +207,7 @@ module.exports = {
   onProposalReceived,
   onProposalAccepted,
   onProposalRejected,
+  onProposalResubmitted,
   onGigOrdered,
   onDepositFunded,
   onWorkDelivered,

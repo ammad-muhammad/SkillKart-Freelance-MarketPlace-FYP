@@ -31,9 +31,10 @@ export const proposalsAPI = {
   acceptProposal: (id, message, milestones) =>
     client.post(`/proposals/${id}/accept`, { message, ...(milestones ? { milestones } : {}) }, { suppressErrorToast: true }),
 
-  // Reject proposal (Client only)
-  rejectProposal: (id, reason) =>
-    client.post(`/proposals/${id}/reject`, { reason }, { suppressErrorToast: true }),
+  // Reject proposal (Client only). `allowResubmit` lets the freelancer edit
+  // and resend this same proposal instead of it being a dead end.
+  rejectProposal: (id, reason, allowResubmit) =>
+    client.post(`/proposals/${id}/reject`, { reason, allowResubmit }, { suppressErrorToast: true }),
 
   // Withdraw proposal (Freelancer only)
   withdrawProposal: (id) => 

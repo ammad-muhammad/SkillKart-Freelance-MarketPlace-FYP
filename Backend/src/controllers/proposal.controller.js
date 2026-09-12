@@ -118,13 +118,16 @@ const updateProposal = asyncHandler(async (req, res) => {
   if (String(proposal.freelancerId) !== String(req.user._id)) {
     throw new ForbiddenError('You can only edit your own proposals');
   }
-  // Can't edit once the client has acted on it.
-  if (proposal.status !== 'pending') {
+  // Can edit while pending, or a rejected proposal the client explicitly
+  // allowed to be revised and resubmitted. Anything else (accepted,
+  // withdrawn, or rejected without that permission) is a dead end.
+  const isResubmit = proposal.status === 'rejected' && proposal.canResubmit;
+  if (proposal.status !== 'pending' && !isResubmit) {
     throw new ForbiddenError(`A "${proposal.status}" proposal can no longer be edited.`);
   }
   // Can't edit once the job itself is no longer open (covers paths that don't
   // bulk-reject pending proposals, e.g. auto-expiry or admin close/cancel).
-  const job = await Job.findById(proposal.jobId).select('status');
+  const job = await Job.findById(proposal.jobId).select('status clientId title');
   if (job && job.status !== 'open') {
     throw new ForbiddenError('This job is no longer open, so the proposal can no longer be edited.');
   }
@@ -135,10 +138,24 @@ const updateProposal = asyncHandler(async (req, res) => {
       proposal[key] = key === 'coverLetter' ? stripHtml(req.body[key]) : req.body[key];
     }
   }
+
+  if (isResubmit) {
+    // Send it back to the client as a fresh pending review.
+    proposal.status = 'pending';
+    proposal.canResubmit = false;
+  }
+
   await proposal.save();
 
+  if (isResubmit && job) {
+    notifications.onProposalResubmitted(job.clientId, {
+      job,
+      freelancerName: [req.user.firstName, req.user.lastName].filter(Boolean).join(' '),
+    });
+  }
+
   sendSuccess(res, {
-    message: 'Proposal updated successfully',
+    message: isResubmit ? 'Proposal revised and resubmitted successfully' : 'Proposal updated successfully',
     data: { proposal }
   });
 });
@@ -407,7 +424,7 @@ const acceptProposal = asyncHandler(async (req, res) => {
  */
 const rejectProposal = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { reason } = req.body;
+  const { reason, allowResubmit } = req.body;
 
   const proposal = await Proposal.findById(id);
   if (!proposal) {
@@ -423,9 +440,10 @@ const rejectProposal = asyncHandler(async (req, res) => {
   proposal.status = 'rejected';
   proposal.clientResponse = reason;
   proposal.respondedAt = new Date();
+  proposal.canResubmit = !!allowResubmit;
   await proposal.save();
 
-  notifications.onProposalRejected(proposal.freelancerId, { job });
+  notifications.onProposalRejected(proposal.freelancerId, { job, canResubmit: proposal.canResubmit });
   
   sendSuccess(res, {
     message: 'Proposal rejected',

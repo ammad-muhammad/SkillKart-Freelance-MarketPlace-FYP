@@ -8,7 +8,7 @@ import { useClient } from '../../context/ClientContext';
 import {
   User, CheckCircle2, XCircle, Clock,
   MessageSquare, ChevronLeft,
-  Mail, Star, ExternalLink, Plus, X, Layers, Wallet
+  Mail, Star, ExternalLink, Plus, X, Layers, Wallet, RotateCcw
 } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
@@ -36,6 +36,9 @@ export default function ReviewProposals() {
   // Set when accept fails with a structured insufficientBalance error —
   // drives the guided top-up modal instead of a plain error toast.
   const [topUpModal, setTopUpModal] = useState(null); // { required, available, contractType }
+  const [rejectModal, setRejectModal] = useState(null); // proposal id being rejected
+  const [rejectReason, setRejectReason] = useState('');
+  const [allowResubmit, setAllowResubmit] = useState(false);
 
   const acceptingProposal = proposals.find((p) => p._id === welcomeModal);
   const isHourlyJob = job?.budget?.type === 'hourly';
@@ -149,14 +152,21 @@ export default function ReviewProposals() {
     }
   };
 
-  const handleReject = async (id) => {
-    const reason = prompt('Reason for rejection (optional):');
-    if (reason === null) return;
+  const handleRejectClick = (id) => {
+    setRejectModal(id);
+    setRejectReason('');
+    setAllowResubmit(false);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectModal) return;
+    const id = rejectModal;
+    setRejectModal(null);
 
     setProcessingId(id);
     try {
-      await proposalsAPI.rejectProposal(id, reason);
-      showToast('Proposal rejected.');
+      await proposalsAPI.rejectProposal(id, rejectReason.trim(), allowResubmit);
+      showToast(allowResubmit ? 'Proposal rejected — freelancer may revise and resubmit.' : 'Proposal rejected.');
       await fetchProfile(); // Sync global state
       fetchData(); // Refresh local view
     } catch {
@@ -279,7 +289,7 @@ export default function ReviewProposals() {
                         variant="danger"
                         size="sm"
                         icon={<XCircle size={18} />}
-                        onClick={() => handleReject(prop._id)}
+                        onClick={() => handleRejectClick(prop._id)}
                         disabled={!!processingId || job?.status !== 'open'}
                       >
                         Reject
@@ -288,6 +298,11 @@ export default function ReviewProposals() {
                   ) : (
                     <span className="rp-responded">
                       {prop.respondedAt ? `Responded on ${new Date(prop.respondedAt).toLocaleDateString()}` : 'Auto-rejected'}
+                      {prop.status === 'rejected' && prop.canResubmit && (
+                        <span className="rp-resubmit-note">
+                          <RotateCcw size={12} /> Freelancer may revise and resubmit
+                        </span>
+                      )}
                     </span>
                   )}
                   <Button
@@ -460,6 +475,82 @@ export default function ReviewProposals() {
           </div>
         </Modal>
       )}
+
+      {rejectModal && (
+        <Modal
+          open={!!rejectModal}
+          onClose={() => setRejectModal(null)}
+          title="Reject Proposal"
+        >
+          <div className="cl-modal__body" style={{ padding: '0.5rem 0 0 0' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+              Reason for rejection (optional)
+            </label>
+            <textarea
+              className="cl-textarea"
+              style={{
+                width: '100%',
+                minHeight: '100px',
+                marginBottom: '1rem',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1.5px solid #d1d9e6',
+                fontFamily: 'inherit',
+                fontSize: '0.9rem',
+                outline: 'none',
+                resize: 'vertical'
+              }}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Your bid is a bit higher than our budget for this project..."
+              maxLength={500}
+            />
+
+            <div style={{ padding: '1rem', borderRadius: '10px', border: '1.5px solid rgba(183, 201, 226, 0.35)', background: 'var(--color-secondary)', marginBottom: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={allowResubmit}
+                  onChange={(e) => setAllowResubmit(e.target.checked)}
+                  style={{ marginTop: '0.2rem' }}
+                />
+                <span>
+                  <RotateCcw size={14} style={{ marginRight: '0.3rem', verticalAlign: 'text-bottom' }} />
+                  Allow freelancer to revise and resubmit
+                  <span style={{ display: 'block', fontWeight: 500, fontSize: '0.78rem', color: 'var(--color-text-mid)', marginTop: '0.25rem' }}>
+                    Instead of a dead end, the freelancer can edit their bid/cover letter and send it back for another review.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="cl-btn cl-btn--ghost"
+                onClick={() => setRejectModal(null)}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="cl-btn cl-btn--danger"
+                onClick={confirmReject}
+                disabled={!!processingId}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                {processingId ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      <style>{`
+        .rp-responded { display: flex; flex-direction: column; gap: 0.3rem; }
+        .rp-resubmit-note { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 600; color: var(--color-info); }
+      `}</style>
     </div>
   );
 }
