@@ -30,6 +30,15 @@ const jobSchema = new mongoose.Schema({
   source: { type: String, enum: ['project', 'gig'], default: 'project' },
   gigId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gig' },
   gigTier: { type: String, enum: ['basic', 'standard', 'premium'] },
+  // Gig orders have no Contract/Milestone (they stay on the legacy 50/50
+  // Stripe flow), so delivery is tracked directly on the job: present =
+  // freelancer has delivered and the client should review; cleared by
+  // requestGigRevision to send it back for changes.
+  delivery: {
+    message: String,
+    links: [String],
+    submittedAt: Date
+  },
   statsRolledUp: { type: Boolean, default: false },
   completedAt: Date,
   deletedAt: Date // set by the admin panel's soft-delete (adminPanel/jobs.controller.js:deleteJob)

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import PkrIcon from '../../../Components/common/PkrIcon';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import ConfirmDialog from '../../../Components/common/ConfirmDialog/ConfirmDialog';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { safeToast as toast } from '../../../utils/safeToast';
 import useFocusTrap from '../../../hooks/useFocusTrap';
@@ -87,6 +88,7 @@ export default function JobDetails() {
   // null = submitting a fresh proposal; set = editing/resubmitting this proposal id.
   const [editingProposalId, setEditingProposalId] = useState(null);
   const [resubmitMode, setResubmitMode] = useState(false);
+  const [skillGateConfirm, setSkillGateConfirm] = useState(null); // { message, onConfirm } | null
   const applyModalRef = useRef(null);
   const closeApplyModal = useCallback(() => { if (!submitting) setShowApplyModal(false); }, [submitting]);
   useFocusTrap(applyModalRef, showApplyModal, closeApplyModal);
@@ -131,6 +133,18 @@ export default function JobDetails() {
   useEffect(() => {
     fetchJob();
   }, [fetchJob]);
+
+  // Reset any open edit/resubmit modal state when navigating to a DIFFERENT
+  // job (e.g. via browser Back/Forward, which bypasses the modal's own close
+  // handler) — otherwise a still-open modal keeps editingProposalId pointed
+  // at the PREVIOUS job's proposal while proposalData gets reset to the new
+  // job's defaults, so submitting would silently edit the wrong proposal
+  // with the wrong content.
+  useEffect(() => {
+    setShowApplyModal(false);
+    setEditingProposalId(null);
+    setResubmitMode(false);
+  }, [id]);
 
   useEffect(() => {
     document.title = job?.title ? `${job.title} – SkillKart` : 'Project Details – SkillKart';
@@ -287,10 +301,13 @@ export default function JobDetails() {
           const levelNote = gate.requiredLevel
             ? ` This project needs ${{ entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[gate.requiredLevel]}-level verification.`
             : '';
-          if (window.confirm(`You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`)) {
-            const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
-            navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
-          }
+          setSkillGateConfirm({
+            message: `You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`,
+            onConfirm: () => {
+              const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
+            },
+          });
         } else if (candidates[0]) {
           // None of the required skills are on their profile at all — a test
           // can't be generated for a skill they don't have listed yet (that's
@@ -299,17 +316,20 @@ export default function JobDetails() {
           // (unverified, same as any profile-edit skill add) and take them
           // straight to its test instead.
           const skillLabel = candidates[0];
-          if (window.confirm(`This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`)) {
-            try {
-              const existingSkillNames = profile?.skills || [];
-              await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
-              await refreshProfile();
-              const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
-              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
-            } catch (addErr) {
-              toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
-            }
-          }
+          setSkillGateConfirm({
+            message: `This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`,
+            onConfirm: async () => {
+              try {
+                const existingSkillNames = profile?.skills || [];
+                await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
+                await refreshProfile();
+                const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+                navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
+              } catch (addErr) {
+                toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
+              }
+            },
+          });
         } else {
           toast.error(msg);
         }
@@ -645,6 +665,20 @@ export default function JobDetails() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!skillGateConfirm}
+        title="Skill verification required"
+        message={skillGateConfirm?.message}
+        confirmLabel="Take the test"
+        danger={false}
+        onConfirm={() => {
+          const action = skillGateConfirm?.onConfirm;
+          setSkillGateConfirm(null);
+          action?.();
+        }}
+        onClose={() => setSkillGateConfirm(null)}
+      />
 
       <Footer />
     </>

@@ -102,7 +102,7 @@ const Login = () => {
 
     const handleSocialLogin = async (provider) => {
         if (!supabaseUrl || !supabaseKey) {
-            alert('Supabase not configured');
+            setError('Social login is not available right now.');
             return;
         }
         const supabase = createClient(supabaseUrl, supabaseKey);

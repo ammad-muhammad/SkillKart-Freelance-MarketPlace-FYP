@@ -15,7 +15,10 @@ const verifyWebhookSignature = (req) => {
   const signature = req.headers['x-webhook-signature'];
   const webhookSecret = process.env.WEBHOOK_SECRET;
 
-  if (!webhookSecret) return true;
+  // Fail CLOSED, not open: with no secret configured there is no way to tell
+  // a real Supabase call from a forged one, so reject every request rather
+  // than accepting everything unsigned.
+  if (!webhookSecret) return false;
   if (!signature) return false;
 
   const expectedSignature = crypto

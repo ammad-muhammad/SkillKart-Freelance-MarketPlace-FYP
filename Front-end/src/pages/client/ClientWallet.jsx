@@ -23,7 +23,7 @@ const statusLabel = (s) =>
   STATUS_LABELS[s] || String(s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function ClientWallet() {
-  const { profile, loading: profileLoading } = useClient();
+  const { profile, loading: profileLoading, showToast } = useClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState([]);
@@ -53,16 +53,16 @@ export default function ClientWallet() {
       paymentsAPI.depositFunds(sessionId)
         .then(({ data }) => {
           setWalletBalance(data?.data?.walletBalance || 0);
-          alert('Wallet successfully funded!');
+          showToast('Wallet successfully funded!');
           navigate('/client/wallet', { replace: true });
         })
         .catch(err => {
-          alert('Failed to verify wallet deposit: ' + (err.response?.data?.message || err.message));
+          showToast('Failed to verify wallet deposit: ' + (err.response?.data?.message || err.message), 'error');
           navigate('/client/wallet', { replace: true });
         })
         .finally(() => setLoading(false));
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, showToast]);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -95,10 +95,10 @@ export default function ClientWallet() {
         window.location.assign(url);
         return;
       }
-      alert('Failed to get checkout URL');
+      showToast('Failed to get checkout URL', 'error');
       setDepositing(false);
     } catch (err) {
-      alert('Failed to initiate checkout: ' + (err.response?.data?.message || err.message));
+      showToast('Failed to initiate checkout: ' + (err.response?.data?.message || err.message), 'error');
       setDepositing(false);
     }
   };
@@ -190,7 +190,11 @@ export default function ClientWallet() {
                         {payment.type === 'wallet_deposit' ? '+' : '-'}Rs. {payment.totalAmount?.toLocaleString()}
                       </td>
                       <td style={{ padding: '1rem' }}>
-                        {payment.status === 'released' ? (
+                        {payment.type === 'wallet_deposit' && payment.status === 'released' ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <CheckCircle2 size={14} /> Completed
+                          </span>
+                        ) : payment.status === 'released' ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
                             <CheckCircle2 size={14} /> Paid in Full
                           </span>

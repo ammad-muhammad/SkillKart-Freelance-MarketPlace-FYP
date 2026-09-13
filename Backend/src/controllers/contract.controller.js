@@ -137,7 +137,8 @@ const requestCancellation = asyncHandler(async (req, res) => {
   notifications.onContractDisputed(notifyUserId, {
     contractId: contract._id,
     actorName,
-    reason
+    reason,
+    recipientRole: isClient ? 'freelancer' : 'client'
   });
 
   sendSuccess(res, {
@@ -306,7 +307,8 @@ const requestEndContract = asyncHandler(async (req, res) => {
   const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
   notifications.onContractStatusChanged(notifyUserId, {
     contractId: contract._id,
-    status: 'end_requested'
+    status: 'end_requested',
+    recipientRole: isClient ? 'freelancer' : 'client'
   });
 
   sendSuccess(res, { message: 'End request sent successfully', data: { contract } });
@@ -348,7 +350,8 @@ const respondEndContract = asyncHandler(async (req, res) => {
     
     notifications.onContractStatusChanged(contract.endRequest.requestedBy, {
       contractId: contract._id,
-      status: 'end_request_rejected'
+      status: 'end_request_rejected',
+      recipientRole: String(contract.endRequest.requestedBy) === String(contract.clientId) ? 'client' : 'freelancer'
     });
 
     return sendSuccess(res, { message: 'End request rejected', data: { contract } });
@@ -401,6 +404,9 @@ const respondEndContract = asyncHandler(async (req, res) => {
       }
 
       await refundRemainingHourlyEscrow({ contract, job });
+      // Escrow is now fully drawn down/refunded — without this the field stays
+      // 'wallet_locked' forever post-completion, stale for anything reading it.
+      contract.paymentStatus = 'settled';
     }
 
     await contract.save();
@@ -430,7 +436,8 @@ const respondEndContract = asyncHandler(async (req, res) => {
     const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
     notifications.onContractStatusChanged(notifyUserId, {
       contractId: contract._id,
-      status: 'completed'
+      status: 'completed',
+      recipientRole: isClient ? 'freelancer' : 'client'
     });
 
     return sendSuccess(res, { message: 'Contract completed successfully', data: { contract } });
@@ -501,7 +508,7 @@ const raiseDispute = asyncHandler(async (req, res) => {
     });
 
     const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
-    notifications.onContractDisputed(notifyUserId, { contractId: contract._id, actorName: req.user.firstName, reason });
+    notifications.onContractDisputed(notifyUserId, { contractId: contract._id, actorName: req.user.firstName, reason, recipientRole: isClient ? 'freelancer' : 'client' });
 
     return sendSuccess(res, { message: 'Dispute raised successfully', data: { contract, milestone } });
   }
@@ -513,8 +520,14 @@ const raiseDispute = asyncHandler(async (req, res) => {
   }
 
   contract.status = 'under_review';
+  // Fold any in-progress timer session into accumulatedMs before stopping it
+  // — just flipping isActive (the old code) silently drops that elapsed
+  // time, unlike requestCancellation's equivalent stop-the-timer step.
   if (contract.timer && contract.timer.isActive) {
+    const elapsedMs = Date.now() - new Date(contract.timer.startedAt).getTime();
+    contract.timer.accumulatedMs += elapsedMs;
     contract.timer.isActive = false;
+    contract.timer.startedAt = null;
   }
 
   contract.dispute = {
@@ -545,7 +558,8 @@ const raiseDispute = asyncHandler(async (req, res) => {
   notifications.onContractDisputed(notifyUserId, {
     contractId: contract._id,
     actorName: req.user.firstName,
-    reason
+    reason,
+    recipientRole: isClient ? 'freelancer' : 'client'
   });
 
   sendSuccess(res, { message: 'Dispute raised successfully', data: { contract } });

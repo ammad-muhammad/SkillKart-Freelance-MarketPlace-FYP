@@ -20,12 +20,12 @@ const registerValidation = [
     .withMessage('Password must contain uppercase, lowercase, and number'),
 
   body('firstName')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 50 }).withMessage('First name must be 2-50 characters'),
 
   body('lastName')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 50 }).withMessage('Last name must be 2-50 characters'),
 

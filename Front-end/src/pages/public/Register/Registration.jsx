@@ -35,6 +35,14 @@ const Registration = () => {
         }
     }, [isAuthenticated, user, authLoading, navigate]);
 
+    // A guest who set a pending post-login redirect (e.g. tapped "Apply Now")
+    // but then registered a brand-new account instead of logging in bypasses
+    // Login.jsx entirely — clear it here so a LATER, unrelated login in this
+    // browser doesn't get silently redirected to that stale destination.
+    useEffect(() => {
+        try { sessionStorage.removeItem('postLoginRedirect'); } catch { /* non-fatal */ }
+    }, []);
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));

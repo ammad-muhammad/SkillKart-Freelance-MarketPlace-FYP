@@ -81,7 +81,7 @@ const TaxonomyAdmin = () => {
       if (res.data?.data?.nodes) {
         setAllNodesList(res.data.data.nodes);
       }
-    });
+    }).catch(err => showToast(err.response?.data?.message || 'Failed to load the relationship-picker node list', 'error'));
     fetchProposals();
   }, []);
 

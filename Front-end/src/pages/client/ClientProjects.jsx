@@ -57,6 +57,7 @@ const ClientProjects = () => {
   const [actioning, setActioning] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(null); // { jobId, targetName }
   const [endRequestModal, setEndRequestModal] = useState(null); // proj
+  const [publishingId, setPublishingId] = useState(null); // project id currently being published
   const [endReason, setEndReason] = useState('Work completed');
   const [endDetails, setEndDetails] = useState('');
   const [disputeModal, setDisputeModal] = useState(null); // proj
@@ -89,18 +90,27 @@ const ClientProjects = () => {
       const { data } = await jobsAPI.getJobById(projectId);
       const job = data?.data?.job || data?.data || {};
       const freelancerName = job.hiredFreelancer ? `${job.hiredFreelancer.firstName} ${job.hiredFreelancer.lastName}` : 'Freelancer';
-      setReviewing({ 
-        id: projectId, 
+      // Gig orders never get a Contract/Delivery doc (legacy 50/50 Stripe
+      // flow) — their delivery lives directly on the job instead.
+      const isGig = job.source === 'gig' && !contract;
+      setReviewing({
+        id: projectId,
         contractId: contract?._id,
         deliveryId: delivery?._id,
-        title: proj.title, 
-        isCompleted: proj.status === 'completed', 
-        delivery: delivery, 
-        revisionCount: revisionCount, 
-        freelancerName 
+        title: proj.title,
+        isCompleted: proj.status === 'completed',
+        delivery: isGig ? job.delivery : delivery,
+        revisionCount: revisionCount,
+        freelancerName,
+        isGig,
       });
     } catch (err) {
       console.error(err);
+      // The modal was already opened optimistically above — without this it
+      // stays open forever showing its "Loading delivery details…" spinner,
+      // with no error and no way to retry or tell what's wrong.
+      showToast('Could not load this delivery\'s details. Please try again.', 'error');
+      setReviewing(null);
     }
   };
 
@@ -108,6 +118,22 @@ const ClientProjects = () => {
     if (!reviewing) return;
     setActioning(true);
     try {
+      // Gig orders: no Delivery doc to accept — release the remaining 50%
+      // (legacy Stripe flow) instead. startFinal pays from wallet balance
+      // instantly when possible; otherwise it returns a checkout URL to
+      // redirect to, same dummy-mode-friendly pattern as wallet deposits.
+      if (reviewing.isGig) {
+        const { data: finalData } = await paymentsAPI.startFinal(reviewing.id);
+        if (finalData?.data?.checkoutUrl) {
+          window.location.assign(finalData.data.checkoutUrl);
+          return; // navigating away
+        }
+        showToast(finalData?.message || 'Final payment released. Order completed!', 'success');
+        setReviewing(null);
+        await fetchProfile();
+        return;
+      }
+
       const { data } = await deliveriesAPI.reviewDelivery(reviewing.deliveryId, { action: 'accept' });
       const payload = data?.data || {};
       // Fixed-price milestones report `isLastMilestone: false` when there's
@@ -165,11 +191,15 @@ const ClientProjects = () => {
   };
 
   const handleRequestRevision = async () => {
-    if (!reviewing || !reviewing.deliveryId) return;
+    if (!reviewing || (!reviewing.deliveryId && !reviewing.isGig)) return;
     if (!revisionNote.trim()) { showToast('Add a note describing the changes needed.', 'error'); return; }
     setActioning(true);
     try {
-      await deliveriesAPI.reviewDelivery(reviewing.deliveryId, { action: 'request_revision', feedback: revisionNote.trim() });
+      if (reviewing.isGig) {
+        await jobsAPI.requestRevision(reviewing.id, revisionNote.trim());
+      } else {
+        await deliveriesAPI.reviewDelivery(reviewing.deliveryId, { action: 'request_revision', feedback: revisionNote.trim() });
+      }
       showToast('Revision requested.');
       setReviewing(null);
       await fetchProfile();
@@ -380,7 +410,7 @@ const ClientProjects = () => {
                     {proj.status === 'open' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> Open</span> :
                      proj.status === 'draft' ? <span><Folder size={14} style={{ marginRight: '6px' }} /> Draft</span> :
                      proj.status === 'in-progress' && proj.contractStatus === 'paused' ? <span><Pause size={14} style={{ marginRight: '6px' }} /> Paused</span> :
-                     proj.status === 'in-progress' && proj.contractStatus === 'delivered' ? <span><Package size={14} style={{ marginRight: '6px' }} /> Delivered — review needed</span> :
+                     proj.status === 'in-progress' && (proj.contractStatus === 'delivered' || (proj.source === 'gig' && proj.delivery)) ? <span><Package size={14} style={{ marginRight: '6px' }} /> Delivered — review needed</span> :
                      proj.status === 'in-progress' && proj.contractStatus === 'in_revision' ? <span><RefreshCw size={14} style={{ marginRight: '6px' }} /> In Revision</span> :
                      proj.status === 'in-progress' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> In Progress</span> :
                      proj.status === 'completed' ? <span><CheckCircle size={14} style={{ marginRight: '6px' }} /> Completed</span> :
@@ -525,11 +555,18 @@ const ClientProjects = () => {
                       review → pay final → completed), never manual override. */}
                   <div className="cl-proj-card__btns">
                     {proj.status === 'draft' && (
-                      <button 
-                        className="cl-btn cl-btn--primary cl-btn--sm" 
+                      <button
+                        className="cl-btn cl-btn--primary cl-btn--sm"
+                        disabled={publishingId === proj.id}
                         onClick={async () => {
-                          const ok = await updateProject(proj.id, { status: 'open' });
-                          if (ok) showToast('Project published successfully!');
+                          if (publishingId) return;
+                          setPublishingId(proj.id);
+                          try {
+                            const ok = await updateProject(proj.id, { status: 'open' });
+                            if (ok) showToast('Project published successfully!');
+                          } finally {
+                            setPublishingId(null);
+                          }
                         }}
                       >
                         <Send size={14} style={{ marginRight: '6px' }} /> Publish Draft
@@ -568,7 +605,7 @@ const ClientProjects = () => {
                         )}
                       </>
                     )}
-                    {proj.contractStatus === 'delivered' && (
+                    {(proj.contractStatus === 'delivered' || (proj.source === 'gig' && proj.status === 'in-progress' && proj.delivery)) && (
                       <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={() => openReview(proj)}>
                         <Package size={14} style={{ marginRight: '6px' }} /> Review Submitted Work
                       </button>

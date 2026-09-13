@@ -365,7 +365,7 @@ export default function CategoryPage() {
             </div>
             <div ref={skillsRef} className="mp-skills-grid">
               {filteredSkills.map((skill) => (
-                <SkillCard key={skill.id} skill={skill} categorySlug={categorySlug} gigCount={skillGigCount(skill)} />
+                <SkillCard key={skill._id || skill.slug} skill={skill} categorySlug={categorySlug} gigCount={skillGigCount(skill)} />
               ))}
             </div>
           </div>

@@ -103,12 +103,29 @@ async function lockHourlyEscrow({ contract, job, clientId, amount, performedBy, 
  * leave the TimeLog 'pending' and retry later (e.g. after a re-lock).
  */
 async function drawDownForTimeLog({ timeLog, contract, job }) {
+  const TimeLog = require('../models/TimeLog');
+
+  // Atomically claim the log itself FIRST — a plain `timeLog.save()` at the
+  // end of this function (the old code) has no precondition, so two
+  // concurrent callers racing on the same still-'pending' log (e.g. the
+  // catch-up loop in lockHourlyContract firing alongside the weekly-invoice
+  // cron, or a manual log racing a timer-stop) would both sail through and
+  // both pay it out. Only one caller can win this claim; the other exits
+  // immediately, before touching any money.
+  const claimed = await TimeLog.findOneAndUpdate(
+    { _id: timeLog._id, status: 'pending' },
+    { $set: { status: 'billed', approvedAt: new Date() } },
+    { new: true }
+  );
+  if (!claimed) {
+    // Already billed (or otherwise no longer pending) by a concurrent call.
+    return { amount: 0, payment: null };
+  }
+
   const hours = (timeLog.duration || 0) / 3600000; // ms -> hours
   const amount = round2(hours * (contract.hourlyRate || 0));
 
   if (amount <= 0) {
-    timeLog.status = 'billed';
-    await timeLog.save();
     return { amount: 0, payment: null };
   }
 
@@ -128,6 +145,10 @@ async function drawDownForTimeLog({ timeLog, contract, job }) {
     { new: true }
   );
   if (!updatedContract) {
+    // Couldn't fund it after all — release our claim on the log so it goes
+    // back to 'pending' and can be retried once the client tops up, instead
+    // of being stuck 'billed' with no payment ever created for it.
+    await TimeLog.updateOne({ _id: timeLog._id }, { $set: { status: 'pending' }, $unset: { approvedAt: '' } });
     const fresh = await Contract.findById(contract._id).select('hourlyEscrow').lean();
     const lockedBalance = fresh?.hourlyEscrow?.lockedBalance || 0;
     throw new BadRequestError(
@@ -166,8 +187,7 @@ async function drawDownForTimeLog({ timeLog, contract, job }) {
   );
 
   timeLog.status = 'billed';
-  timeLog.approvedAt = new Date();
-  await timeLog.save();
+  timeLog.approvedAt = claimed.approvedAt;
 
   notifications.onPaymentReleased(contract.freelancerId, { job, amount: freelancerPayout });
 

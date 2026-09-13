@@ -127,25 +127,67 @@ const updateProposal = asyncHandler(async (req, res) => {
   }
   // Can't edit once the job itself is no longer open (covers paths that don't
   // bulk-reject pending proposals, e.g. auto-expiry or admin close/cancel).
-  const job = await Job.findById(proposal.jobId).select('status clientId title');
+  const job = await Job.findById(proposal.jobId).select('status clientId title skills category experienceLevel');
   if (job && job.status !== 'open') {
     throw new ForbiddenError('This job is no longer open, so the proposal can no longer be edited.');
   }
 
-  // Allow-list only
-  for (const key of ['coverLetter', 'fixedPrice', 'hourlyRate', 'estimatedDeliveryTime', 'estimatedWeeklyHours', 'attachments']) {
-    if (Object.prototype.hasOwnProperty.call(req.body, key)) {
-      proposal[key] = key === 'coverLetter' ? stripHtml(req.body[key]) : req.body[key];
+  // Resubmitting re-enters the marketplace exactly like a fresh application,
+  // so it must clear the same skill gate createProposal enforces — otherwise
+  // a freelancer whose verification has since expired (6-month window) could
+  // resubmit straight into a pending review without ever re-proving
+  // eligibility. Unlike a plain pending-edit window (short), the
+  // reject-then-resubmit window is unbounded, so this can't be waved through.
+  if (isResubmit && job) {
+    const gate = await checkSkillGate(req.user._id, job.skills, job.category, job.experienceLevel);
+    if (!gate.allowed) {
+      const levelLabel = { entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[job.experienceLevel];
+      return sendError(res, {
+        statusCode: 403,
+        message: levelLabel
+          ? `This project requires ${levelLabel}-level verification in at least one of its required skills before you can resubmit.`
+          : 'You need to pass the skill test for this project’s required skills before you can resubmit. Verify at least one of them to continue.',
+        errors: {
+          skillTestRequired: true,
+          requiredSkills: job.skills || [],
+          category: job.category || '',
+          requiredLevel: job.experienceLevel || '',
+          verifiedSkills: gate.verifiedSkills,
+        },
+      });
     }
   }
 
-  if (isResubmit) {
-    // Send it back to the client as a fresh pending review.
-    proposal.status = 'pending';
-    proposal.canResubmit = false;
+  // Allow-list only
+  const updates = {};
+  for (const key of ['coverLetter', 'fixedPrice', 'hourlyRate', 'estimatedDeliveryTime', 'estimatedWeeklyHours', 'attachments']) {
+    if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+      updates[key] = key === 'coverLetter' ? stripHtml(req.body[key]) : req.body[key];
+    }
   }
 
-  await proposal.save();
+  let saved;
+  if (isResubmit) {
+    // Atomic conditional write — a plain read-then-save here would let this
+    // request race the client re-rejecting (or re-allowing) the same
+    // proposal at nearly the same moment; only one of them should win.
+    // Resubmitting also clears the OLD rejection's clientResponse/
+    // respondedAt — otherwise the freelancer would see last time's "Client
+    // Feedback" still displayed next to a fresh Pending badge, reading as if
+    // the client already responded to the new submission.
+    saved = await Proposal.findOneAndUpdate(
+      { _id: proposal._id, status: 'rejected', canResubmit: true },
+      { $set: { ...updates, status: 'pending', canResubmit: false, clientResponse: null, respondedAt: null } },
+      { new: true }
+    );
+    if (!saved) {
+      throw new ForbiddenError('This proposal is no longer eligible to be resubmitted (the client may have changed their mind).');
+    }
+  } else {
+    Object.assign(proposal, updates);
+    await proposal.save();
+    saved = proposal;
+  }
 
   if (isResubmit && job) {
     notifications.onProposalResubmitted(job.clientId, {
@@ -156,7 +198,7 @@ const updateProposal = asyncHandler(async (req, res) => {
 
   sendSuccess(res, {
     message: isResubmit ? 'Proposal revised and resubmitted successfully' : 'Proposal updated successfully',
-    data: { proposal }
+    data: { proposal: saved }
   });
 });
 
@@ -235,7 +277,7 @@ const listProposals = asyncHandler(async (req, res) => {
  */
 const acceptProposal = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { message, milestones } = req.body;
+  const { message, milestones, expectedPrice } = req.body;
 
   const proposal = await Proposal.findById(id);
   if (!proposal) {
@@ -253,6 +295,18 @@ const acceptProposal = asyncHandler(async (req, res) => {
   }
   if (job.contractId) {
     throw new ForbiddenError('An active contract already exists for this job.');
+  }
+  // Price staleness guard: `updateProposal` lets a freelancer edit a still-
+  // pending proposal's price at any time, including in the window between
+  // the client opening "Accept" and actually confirming it. If the caller
+  // tells us what price it displayed, reject when the live price has since
+  // moved instead of silently funding/locking escrow for a number the client
+  // never actually saw or agreed to.
+  if (expectedPrice !== undefined && expectedPrice !== null) {
+    const livePrice = job.budget?.type === 'hourly' ? proposal.hourlyRate : proposal.fixedPrice;
+    if (round2(Number(expectedPrice)) !== round2(Number(livePrice) || 0)) {
+      throw new BadRequestError('This proposal’s price has changed since you last viewed it — please refresh and review it again before accepting.');
+    }
   }
 
   const isHourly = job.budget?.type === 'hourly';
@@ -344,11 +398,11 @@ const acceptProposal = asyncHandler(async (req, res) => {
     freelancerId: proposal.freelancerId,
     type: isHourly ? 'hourly' : 'fixed',
     status: 'active',
-    // Fixed hires lock milestone 1 below (paymentStatus becomes 'funded' there
-    // implicitly via the milestone); hourly hires lock their weekly estimate
-    // right after this contract is saved and paymentStatus becomes
-    // 'wallet_locked' inside lockHourlyEscrow.
-    paymentStatus: isHourly ? 'pending' : 'funded',
+    // Starts 'pending' for BOTH types — it only becomes 'funded'/
+    // 'wallet_locked' once the fund/lock call below actually succeeds.
+    // Setting 'funded' here unconditionally (the old code, fixed-price only)
+    // would lie about escrow existing if that call then throws.
+    paymentStatus: 'pending',
 
     // Copy the agreed upon terms from the proposal
     fixedPrice: proposal.fixedPrice,
@@ -383,31 +437,64 @@ const acceptProposal = asyncHandler(async (req, res) => {
   job.contractId = contract._id;
   await job.save();
 
-  // Automatically reject other pending proposals
-  await Proposal.updateMany(
-    { jobId: job._id, _id: { $ne: proposal._id }, status: 'pending' },
-    { $set: { status: 'rejected', clientResponse: 'Position filled', respondedAt: new Date() } }
-  );
+  // Automatically reject other pending proposals — keep the ids so they can
+  // be put back to 'pending' below if funding ends up failing.
+  const otherPendingIds = await Proposal.find(
+    { jobId: job._id, _id: { $ne: proposal._id }, status: 'pending' }
+  ).distinct('_id');
+  if (otherPendingIds.length) {
+    await Proposal.updateMany(
+      { _id: { $in: otherPendingIds } },
+      { $set: { status: 'rejected', clientResponse: 'Position filled', respondedAt: new Date() } }
+    );
+  }
 
   // Lock escrow now that the contract/milestone records exist. Balance was
-  // already confirmed sufficient above.
-  if (!isHourly) {
-    await fundMilestoneFromWallet({
-      milestone: createdMilestones[0],
-      job,
-      contract,
-      clientId: req.user._id,
-      performedBy: req.user._id
-    });
-  } else if (hourlyLockAmount > 0) {
-    await lockHourlyEscrow({
-      contract,
-      job,
-      clientId: req.user._id,
-      amount: hourlyLockAmount,
-      performedBy: req.user._id,
-      initial: true
-    });
+  // already confirmed sufficient above, but that check (and the atomic job
+  // claim) can't fully close a same-client race: accepting two DIFFERENT
+  // proposals on two DIFFERENT jobs at nearly the same moment can both pass
+  // the earlier balance pre-check against the same stale wallet figure, and
+  // only one of the atomic debits inside fundMilestoneFromWallet/
+  // lockHourlyEscrow can actually succeed. There are no Mongo transactions
+  // in this app, so if the loser's fund/lock call throws here, everything
+  // written above (proposal accepted, contract, milestones, job claimed,
+  // other proposals auto-rejected) is otherwise a set of irreversible writes
+  // with no automatic rollback — undo them by hand instead of leaving the
+  // job stuck "in-progress" with a contract that was never actually funded.
+  try {
+    if (!isHourly) {
+      await fundMilestoneFromWallet({
+        milestone: createdMilestones[0],
+        job,
+        contract,
+        clientId: req.user._id,
+        performedBy: req.user._id
+      });
+    } else if (hourlyLockAmount > 0) {
+      await lockHourlyEscrow({
+        contract,
+        job,
+        clientId: req.user._id,
+        amount: hourlyLockAmount,
+        performedBy: req.user._id,
+        initial: true
+      });
+    }
+  } catch (fundError) {
+    await Job.updateOne({ _id: job._id }, { $set: { status: 'open' }, $unset: { hiredFreelancer: '', contractId: '' } });
+    await Proposal.updateOne({ _id: proposal._id }, { $set: { status: 'pending' }, $unset: { clientResponse: '', respondedAt: '' } });
+    if (otherPendingIds.length) {
+      await Proposal.updateMany(
+        { _id: { $in: otherPendingIds } },
+        { $set: { status: 'pending' }, $unset: { clientResponse: '', respondedAt: '' } }
+      );
+    }
+    if (createdMilestones.length) {
+      await Milestone.deleteMany({ _id: { $in: createdMilestones.map((m) => m._id) } });
+    }
+    await ContractHistory.deleteMany({ contractId: contract._id });
+    await Contract.deleteOne({ _id: contract._id });
+    throw fundError;
   }
 
   // Notify the hired freelancer.
@@ -436,12 +523,28 @@ const rejectProposal = asyncHandler(async (req, res) => {
   if (String(job.clientId) !== String(req.user._id)) {
     throw new ForbiddenError('You can only reject proposals on your own projects');
   }
+  // Only a still-pending proposal can be rejected — without this, an already
+  // `accepted` proposal (with a live Contract/Milestone behind it) could be
+  // flipped back to `rejected` (and, combined with canResubmit, back to
+  // `pending`), leaving a Contract whose source Proposal no longer reflects
+  // that it was ever accepted.
+  if (proposal.status !== 'pending') {
+    throw new BadRequestError(`A "${proposal.status}" proposal can no longer be rejected.`);
+  }
 
-  proposal.status = 'rejected';
-  proposal.clientResponse = reason;
-  proposal.respondedAt = new Date();
-  proposal.canResubmit = !!allowResubmit;
-  await proposal.save();
+  // Atomic claim — mirrors the same status precondition as a filter so a
+  // concurrent request (e.g. a double-submitted reject, or racing the
+  // freelancer's own in-flight resubmit) can't silently clobber whichever
+  // write lands second.
+  const rejected = await Proposal.findOneAndUpdate(
+    { _id: proposal._id, status: 'pending' },
+    { $set: { status: 'rejected', clientResponse: reason, respondedAt: new Date(), canResubmit: !!allowResubmit } },
+    { new: true }
+  );
+  if (!rejected) {
+    throw new BadRequestError('This proposal was already responded to.');
+  }
+  Object.assign(proposal, rejected.toObject());
 
   notifications.onProposalRejected(proposal.freelancerId, { job, canResubmit: proposal.canResubmit });
   

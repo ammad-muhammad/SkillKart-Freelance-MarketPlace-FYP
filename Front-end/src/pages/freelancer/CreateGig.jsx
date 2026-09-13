@@ -8,6 +8,7 @@ import Stepper from '../../Components/common/Stepper/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import { validateFile } from '../../utils/uploadHelper';
 import { aiAPI } from '../../api/ai';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
@@ -376,7 +377,7 @@ const Step4 = ({ gig, set }) => {
           {gig.media.images.map((img, i) => (
             <div key={i} className="fl-image-thumb">
               <img src={img} alt={`portfolio-${i}`} />
-              <button className="fl-image-thumb__remove" onClick={() => removeImage(i)}><X size={14} /></button>
+              <button className="fl-image-thumb__remove" onClick={() => removeImage(i)} aria-label={`Remove image ${i + 1}`}><X size={14} /></button>
             </div>
           ))}
           {gig.media.images.length === 0 && (
@@ -413,7 +414,7 @@ const Step4 = ({ gig, set }) => {
               onChange={(e) => updatePortfolioLink(i, e.target.value)}
               placeholder="https://your-project.com"
             />
-            <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)}><X size={14} /></button>
+            <button className="fl-btn fl-btn--ghost fl-btn--sm" onClick={() => removePortfolioLink(i)} aria-label={`Remove portfolio link ${i + 1}`}><X size={14} /></button>
           </div>
         ))}
       </div>
@@ -539,6 +540,7 @@ const CreateGig = () => {
   const [step, setStep] = useState(0);
   const [gig, setGig] = useState(EMPTY_GIG);
   const [publishing, setPublishing] = useState(false);
+  const [showSkillTestConfirm, setShowSkillTestConfirm] = useState(false);
   const [validatingCategory, setValidatingCategory] = useState(false);
 
   // Only allow skills the freelancer has passed tests for (isVerified === true)
@@ -653,9 +655,7 @@ const CreateGig = () => {
       // the baseline skill test (covers their unverified profile skills). We
       // intentionally don't force ?skill= — a per-skill test requires that skill
       // to already be on their profile, which may not be the case yet.
-      if (window.confirm('You must pass the skill test for this gig’s skills before publishing. Take the test now?')) {
-        navigate('/freelancer/skill-test');
-      }
+      setShowSkillTestConfirm(true);
     }
   };
 
@@ -690,6 +690,16 @@ const CreateGig = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={showSkillTestConfirm}
+        title="Skill verification required"
+        message="You must pass the skill test for this gig's skills before publishing. Take the test now?"
+        confirmLabel="Take the test"
+        danger={false}
+        onConfirm={() => { setShowSkillTestConfirm(false); navigate('/freelancer/skill-test'); }}
+        onClose={() => setShowSkillTestConfirm(false)}
+      />
     </div>
   );
 };

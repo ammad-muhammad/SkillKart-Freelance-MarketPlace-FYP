@@ -615,8 +615,15 @@ a.navbar__mega-subtitle:hover {
 .navbar__hamburger {
   display: none;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 5px;
   padding: var(--space-2);
+  /* Guarantees a >=44px tap target regardless of the icon's own visual size
+     (which shrinks further at the ultra-compact breakpoint below) — the icon
+     was previously only as tappable as its padding + 2px-tall lines. */
+  min-width: 44px;
+  min-height: 44px;
   margin-left: auto;
   border-radius: var(--radius-md);
   transition: var(--transition-base);

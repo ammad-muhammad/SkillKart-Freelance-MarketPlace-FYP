@@ -1,4 +1,5 @@
 const CryptoJS = require('crypto-js');
+const bcrypt = require('bcryptjs');
 const fs = require('fs').promises;
 const path = require('path');
 const config = require('../config');
@@ -19,13 +20,20 @@ const decrypt = (ciphertext, key) => {
 };
 
 /**
- * Save SuperAdmin credentials (encrypted)
+ * Save SuperAdmin credentials (encrypted at rest, password one-way hashed)
  */
 const saveSuperAdminCredentials = async (username, email, password) => {
+  // Bcrypt-hash the password itself (same as every regular User account) —
+  // on top of, not instead of, the AES encryption of the whole file below.
+  // The old scheme stored the password reversibly (AES-decryptable back to
+  // plaintext given ENCRYPTION_KEY) for the single most powerful account in
+  // the system; a leaked credentials file + key recovered it instantly,
+  // where a leaked bcrypt hash would not.
+  const hashedPassword = await bcrypt.hash(password, 12);
   const credentials = {
     username,
     email,
-    password,
+    password: hashedPassword,
     createdAt: new Date().toISOString()
   };
 
@@ -59,12 +67,14 @@ const loadSuperAdminCredentials = async () => {
  */
 const verifySuperAdminCredentials = async (username, password) => {
   const credentials = await loadSuperAdminCredentials();
-  
-  if (!credentials) {
+
+  if (!credentials || credentials.username !== username) {
     return false;
   }
 
-  return credentials.username === username && credentials.password === password;
+  // bcrypt.compare is constant-time for the actual secret, unlike the old
+  // plain `===` on a decrypted plaintext password.
+  return bcrypt.compare(password, credentials.password);
 };
 
 /**
@@ -72,12 +82,12 @@ const verifySuperAdminCredentials = async (username, password) => {
  */
 const changeSuperAdminPassword = async (oldPassword, newPassword) => {
   const credentials = await loadSuperAdminCredentials();
-  
-  if (!credentials || credentials.password !== oldPassword) {
+
+  if (!credentials || !(await bcrypt.compare(oldPassword, credentials.password))) {
     throw new Error('Invalid current password');
   }
 
-  credentials.password = newPassword;
+  credentials.password = await bcrypt.hash(newPassword, 12);
   credentials.updatedAt = new Date().toISOString();
   
   const encrypted = encrypt(JSON.stringify(credentials), config.superadmin.encryptionKey);

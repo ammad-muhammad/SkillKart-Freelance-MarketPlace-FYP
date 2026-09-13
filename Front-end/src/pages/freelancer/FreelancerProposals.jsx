@@ -11,6 +11,7 @@ import Modal from '../../Components/common/Modal/Modal';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const DELIVERY_OPTIONS = ['Less than 1 week', '1-2 weeks', '1 month', '3+ months'];
@@ -22,6 +23,7 @@ export default function FreelancerProposals() {
   const [editingProposal, setEditingProposal] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [withdrawingId, setWithdrawingId] = useState(null);
 
 
   useEffect(() => {
@@ -45,13 +47,17 @@ export default function FreelancerProposals() {
   };
 
   const handleWithdraw = async (id) => {
+    if (withdrawingId) return;
     if (!window.confirm('Are you sure you want to withdraw this proposal?')) return;
+    setWithdrawingId(id);
     try {
       await proposalsAPI.withdrawProposal(id);
       toast.success('Proposal withdrawn.');
       fetchProposals();
     } catch {
       toast.error('Failed to withdraw proposal.');
+    } finally {
+      setWithdrawingId(null);
     }
   };
 
@@ -211,9 +217,13 @@ export default function FreelancerProposals() {
 
               <div className="fl-prop-card__footer">
                 <div className="fl-prop-card__btns">
-                  <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
-                    View Project <ExternalLink size={14} />
-                  </Link>
+                  {/* Not registered at all on the mobile build (see AppRoutes.jsx) —
+                      editing/resubmitting is still possible below without it. */}
+                  {!isMobileApp() && (
+                    <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
+                      View Project <ExternalLink size={14} />
+                    </Link>
+                  )}
                   {prop.status === 'pending' && prop.jobId?.status === 'open' && (
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
@@ -234,9 +244,10 @@ export default function FreelancerProposals() {
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
                       onClick={() => handleWithdraw(prop._id)}
+                      disabled={withdrawingId === prop._id}
                       style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
                     >
-                      Withdraw
+                      {withdrawingId === prop._id ? 'Withdrawing...' : 'Withdraw'}
                     </button>
                   )}
                   {prop.status === 'accepted' && prop.jobId?.status === 'in-progress' && (

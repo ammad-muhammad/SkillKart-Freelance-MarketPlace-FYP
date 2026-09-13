@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom"
 import ProtectedRoute from '../hooks/ProtectedRoute';
+import { useAuth } from '../hooks/useAuth';
 import { ClientProvider } from '../context/ClientContext';
 import { FreelancerProvider } from '../context/FreelancerContext';
 import ErrorBoundary from '../Components/common/ErrorBoundary/ErrorBoundary';
@@ -7,7 +8,6 @@ import { isMobileApp } from '../utils/platform';
 
 // Layouts
 import PublicLayout from "../layouts/PublicLayout";
-import AppLayout from "../layouts/AppLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import FreelancerLayout from "../layouts/FreelancerLayout";
 
@@ -119,6 +119,28 @@ const RedirectTo404 = () => {
       replace
       state={{ from: `${location.pathname}${location.search}` }}
     />
+  );
+};
+
+/**
+ * Where ProtectedRoute sends a logged-in user whose role isn't allowed on
+ * the route they hit (e.g. a freelancer opening a /client/... URL) — used to
+ * be a bare unstyled <h1> with no way out but the browser Back button.
+ */
+const Unauthorized = () => {
+  const { user } = useAuth();
+  const homeLink = user?.role === 'client' ? '/client/dashboard'
+    : user?.role === 'freelancer' ? '/freelancer/dashboard'
+    : user?.role === 'admin' || user?.role === 'superadmin' ? '/admin'
+    : '/';
+  return (
+    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', textAlign: 'center', padding: '2rem' }}>
+      <h1 style={{ fontSize: '2rem', margin: 0 }}>403 – Not Authorized</h1>
+      <p style={{ color: 'var(--color-text-mid, #555)', margin: 0 }}>
+        Your account doesn't have access to that page.
+      </p>
+      <Link to={homeLink} style={{ fontWeight: 600 }}>Go to your dashboard</Link>
+    </div>
   );
 };
 
@@ -314,7 +336,7 @@ const AppRoutes = () => {
             </Route>
           )}
 
-          <Route path="/unauthorized" element={<h1>403 – Unauthorized</h1>} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
           {/* 404 — directly linkable, and where unknown routes land */}
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<RedirectTo404 />} />

@@ -12,6 +12,7 @@ import {
   CheckCircle2, Tag, MessageCircle, User
 } from 'lucide-react';
 import { safeToast as toast } from '../../../utils/safeToast';
+import ConfirmDialog from '../../../Components/common/ConfirmDialog/ConfirmDialog';
 import './GigDetail.css';
 
 const TIER_ORDER = ['basic', 'standard', 'premium'];
@@ -25,6 +26,7 @@ export default function GigDetail() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [ordering, setOrdering] = useState(null); // tier key being ordered
+  const [orderConfirmTier, setOrderConfirmTier] = useState(null); // tier key pending confirmation
 
   useEffect(() => {
     let active = true;
@@ -74,7 +76,7 @@ export default function GigDetail() {
     navigate(user.role === 'freelancer' ? '/freelancer/messages' : '/client/messages');
   };
 
-  const handleOrder = async (tier) => {
+  const handleOrder = (tier) => {
     if (!user) {
       toast.info('Please log in as a client to order this gig.');
       try { sessionStorage.setItem('postLoginRedirect', `/gigs/${id}`); } catch { /* non-fatal */ }
@@ -85,11 +87,12 @@ export default function GigDetail() {
       toast.warning('Only clients can order gigs. Switch to a client account to purchase.');
       return;
     }
-    
-    if (!window.confirm("Have you contacted the freelancer to discuss your project requirements?\n\nIt is highly recommended to do so before placing an order.\n\nClick 'OK' to proceed to checkout if you are ready.")) {
-      return;
-    }
+    setOrderConfirmTier(tier);
+  };
 
+  const proceedWithOrder = async () => {
+    const tier = orderConfirmTier;
+    setOrderConfirmTier(null);
     setOrdering(tier);
     try {
       // Create the order (a job under the hood), then go straight to the 50%
@@ -330,6 +333,17 @@ export default function GigDetail() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!orderConfirmTier}
+        title="Ready to order?"
+        message="Have you contacted the freelancer to discuss your project requirements? It's highly recommended to do so before placing an order."
+        confirmLabel="Proceed to checkout"
+        danger={false}
+        onConfirm={proceedWithOrder}
+        onClose={() => setOrderConfirmTier(null)}
+      />
+
       <Footer />
     </>
   );

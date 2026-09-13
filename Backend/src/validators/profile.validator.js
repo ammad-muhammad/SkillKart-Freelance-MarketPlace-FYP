@@ -12,12 +12,12 @@ const updateFreelancerProfileValidation = [
     .isLength({ max: 1000 }).withMessage('Bio must not exceed 1000 characters'),
 
   body('title')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 100 }).withMessage('Title must be 2-100 characters'),
 
   body('username')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 3, max: 30 }).withMessage('Username must be 3–30 characters')
     .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores'),
@@ -32,7 +32,7 @@ const updateFreelancerProfileValidation = [
     .custom((value) => value.length >= 1).withMessage('At least one skill is required'),
 
   body('skills.*.name')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 50 }).withMessage('Each skill must be 2-50 characters'),
 
@@ -79,11 +79,11 @@ const updateFreelancerProfileValidation = [
     .isLength({ max: 100 }).withMessage('Field of study too long'),
 
   body('education.*.startDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid start date format'),
 
   body('education.*.endDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid end date format'),
 
   body('certifications')
@@ -101,7 +101,7 @@ const updateFreelancerProfileValidation = [
     .isLength({ max: 100 }).withMessage('Issuer name too long'),
 
   body('certifications.*.issueDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid issue date format'),
 
   body('certifications.*.url')
@@ -169,7 +169,7 @@ const updateClientProfileValidation = [
     .isLength({ max: 1000 }).withMessage('Description must not exceed 1000 characters'),
 
   body('username')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 3, max: 30 }).withMessage('Username must be 3–30 characters')
     .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores'),
@@ -371,12 +371,12 @@ const updatePortfolioItemValidation = [
     .isMongoId().withMessage('Invalid portfolio item ID'),
 
   body('title')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 100 }).withMessage('Title must be 2-100 characters'),
 
   body('description')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ max: 500 }).withMessage('Description must not exceed 500 characters'),
 
@@ -437,7 +437,7 @@ const addExperienceValidation = [
     .isISO8601().withMessage('Invalid start date format'),
 
   body('endDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid end date format'),
 
   body('current')
@@ -467,11 +467,11 @@ const updateExperienceValidation = [
     .isLength({ max: 100 }).withMessage('Company name too long'),
 
   body('startDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid start date format'),
 
   body('endDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid end date format')
 ];
 

@@ -4,6 +4,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle, ChevronRight, Plus } from 'lucide-react';
 import ShareStory from './components/ShareStory';
 import Skeleton from '../../Components/common/Skeleton/Skeleton';
+import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const StatCard = ({ icon, value, label, to }) => {
@@ -181,11 +182,17 @@ const DashboardOverview = () => {
           <Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'var(--color-primary-light)'}} /> Quick Actions
         </h3>
         <div className="fl-dashboard-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link to="/browse-projects" className="fl-btn fl-btn--primary"><Search size={16} style={{ marginRight: 6 }} /> Find Work</Link>
+          {/* Neither route is registered at all on the mobile build (see
+              AppRoutes.jsx) — hidden there rather than left as a dead link. */}
+          {!isMobileApp() && (
+            <Link to="/browse-projects" className="fl-btn fl-btn--primary"><Search size={16} style={{ marginRight: 6 }} /> Find Work</Link>
+          )}
           <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline"><Plus size={16} style={{ marginRight: 6 }} /> Create Gig</Link>
           <Link to="/freelancer/proposals" className="fl-btn fl-btn--ghost"><ClipboardList size={16} style={{ marginRight: 6 }} /> My Proposals</Link>
           <Link to="/freelancer/messages" className="fl-btn fl-btn--ghost"><MessageSquare size={16} style={{ marginRight: 6 }} /> Messages</Link>
-          <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
+          {!isMobileApp() && (
+            <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
+          )}
         </div>
       </div>
 
@@ -276,7 +283,10 @@ const DashboardOverview = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {gigs.slice(0, 3).map((gig) => (
-              <Link key={gig._id || gig.id} to={`/gigs/${gig._id || gig.id}`} className="fl-recent-gig" style={{ textDecoration: 'none' }}>
+              // The public gig detail route isn't registered at all on the
+              // mobile build (see AppRoutes.jsx) — fall back to the
+              // freelancer's own gigs management page, which is.
+              <Link key={gig._id || gig.id} to={isMobileApp() ? '/freelancer/gigs' : `/gigs/${gig._id || gig.id}`} className="fl-recent-gig" style={{ textDecoration: 'none' }}>
                 <div className="fl-recent-gig__left">
                   <div className="fl-recent-gig__icon-wrapper">
                     <Package size={20} />

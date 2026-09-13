@@ -590,7 +590,7 @@ const confirmChangePassword = asyncHandler(async (req, res) => {
 
   const user = await User.findById(userId);
   if (!user) {
-    return sendError(res, 'User not found', 404);
+    return sendError(res, { message: 'User not found', statusCode: 404 });
   }
 
   // Step 1: Verify OTP

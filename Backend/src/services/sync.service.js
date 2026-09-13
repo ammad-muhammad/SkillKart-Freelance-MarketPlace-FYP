@@ -14,26 +14,29 @@ const syncFromSupabase = async (supabaseUser) => {
   }
 
   if (user) {
-    // Update existing user
+    // Update existing user. Deliberately NEVER touch `role` here — it must
+    // stay under the backend's own RBAC control. `user_metadata` (unlike
+    // `app_metadata`) is writable by the end user themselves via Supabase's
+    // standard client SDK (`supabase.auth.updateUser`), so trusting a role
+    // out of it would let any user self-grant admin/superadmin.
     user.supabaseId = id;
     user.email = email;
     user.firstName = user_metadata?.firstName || user.firstName;
     user.lastName = user_metadata?.lastName || user.lastName;
     user.profilePicture = user_metadata?.avatar_url || user.profilePicture;
-    user.role = user_metadata?.role || user.role;
     user.isEmailVerified = !!email_confirmed_at;
     user.emailVerifiedAt = email_confirmed_at ? new Date(email_confirmed_at) : user.emailVerifiedAt;
     user.isSyncedToSupabase = true;
     user.lastSyncedAt = new Date();
   } else {
-    // Create new user
+    // Create new user — always the safe baseline role, never caller-supplied.
     user = new User({
       supabaseId: id,
       email,
       firstName: user_metadata?.firstName,
       lastName: user_metadata?.lastName,
       profilePicture: user_metadata?.avatar_url,
-      role: user_metadata?.role || 'publicviewer',
+      role: 'publicviewer',
       authProvider: supabaseUser.app_metadata?.provider || 'supabase',
       isEmailVerified: !!email_confirmed_at,
       emailVerifiedAt: email_confirmed_at ? new Date(email_confirmed_at) : null,

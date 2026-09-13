@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const Contract = require('../models/Contract');
 const TimeLog = require('../models/TimeLog');
 const Milestone = require('../models/Milestone');
+const Delivery = require('../models/Delivery');
 const Job = require('../models/Job');
 const { approveMilestone } = require('./milestone.service');
 const { drawDownForTimeLog } = require('./hourlyEscrow.service');
@@ -74,6 +75,14 @@ const autoReleaseStaleMilestones = async () => {
         if (!contract || !job) continue;
 
         const { isLastMilestone, freelancerPayout } = await approveMilestone({ milestone, contract, job, auto: true });
+        // Keep the Delivery record in sync — otherwise it's left forever
+        // 'pending_review' with no way to action it, and a later stale
+        // action on it would resolve to whatever milestone the contract has
+        // since moved on to instead of this one.
+        await Delivery.updateOne(
+          { milestoneId: milestone._id, status: 'pending_review' },
+          { $set: { status: 'accepted', reviewedAt: new Date() } }
+        );
         console.log(`[CRON] Auto-released milestone ${milestone._id} (order ${milestone.order}${isLastMilestone ? ', final' : ''}) — Rs. ${freelancerPayout} to freelancer.`);
       } catch (err) {
         // One bad milestone must not stop the rest of the batch from processing.

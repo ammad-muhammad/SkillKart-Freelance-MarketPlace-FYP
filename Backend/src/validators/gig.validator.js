@@ -7,7 +7,7 @@ const { body } = require('express-validator');
 const pricingTierValidation = (tier, required) => {
   const priceChain = body(`pricing.${tier}.price`);
   return [
-    (required ? priceChain.notEmpty().withMessage(`${tier} price is required`) : priceChain.optional())
+    (required ? priceChain.notEmpty().withMessage(`${tier} price is required`) : priceChain.optional({ values: 'falsy' }))
       .isFloat({ gt: 0 }).withMessage(`${tier} price must be greater than 0`),
 
     body(`pricing.${tier}.deliveryTime`)
@@ -16,7 +16,7 @@ const pricingTierValidation = (tier, required) => {
       .isLength({ max: 100 }).withMessage(`${tier} delivery time too long`),
 
     body(`pricing.${tier}.revisions`)
-      .optional()
+      .optional({ values: 'falsy' })
       .isInt({ min: 0, max: 100 }).withMessage(`${tier} revisions must be a whole number between 0 and 100`),
 
     body(`pricing.${tier}.features`)
@@ -90,7 +90,7 @@ const createGigValidation = [
 // required-on-create basic price) is optional since this is a partial update.
 const updateGigValidation = [
   body('title')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 5, max: 100 }).withMessage('Title must be 5-100 characters'),
 
@@ -100,7 +100,7 @@ const updateGigValidation = [
     .isLength({ max: 300 }).withMessage('Short description too long'),
 
   body('fullDescription')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 50, max: 5000 }).withMessage('Full description must be 50-5000 characters'),
 

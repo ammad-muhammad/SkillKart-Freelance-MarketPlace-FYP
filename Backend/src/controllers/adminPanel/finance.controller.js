@@ -2,6 +2,7 @@ const Payment = require('../../models/Payment');
 const FreelancerProfile = require('../../models/FreelancerProfile');
 const ClientProfile = require('../../models/ClientProfile');
 const Withdrawal = require('../../models/Withdrawal');
+const User = require('../../models/User');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
@@ -245,18 +246,26 @@ const getWallets = async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
     const halfLimit = Math.max(1, Math.floor(limit / 2));
+    const { search } = req.query;
+
+    let profileFilter = { walletBalance: { $gt: 0 } };
+    if (search && search.trim()) {
+      const regex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const matchedUsers = await User.find({ $or: [{ email: regex }, { firstName: regex }, { lastName: regex }] }).select('_id').lean();
+      profileFilter = { ...profileFilter, userId: { $in: matchedUsers.map(u => u._id) } };
+    }
 
     const [freelancers, clients, totalF, totalC] = await Promise.all([
-      FreelancerProfile.find({ walletBalance: { $gt: 0 } })
+      FreelancerProfile.find(profileFilter)
         .populate('userId', 'email firstName lastName')
         .select('userId walletBalance totalEarnings isFrozenWallet walletFrozenAt')
         .skip(skip).limit(halfLimit).lean(),
-      ClientProfile.find({ walletBalance: { $gt: 0 } })
+      ClientProfile.find(profileFilter)
         .populate('userId', 'email firstName lastName')
         .select('userId walletBalance totalSpent isFrozenWallet walletFrozenAt')
         .skip(skip).limit(halfLimit).lean(),
-      FreelancerProfile.countDocuments({ walletBalance: { $gt: 0 } }),
-      ClientProfile.countDocuments({ walletBalance: { $gt: 0 } })
+      FreelancerProfile.countDocuments(profileFilter),
+      ClientProfile.countDocuments(profileFilter)
     ]);
 
     const wallets = [
@@ -264,7 +273,8 @@ const getWallets = async (req, res) => {
       ...clients.map(c => ({ ...c, userType: 'client' }))
     ];
 
-    return res.status(200).json({ success: true, wallets, total: totalF + totalC });
+    const total = totalF + totalC;
+    return res.status(200).json({ success: true, wallets, total, pagination: { total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to load wallets' });
   }
@@ -289,28 +299,42 @@ const adjustWallet = async (req, res) => {
   try {
     const { amount, reason, notes } = req.body;
     const userId = req.params.userId;
+    const parsedAmount = parseFloat(amount);
 
-    let profile = await FreelancerProfile.findOne({ userId });
+    let profile = await FreelancerProfile.findOne({ userId }).select('_id walletBalance');
     let profileType = 'freelancer';
-    if (!profile) { profile = await ClientProfile.findOne({ userId }); profileType = 'client'; }
+    let Model = FreelancerProfile;
+    if (!profile) {
+      profile = await ClientProfile.findOne({ userId }).select('_id walletBalance');
+      profileType = 'client';
+      Model = ClientProfile;
+    }
     if (!profile) return res.status(404).json({ success: false, message: 'Wallet not found' });
 
     const prev = profile.walletBalance;
-    profile.walletBalance = Math.max(0, profile.walletBalance + parseFloat(amount));
-    await profile.save();
+
+    // Atomic — a plain read-modify-write (the old code) could lose an update
+    // if two adjustments to the same wallet land close together, unlike
+    // every other money mutation in this codebase. A pipeline update lets
+    // the floor-at-0 clamp happen server-side in the same atomic operation.
+    const updated = await Model.findOneAndUpdate(
+      { _id: profile._id },
+      [{ $set: { walletBalance: { $max: [0, { $add: ['$walletBalance', parsedAmount] }] } } }],
+      { new: true }
+    );
 
     auditLog(req, {
       action: 'wallet.adjusted',
       category: 'wallet',
       resource: profileType === 'freelancer' ? 'FreelancerProfile' : 'ClientProfile',
-      resourceId: profile._id,
+      resourceId: updated._id,
       previousValue: { walletBalance: prev },
-      newValue: { walletBalance: profile.walletBalance, adjustment: amount, reason },
+      newValue: { walletBalance: updated.walletBalance, adjustment: amount, reason },
       notes,
       severity: 'critical'
     });
 
-    return res.status(200).json({ success: true, message: 'Wallet adjusted', newBalance: profile.walletBalance });
+    return res.status(200).json({ success: true, message: 'Wallet adjusted', newBalance: updated.walletBalance });
   } catch (err) {
     console.error('[Wallet] adjust error:', err);
     return res.status(500).json({ success: false, message: 'Failed to adjust wallet' });

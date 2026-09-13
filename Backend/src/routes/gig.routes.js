@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const gigController = require('../controllers/gig.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, optionalAuth } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
 const { uploadSingle } = require('../middleware/upload.middleware');
 const { validate } = require('../middleware/validation.middleware');
@@ -18,8 +18,9 @@ router.get('/my-gigs',
   gigController.listMyGigs
 );
 
-// Public single gig detail
-router.get('/:id', gigController.getGigById);
+// Public single gig detail — optionalAuth so a logged-in owner (or admin)
+// can view their own draft/paused gig; the controller enforces that check.
+router.get('/:id', optionalAuth, gigController.getGigById);
 
 // Order a gig (client buys a tier → creates a job that enters the escrow flow)
 router.post('/:id/order',

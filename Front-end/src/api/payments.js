@@ -4,9 +4,10 @@ import client from './client';
  * Escrow payments (Stripe test mode / dummy). Fixed-price contracts now lock
  * 100% of each milestone's amount in escrow (see `fundMilestone` below) —
  * milestone 1 is funded automatically as part of accepting a proposal.
- * `startDeposit`/`startFinal` below are the legacy 50%/50% split endpoints,
- * kept for any pre-existing in-flight escrow records but no longer used by
- * new hires.
+ * `startDeposit`/`startFinal` below are the legacy 50%/50% split endpoints —
+ * fixed-price/hourly contracts have moved off them, but Gig orders still
+ * actively use this flow for every new order (see gig.controller.js's
+ * createGigOrder).
  */
 export const paymentsAPI = {
   // Fund a milestone (100% lock, wallet-only) — used for milestone 2+ once
@@ -18,7 +19,7 @@ export const paymentsAPI = {
     client.post(`/payments/milestones/${milestoneId}/fund`, undefined, { suppressErrorToast: true }),
 
   // Legacy: start the 50% deposit checkout → { checkoutUrl, sessionId, simulated }
-  // (fixed-price/gig orders only now — hourly contracts use lockHourlyContract below)
+  // (Gig orders only now — fixed-price uses fundMilestone, hourly uses lockHourlyContract)
   startDeposit: (jobId) =>
     client.post(`/payments/jobs/${jobId}/deposit`, undefined, { suppressErrorToast: true }),
 

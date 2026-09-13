@@ -134,7 +134,13 @@ export const ClientProvider = ({ children }) => {
       const transformedProfile = {
         personalInfo: {
           fullName: activeUser ? `${activeUser.firstName || ''} ${activeUser.lastName || ''}`.trim() : '',
-          username: activeUser?.username || activeUser?.email?.split('@')[0] || 'user',
+          // Don't fall back to an email-derived value here — that fake
+          // "username" would get silently resubmitted as a real change on
+          // every save (the backend's dot-restricted username format often
+          // rejects it, since email local-parts commonly contain dots the
+          // real username field disallows), even though the user never
+          // touched this field. Leave it genuinely empty when unset.
+          username: activeUser?.username || '',
           email: activeUser?.email || '',
           phone: dbProfile?.phone || '',
           companyName: dbProfile?.companyName || '',
@@ -208,6 +214,7 @@ export const ClientProvider = ({ children }) => {
         source: j.source || 'project',
         hiredFreelancer: j.hiredFreelancer,
         payment: j.payment,
+        delivery: j.delivery || null,
         milestones: j.milestones || [],
         currentMilestone: j.currentMilestone || null,
         contractId: j.contractId?._id || null,

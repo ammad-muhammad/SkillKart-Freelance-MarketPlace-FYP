@@ -168,6 +168,7 @@ const IndustryInput = ({
                   onChange(updated);
                 }}
                 className="fl-tag-chip__remove"
+                aria-label={`Remove ${val}`}
               >
                 <X size={12} />
               </button>

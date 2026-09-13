@@ -79,7 +79,7 @@ export default function ShareStory() {
             key={n}
             type="button"
             onClick={() => setRating(n)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px', margin: '-10px', lineHeight: 1 }}
             aria-label={`${n} star${n > 1 ? 's' : ''}`}
           >
             <Star size={20} fill={n <= rating ? '#facc15' : 'none'} color={n <= rating ? '#facc15' : 'rgba(183, 201, 226, 0.6)'} />

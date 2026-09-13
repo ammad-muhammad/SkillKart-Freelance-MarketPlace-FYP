@@ -360,7 +360,11 @@ const searchFreelancers = asyncHandler(async (req, res) => {
   const query = {};
   
   if (q) {
-    const regex = new RegExp(q, 'i');
+    // Escape regex metacharacters — this is a fully public, unauthenticated
+    // endpoint, so an unescaped user-controlled pattern here is a ReDoS
+    // vector (e.g. a catastrophic-backtracking pattern like "(a+)+$").
+    const escapedQ = String(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedQ, 'i');
     const User = require('../models/User');
     const matchedUsers = await User.find({
       $or: [

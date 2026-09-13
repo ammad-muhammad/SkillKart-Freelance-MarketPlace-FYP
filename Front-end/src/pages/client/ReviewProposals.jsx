@@ -15,6 +15,7 @@ import Skeleton from '../../Components/common/Skeleton/Skeleton';
 import Modal from '../../Components/common/Modal/Modal';
 import Button from '../../Components/common/Button/Button';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
+import { isMobileApp } from '../../utils/platform';
 import './ReviewProposals.css';
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -125,7 +126,8 @@ export default function ReviewProposals() {
       // Fixed-price hires lock 100% of milestone 1's escrow, hourly hires lock
       // one week's estimate — both as part of this call itself, there's no
       // separate "fund the deposit" step to redirect to afterward.
-      await proposalsAPI.acceptProposal(id, message, milestonePayload);
+      const expectedPrice = isHourlyJob ? acceptingProposal?.hourlyRate : acceptingProposal?.fixedPrice;
+      await proposalsAPI.acceptProposal(id, message, milestonePayload, expectedPrice);
       showToast(
         isHourlyJob
           ? 'Proposal accepted — one week\'s escrow locked. The freelancer can start logging time.'
@@ -315,9 +317,12 @@ export default function ReviewProposals() {
                     {messagingId === prop._id ? 'Opening…' : 'Message'}
                   </Button>
                 </div>
-                <Link to={`/freelancers/${prop.freelancerId?._id}`} className="rp-link">
-                  View Profile <ExternalLink size={14} />
-                </Link>
+                {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
+                {!isMobileApp() && (
+                  <Link to={`/freelancers/${prop.freelancerId?._id}`} className="rp-link">
+                    View Profile <ExternalLink size={14} />
+                  </Link>
+                )}
               </div>
             </div>
           ))}
@@ -386,7 +391,7 @@ export default function ReviewProposals() {
                           onBlur={() => clampMilestoneAmount(i)}
                         />
                         {milestones.length > 1 && (
-                          <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeMilestoneRow(i)} style={{ padding: '0.4rem' }}>
+                          <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeMilestoneRow(i)} style={{ padding: '0.4rem' }} aria-label={`Remove milestone ${i + 1}`}>
                             <X size={14} />
                           </button>
                         )}

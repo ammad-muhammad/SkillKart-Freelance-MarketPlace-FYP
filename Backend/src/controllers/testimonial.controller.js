@@ -3,6 +3,7 @@ const FreelancerProfile = require('../models/FreelancerProfile');
 const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError } = require('../utils/apiError');
+const { stripHtml } = require('../utils/sanitizeInput');
 
 /**
  * POST /testimonials — freelancer submits (or updates) their success story.
@@ -25,7 +26,11 @@ const submitTestimonial = asyncHandler(async (req, res) => {
       userId: user._id,
       name,
       role: profile?.title || '',
-      text: String(text).trim().slice(0, 600),
+      // Every other free-text field in this app goes through stripHtml
+      // before persisting (removes the stored-XSS risk outright) — this is
+      // the one place that skipped it despite being served unauthenticated
+      // on the public homepage.
+      text: stripHtml(String(text).trim().slice(0, 600)),
       rating: Math.min(5, Math.max(1, Number(rating) || 5)),
       status: 'approved', // auto-approve for the demo
     },

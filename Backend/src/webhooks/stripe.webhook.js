@@ -65,41 +65,51 @@ router.post('/', async (req, res) => {
         }
       }
     } else if (jobId && phase) {
-      // It's a job payment
-      const payment = await Payment.findOne({ jobId });
-      if (payment) {
-        const job = await Job.findById(jobId);
-        
-        if (phase === 'deposit' && payment.status === 'deposit_pending') {
-          payment.status = 'deposit_paid';
-          payment.depositPaidAt = new Date();
-          payment.stripe.depositPaymentIntent = session.payment_intent;
-          await payment.save();
+      // It's a job payment. This webhook and the browser redirect's own
+      // confirmPayment (payment.controller.js) both confirm the SAME
+      // checkout — every write here must be the same atomic conditional
+      // claim confirmPayment uses, or whichever of the two runs with stale
+      // (non-atomic) data can still duplicate the job-completion/notify
+      // side effects even though only one of them can flip the DB status.
+      if (phase === 'deposit') {
+        const claimedDeposit = await Payment.findOneAndUpdate(
+          { jobId, status: 'deposit_pending' },
+          { $set: { status: 'deposit_paid', depositPaidAt: new Date(), 'stripe.depositPaymentIntent': session.payment_intent } },
+          { new: true }
+        );
+        if (claimedDeposit) {
+          const job = await Job.findById(jobId);
           if (job && job.hiredFreelancer) {
             notifications.onDepositFunded(job.hiredFreelancer, { job });
           }
-        } else if (phase === 'final' && payment.status !== 'released') {
-          payment.platformFee = Math.round((payment.totalAmount * payment.feeRate) * 100) / 100;
-          payment.freelancerPayout = Math.round((payment.totalAmount - payment.platformFee) * 100) / 100;
-          payment.status = 'released';
-          payment.releasedAt = new Date();
-          payment.stripe.finalPaymentIntent = session.payment_intent;
-          await payment.save();
-
-          if (job && job.status !== 'completed') {
-            job.status = 'completed';
-            job.completedAt = new Date();
-            await job.save();
-            try {
-              await finalizeJobCompletion(job, {
-                freelancerEarning: payment.freelancerPayout,
-                clientSpend: payment.totalAmount,
-              });
-            } catch (e) {
-              console.error('[Stripe Webhook] stats roll-up failed:', e.message);
-            }
-            if (job.hiredFreelancer) {
-              notifications.onPaymentReleased(job.hiredFreelancer, { job, amount: payment.freelancerPayout });
+        }
+      } else if (phase === 'final') {
+        const payment = await Payment.findOne({ jobId });
+        if (payment && payment.status !== 'released') {
+          const platformFee = Math.round((payment.totalAmount * payment.feeRate) * 100) / 100;
+          const freelancerPayout = Math.round((payment.totalAmount - platformFee) * 100) / 100;
+          const claimedFinal = await Payment.findOneAndUpdate(
+            { _id: payment._id, status: { $ne: 'released' } },
+            { $set: { platformFee, freelancerPayout, status: 'released', releasedAt: new Date(), 'stripe.finalPaymentIntent': session.payment_intent } },
+            { new: true }
+          );
+          if (claimedFinal) {
+            const job = await Job.findById(jobId);
+            if (job && job.status !== 'completed') {
+              job.status = 'completed';
+              job.completedAt = new Date();
+              await job.save();
+              try {
+                await finalizeJobCompletion(job, {
+                  freelancerEarning: claimedFinal.freelancerPayout,
+                  clientSpend: claimedFinal.totalAmount,
+                });
+              } catch (e) {
+                console.error('[Stripe Webhook] stats roll-up failed:', e.message);
+              }
+              if (job.hiredFreelancer) {
+                notifications.onPaymentReleased(job.hiredFreelancer, { job, amount: claimedFinal.freelancerPayout });
+              }
             }
           }
         }

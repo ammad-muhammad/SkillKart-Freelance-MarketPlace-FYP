@@ -161,6 +161,18 @@ const getJobById = asyncHandler(async (req, res) => {
   if (!job) {
     throw new NotFoundError('Job not found');
   }
+  // Draft jobs are never published — only the owning client (or an admin)
+  // may view one, otherwise anyone who obtains/guesses the ObjectId could
+  // read a client's private, unpublished draft content. Every other status
+  // (open, in-progress, completed, ...) was public at some point, so those
+  // stay visible to anyone, matching normal marketplace listing behavior.
+  if (job.status === 'draft') {
+    const isOwner = req.user && String(job.clientId?._id) === String(req.user._id);
+    const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+    if (!isOwner && !isAdmin) {
+      throw new NotFoundError('Job not found');
+    }
+  }
 
   const proposalsCount = Array.isArray(job.proposals) ? job.proposals.length : 0;
   // Own proposal only (never another freelancer's) — enough for the UI to
@@ -269,6 +281,7 @@ const getMyContracts = asyncHandler(async (req, res) => {
   const freelancerId = req.user._id;
 
   const query = { hiredFreelancer: freelancerId };
+  if (['project', 'gig'].includes(req.query.source)) query.source = req.query.source;
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
     .populate('clientId', 'firstName lastName profilePicture')
@@ -486,6 +499,77 @@ const closeJob = asyncHandler(async (req, res) => {
 // Removed deprecated submitDelivery, acceptDelivery, requestRevision functions.
 
 /**
+ * Submit delivery for a GIG order (source: 'gig'). Gig orders stay on the
+ * legacy 50/50 Stripe deposit flow and never get a Contract/Milestone, so
+ * delivery lives directly on the Job — see paymentController.startFinal for
+ * the other half (client reviews this, then releases the final 50%).
+ */
+const submitGigDelivery = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { message, links } = req.body;
+
+  if (!message || !message.trim()) {
+    throw new BadRequestError('A delivery message is required');
+  }
+
+  const job = await Job.findById(id);
+  if (!job) throw new NotFoundError('Job not found');
+  if (job.source !== 'gig') throw new BadRequestError('This job is not a gig order');
+  if (String(job.hiredFreelancer) !== String(req.user._id)) {
+    throw new ForbiddenError('Only the hired freelancer can submit delivery for this order');
+  }
+  if (!['in-progress'].includes(job.status)) {
+    throw new BadRequestError(`Cannot submit delivery while the order is "${job.status}"`);
+  }
+
+  const payment = await Payment.findOne({ jobId: job._id, type: 'job_escrow' });
+  if (!payment || payment.status !== 'deposit_paid') {
+    throw new BadRequestError('The client has not funded the deposit for this order yet');
+  }
+
+  job.delivery = {
+    message: stripHtml(message.trim()),
+    links: Array.isArray(links) ? links.filter(Boolean).slice(0, 10) : [],
+    submittedAt: new Date(),
+  };
+  await job.save();
+
+  notifications.onWorkDelivered(job.clientId, { job });
+
+  sendSuccess(res, { message: 'Delivery submitted. The client will review it.', data: { job } });
+});
+
+/**
+ * Client requests changes on a GIG order's delivery — sends it back to the
+ * freelancer instead of releasing final payment.
+ */
+const requestGigRevision = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  if (!note || !note.trim()) {
+    throw new BadRequestError('A revision note is required');
+  }
+
+  const job = await Job.findById(id);
+  if (!job) throw new NotFoundError('Job not found');
+  if (job.source !== 'gig') throw new BadRequestError('This job is not a gig order');
+  if (String(job.clientId) !== String(req.user._id)) {
+    throw new ForbiddenError('Only the client who ordered this gig can request a revision');
+  }
+  if (!job.delivery) throw new BadRequestError('There is no delivery to request changes on yet');
+
+  job.delivery = undefined;
+  await job.save();
+
+  if (job.hiredFreelancer) {
+    notifications.onRevisionRequested(job.hiredFreelancer, { job });
+  }
+
+  sendSuccess(res, { message: 'Revision requested. The freelancer will make changes.', data: { job } });
+});
+
+/**
  * Review a completed job.
  */
 const reviewJob = asyncHandler(async (req, res) => {
@@ -580,5 +664,7 @@ module.exports = {
   recommendSubcategory,
   getMyProjects,
   getMyContracts,
+  submitGigDelivery,
+  requestGigRevision,
   reviewJob
 };

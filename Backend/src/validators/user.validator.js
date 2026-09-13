@@ -21,7 +21,7 @@ const createUserValidation = [
     .normalizeEmail(),
 
   body('password')
-    .optional()
+    .optional({ values: 'falsy' })
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain uppercase, lowercase, and number'),
@@ -42,7 +42,7 @@ const createUserValidation = [
     .withMessage('Invalid role'),
 
   body('phone')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .matches(/^\+?[1-9]\d{1,14}$/).withMessage('Invalid phone number format'),
 
@@ -58,17 +58,17 @@ const updateUserValidation = [
     .isMongoId().withMessage('Invalid user ID format'),
 
   body('firstName')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 50 }).withMessage('First name must be 2-50 characters'),
 
   body('lastName')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 50 }).withMessage('Last name must be 2-50 characters'),
 
   body('phone')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .matches(/^\+?[1-9]\d{1,14}$/).withMessage('Invalid phone number format'),
 
@@ -236,11 +236,11 @@ const importUsersValidation = [
 // Get user statistics validation
 const getUserStatsValidation = [
   query('startDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid start date format'),
 
   query('endDate')
-    .optional()
+    .optional({ values: 'falsy' })
     .isISO8601().withMessage('Invalid end date format'),
 
   query('groupBy')
