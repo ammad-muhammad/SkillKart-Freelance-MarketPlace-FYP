@@ -62,16 +62,22 @@ These are **mandatory** for a working production deploy. Do them, commit, and pu
 
 > Railway/Render run `npm start` by default, so `start` **must** be `node src/server.js`.
 
-### 2.2 CORS accepts a single origin — set it exactly
+### 2.2 CORS — comma-separated origins, each exact (no trailing slash)
 
-The backend builds its allow-list from `CORS_ORIGIN` (one value) + `FRONTEND_URL`. It does **not** split a comma-separated list. So each of `CORS_ORIGIN` and `FRONTEND_URL` must be a **single, exact origin** — your Vercel URL, **no trailing slash**:
+The backend builds its allow-list from `CORS_ORIGIN` + `FRONTEND_URL`, both split on
+commas and `.trim()`-cleaned (`Backend/src/app.js`), plus hardcoded local dev origins.
+Each entry must match the request's `Origin` header **exactly** — scheme, host, and
+no trailing slash:
 
 ```
-CORS_ORIGIN=https://your-app.vercel.app
+CORS_ORIGIN=https://your-app.vercel.app,https://localhost
 FRONTEND_URL=https://your-app.vercel.app
 ```
 
-*(If you later need multiple frontend origins, update the allow-list logic in `Backend/src/app.js` to `CORS_ORIGIN.split(',')` — currently it takes one.)*
+`https://localhost` is the [mobile app's](../Front-end/README.md#mobile-app-android--capacitor)
+fixed WebView origin (Capacitor's `androidScheme: "https"`) — include it in
+`CORS_ORIGIN` if the mobile build needs to reach this backend, or every request from
+the app gets blocked.
 
 ### 2.3 SuperAdmin credentials are ephemeral on cloud hosts
 
@@ -136,7 +142,7 @@ Get at least one key (Gemini and Groq have generous free tiers). The provider fa
    - `JWT_SECRET`, `JWT_REFRESH_SECRET` (32+ random chars each)
    - `ENCRYPTION_KEY` (32+ chars)
    - `STRIPE_DUMMY=true` (or real Stripe keys)
-   - **`EMAIL_PROVIDER=gmail`** + `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL` — **not optional in practice**: Railway blocks outbound SMTP ports, so `smtp` cannot deliver here and OTP-gated registration breaks entirely. Generate the refresh token locally once with `npm run gmail:token` and paste the same value here (it isn't machine-bound). `GOOGLE_REDIRECT_URI` is **not** needed in production — it's only used during that one-time consent.
+   - **`EMAIL_PROVIDER=gmail`** + `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL` — **not optional in practice**: Railway blocks outbound SMTP ports, so `smtp` cannot deliver here and OTP-gated registration breaks entirely. Generate the refresh token once via [Google's OAuth Playground](https://developers.google.com/oauthplayground/) (see Backend/README.md → Email) and paste the same value here (it isn't machine-bound). `GOOGLE_REDIRECT_URI` is **not** needed in production — it's only used during that one-time consent.
    - `PUBLIC_SITE_URL=https://<your-frontend>` — the canonical domain for the sitemap. Without it the sitemap advertises whichever origin happens to be first in `FRONTEND_URL`.
    - `RECAPTCHA_SECRET_KEY` (optional; blank = bot protection off, requests still pass)
    - AI keys + `AI_PRIORITY_*` (optional)
@@ -314,7 +320,7 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `EMAIL_ENABLED` | ❌ | `false` disables all sending; defaults `true` |
 | `EMAIL_SANDBOX` / `EMAIL_SANDBOX_RECIPIENT` | ❌ | staging only — redirects all mail to one inbox |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` | ⬤ | SMTP — needed for OTP emails. Legacy `EMAIL_*` names still work |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL` | ⬤ | only if `EMAIL_PROVIDER=gmail`. Generate the token locally (`npm run gmail:token`) and paste the same value here — it is not machine-bound, and `GOOGLE_REDIRECT_URI` is not needed in production. **Railway blocks outbound SMTP (465/587)**, so Gmail is the working transport there — but a Testing-mode consent screen expires refresh tokens after **7 days**, and the SMTP fallback cannot save you on Railway. See [Backend README → Email](../Backend/README.md#email). Not related to Supabase Google sign-in |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL` | ⬤ | only if `EMAIL_PROVIDER=gmail`. Generate the token once via [Google's OAuth Playground](https://developers.google.com/oauthplayground/) and paste the same value here — it is not machine-bound, and `GOOGLE_REDIRECT_URI` is not needed in production. **Railway blocks outbound SMTP (465/587)**, so Gmail is the working transport there — but a Testing-mode consent screen expires refresh tokens after **7 days**, and the SMTP fallback cannot save you on Railway. See [Backend README → Email](../Backend/README.md#email). Not related to Supabase Google sign-in |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` | ⬤ | social OAuth only |
 | `REDIS_URL` | ❌ | optional cache; leave blank / `ENABLE_REDIS_CACHE=false` |
 | `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys. Gemini and DeepSeek implement the full AI feature set; the rest cover only the core 6 methods |
@@ -324,6 +330,7 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `PUBLIC_SITE_URL` | ⬤ | Canonical public origin for the sitemap, e.g. `https://skillkart-fuuast.vercel.app`. **Not** `FRONTEND_URL` — that's a CSV of CORS origins whose first entry may be the wrong domain to advertise to Google. Defaults to the first `FRONTEND_URL` entry if unset |
 | `RECAPTCHA_SECRET_KEY` | ❌ | reCAPTCHA v3 secret. **Blank = verification disabled** (fails open) |
 | `RECAPTCHA_MIN_SCORE` | ❌ | Reject below this score; defaults `0.5` |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | ❌ | Mobile app push notifications — paste the whole Firebase service account JSON file's contents as this one var (Railway has no persistent disk for `FIREBASE_SERVICE_ACCOUNT_PATH`'s file-path form). Blank = push disabled, in-app notifications still work. See [Backend README → Push Notifications](../Backend/README.md#push-notifications) |
 
 ✅ required · ⬤ conditionally required · ❌ optional
 
@@ -370,7 +377,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 | Symptom | Cause & Fix |
 |---------|-------------|
-| **CORS error** in browser console | `CORS_ORIGIN` / `FRONTEND_URL` don't exactly match the frontend origin. Check for a trailing slash, `http` vs `https`, or `www`. Redeploy backend after changing. |
+| **CORS error** in browser console | `CORS_ORIGIN` / `FRONTEND_URL` don't exactly match the frontend origin. Check for a trailing slash, `http` vs `https`, or `www`. Both support comma-separated values — redeploy backend after changing. |
+| Mobile app can't reach the backend at all (every request fails) | `CORS_ORIGIN` is missing `https://localhost` — the Capacitor app's fixed WebView origin. See [§2.2](#22-cors--comma-separated-origins-each-exact-no-trailing-slash). |
+| Mobile app login/register always fails with "Security verification failed" | Production has a real `RECAPTCHA_SECRET_KEY` configured, and reCAPTCHA v3 is unreliable inside the app's embedded WebView. The backend should already exempt the `https://localhost` origin (`Backend/src/middleware/recaptcha.middleware.js`) — if this regresses, that's the fix, not a key/config issue. |
 | Backend build/start hangs or restarts | `start` still runs `nodemon`. Set it to `node src/server.js` (see [2.1](#21-backend-start-script-must-not-use-nodemon)). |
 | `MongoServerError: bad auth` / timeout | Wrong `MONGODB_URI` password, or Atlas **Network Access** doesn't include `0.0.0.0/0`. |
 | Refreshing a route (e.g. `/dashboard`) → 404 on Vercel | Missing `Front-end/vercel.json` SPA rewrite (see [step 6](#6-deploy-the-frontend--vercel)). |

@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const pushService = require('./push.service');
 
 /**
  * Notification service — the single entry point the lifecycle uses to create
@@ -39,6 +40,10 @@ async function notify(userId, { type, title, message = '', link = '', jobId, gig
     // eslint-disable-next-line no-console
     console.error('[notify] failed:', e.message);
   }
+  // Fire-and-forget: pushService no-ops entirely when Firebase isn't
+  // configured, and never throws — safe to call unconditionally for every
+  // notification type from this single choke point.
+  pushService.sendToUser(userId, { title, body: message, link }).catch(() => {});
 }
 
 /* ── Event helpers (each maps an event → a recipient + copy + deep link) ── */

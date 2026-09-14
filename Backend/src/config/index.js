@@ -98,6 +98,22 @@ const config = {
     timeoutMs: parseInt(process.env.RECAPTCHA_TIMEOUT_MS, 10) || 5000
   },
 
+  // Firebase Cloud Messaging (mobile app push notifications). Optional — see
+  // services/push.service.js for the fail-open rationale (same pattern as
+  // recaptcha/email/AI: unset = feature no-ops, never breaks the request it's
+  // attached to). Two ways to supply the service account credential (JSON
+  // takes priority if both are set):
+  //   - serviceAccountJson: the whole downloaded key file's contents, pasted
+  //     as one env var — use this on Railway/most hosts, which have no way
+  //     to persist an uploaded file to disk.
+  //   - serviceAccountPath: a file path (default below, already gitignored
+  //     under Backend/secure/ same as superadmin.encrypted) — simpler for
+  //     local dev, where you can just drop the downloaded file there.
+  push: {
+    serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || './secure/firebase-service-account.json'
+  },
+
   // OTP
   otp: {
     expiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES) || 10,

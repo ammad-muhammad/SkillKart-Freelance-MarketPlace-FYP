@@ -7,6 +7,7 @@ import {
   ChevronDown, Calendar, FileText, Check, X, User, Link as LinkIcon, Camera, Image as ImageIcon, Sparkles, FolderOpen, AlertTriangle
 } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
+import { openExternal } from '../../utils/externalLink';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadAvatar as apiUploadAvatar, uploadPortfolioImage as apiUploadCover, validateFile } from '../../utils/uploadHelper';
@@ -560,7 +561,7 @@ const FreelancerProfile = () => {
                       )}
                     </div>
                     {cert.url && (
-                      <a href={cert.url} target="_blank" rel="noopener noreferrer" className="fl-btn fl-btn--ghost fl-btn--xs" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                      <a href={cert.url} target="_blank" rel="noopener noreferrer" className="fl-btn fl-btn--ghost fl-btn--xs" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px' }} onClick={(e) => { e.preventDefault(); openExternal(cert.url); }}>
                         <ExternalLink size={12} /> View Certificate
                       </a>
                     )}

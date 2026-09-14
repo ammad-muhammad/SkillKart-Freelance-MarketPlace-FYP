@@ -35,6 +35,12 @@ export const authAPI = {
   updateRole: (role) =>
     client.put('/auth/role/change', role),
 
+  registerPushToken: (token) =>
+    client.post('/auth/push-token', { token }, { suppressErrorToast: true }),
+
+  removePushToken: (token) =>
+    client.post('/auth/push-token/remove', { token }, { suppressErrorToast: true }),
+
   logout: () =>
     client.post('/auth/logout', { refreshToken: tokenManager.getRefreshToken() }),
 

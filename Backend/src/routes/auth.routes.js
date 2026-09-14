@@ -345,6 +345,17 @@ router.put('/me',
   authController.updateMe
 );
 
+// Mobile app push notification device tokens (see services/push.service.js —
+// no-ops until Firebase is configured).
+router.post('/push-token',
+  authenticate,
+  authController.registerPushToken
+);
+router.post('/push-token/remove',
+  authenticate,
+  authController.removePushToken
+);
+
 // Change Role
 router.put('/role/change',
   authenticate,

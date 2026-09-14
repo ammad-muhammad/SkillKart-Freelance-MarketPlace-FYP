@@ -18,6 +18,8 @@ import { uploadAvatar, uploadCompanyLogo } from "../../../utils/uploadHelper";
 import { LANGUAGES } from "../../../data/languages";
 import TagInput from "../../../Components/common/TagInput/TagInput";
 import IndustryInput from "../../../Components/common/IndustryInput/IndustryInput";
+import { isMobileApp } from "../../../utils/platform";
+import { openExternal } from "../../../utils/externalLink";
 import AiGenerateText from "../../../Components/common/AiSuggest/AiGenerateText";
 import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import "./ClientOnboarding.css";
@@ -1010,7 +1012,14 @@ const ClientOnboarding = () => {
                     <label className="onboarding__label" style={{ lineHeight: 1.4, margin: 0, fontWeight: '500' }}>
                         I agree to the <span
                             style={{ color: 'var(--onboard-accent-primary)', textDecoration: 'underline', cursor: 'pointer' }}
-                            onClick={() => window.open('/services-agreement', '_blank')}
+                            onClick={() => {
+                                // /services-agreement isn't registered as an in-app route in the
+                                // mobile build (it's part of the excluded marketing route block in
+                                // AppRoutes.jsx), so it 404s there. Read it from the live site instead
+                                // of losing onboarding progress by navigating the app itself away.
+                                if (isMobileApp()) openExternal('https://skillkart-fuuast.vercel.app/services-agreement');
+                                else window.open('/services-agreement', '_blank');
+                            }}
                         >Service Agreement</span> and understand that SkillKart ensures payment safety through Escrow.
                     </label>
                 </div>

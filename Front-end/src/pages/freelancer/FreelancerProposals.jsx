@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import Modal from '../../Components/common/Modal/Modal';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
@@ -24,6 +25,7 @@ export default function FreelancerProposals() {
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [withdrawingId, setWithdrawingId] = useState(null);
+  const [withdrawConfirmId, setWithdrawConfirmId] = useState(null);
 
 
   useEffect(() => {
@@ -48,7 +50,6 @@ export default function FreelancerProposals() {
 
   const handleWithdraw = async (id) => {
     if (withdrawingId) return;
-    if (!window.confirm('Are you sure you want to withdraw this proposal?')) return;
     setWithdrawingId(id);
     try {
       await proposalsAPI.withdrawProposal(id);
@@ -58,6 +59,7 @@ export default function FreelancerProposals() {
       toast.error('Failed to withdraw proposal.');
     } finally {
       setWithdrawingId(null);
+      setWithdrawConfirmId(null);
     }
   };
 
@@ -243,7 +245,7 @@ export default function FreelancerProposals() {
                   {prop.status === 'pending' && (
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
-                      onClick={() => handleWithdraw(prop._id)}
+                      onClick={() => setWithdrawConfirmId(prop._id)}
                       disabled={withdrawingId === prop._id}
                       style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
                     >
@@ -264,6 +266,16 @@ export default function FreelancerProposals() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!withdrawConfirmId}
+        title="Withdraw proposal?"
+        message="Are you sure you want to withdraw this proposal? This can't be undone."
+        confirmLabel="Withdraw"
+        loading={!!withdrawingId}
+        onConfirm={() => handleWithdraw(withdrawConfirmId)}
+        onClose={() => setWithdrawConfirmId(null)}
+      />
 
       <Modal open={!!editingProposal} title={isResubmit(editingProposal) ? 'Edit & Resubmit Proposal' : 'Edit Proposal'} onClose={closeEdit} size="md">
         {editForm && (

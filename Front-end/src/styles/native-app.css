@@ -13,3 +13,17 @@ html.is-native-app *::after {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* variables.css styles a persistent thin scrollbar for desktop web — inside
+   the native app that renders as an out-of-place solid bar down the side of
+   the screen (real mobile apps never show one; touch scrolling needs no
+   visible indicator). Hide it everywhere; scrolling itself is unaffected. */
+html.is-native-app,
+html.is-native-app * {
+  scrollbar-width: none !important;
+}
+html.is-native-app *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

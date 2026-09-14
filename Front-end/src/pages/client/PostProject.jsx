@@ -9,6 +9,8 @@ import Stepper from '../../Components/common/Stepper/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
+import { isMobileApp } from '../../utils/platform';
+import { openExternal } from '../../utils/externalLink';
 import './ClientDashboard.css';
 import './PostProject.css';
 
@@ -585,6 +587,15 @@ const PostProject = () => {
                 fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none',
                 background: 'rgba(4, 46, 76, 0.06)', padding: '6px 12px', borderRadius: '8px',
               }}
+              onClick={(e) => {
+                // /ai/cost-estimator isn't registered as an in-app route in the
+                // mobile build (excluded marketing route block in AppRoutes.jsx),
+                // so it 404s there — read it from the live site instead.
+                if (isMobileApp()) {
+                  e.preventDefault();
+                  openExternal('https://skillkart-fuuast.vercel.app/ai/cost-estimator');
+                }
+              }}
             >
               <Bot size={14} style={{ marginRight: '6px' }} /> Not sure what to pay? Estimate a fair budget →
             </a>
@@ -834,6 +845,7 @@ const PostProject = () => {
                           rel="noopener noreferrer"
                           className="cl-doc-list__link"
                           title={label}
+                          onClick={(e) => { e.preventDefault(); openExternal(url); }}
                         >
                           {label}
                         </a>
@@ -841,7 +853,7 @@ const PostProject = () => {
                           <button
                             type="button"
                             className="cl-btn cl-btn--ghost cl-btn--sm"
-                            onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                            onClick={() => openExternal(url)}
                           >
                             Open
                           </button>
@@ -851,6 +863,7 @@ const PostProject = () => {
                               download={label}
                               className="cl-btn cl-btn--ghost cl-btn--sm"
                               style={{ textDecoration: 'none' }}
+                              onClick={(e) => { if (isMobileApp()) { e.preventDefault(); openExternal(url); } }}
                             >
                               Download
                             </a>
