@@ -158,6 +158,7 @@ const startFinal = asyncHandler(async (req, res) => {
   if (payment.milestoneId) throw new BadRequestError('This project uses milestone-based escrow — use the milestone endpoints instead.');
   if (payment.status === 'deposit_pending') throw new BadRequestError('Pay the 50% deposit before the final payment');
   if (payment.status === 'released') throw new BadRequestError('This project has already been fully paid');
+  if (!job.delivery) throw new BadRequestError('Wait for the freelancer to submit delivery before releasing the final payment');
 
   // Atomic conditional debit — a plain read-then-write here let two concurrent
   // requests (double-click, network retry) both pass the balance check before
@@ -243,12 +244,21 @@ const confirmPayment = asyncHandler(async (req, res) => {
   if (!result.paid) throw new BadRequestError('Payment was not completed');
 
   if (phase === 'deposit') {
-    if (payment.status === 'deposit_pending') {
-      payment.status = 'deposit_paid';
-      payment.depositPaidAt = new Date();
-      payment.stripe.depositPaymentIntent = result.paymentIntent;
-      await payment.save();
-      
+    // Atomic claim — a plain status check + `.save()` (the old code) lets
+    // the browser's redirect callback and the async Stripe webhook, which
+    // both confirm the same checkout, race each other. Harmless for the
+    // deposit phase today (no real money movement here), but keep it
+    // idempotent for the same reason the final phase below must be.
+    const claimedDeposit = await Payment.findOneAndUpdate(
+      { _id: payment._id, status: 'deposit_pending' },
+      { $set: { status: 'deposit_paid', depositPaidAt: new Date(), 'stripe.depositPaymentIntent': result.paymentIntent } },
+      { new: true }
+    );
+    if (claimedDeposit) {
+      payment.status = claimedDeposit.status;
+      payment.depositPaidAt = claimedDeposit.depositPaidAt;
+      payment.stripe.depositPaymentIntent = claimedDeposit.stripe.depositPaymentIntent;
+
       if (payment.contractId) {
         const Contract = require('../models/Contract');
         await Contract.findByIdAndUpdate(payment.contractId, { paymentStatus: 'funded' });
@@ -262,51 +272,82 @@ const confirmPayment = asyncHandler(async (req, res) => {
 
   // phase === 'final'
   if (payment.status !== 'released') {
-    payment.platformFee = round2(payment.totalAmount * payment.feeRate);
-    payment.freelancerPayout = round2(payment.totalAmount - payment.platformFee);
-    payment.status = 'released';
-    payment.releasedAt = new Date();
-    payment.stripe.finalPaymentIntent = result.paymentIntent;
-    await payment.save();
+    const platformFee = round2(payment.totalAmount * payment.feeRate);
+    const freelancerPayout = round2(payment.totalAmount - platformFee);
 
-    // Complete the job + roll up stats with the EXACT net amounts.
-    if (job.status !== 'completed') {
-      job.status = 'completed';
-      job.completedAt = new Date();
-      await job.save();
-      try {
-        await finalizeJobCompletion(job, {
-          freelancerEarning: payment.freelancerPayout,
-          clientSpend: payment.totalAmount,
-        });
-
-        // ==========================================
-        // STRIPE CONNECT: SOURCE-TRACKED TRANSFER
-        // Move funds to Freelancer's Stripe Wallet
-        // ==========================================
-        const profile = await FreelancerProfile.findOne({ userId: job.hiredFreelancer });
-        if (profile && profile.stripeAccountId && profile.stripeOnboardingComplete) {
-          // Send the deposit portion
-          if (payment.stripe?.depositPaymentIntent) {
-            const depositAmount = payment.freelancerPayout / 2;
-            const chargeId = await getChargeIdFromPaymentIntent(payment.stripe.depositPaymentIntent);
-            await createTransfer(depositAmount, profile.stripeAccountId, `Deposit release for Job ${job._id}`, chargeId);
-          }
-          // Send the final portion
-          if (payment.stripe?.finalPaymentIntent) {
-            const finalAmount = payment.freelancerPayout / 2;
-            const chargeId = await getChargeIdFromPaymentIntent(payment.stripe.finalPaymentIntent);
-            await createTransfer(finalAmount, profile.stripeAccountId, `Final release for Job ${job._id}`, chargeId);
-          }
+    // Atomic claim — this is the one that matters. The old code did a plain
+    // `if (payment.status !== 'released') { ...; await payment.save(); }`,
+    // so the browser's redirect callback and the async Stripe webhook (both
+    // of which call confirmPayment/this same logic for the same checkout)
+    // could both read 'not released yet' before either write landed, and
+    // both would go on to call createTransfer below — a REAL, duplicate
+    // Stripe Connect transfer to the freelancer. This conditional update can
+    // only succeed once per payment, exactly like releaseMilestone's claim.
+    const claimedFinal = await Payment.findOneAndUpdate(
+      { _id: payment._id, status: { $ne: 'released' } },
+      {
+        $set: {
+          platformFee,
+          freelancerPayout,
+          status: 'released',
+          releasedAt: new Date(),
+          'stripe.finalPaymentIntent': result.paymentIntent,
         }
-      } catch (e) {
-        console.error('[confirmPayment] stats roll-up or transfer failed:', e.message);
-      }
-      // Tell the freelancer they were paid.
-      if (job.hiredFreelancer) {
-        notifications.onPaymentReleased(job.hiredFreelancer, { job, amount: payment.freelancerPayout });
+      },
+      { new: true }
+    );
+
+    if (claimedFinal) {
+      payment.platformFee = claimedFinal.platformFee;
+      payment.freelancerPayout = claimedFinal.freelancerPayout;
+      payment.status = claimedFinal.status;
+      payment.releasedAt = claimedFinal.releasedAt;
+      payment.stripe.finalPaymentIntent = claimedFinal.stripe.finalPaymentIntent;
+
+      // Complete the job + roll up stats with the EXACT net amounts. Only
+      // the winner of the claim above ever reaches this point for a given
+      // payment, so there's no separate race to guard here.
+      if (job.status !== 'completed') {
+        job.status = 'completed';
+        job.completedAt = new Date();
+        await job.save();
+        try {
+          await finalizeJobCompletion(job, {
+            freelancerEarning: payment.freelancerPayout,
+            clientSpend: payment.totalAmount,
+          });
+
+          // ==========================================
+          // STRIPE CONNECT: SOURCE-TRACKED TRANSFER
+          // Move funds to Freelancer's Stripe Wallet
+          // ==========================================
+          const profile = await FreelancerProfile.findOne({ userId: job.hiredFreelancer });
+          if (profile && profile.stripeAccountId && profile.stripeOnboardingComplete) {
+            // Send the deposit portion
+            if (payment.stripe?.depositPaymentIntent) {
+              const depositAmount = payment.freelancerPayout / 2;
+              const chargeId = await getChargeIdFromPaymentIntent(payment.stripe.depositPaymentIntent);
+              await createTransfer(depositAmount, profile.stripeAccountId, `Deposit release for Job ${job._id}`, chargeId);
+            }
+            // Send the final portion
+            if (payment.stripe?.finalPaymentIntent) {
+              const finalAmount = payment.freelancerPayout / 2;
+              const chargeId = await getChargeIdFromPaymentIntent(payment.stripe.finalPaymentIntent);
+              await createTransfer(finalAmount, profile.stripeAccountId, `Final release for Job ${job._id}`, chargeId);
+            }
+          }
+        } catch (e) {
+          console.error('[confirmPayment] stats roll-up or transfer failed:', e.message);
+        }
+        // Tell the freelancer they were paid.
+        if (job.hiredFreelancer) {
+          notifications.onPaymentReleased(job.hiredFreelancer, { job, amount: payment.freelancerPayout });
+        }
       }
     }
+    // else: lost the race, or a genuine repeat call — the winner (or the
+    // webhook) already released this payment, so fall through to the
+    // success response below rather than doing anything twice.
   }
 
   sendSuccess(res, { message: 'Final payment confirmed. Funds released to the freelancer (minus 0.5% fee).', data: { payment } });
@@ -608,7 +649,7 @@ const withdrawFunds = asyncHandler(async (req, res) => {
       amount: Number(amount),
       method,
       status: payout.simulated ? 'completed' : 'processing',
-      transactionId: payout.id
+      referenceId: payout.id
     });
 
     notifications.onWithdrawalRequested(req.user._id, { amount, method });

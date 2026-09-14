@@ -465,6 +465,7 @@ const FreelancerGigs = () => {
                         style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,0.9)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', transition: 'transform 0.2s' }}
                         onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
                         onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                        aria-label={`Remove image ${i + 1}`}
                       >
                         <X size={12} />
                       </button>
@@ -506,7 +507,7 @@ const FreelancerGigs = () => {
                       }}
                       placeholder="https://..."
                     />
-                    <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: p.media.portfolioLinks.filter((_, idx) => idx !== i) } }))}>
+                    <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: p.media.portfolioLinks.filter((_, idx) => idx !== i) } }))} aria-label={`Remove portfolio link ${i + 1}`}>
                       <X size={14} />
                     </button>
                   </div>

@@ -4,6 +4,7 @@ import { useFreelancer } from '../../../context/FreelancerContext';
 import { useAuth } from '../../../hooks/useAuth';
 import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import { useNotification } from '../../../context/NotificationContext';
+import { isMobileApp } from '../../../utils/platform';
 import {
   Zap,
   Search,
@@ -28,9 +29,11 @@ import './FreelancerSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/freelancer/dashboard', icon: <Zap size={20} />, label: 'Dashboard' },
-  { to: '/browse-projects', icon: <Search size={20} />, label: 'Find Work' },
+  // Both link to routes that aren't registered at all on the mobile build
+  // (see AppRoutes.jsx) — filtered out below rather than left as dead links.
+  { to: '/browse-projects', icon: <Search size={20} />, label: 'Find Work', mobileHidden: true },
   { to: '/freelancer/profile', icon: <User size={20} />, label: 'My Profile' },
-  { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile' },
+  { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile', mobileHidden: true },
   { to: '/freelancer/gigs', icon: <Package size={20} />, label: 'My Gigs' },
   { to: '/freelancer/gigs/create', icon: <PlusSquare size={20} />, label: 'Create New Gig' },
   { to: '/freelancer/work', icon: <Briefcase size={20} />, label: 'My Work' },
@@ -102,7 +105,7 @@ const FreelancerSidebar = () => {
 
         {/* Navigation */}
         <nav className="fl-sidebar__nav">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter((item) => !item.mobileHidden || !isMobileApp()).map((item) => {
             const to = item.to === '__public_profile__' ? `/freelancers/${userId}` : item.to;
             return (
               <NavLink

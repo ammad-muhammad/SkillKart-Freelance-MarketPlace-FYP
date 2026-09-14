@@ -265,7 +265,7 @@ const ClientOnboarding = () => {
             if (!formData.bio || formData.bio.trim().length < 20) {
                 newErrors.bio = "Please provide a descriptive Bio / About summary (minimum 20 characters)";
             }
-            if (!formData.languages || formData.languages.length === 0) {
+            if (!formData.languages || formData.languages.length === 0 || formData.languages.every(l => !l.language)) {
                 newErrors.languages = "Please select at least one language spoken / preferred";
             }
         }

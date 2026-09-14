@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole } = require('../middleware/rbac.middleware');
+const { requireRole, requireHigherRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
 const { createUserValidation, resetUserPasswordValidation } = require('../validators/user.validator');
 
@@ -35,8 +35,12 @@ router.post('/create-admin',
   adminController.createAdmin
 );
 
-// Reset any user's password
+// Reset any user's password — requireHigherRole stops one admin from
+// resetting another admin's (or superadmin's) password and taking over
+// their account; every other sensitive per-user admin action already has
+// this guard, this route was the one gap.
 router.put('/users/:id/password',
+  requireHigherRole,
   resetUserPasswordValidation,
   validate,
   adminController.resetUserPassword

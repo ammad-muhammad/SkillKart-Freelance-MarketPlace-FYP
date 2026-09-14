@@ -3,6 +3,7 @@ import { useClient } from '../../context/ClientContext';
 import { FolderOpen, Zap, Users2, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import Loader from '../../Components/common/Loader/Loader';
+import { isMobileApp } from '../../utils/platform';
 import './ClientDashboard.css';
 
 const StatCard = ({ icon, value, label, to }) => {
@@ -93,10 +94,16 @@ const ClientDashboardOverview = () => {
         <h3 className="cl-section-title"><Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'var(--color-primary-light)'}} /> Quick Actions</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link to="/client/projects/create" className="cl-btn cl-btn--primary"><PlusSquare size={16} style={{ marginRight: 6 }} /> Post New Project</Link>
-          <Link to="/browse-freelancers" className="cl-btn cl-btn--outline"><Search size={16} style={{ marginRight: 6 }} /> Find Freelancers</Link>
+          {/* Neither route is registered at all on the mobile build (see
+              AppRoutes.jsx) — hidden there rather than left as a dead link. */}
+          {!isMobileApp() && (
+            <Link to="/browse-freelancers" className="cl-btn cl-btn--outline"><Search size={16} style={{ marginRight: 6 }} /> Find Freelancers</Link>
+          )}
           <Link to="/client/projects" className="cl-btn cl-btn--ghost"><FolderOpen size={16} style={{ marginRight: 6 }} /> View My Projects</Link>
           <Link to="/client/messages" className="cl-btn cl-btn--ghost"><MessageSquare size={16} style={{ marginRight: 6 }} /> Messages</Link>
-          <Link to="/ai-matchmaking" className="cl-btn cl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
+          {!isMobileApp() && (
+            <Link to="/ai-matchmaking" className="cl-btn cl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
+          )}
         </div>
       </div>
 

@@ -15,6 +15,21 @@ const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CREATABLE_GIG_FIELDS = ['title', 'shortDescription', 'fullDescription', 'category', 'subcategory', 'skills', 'pricing', 'media', 'faqs'];
 const GIG_CREATE_STATUSES = ['draft', 'active'];
 
+// An untouched optional tier (Standard/Premium) arrives from the form as
+// {price: '', deliveryTime: '', revisions: ''} rather than being omitted.
+// Strip it entirely rather than let Mongoose's Number caster turn '' into a
+// real 0 — that would create a phantom free tier instead of no tier at all.
+const sanitizeOptionalPricingTiers = (pricing) => {
+  if (!pricing || typeof pricing !== 'object') return pricing;
+  const cleaned = { ...pricing };
+  for (const tier of ['standard', 'premium']) {
+    if (cleaned[tier] && !Number(cleaned[tier].price)) {
+      delete cleaned[tier];
+    }
+  }
+  return cleaned;
+};
+
 /**
  * Create Gig.
  * Skill-gated: the freelancer must have passed (verified) at least one skill
@@ -44,6 +59,7 @@ const createGig = asyncHandler(async (req, res) => {
       fields[key] = gigData[key];
     }
   }
+  if (fields.pricing) fields.pricing = sanitizeOptionalPricingTiers(fields.pricing);
   if (GIG_CREATE_STATUSES.includes(gigData.status)) {
     fields.status = gigData.status;
   }
@@ -93,7 +109,7 @@ const updateGig = asyncHandler(async (req, res) => {
   const UPDATABLE_GIG_FIELDS = [...CREATABLE_GIG_FIELDS, 'status'];
   for (const key of UPDATABLE_GIG_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(updates, key)) {
-      gig[key] = updates[key];
+      gig[key] = key === 'pricing' ? sanitizeOptionalPricingTiers(updates[key]) : updates[key];
     }
   }
   await gig.save();
@@ -206,8 +222,18 @@ const getGigById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const gig = await Gig.findById(id)
     .populate('freelancerId', 'firstName lastName profilePicture rating freelancerProfile');
-  
+
   if (!gig) throw new NotFoundError('Gig not found');
+  // Draft/paused gigs aren't meant to be publicly browsable — only the
+  // owning freelancer (or an admin) may view one directly by id. 'active'
+  // gigs (the only ones listGigs surfaces) stay open to anyone.
+  if (gig.status !== 'active') {
+    const isOwner = req.user && String(gig.freelancerId?._id || gig.freelancerId) === String(req.user._id);
+    const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+    if (!isOwner && !isAdmin) {
+      throw new NotFoundError('Gig not found');
+    }
+  }
 
   // best-effort view increment (don't block the response)
   Gig.updateOne({ _id: id }, { $inc: { 'stats.views': 1 } }).catch(() => {});
@@ -249,6 +275,20 @@ const createGigOrder = asyncHandler(async (req, res) => {
   const price = Number(tierData?.price);
   if (!price || price <= 0) {
     throw new BadRequestError(`The "${tier}" package isn’t available for this gig`);
+  }
+
+  // Debounce a double-click/accidental double-submit — no idempotency key
+  // comes from the client, so treat an identical order (same buyer, gig,
+  // tier) placed moments ago as the same click rather than a real second
+  // purchase, and just return it instead of creating a duplicate Job.
+  const recentDuplicate = await Job.findOne({
+    clientId: req.user._id,
+    gigId: gig._id,
+    gigTier: tier,
+    createdAt: { $gte: new Date(Date.now() - 30 * 1000) }
+  }).sort({ createdAt: -1 });
+  if (recentDuplicate) {
+    return sendCreated(res, 'Gig ordered successfully. Fund the deposit to start the work.', { order: recentDuplicate });
   }
 
   // Create the work item (a Job) representing this order.

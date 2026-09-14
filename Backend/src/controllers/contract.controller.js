@@ -82,10 +82,39 @@ const requestCancellation = asyncHandler(async (req, res) => {
     contract.timer.startedAt = null;
   }
 
-  // Change status
   const oldStatus = contract.status;
+  let disputedMilestone = null;
+
+  // A cancellation request IS a dispute (contract goes to 'under_review'
+  // exactly like raiseDispute) — it must write the same dispute record
+  // raiseDispute does, not just flip the status flag. Previously this only
+  // set contract.status with no dispute doc at all, which (a) orphaned the
+  // contract from the admin dispute queue (adminPanel's getDisputes filters
+  // on `dispute.status` existing on the contract or its current milestone)
+  // and (b) for fixed-price contracts, left the milestone's reviewDeadline
+  // intact — the auto-release cron (which only checks status:'submitted' +
+  // reviewDeadline) could still release escrow out from under a contract
+  // that's nominally "under review" pending this exact cancellation.
+  if (contract.type === 'fixed') {
+    const milestone = await Milestone.findOne({ contractId: contract._id, order: contract.currentMilestoneOrder });
+    if (!milestone) throw new NotFoundError('No milestone found for this contract');
+    if (['released', 'refunded', 'cancelled'].includes(milestone.status)) {
+      throw new BadRequestError(`Cannot cancel — the current milestone is already ${milestone.status}.`);
+    }
+    if (milestone.dispute?.status === 'pending') {
+      throw new BadRequestError('This milestone already has a pending dispute');
+    }
+    milestone.status = 'disputed';
+    milestone.reviewDeadline = undefined;
+    milestone.dispute = { raisedBy: req.user._id, reason, status: 'pending', raisedAt: new Date() };
+    await milestone.save();
+    disputedMilestone = milestone;
+  } else if (!contract.dispute || contract.dispute.status !== 'pending') {
+    contract.dispute = { raisedBy: req.user._id, reason, status: 'pending', raisedAt: new Date() };
+  }
+
   contract.status = 'under_review'; // Directly to under_review for V1
-  
+
   // NOTE: In V1, escrow funds remain frozen, no automatic refunds yet
   // No new manual time entries / payments will be allowed (checked in respective controllers)
 
@@ -108,12 +137,13 @@ const requestCancellation = asyncHandler(async (req, res) => {
   notifications.onContractDisputed(notifyUserId, {
     contractId: contract._id,
     actorName,
-    reason
+    reason,
+    recipientRole: isClient ? 'freelancer' : 'client'
   });
 
   sendSuccess(res, {
     message: 'Cancellation requested and contract is now under review',
-    data: { contract }
+    data: { contract, milestone: disputedMilestone }
   });
 });
 
@@ -277,7 +307,8 @@ const requestEndContract = asyncHandler(async (req, res) => {
   const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
   notifications.onContractStatusChanged(notifyUserId, {
     contractId: contract._id,
-    status: 'end_requested'
+    status: 'end_requested',
+    recipientRole: isClient ? 'freelancer' : 'client'
   });
 
   sendSuccess(res, { message: 'End request sent successfully', data: { contract } });
@@ -319,7 +350,8 @@ const respondEndContract = asyncHandler(async (req, res) => {
     
     notifications.onContractStatusChanged(contract.endRequest.requestedBy, {
       contractId: contract._id,
-      status: 'end_request_rejected'
+      status: 'end_request_rejected',
+      recipientRole: String(contract.endRequest.requestedBy) === String(contract.clientId) ? 'client' : 'freelancer'
     });
 
     return sendSuccess(res, { message: 'End request rejected', data: { contract } });
@@ -372,6 +404,9 @@ const respondEndContract = asyncHandler(async (req, res) => {
       }
 
       await refundRemainingHourlyEscrow({ contract, job });
+      // Escrow is now fully drawn down/refunded — without this the field stays
+      // 'wallet_locked' forever post-completion, stale for anything reading it.
+      contract.paymentStatus = 'settled';
     }
 
     await contract.save();
@@ -401,7 +436,8 @@ const respondEndContract = asyncHandler(async (req, res) => {
     const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
     notifications.onContractStatusChanged(notifyUserId, {
       contractId: contract._id,
-      status: 'completed'
+      status: 'completed',
+      recipientRole: isClient ? 'freelancer' : 'client'
     });
 
     return sendSuccess(res, { message: 'Contract completed successfully', data: { contract } });
@@ -472,7 +508,7 @@ const raiseDispute = asyncHandler(async (req, res) => {
     });
 
     const notifyUserId = isClient ? contract.freelancerId : contract.clientId;
-    notifications.onContractDisputed(notifyUserId, { contractId: contract._id, actorName: req.user.firstName, reason });
+    notifications.onContractDisputed(notifyUserId, { contractId: contract._id, actorName: req.user.firstName, reason, recipientRole: isClient ? 'freelancer' : 'client' });
 
     return sendSuccess(res, { message: 'Dispute raised successfully', data: { contract, milestone } });
   }
@@ -484,8 +520,14 @@ const raiseDispute = asyncHandler(async (req, res) => {
   }
 
   contract.status = 'under_review';
+  // Fold any in-progress timer session into accumulatedMs before stopping it
+  // — just flipping isActive (the old code) silently drops that elapsed
+  // time, unlike requestCancellation's equivalent stop-the-timer step.
   if (contract.timer && contract.timer.isActive) {
+    const elapsedMs = Date.now() - new Date(contract.timer.startedAt).getTime();
+    contract.timer.accumulatedMs += elapsedMs;
     contract.timer.isActive = false;
+    contract.timer.startedAt = null;
   }
 
   contract.dispute = {
@@ -516,47 +558,20 @@ const raiseDispute = asyncHandler(async (req, res) => {
   notifications.onContractDisputed(notifyUserId, {
     contractId: contract._id,
     actorName: req.user.firstName,
-    reason
+    reason,
+    recipientRole: isClient ? 'freelancer' : 'client'
   });
 
   sendSuccess(res, { message: 'Dispute raised successfully', data: { contract } });
 });
 
-/**
- * Admin: Resolve Dispute (Future API hook)
- */
-const adminResolveDispute = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { outcome, resolutionNotes } = req.body; // e.g. 'release_freelancer', 'refund_client', 'split', 'resume'
-
-  // Admin authorization would normally happen in middleware
-  // For now, this is just a skeleton for future admin dashboard
-  
-  const contract = await Contract.findById(id);
-  if (!contract) throw new NotFoundError('Contract not found');
-
-  if (!contract.dispute || contract.dispute.status !== 'pending') {
-    throw new BadRequestError('No pending dispute found');
-  }
-
-  if (outcome === 'resume') {
-    contract.status = 'active';
-  } else {
-    contract.status = 'completed'; // or cancelled
-    contract.completedAt = Date.now();
-  }
-
-  contract.dispute.status = 'resolved';
-  contract.dispute.resolutionNotes = resolutionNotes;
-  contract.dispute.resolvedBy = req.user._id; // Admin ID
-  contract.dispute.resolvedAt = Date.now();
-
-  await contract.save();
-
-  // (Future logic: process wallet transfers atomically here)
-
-  sendSuccess(res, { message: 'Dispute resolved successfully', data: { contract } });
-});
+// NOTE: admin dispute resolution lives in adminPanel/disputes.controller.js's
+// resolveDispute — it's the only wired path, and it's escrow-aware (routes
+// through releaseMilestone/drawDownForTimeLog/refundRemainingHourlyEscrow
+// rather than flipping contract.status with no money movement). A dead,
+// unwired skeleton used to sit here (`adminResolveDispute`) that bypassed all
+// of that — removed rather than left as a trap for a future route to
+// accidentally wire up.
 
 module.exports = {
   getContract,
@@ -565,6 +580,5 @@ module.exports = {
   getMyContracts,
   requestEndContract,
   respondEndContract,
-  raiseDispute,
-  adminResolveDispute
+  raiseDispute
 };

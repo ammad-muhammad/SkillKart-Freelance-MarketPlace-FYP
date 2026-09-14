@@ -27,4 +27,10 @@ const timeLogSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// contractId and status already carry single-field indexes above, but every
+// real query filters on BOTH together (settling pending logs for a contract,
+// dispute/admin views, the drawdown cron) — a compound index serves those
+// directly instead of relying on index intersection.
+timeLogSchema.index({ contractId: 1, status: 1 });
+
 module.exports = mongoose.model('TimeLog', timeLogSchema);

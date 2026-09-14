@@ -54,4 +54,18 @@ export const jobsAPI = {
   // Leave a review for a completed job
   reviewJob: (id, data) =>
     client.post(`/jobs/${id}/review`, data),
+
+  // Jobs the freelancer is hired on (both custom-project contracts and gig
+  // orders) — pass { source: 'gig' } to fetch just gig orders.
+  getMyHiredJobs: (params) =>
+    client.get('/jobs/my-contracts', { params }),
+
+  // Gig order delivery lifecycle (no Contract/Milestone — legacy 50/50 flow).
+  submitGigDelivery: (id, data) =>
+    client.post(`/jobs/${id}/gig-delivery`, data),
+
+  // Matches the already-wired ClientContext.requestRevision(id, note) —
+  // that function existed with no live backend counterpart until now.
+  requestRevision: (id, note) =>
+    client.post(`/jobs/${id}/gig-revision`, { note }),
 };

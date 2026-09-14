@@ -158,7 +158,19 @@ router.post('/:id/close',
   jobController.closeJob
 );
 
-// Delivery lifecycle routes removed. Deliveries are now managed by Delivery API.
+// Gig orders have no Contract/Milestone (legacy 50/50 Stripe flow), so their
+// delivery lifecycle lives here rather than the Contract-based Delivery API.
+router.post('/:id/gig-delivery',
+  authenticate,
+  requireRole('freelancer'),
+  jobController.submitGigDelivery
+);
+
+router.post('/:id/gig-revision',
+  authenticate,
+  requireRole('client'),
+  jobController.requestGigRevision
+);
 
 // Review a completed job
 router.post('/:id/review',

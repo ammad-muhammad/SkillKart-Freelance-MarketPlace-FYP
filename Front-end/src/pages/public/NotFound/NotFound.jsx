@@ -4,14 +4,19 @@ import { gsap } from 'gsap';
 import { Home, Search, Users, ArrowLeft, Compass } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import { isMobileApp } from '../../../utils/platform';
 import './NotFound.css';
 
-/* Where people most often actually meant to go. */
+/* Where people most often actually meant to go. `/` is safe on mobile (it
+   redirects to /login there — see AppRoutes.jsx); the other three are
+   marketing/discovery routes that aren't registered at all on the mobile
+   build, so they're excluded there rather than left as dead links on the
+   one page guaranteed to be reachable from any bad mobile deep link. */
 const SUGGESTIONS = [
     { icon: Home, label: 'Home', desc: 'Back to the start', to: '/' },
-    { icon: Search, label: 'Browse Projects', desc: 'Find work to bid on', to: '/browse-projects' },
-    { icon: Users, label: 'Find Freelancers', desc: 'Hire the right talent', to: '/browse-freelancers' },
-    { icon: Compass, label: 'Explore Skills', desc: 'See every category', to: '/categories' }
+    { icon: Search, label: 'Browse Projects', desc: 'Find work to bid on', to: '/browse-projects', webOnly: true },
+    { icon: Users, label: 'Find Freelancers', desc: 'Hire the right talent', to: '/browse-freelancers', webOnly: true },
+    { icon: Compass, label: 'Explore Skills', desc: 'See every category', to: '/categories', webOnly: true }
 ];
 
 export default function NotFound() {
@@ -52,9 +57,20 @@ export default function NotFound() {
         return () => ctx.revert();
     }, []);
 
+    // Navbar/Footer carry their own mega-menu/footer links to the same
+    // mobile-excluded marketing routes — this page is the one guaranteed to
+    // render on any bad mobile deep link, so on mobile it gets a minimal,
+    // link-free header/footer instead of leaking that whole surface too.
+    const mobile = isMobileApp();
+    const visibleSuggestions = SUGGESTIONS.filter((s) => !s.webOnly || !mobile);
+
     return (
         <>
-            <Navbar alwaysSticky />
+            {mobile ? (
+                <header style={{ padding: '1.25rem', textAlign: 'center', fontWeight: 700, fontSize: '1.1rem' }}>SkillKart</header>
+            ) : (
+                <Navbar alwaysSticky />
+            )}
 
             <main className="nf" ref={heroRef}>
                 <div className="nf__bg" aria-hidden="true">
@@ -90,7 +106,7 @@ export default function NotFound() {
                     <div className="nf__suggest">
                         <p className="nf__suggest-label">Or try one of these</p>
                         <div className="nf__cards">
-                            {SUGGESTIONS.map(({ icon: Icon, label, desc, to }) => (
+                            {visibleSuggestions.map(({ icon: Icon, label, desc, to }) => (
                                 <Link key={to} to={to} className="nf__card">
                                     <span className="nf__card-icon"><Icon size={20} /></span>
                                     <span className="nf__card-text">
@@ -104,7 +120,7 @@ export default function NotFound() {
                 </div>
             </main>
 
-            <Footer />
+            {!mobile && <Footer />}
         </>
     );
 }

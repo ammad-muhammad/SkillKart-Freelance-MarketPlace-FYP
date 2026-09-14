@@ -184,7 +184,7 @@ const TagInput = ({
             return (
               <span key={`${name}-${idx}`} className="fl-tag-chip">
                 {name}
-                <button type="button" onClick={() => removeTag(tag)} className="fl-tag-chip__remove">
+                <button type="button" onClick={() => removeTag(tag)} className="fl-tag-chip__remove" aria-label={`Remove ${name}`}>
                   <X size={12} />
                 </button>
               </span>

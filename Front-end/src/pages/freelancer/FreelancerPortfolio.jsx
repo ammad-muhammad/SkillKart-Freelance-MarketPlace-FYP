@@ -6,6 +6,7 @@ import { Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen, Package, Load
 import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
+import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
@@ -117,13 +118,16 @@ const FreelancerPortfolio = () => {
           <p className="fl-page-sub">Showcase your best professional work and side projects.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <Link 
-            to={`/freelancers/${user?._id || user?.id}`} 
-            className="fl-btn fl-btn--outline" 
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-          >
-            <Eye size={14} /> View Public Profile
-          </Link>
+          {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
+          {!isMobileApp() && (
+            <Link
+              to={`/freelancers/${user?._id || user?.id}`}
+              className="fl-btn fl-btn--outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+            >
+              <Eye size={14} /> View Public Profile
+            </Link>
+          )}
           <button className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={handleOpenAdd}><Plus size={14} /> Add Project</button>
         </div>
       </div>

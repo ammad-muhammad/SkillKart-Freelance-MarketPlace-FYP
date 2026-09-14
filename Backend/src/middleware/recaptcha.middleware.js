@@ -13,8 +13,18 @@ const { verifyToken, isConfigured } = require('../services/recaptcha.service');
  *                          executeRecaptcha(action) call or the token is rejected
  *                          as a replay.
  */
+// The Capacitor mobile app's WebView always presents this fixed origin
+// (androidScheme/iosScheme: "https" in capacitor.config.json — nothing real
+// is ever hosted at "localhost"). Google reCAPTCHA v3 is a browser-page
+// product: its script/iframe is unreliable inside an embedded WebView and
+// frequently fails to mint a token there, which would otherwise hard-lock
+// every mobile app user out of login/register. authLimiter + account
+// lockout remain as the real anti-abuse gate for this origin.
+const MOBILE_APP_ORIGIN = 'https://localhost';
+
 const verifyRecaptcha = (action) => async (req, res, next) => {
   if (!isConfigured()) return next();
+  if (req.headers.origin === MOBILE_APP_ORIGIN) return next();
 
   const token =
     req.headers['x-recaptcha-token'] ||

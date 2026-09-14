@@ -7,6 +7,12 @@ const Report = require('../../models/Report');
 const Review = require('../../models/Review');
 const Conversation = require('../../models/Conversation');
 
+// Admin-only endpoint (gated by the isolated admin-panel auth), so this is
+// defense-in-depth rather than a live public exposure — still worth
+// escaping so admin search input can't cause pathological regex
+// backtracking across these collections.
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * GET /search/global?q=term&types=users,jobs
  * Returns categorized results (max 5 per type).
@@ -20,7 +26,7 @@ const globalSearch = async (req, res) => {
     }
 
     const term = q.trim();
-    const regex = new RegExp(term, 'i');
+    const regex = new RegExp(escapeRegex(term), 'i');
 
     const requestedTypes = types
       ? types.split(',').map(t => t.trim())

@@ -138,7 +138,7 @@ const StepEducation = ({ formData, setFormData, errors }) => {
 
               <div className="fob-form-row">
                 <div className="fob-form-group">
-                  <label className="fob-label">Start Date</label>
+                  <label className="fob-label">Start Date*</label>
                   <input
                     type="month"
                     value={edu.startDate}

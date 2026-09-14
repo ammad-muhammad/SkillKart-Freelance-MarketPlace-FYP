@@ -16,6 +16,7 @@ import {
 } from '../../api/adminPanel';
 import { AdjustWalletModal } from './AdminDetailPages';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import { safeToast as toast } from '../../utils/safeToast';
 
 // ─── Reusable page shell ───────────────────────────────────────
 const PageShell = ({ title, desc, icon, headerRight, children }) => (
@@ -249,20 +250,25 @@ export const PaymentsPage = () => {
 // WALLETS
 // ═══════════════════════════════════════════════════════════════
 export const WalletsPage = () => {
-  const { data, loading, error, load } = useList(adminWallets.list, 'wallets');
+  const { data, pagination, loading, error, setPage, load } = useList(adminWallets.list, 'wallets');
   const [adjustTarget, setAdjustTarget] = useState(null); // userId
 
   const freeze = (userId) => {
     const r = prompt('Freeze reason? (min 5 chars)');
     if (r == null) return;
-    if (r.trim().length < 5) return alert('Reason must be at least 5 characters.');
-    adminWallets.freeze(userId, r.trim()).then(() => load()).catch(e => alert(e?.message || 'Failed'));
+    if (r.trim().length < 5) return toast.error('Reason must be at least 5 characters.');
+    adminWallets.freeze(userId, r.trim()).then(() => load()).catch(e => toast.error(e?.message || 'Failed'));
   };
 
   return (
     <PageShell title="Wallets" desc="All user wallet balances" icon="👛">
+      <AdminFilterBar>
+        <input className="ap-input" style={{ maxWidth: 240 }} placeholder="Search email or name…"
+          onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
+      </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="👛" emptyTitle="No wallets found"
         columns={['User','Type','Balance','Frozen','Actions']}
+        pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
         renderRow={(w) => (
           <tr key={w._id}>
             <td style={{ fontSize: '0.83rem' }}>{w.userId?.email || '—'}</td>
@@ -273,7 +279,7 @@ export const WalletsPage = () => {
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => setAdjustTarget(w.userId?._id)}>💰 Adjust</button>
                 {w.isFrozenWallet
-                  ? <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => adminWallets.unfreeze(w.userId?._id).then(() => load()).catch(e => alert(e?.message || 'Failed'))}>Unfreeze</button>
+                  ? <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => adminWallets.unfreeze(w.userId?._id).then(() => load()).catch(e => toast.error(e?.message || 'Failed'))}>Unfreeze</button>
                   : <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => freeze(w.userId?._id)}>Freeze</button>
                 }
               </div>
@@ -302,11 +308,10 @@ export const WithdrawalsPage = () => {
   const act = async (id, action) => {
     setBusy(true);
     try {
-      if (action === 'approve') await adminWithdrawals.approve(id);
-      else if (action === 'reject') {
+      if (action === 'reject') {
         const r = prompt('Rejection reason? (min 5 chars)');
         if (r == null) return;
-        if (r.trim().length < 5) { alert('Reason must be at least 5 characters.'); return; }
+        if (r.trim().length < 5) { toast.error('Reason must be at least 5 characters.'); return; }
         await adminWithdrawals.reject(id, r.trim());
       } else if (action === 'complete') {
         const ref = prompt('Payout reference ID (e.g. bank/transfer ref). Leave blank if none:');
@@ -314,7 +319,7 @@ export const WithdrawalsPage = () => {
         await adminWithdrawals.complete(id, ref.trim() || undefined);
       }
       load();
-    } catch (e) { alert(e?.message || 'Action failed'); }
+    } catch (e) { toast.error(e?.message || 'Action failed'); }
     finally { setBusy(false); }
   };
 
@@ -482,7 +487,7 @@ export const NotificationsPage = () => {
       setSent(res?.message || 'Notification sent!');
       setTitle(''); setMessage('');
     } catch (err) {
-      alert(err?.message || 'Failed to send');
+      toast.error(err?.message || 'Failed to send');
     } finally { setBusy(false); }
   };
 
@@ -609,7 +614,7 @@ export const MonitoringPage = () => {
                     <td style={{ fontSize: '0.82rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.message}</td>
                     <td><StatusBadge status={log.resolved ? 'resolved' : 'pending'} /></td>
                     <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.relative(log.timestamp)}</td>
-                    <td>{!log.resolved && <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => adminMonitoring.resolveError(log._id).then(() => load())}>✓</button>}</td>
+                    <td>{!log.resolved && <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => adminMonitoring.resolveError(log._id).then(() => load()).catch(e => toast.error(e?.message || 'Failed to resolve'))}>✓</button>}</td>
                   </>}
                   {tab === 'api' && <>
                     <td><span className={`ap-badge ${log.method === 'GET' ? 'ap-badge-blue' : log.method === 'POST' ? 'ap-badge-green' : 'ap-badge-yellow'}`}>{log.method}</span></td>
@@ -1099,7 +1104,7 @@ export const SettingsPage = () => {
       const e = { ...editing }; delete e[key]; setEditing(e);
       setSaved(`"${key}" updated`);
       setTimeout(() => setSaved(''), 3000);
-    } catch (err) { alert(err?.message); } finally { setBusy(false); }
+    } catch (err) { toast.error(err?.message); } finally { setBusy(false); }
   };
 
   if (loading) return <AdminLoader />;
@@ -1131,7 +1136,7 @@ export const SettingsPage = () => {
                   <button
                     className={`ap-btn ap-btn-sm ${s.value ? 'ap-btn-success' : 'ap-btn-secondary'}`}
                     disabled={busy}
-                    onClick={() => adminSettings.update(s.key, !s.value).then(() => setSettings(prev => prev.map(x => x.key === s.key ? { ...x, value: !s.value } : x)))}
+                    onClick={() => adminSettings.update(s.key, !s.value).then(() => setSettings(prev => prev.map(x => x.key === s.key ? { ...x, value: !s.value } : x))).catch(e => toast.error(e?.message || 'Failed to update setting'))}
                   >
                     {s.value ? '✅ Enabled' : '⬜ Disabled'}
                   </button>

@@ -4,13 +4,14 @@ import { Link } from 'react-router-dom';
 import { proposalsAPI } from '../../api/proposals';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  Clock, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag, Edit2
+  Clock, ExternalLink, UploadCloud, X, FileText, Settings, Package, CheckCircle2, XCircle, Flag, Edit2, RotateCcw
 } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import Modal from '../../Components/common/Modal/Modal';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const DELIVERY_OPTIONS = ['Less than 1 week', '1-2 weeks', '1 month', '3+ months'];
@@ -22,6 +23,7 @@ export default function FreelancerProposals() {
   const [editingProposal, setEditingProposal] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [withdrawingId, setWithdrawingId] = useState(null);
 
 
   useEffect(() => {
@@ -45,15 +47,21 @@ export default function FreelancerProposals() {
   };
 
   const handleWithdraw = async (id) => {
+    if (withdrawingId) return;
     if (!window.confirm('Are you sure you want to withdraw this proposal?')) return;
+    setWithdrawingId(id);
     try {
       await proposalsAPI.withdrawProposal(id);
       toast.success('Proposal withdrawn.');
       fetchProposals();
     } catch {
       toast.error('Failed to withdraw proposal.');
+    } finally {
+      setWithdrawingId(null);
     }
   };
+
+  const isResubmit = (prop) => prop?.status === 'rejected' && prop?.canResubmit;
 
   const openEdit = (prop) => {
     setEditingProposal(prop);
@@ -112,10 +120,11 @@ export default function FreelancerProposals() {
       payload.estimatedDeliveryTime = editForm.estimatedDeliveryTime;
     }
 
+    const resubmitting = isResubmit(editingProposal);
     setSavingEdit(true);
     try {
       await proposalsAPI.updateProposal(editingProposal._id, payload);
-      toast.success('Proposal updated.');
+      toast.success(resubmitting ? 'Proposal revised and resubmitted!' : 'Proposal updated.');
       setEditingProposal(null);
       setEditForm(null);
       fetchProposals();
@@ -189,6 +198,12 @@ export default function FreelancerProposals() {
                   </div>
                 )}
 
+                {isResubmit(prop) && (
+                  <div className="fl-prop-card__resubmit-note">
+                    <RotateCcw size={14} /> The client is open to a revised proposal — edit and resubmit below.
+                  </div>
+                )}
+
                 {/* Work stage (only on accepted proposals) */}
                 {prop.status === 'accepted' && workStage(prop.jobId?.status) && (
                   <div className="fl-work-stage" style={{ color: workStage(prop.jobId?.status).color }}>
@@ -202,9 +217,13 @@ export default function FreelancerProposals() {
 
               <div className="fl-prop-card__footer">
                 <div className="fl-prop-card__btns">
-                  <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
-                    View Project <ExternalLink size={14} />
-                  </Link>
+                  {/* Not registered at all on the mobile build (see AppRoutes.jsx) —
+                      editing/resubmitting is still possible below without it. */}
+                  {!isMobileApp() && (
+                    <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
+                      View Project <ExternalLink size={14} />
+                    </Link>
+                  )}
                   {prop.status === 'pending' && prop.jobId?.status === 'open' && (
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
@@ -213,13 +232,22 @@ export default function FreelancerProposals() {
                       <Edit2 size={14} /> Edit
                     </button>
                   )}
+                  {isResubmit(prop) && prop.jobId?.status === 'open' && (
+                    <button
+                      className="fl-btn fl-btn--primary fl-btn--sm"
+                      onClick={() => openEdit(prop)}
+                    >
+                      <RotateCcw size={14} /> Edit & Resubmit
+                    </button>
+                  )}
                   {prop.status === 'pending' && (
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"
                       onClick={() => handleWithdraw(prop._id)}
+                      disabled={withdrawingId === prop._id}
                       style={{ color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
                     >
-                      Withdraw
+                      {withdrawingId === prop._id ? 'Withdrawing...' : 'Withdraw'}
                     </button>
                   )}
                   {prop.status === 'accepted' && prop.jobId?.status === 'in-progress' && (
@@ -237,7 +265,7 @@ export default function FreelancerProposals() {
         </div>
       )}
 
-      <Modal open={!!editingProposal} title="Edit Proposal" onClose={closeEdit} size="md">
+      <Modal open={!!editingProposal} title={isResubmit(editingProposal) ? 'Edit & Resubmit Proposal' : 'Edit Proposal'} onClose={closeEdit} size="md">
         {editForm && (
           <form onSubmit={handleEditSubmit}>
             {editingProposal?.jobId?.budget?.type === 'hourly' ? (
@@ -316,7 +344,7 @@ export default function FreelancerProposals() {
             <div className="fl-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)' }}>
               <button type="button" className="fl-btn fl-btn--ghost" onClick={closeEdit} disabled={savingEdit}>Cancel</button>
               <button type="submit" className="fl-btn fl-btn--primary" disabled={savingEdit}>
-                {savingEdit ? 'Saving...' : 'Save Changes'}
+                {savingEdit ? 'Saving...' : (isResubmit(editingProposal) ? 'Resubmit Proposal' : 'Save Changes')}
               </button>
             </div>
           </form>
@@ -333,6 +361,7 @@ export default function FreelancerProposals() {
         .fl-prop-card__response { background: var(--color-secondary); border: 1px solid rgba(183, 201, 226, 0.35); padding: 0.75rem 1rem; border-radius: 10px; margin-top: 1rem; }
         .fl-prop-card__response strong { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-light); margin-bottom: 0.3rem; }
         .fl-prop-card__response p { font-size: 0.875rem; color: var(--color-text-mid); line-height: 1.5; }
+        .fl-prop-card__resubmit-note { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; color: var(--color-info); margin-top: 0.75rem; }
         .fl-prop-card__footer { border-top: 1px solid rgba(183, 201, 226, 0.2); padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; }
         .fl-prop-card__btns { display: flex; gap: 0.75rem; }
         .fl-work-stage { margin-top: 0.85rem; font-weight: 700; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.25rem; }

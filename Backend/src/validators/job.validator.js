@@ -104,12 +104,12 @@ const updateJobValidation = [
     .isMongoId().withMessage('Invalid job ID'),
 
   body('title')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 5, max: 100 }).withMessage('Title must be 5-100 characters'),
 
   body('description')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 50, max: 5000 }).withMessage('Description must be 50-5000 characters'),
 
@@ -291,7 +291,7 @@ const updateProposalValidation = [
     .isMongoId().withMessage('Invalid proposal ID'),
 
   body('coverLetter')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 100, max: 2000 }).withMessage('Cover letter must be 100-2000 characters'),
 
@@ -310,7 +310,14 @@ const updateProposalValidation = [
 
   body('estimatedWeeklyHours')
     .optional()
-    .isInt({ min: 1, max: 168 }).withMessage('Weekly hours must be between 1 and 168')
+    .isInt({ min: 1, max: 168 }).withMessage('Weekly hours must be between 1 and 168'),
+
+  body('attachments')
+    .optional()
+    .isArray().withMessage('Attachments must be an array'),
+
+  body('attachments.*')
+    .isURL().withMessage('Each attachment must be a valid URL')
 ];
 
 // Get proposal validation
@@ -366,7 +373,14 @@ const acceptProposalValidation = [
   body('message')
     .optional()
     .trim()
-    .isLength({ max: 500 }).withMessage('Message must not exceed 500 characters')
+    .isLength({ max: 500 }).withMessage('Message must not exceed 500 characters'),
+
+  // The price the client actually saw before clicking Accept — lets the
+  // server reject if the freelancer edited the proposal's price in the
+  // meantime, instead of silently accepting whatever the live value is.
+  body('expectedPrice')
+    .optional()
+    .isFloat({ gt: 0 }).withMessage('expectedPrice must be a positive number')
 ];
 
 // Reject proposal validation
@@ -378,7 +392,11 @@ const rejectProposalValidation = [
   body('reason')
     .optional()
     .trim()
-    .isLength({ max: 500 }).withMessage('Reason must not exceed 500 characters')
+    .isLength({ max: 500 }).withMessage('Reason must not exceed 500 characters'),
+
+  body('allowResubmit')
+    .optional()
+    .isBoolean().withMessage('allowResubmit must be a boolean')
 ];
 
 // Withdraw proposal validation

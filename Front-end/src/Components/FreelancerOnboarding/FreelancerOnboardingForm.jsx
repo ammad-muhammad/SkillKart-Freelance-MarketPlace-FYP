@@ -245,8 +245,12 @@ const FreelancerOnboardingForm = () => {
     if (step === 6) {
       const edu = formData.education || [];
       edu.forEach(item => {
-        if (!item.institution?.trim() || !item.degree?.trim() || !item.startDate) {
-          newErrors.education = "Please complete all required education fields.";
+        const missing = [];
+        if (!item.institution?.trim()) missing.push("Institution");
+        if (!item.degree?.trim()) missing.push("Degree");
+        if (!item.startDate) missing.push("Start Date");
+        if (missing.length) {
+          newErrors.education = `Please fill in: ${missing.join(", ")}.`;
         }
       });
     }
@@ -254,8 +258,11 @@ const FreelancerOnboardingForm = () => {
     if (step === 7) {
       const cert = formData.certifications || [];
       cert.forEach(item => {
-        if (!item.name?.trim() || !item.issuer?.trim()) {
-          newErrors.certifications = "Please complete all required certification fields.";
+        const missing = [];
+        if (!item.name?.trim()) missing.push("Certification Name");
+        if (!item.issuer?.trim()) missing.push("Issuing Organization");
+        if (missing.length) {
+          newErrors.certifications = `Please fill in: ${missing.join(", ")}.`;
         }
       });
     }
@@ -463,6 +470,13 @@ const FreelancerOnboardingForm = () => {
               >
                 <Rocket size={18} />
                 Start Skill Verification
+              </button>
+              <button
+                className="fob-btn-link"
+                style={{ background: "none", border: "none", marginTop: "12px", cursor: "pointer", textDecoration: "underline", color: "var(--color-text-light, #64748b)" }}
+                onClick={() => navigate("/freelancer/dashboard")}
+              >
+                Skip for now, go to dashboard
               </button>
             </motion.div>
           </div>

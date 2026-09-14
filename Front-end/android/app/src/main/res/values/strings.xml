@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SkillKart</string>
+    <string name="title_activity_main">SkillKart</string>
+    <string name="package_name">com.skillkart.app</string>
+    <string name="custom_url_scheme">com.skillkart.app</string>
+</resources>

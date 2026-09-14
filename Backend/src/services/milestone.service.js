@@ -115,6 +115,15 @@ async function releaseMilestone({ milestone, contract, job, auto = false }) {
   if (milestone.status === 'disputed') {
     throw new BadRequestError('This milestone has an unresolved dispute — resolve it before releasing escrow.');
   }
+  // Only a milestone actually awaiting review can be released fresh.
+  // 'released' is let through so a second concurrent/stale call is a
+  // harmless idempotent no-op (the Payment.status check just below handles
+  // that) — but anything else (funded, in_revision, pending_funding,
+  // refunded, cancelled) means this specific milestone isn't the one
+  // actually delivered right now and must not have its escrow released.
+  if (!['submitted', 'released'].includes(milestone.status)) {
+    throw new BadRequestError(`This milestone can't be released from its current state (${milestone.status}).`);
+  }
 
   const payment = await Payment.findOne({ milestoneId: milestone._id, type: 'job_escrow' });
   if (!payment) throw new BadRequestError('No escrow payment found for this milestone');

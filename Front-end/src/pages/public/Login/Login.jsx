@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
 import AuthBackground from "../AuthBackground";
+import { isMobileApp } from "../../../utils/platform";
 import "../Auth.css";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -102,7 +103,7 @@ const Login = () => {
 
     const handleSocialLogin = async (provider) => {
         if (!supabaseUrl || !supabaseKey) {
-            alert('Supabase not configured');
+            setError('Social login is not available right now.');
             return;
         }
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -116,10 +117,12 @@ const Login = () => {
 
     return (
         <div className="auth-page">
-            <Link to="/" className="back-home-btn">
-                <ArrowLeft size={18} />
-                <span>Back to Home</span>
-            </Link>
+            {!isMobileApp() && (
+                <Link to="/" className="back-home-btn">
+                    <ArrowLeft size={18} />
+                    <span>Back to Home</span>
+                </Link>
+            )}
 
             <AuthBackground />
 

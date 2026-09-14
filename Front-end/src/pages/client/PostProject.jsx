@@ -722,7 +722,7 @@ const PostProject = () => {
                   placeholder="https://..."
                   onChange={(e) => updateRefLink(i, e.target.value)}
                 />
-                <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeRefLink(i)}><X size={14} /></button>
+                <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeRefLink(i)} aria-label={`Remove reference link ${i + 1}`}><X size={14} /></button>
               </div>
             ))}
             <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={addRefLink}><Plus size={14} style={{ marginRight: '4px' }} /> Add Link</button>
@@ -733,7 +733,7 @@ const PostProject = () => {
               <div key={i} className="cl-faq-item">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span className="cl-label">Question {i + 1}</span>
-                  <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeFaq(i)}><X size={14} /></button>
+                  <button type="button" className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => removeFaq(i)} aria-label={`Remove FAQ ${i + 1}`}><X size={14} /></button>
                 </div>
                 <input
                   className="cl-input"
@@ -789,6 +789,7 @@ const PostProject = () => {
                           const newImgs = form.attachments.images.filter((_, idx) => idx !== i);
                           updateForm({ attachments: { ...form.attachments, images: newImgs } });
                         }}
+                        aria-label={`Remove image ${i + 1}`}
                       ><X size={14} /></button>
                     </div>
                   ))}
@@ -861,6 +862,7 @@ const PostProject = () => {
                               const docs = form.attachments.documents.filter((_, idx) => idx !== i);
                               updateForm({ attachments: { ...form.attachments, documents: docs } });
                             }}
+                            aria-label={`Remove document ${i + 1}`}
                           ><X size={14} /></button>
                         </div>
                       </li>

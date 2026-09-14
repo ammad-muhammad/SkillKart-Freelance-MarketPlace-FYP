@@ -8,7 +8,7 @@ export const policyState = {
     companyName: 'SkillKart',
     websiteUrl: 'https://skillkart.app',
     contactEmail: 'legal@skillkart.app',
-    supportEmail: 'support@skillkart.app',
+    supportEmail: 'support@skillkart.com',
     jurisdiction: 'Pakistan (governed by applicable Pakistani law)',
     governingLaw: 'Pakistan',
     effectiveDate: 'February 25, 2026',

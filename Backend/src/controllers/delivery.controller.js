@@ -84,7 +84,10 @@ const submitDelivery = asyncHandler(async (req, res) => {
     await milestone.save();
   }
 
-  notifications.onWorkDelivered(contract.clientId, { contractId: contract._id, jobId: contract.jobId });
+  // onWorkDelivered reads job.title/job._id, not raw IDs — fetch the job so
+  // the notification actually names the project instead of rendering blank.
+  const deliveredJob = await Job.findById(contract.jobId).select('title').lean();
+  notifications.onWorkDelivered(contract.clientId, { job: deliveredJob });
 
   sendSuccess(res, {
     message: 'Delivery submitted successfully',
@@ -118,8 +121,14 @@ const reviewDelivery = asyncHandler(async (req, res) => {
   const contract = await Contract.findById(delivery.contractId);
   if (!contract) throw new NotFoundError('Contract not found');
 
-  const milestone = contract.type === 'fixed'
-    ? await getCurrentMilestone(contract._id, contract.currentMilestoneOrder)
+  // Resolve via THIS delivery's own milestoneId, not
+  // contract.currentMilestoneOrder — the two can drift apart if the
+  // auto-release cron already released an earlier milestone (which advances
+  // currentMilestoneOrder) while this delivery's review was left pending; a
+  // stale action on this delivery must still resolve to the milestone it was
+  // actually submitted against, never a later, different one.
+  const milestone = contract.type === 'fixed' && delivery.milestoneId
+    ? await Milestone.findById(delivery.milestoneId)
     : null;
 
   if (action === 'request_revision') {
@@ -143,7 +152,8 @@ const reviewDelivery = asyncHandler(async (req, res) => {
       await milestone.save();
     }
 
-    notifications.onRevisionRequested(contract.freelancerId, { contractId: contract._id, jobId: contract.jobId });
+    const revisedJob = await Job.findById(contract.jobId).select('title').lean();
+    notifications.onRevisionRequested(contract.freelancerId, { job: revisedJob });
 
     return sendSuccess(res, {
       message: 'Revision requested',

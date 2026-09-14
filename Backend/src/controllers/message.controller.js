@@ -7,6 +7,36 @@ const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/api
 const { uploadJobAttachment: uploadAttachmentToCloud } = require('../services/upload.service');
 const notifications = require('../services/notification.service');
 
+// A bare run of digits (order numbers, timestamps, invoice IDs) is NOT a phone
+// number on its own — only treat a digit run as one when it's both a
+// realistic phone length (7-15 digits) AND actually formatted like a phone
+// number (a leading "+" or at least one separator between digits). Without
+// the formatting check, something like a 13-digit timestamp would otherwise
+// get masked and count as a contact-info violation.
+const PHONE_CANDIDATE_REGEX = () => /\+?\d[\d\s\-.()]{5,18}\d/g;
+
+function isLikelyPhoneNumber(candidate) {
+  const digitsOnly = candidate.replace(/\D/g, '');
+  const hasSeparator = /[\s\-.()]/.test(candidate);
+  const startsWithPlus = candidate.trim().startsWith('+');
+  return digitsOnly.length >= 7 && digitsOnly.length <= 15 && (hasSeparator || startsWithPlus);
+}
+
+function matchesLikelyPhoneNumber(text) {
+  const regex = PHONE_CANDIDATE_REGEX();
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    if (isLikelyPhoneNumber(m[0])) return true;
+  }
+  return false;
+}
+
+function maskLikelyPhoneNumbers(text) {
+  return text.replace(PHONE_CANDIDATE_REGEX(), (candidate) =>
+    isLikelyPhoneNumber(candidate) ? '*** [CONTACT INFO BLOCKED] ***' : candidate
+  );
+}
+
 /**
  * Get all conversations for current user
  */
@@ -80,13 +110,16 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   if (modifiedContent) {
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-    // Aggressive regex for phone numbers: catches 8+ digits optionally separated by spaces, dashes, dots, or parentheses
-    const phoneRegex = /(?:\+?\d[\s\-.()]*){7,}\d/g;
-    
-    if (emailRegex.test(modifiedContent) || phoneRegex.test(modifiedContent)) {
+    // A bare run of 7+ digits (order numbers, timestamps, invoice IDs...) used
+    // to be flagged as a phone number on its own — matchesLikelyPhoneNumber()
+    // only accepts a digit run in the realistic phone range (7-15 digits) AND
+    // only when it's actually formatted like a phone number (a leading "+" or
+    // at least one separator among the digits), so a contiguous ID/timestamp
+    // with no separators no longer trips it.
+    if (emailRegex.test(modifiedContent) || matchesLikelyPhoneNumber(modifiedContent)) {
       contactInfoDetected = true;
       modifiedContent = modifiedContent.replace(emailRegex, '*** [CONTACT INFO BLOCKED] ***');
-      modifiedContent = modifiedContent.replace(phoneRegex, '*** [CONTACT INFO BLOCKED] ***');
+      modifiedContent = maskLikelyPhoneNumbers(modifiedContent);
     }
   }
 

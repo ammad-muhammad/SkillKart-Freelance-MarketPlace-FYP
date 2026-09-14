@@ -59,11 +59,23 @@ const onProposalAccepted = (freelancerId, { job }) => notify(freelancerId, {
   jobId: job?._id,
 });
 
-const onProposalRejected = (freelancerId, { job }) => notify(freelancerId, {
+const onProposalRejected = (freelancerId, { job, canResubmit }) => notify(freelancerId, {
   type: TYPES.PROPOSAL_REJECTED,
-  title: 'Proposal not selected',
-  message: `Your proposal for "${job?.title || 'a project'}" wasn't selected this time.`,
+  title: canResubmit ? 'Proposal not selected — you can revise it' : 'Proposal not selected',
+  message: canResubmit
+    ? `Your proposal for "${job?.title || 'a project'}" wasn't selected, but the client is open to a revised resubmission.`
+    : `Your proposal for "${job?.title || 'a project'}" wasn't selected this time.`,
   link: '/freelancer/proposals',
+  jobId: job?._id,
+});
+
+// To the client: the freelancer edited a rejected-but-resubmittable
+// proposal and sent it back — it's pending review again.
+const onProposalResubmitted = (clientId, { job, freelancerName }) => notify(clientId, {
+  type: TYPES.PROPOSAL_RECEIVED,
+  title: 'Proposal resubmitted',
+  message: `${freelancerName || 'A freelancer'} revised and resubmitted their proposal for "${job?.title || 'your project'}".`,
+  link: `/client/projects/${job?._id}/proposals`,
   jobId: job?._id,
 });
 
@@ -145,7 +157,10 @@ const onReviewSubmitted = (recipientId, { reviewerName, job }) => notify(recipie
   type: TYPES.REVIEW_SUBMITTED,
   title: 'New Review!',
   message: `${reviewerName} just left you a review for "${job?.title}".`,
-  link: '/profile',
+  // Recipient could be either role here (reviews go both directions), so
+  // there's no single role-specific dashboard page to link to safely — the
+  // public job page is valid for any logged-in role.
+  link: `/jobs/${job?._id}`,
   jobId: job?._id,
 });
 
@@ -153,22 +168,26 @@ const onJobCancelled = (userId, { job }) => notify(userId, {
   type: TYPES.JOB_CANCELLED,
   title: 'Project Cancelled',
   message: `The project "${job?.title}" has been cancelled.`,
-  link: '/messages',
+  // Same ambiguous-recipient-role reasoning as onReviewSubmitted above.
+  link: `/jobs/${job?._id}`,
   jobId: job?._id,
 });
 
-const onContractDisputed = (userId, { contractId, actorName, reason }) => notify(userId, {
+// `recipientRole` ('client' | 'freelancer') tells us which dashboard the
+// recipient actually has — there's no single unified "/contract/:id" page,
+// so the link must vary by which role is being notified.
+const onContractDisputed = (userId, { contractId, actorName, reason, recipientRole }) => notify(userId, {
   type: TYPES.CONTRACT_DISPUTED,
   title: 'Contract Dispute Raised',
   message: `${actorName} has requested to cancel the contract. Reason: ${reason}. This contract is now under review.`,
-  link: `/contract/${contractId}`,
+  link: recipientRole === 'client' ? '/client/projects' : '/freelancer/work',
 });
 
 const onProjectCompleted = (freelancerId, { job }) => notify(freelancerId, {
   type: TYPES.PROJECT_COMPLETED,
   title: 'Project Completed! 🎉',
   message: `The client has accepted your delivery for "${job?.title}". Payment has been released!`,
-  link: `/freelancer/projects/${job?._id}`,
+  link: '/freelancer/work',
   jobId: job?._id,
 });
 
@@ -182,11 +201,11 @@ const onMilestoneAutoReleased = (clientId, { job, milestone }) => notify(clientI
   jobId: job?._id,
 });
 
-const onContractStatusChanged = (userId, { contractId, status }) => notify(userId, {
+const onContractStatusChanged = (userId, { contractId, status, recipientRole }) => notify(userId, {
   type: 'contract_status_changed',
   title: 'Contract Update',
   message: `The status of your contract has been updated to ${status}.`,
-  link: `/contract/${contractId}`,
+  link: recipientRole === 'client' ? '/client/projects' : '/freelancer/work',
 });
 
 module.exports = {
@@ -195,6 +214,7 @@ module.exports = {
   onProposalReceived,
   onProposalAccepted,
   onProposalRejected,
+  onProposalResubmitted,
   onGigOrdered,
   onDepositFunded,
   onWorkDelivered,

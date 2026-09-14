@@ -75,7 +75,12 @@ async function createCheckoutSession({ jobId, phase, amount, description, metada
 async function verifyCheckoutSession(sessionId) {
   if (!sessionId) return { paid: false, paymentIntent: null, simulated: false, amount_total: 0 };
 
-  if (sessionId.startsWith('sim_') || !isLive()) {
+  // The 'sim_' shortcut must ONLY apply in dummy/test mode — otherwise a
+  // client could hand-craft a `sim_x_x_<amountCents>` id and have it accepted
+  // as a paid session for an arbitrary amount even with a real Stripe key
+  // configured, bypassing Stripe entirely. In live mode, always verify for
+  // real regardless of what prefix the caller-supplied id happens to have.
+  if (!isLive()) {
     // Format: sim_{phase}_{jobId}_{amountCents}
     const parts = sessionId.split('_');
     const amountCents = parseInt(parts[parts.length - 1], 10) || 0;
@@ -95,8 +100,12 @@ async function verifyCheckoutSession(sessionId) {
  * Get the latest Charge ID from a PaymentIntent ID
  */
 async function getChargeIdFromPaymentIntent(paymentIntentId) {
-  if (!paymentIntentId || !isLive() || paymentIntentId.startsWith('sim_')) {
-    return paymentIntentId ? paymentIntentId.replace('sim_pi_', 'sim_ch_') : null;
+  if (!paymentIntentId) return null;
+  // Same rule as verifyCheckoutSession: the sim_ shortcut only applies when
+  // not live — in live mode a sim_-prefixed id is never legitimate and should
+  // fail against the real Stripe API rather than being waved through.
+  if (!isLive()) {
+    return paymentIntentId.replace('sim_pi_', 'sim_ch_');
   }
   const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
   return pi.latest_charge || null;

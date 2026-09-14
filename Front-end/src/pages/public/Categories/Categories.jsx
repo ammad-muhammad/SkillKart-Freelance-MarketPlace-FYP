@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { publicAPI } from "../../../api/publicData";
 import Navbar from "../../../Components/common/Navbar/Navbar";
 import Footer from "../../../Components/common/Footer/Footer";
+import Skeleton from "../../../Components/common/Skeleton/Skeleton";
 import "./Categories.css";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,6 +17,8 @@ export default function Categories() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -35,7 +38,8 @@ export default function Categories() {
           isLiveCount: true
         })));
       })
-      .catch(() => {});
+      .catch(() => { if (active) setLoadError(true); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -119,7 +123,19 @@ export default function Categories() {
           </div>
 
           <div ref={gridRef} className="cats-grid">
-            {categories.map((cat) => (
+            {loading ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} height="220px" style={{ borderRadius: '16px' }} />
+              ))
+            ) : loadError ? (
+              <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--color-text-mid)' }}>
+                Couldn't load categories right now. Please refresh the page to try again.
+              </p>
+            ) : categories.length === 0 ? (
+              <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--color-text-mid)' }}>
+                No categories available yet.
+              </p>
+            ) : categories.map((cat) => (
               <Link key={cat.id} to={`/skills/${cat.slug}`} className="cat-card">
                 <div className="cat-card__content">
                   <div className="cat-card__icon" style={{ background: cat.lightBg }}>

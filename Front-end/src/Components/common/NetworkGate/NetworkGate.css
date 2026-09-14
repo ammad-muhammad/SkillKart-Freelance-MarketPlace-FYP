@@ -1,0 +1,59 @@
+.sk-network-gate {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: center;
+  background: var(--color-bg);
+  font-family: var(--font-body);
+}
+
+.sk-network-gate__icon {
+  color: var(--color-text-light);
+  margin-bottom: var(--space-2);
+}
+
+.sk-network-gate h1 {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary);
+}
+
+.sk-network-gate p {
+  color: var(--color-text-mid);
+  font-size: var(--fs-sm);
+  max-width: 320px;
+}
+
+.sk-network-gate__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  transition: var(--transition-fast);
+}
+
+.sk-network-gate__retry:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sk-network-gate__retry .spin {
+  animation: sk-network-gate-spin 1s linear infinite;
+}
+
+@keyframes sk-network-gate-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

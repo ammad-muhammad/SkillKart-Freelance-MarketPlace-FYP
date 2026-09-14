@@ -10,6 +10,7 @@ const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError } = require('../utils/apiError');
 const { JOB_CATEGORIES, CATEGORY_GROUPS } = require('../utils/constants');
 const { sendEmail } = require('../services/email.service');
+const { escapeHtml } = require('../services/email/templates/layout');
 const config = require('../config');
 
 const slugify = (s) =>
@@ -344,7 +345,7 @@ const submitContact = asyncHandler(async (req, res) => {
   });
 
   // Send the email via SMTP to the platform's support inbox (using the configured sender email)
-  const supportEmail = config.email.from || config.email.user || 'support@skillkart.app';
+  const supportEmail = config.email.from || config.email.user || 'support@skillkart.com';
   const emailSubject = `New Contact Form Submission: ${subject || 'General Inquiry'}`;
   const emailHtml = `
     <!DOCTYPE html>
@@ -352,13 +353,13 @@ const submitContact = asyncHandler(async (req, res) => {
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         <h2 style="color: #4F46E5; margin-top: 0;">New Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject || 'None provided'}</p>
+        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Subject:</strong> ${escapeHtml(subject) || 'None provided'}</p>
         <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
         <p><strong>Message:</strong></p>
         <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; white-space: pre-wrap;">
-          ${message}
+          ${escapeHtml(message)}
         </div>
       </div>
     </body>
@@ -407,7 +408,7 @@ const submitNewsletter = asyncHandler(async (req, res) => {
       <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         <h2 style="color: #4F46E5; margin-top: 0;">New Newsletter Subscription</h2>
         <p>A new user has just subscribed to the newsletter!</p>
-        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       </div>
     </body>
     </html>

@@ -28,12 +28,20 @@ export const proposalsAPI = {
   // single "Full Project" milestone. Caller (ReviewProposals.jsx) already
   // shows its own toast / guided top-up modal — suppress the global
   // auto-toast to avoid double-toasting.
-  acceptProposal: (id, message, milestones) =>
-    client.post(`/proposals/${id}/accept`, { message, ...(milestones ? { milestones } : {}) }, { suppressErrorToast: true }),
+  // `expectedPrice` is the price the client saw when they opened the Accept
+  // dialog — the server rejects if the live proposal price has since moved
+  // (e.g. the freelancer edited their pending bid in the meantime).
+  acceptProposal: (id, message, milestones, expectedPrice) =>
+    client.post(`/proposals/${id}/accept`, {
+      message,
+      ...(milestones ? { milestones } : {}),
+      ...(expectedPrice !== undefined && expectedPrice !== null ? { expectedPrice } : {})
+    }, { suppressErrorToast: true }),
 
-  // Reject proposal (Client only)
-  rejectProposal: (id, reason) =>
-    client.post(`/proposals/${id}/reject`, { reason }, { suppressErrorToast: true }),
+  // Reject proposal (Client only). `allowResubmit` lets the freelancer edit
+  // and resend this same proposal instead of it being a dead end.
+  rejectProposal: (id, reason, allowResubmit) =>
+    client.post(`/proposals/${id}/reject`, { reason, allowResubmit }, { suppressErrorToast: true }),
 
   // Withdraw proposal (Freelancer only)
   withdrawProposal: (id) => 

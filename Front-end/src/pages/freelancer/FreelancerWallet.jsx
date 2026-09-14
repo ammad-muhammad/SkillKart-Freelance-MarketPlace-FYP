@@ -237,7 +237,7 @@ export default function FreelancerWallet() {
                         {tx.isWithdrawal ? (tx.method === 'stripe' ? 'Stripe Connect' : tx.method) : `${tx.clientId?.firstName} ${tx.clientId?.lastName}`}
                       </td>
                       <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: tx.isWithdrawal ? 'var(--color-error)' : 'var(--color-success)' }}>
-                        {tx.isWithdrawal ? '- PKR ' : '+ PKR '}{tx.isWithdrawal ? tx.amount?.toLocaleString() : (tx.status === 'released' ? tx.freelancerPayout?.toLocaleString() : tx.totalAmount?.toLocaleString())}
+                        {tx.isWithdrawal ? '- Rs. ' : '+ Rs. '}{tx.isWithdrawal ? tx.amount?.toLocaleString() : (tx.status === 'released' ? tx.freelancerPayout?.toLocaleString() : tx.totalAmount?.toLocaleString())}
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {tx.isWithdrawal ? (
@@ -312,7 +312,7 @@ export default function FreelancerWallet() {
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem' }}>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', fontWeight: '500' }}>Available: PKR {walletBalance.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', fontWeight: '500' }}>Available: Rs. {walletBalance.toLocaleString()}</span>
                   <button type="button" onClick={() => setWithdrawAmount(walletBalance)} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}>Withdraw All</button>
                 </div>
               </div>

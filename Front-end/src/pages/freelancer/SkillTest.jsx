@@ -125,18 +125,24 @@ const SkillTest = () => {
 
   // Camera/face proctoring is a separate, more lenient guard — only armed
   // during the locked-down testing phase, using whichever <video> element is
-  // currently mounted (rules-screen preview vs in-test thumbnail).
-  const { modelsReady, cameraError, startCamera, stopCamera } = useFaceProctor({
+  // currently mounted (rules-screen preview vs in-test thumbnail). Its budget
+  // scales with test length (half the question count, min 2) so a longer
+  // test tolerates more incidental head movement than a short one.
+  const { modelsReady, cameraError, violationCount: cameraViolationCount, maxViolations: cameraMaxViolations, startCamera, stopCamera } = useFaceProctor({
     active: phase === 'testing' && !result,
     attemptId,
     videoRef: phase === 'testing' ? testVideoRef : rulesVideoRef,
-    onWarn: (reason) => {
+    maxViolations: Math.max(2, Math.floor((questions.length || 0) / 2)),
+    onViolation: (count, max, reason) => {
+      // Every counted violation is logged for the backend record, regardless
+      // of whether it crosses the warn/abort threshold.
       logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
+    },
+    onWarn: (reason) => {
       setWarning(reason);
-      toast.warning('Camera warning: repeated issues will cancel the test.');
+      toast.warning(`Last warning: one more camera issue will cancel the test.`);
     },
     onAbort: (reason) => {
-      logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
       setAbortReason(reason);
       setPhase('aborted');
       exitFullscreen();
@@ -418,7 +424,7 @@ const SkillTest = () => {
               <li><Maximize2 size={18} /><span>The test runs in <strong>full-screen</strong>. Other menus are hidden — only the test is shown.</span></li>
               <li><Eye size={18} /><span><strong>Do not switch tabs, minimize, or leave the window.</strong> The first time you do, you get one warning.</span></li>
               <li><Ban size={18} /><span>A <strong>second</strong> violation (or exiting full-screen) <strong>cancels the test</strong> for cheating — you restart from question 1 with new questions.</span></li>
-              <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. Keep your face visible and alone in frame — repeated issues (no face, another person, looking away) will also cancel the test.</span></li>
+              <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. Keep your face visible and alone in frame. Occasional movement is fine — you have a budget of camera issues (no face, another person, looking away) scaled to the test length, shown live as <strong>Movements: x/y</strong>; you'll get a last warning near the end of that budget, and exceeding it cancels the test.</span></li>
               <li><Clock size={18} /><span>Each question has a timer — <strong>{PER_QUESTION_SECONDS}s for multiple-choice</strong>, <strong>{TEXT_QUESTION_SECONDS}s for written-answer</strong> questions. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
               <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
               <li><CheckCircle2 size={18} /><span>Score at least <strong>25%</strong> to verify this skill and unlock applying to work that requires it. Reach <strong>80%</strong> to also earn the Expert badge.</span></li>
@@ -512,9 +518,12 @@ const SkillTest = () => {
             <Clock size={18} />
             <span>0:{String(timeLeft).padStart(2, '0')}</span>
           </div>
-          <div className="st-timer st-proctor">
+          <div
+            className={`st-timer st-proctor${cameraViolationCount >= cameraMaxViolations - 1 ? ' st-question-timer--danger' : ''}`}
+            title="Camera movement/attention violations used this attempt"
+          >
             <Eye size={18} />
-            <span>Proctoring Active</span>
+            <span>Movements: {cameraViolationCount}/{cameraMaxViolations}</span>
           </div>
         </div>
       </div>

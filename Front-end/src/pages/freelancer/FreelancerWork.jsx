@@ -1,10 +1,11 @@
 import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers, Star } from 'lucide-react';
+import { Briefcase, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers, Star, ShoppingBag } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { contractsAPI } from '../../api/contracts';
+import { jobsAPI } from '../../api/jobs';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
 import Modal from '../../Components/common/Modal/Modal';
@@ -15,6 +16,7 @@ import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import Button from '../../Components/common/Button/Button';
+import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const STAGES = {
@@ -36,11 +38,15 @@ const ESCROW = {
 
 export default function FreelancerWork() {
   const [contracts, setContracts] = useState([]);
+  const [gigOrders, setGigOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deliverFor, setDeliverFor] = useState(null);
   const [delivery, setDelivery] = useState({ message: '', links: '' });
   const [delivering, setDelivering] = useState(false);
   const [tracking, setTracking] = useState({}); // state for tracking operations
+  const [manualLogFor, setManualLogFor] = useState(null); // contract obj
+  const [manualLog, setManualLog] = useState({ startTime: '', endTime: '', notes: '' });
+  const [loggingManual, setLoggingManual] = useState(false);
   const deliverModalRef = useRef(null);
   const closeDeliverModal = useCallback(() => { if (!delivering) setDeliverFor(null); }, [delivering]);
   useFocusTrap(deliverModalRef, !!deliverFor, closeDeliverModal);
@@ -57,8 +63,14 @@ export default function FreelancerWork() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await contractsAPI.getMyContracts({ limit: 50 });
+      const [{ data }, gigRes] = await Promise.all([
+        contractsAPI.getMyContracts({ limit: 50 }),
+        // Gig orders have no Contract (legacy 50/50 Stripe flow) — fetched
+        // separately from the Job collection instead.
+        jobsAPI.getMyHiredJobs({ source: 'gig', limit: 50 }).catch(() => null),
+      ]);
       setContracts(Array.isArray(data?.data) ? data.data : []);
+      setGigOrders(Array.isArray(gigRes?.data?.data) ? gigRes.data.data : []);
     } catch { /* handled by the global error handler */ } finally { setLoading(false); }
   }, []);
 
@@ -79,7 +91,13 @@ export default function FreelancerWork() {
     setDelivering(true);
     try {
       const externalLinks = delivery.links.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
-      await deliveriesAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), externalLinks });
+      // Gig orders have no Contract/Delivery doc (legacy 50/50 Stripe flow) —
+      // delivery lives directly on the Job instead.
+      if (deliverFor.isGig) {
+        await jobsAPI.submitGigDelivery(deliverFor._id, { message: delivery.message.trim(), links: externalLinks });
+      } else {
+        await deliveriesAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), externalLinks });
+      }
       showToast('Work delivered! The client will review it.');
       setDeliverFor(null);
       setDelivery({ message: '', links: '' });
@@ -116,6 +134,34 @@ export default function FreelancerWork() {
       showToast(err.response?.data?.message || 'Failed to toggle timer', 'error');
     } finally {
       setTracking(prev => ({ ...prev, [contractId]: false }));
+    }
+  };
+
+  const submitManualLog = async () => {
+    if (!manualLogFor) return;
+    if (!manualLog.startTime || !manualLog.endTime) {
+      showToast('Set a start and end time.', 'warning');
+      return;
+    }
+    if (new Date(manualLog.endTime) <= new Date(manualLog.startTime)) {
+      showToast('End time must be after start time.', 'warning');
+      return;
+    }
+    setLoggingManual(true);
+    try {
+      const { data } = await timeTrackingAPI.addManualLog(manualLogFor._id, {
+        startTime: new Date(manualLog.startTime).toISOString(),
+        endTime: new Date(manualLog.endTime).toISOString(),
+        notes: manualLog.notes.trim(),
+      });
+      showToast(data?.message || 'Time logged.', data?.data?.needsTopUp ? 'warning' : 'success');
+      setManualLogFor(null);
+      setManualLog({ startTime: '', endTime: '', notes: '' });
+      load();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to log time.', 'error');
+    } finally {
+      setLoggingManual(false);
     }
   };
 
@@ -176,9 +222,12 @@ export default function FreelancerWork() {
           <h1 className="fl-page-title">My Work</h1>
           <p className="fl-page-sub">Your active contracts, deliveries, and earnings.</p>
         </div>
-        <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Search size={14} style={{ marginRight: '4px' }} /> Find Work
-        </Link>
+        {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
+        {!isMobileApp() && (
+          <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Search size={14} style={{ marginRight: '4px' }} /> Find Work
+          </Link>
+        )}
       </div>
 
       {/* Earnings summary */}
@@ -197,12 +246,14 @@ export default function FreelancerWork() {
         </div>
       </div>
 
-      {contracts.length === 0 ? (
+      {contracts.length === 0 && gigOrders.length === 0 ? (
         <div className="fl-empty-state">
           <div className="fl-empty-state__icon"><Briefcase size={48} style={{ color: 'var(--color-primary)' }} /></div>
           <h3>No contracts yet</h3>
           <p>When a client hires you (via a proposal or a gig order), your work will appear here.</p>
-          <Link to="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</Link>
+          {!isMobileApp() && (
+            <Link to="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</Link>
+          )}
         </div>
       ) : (
         <div className="fl-card-list">
@@ -361,7 +412,11 @@ export default function FreelancerWork() {
                 )}
 
                 <div className="fl-contract__footer">
-                  <Link to={`/jobs/${c.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
+                  {/* The public job-detail route isn't registered at all on
+                      the mobile build (see AppRoutes.jsx). */}
+                  {!isMobileApp() && (
+                    <Link to={`/jobs/${c.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
+                  )}
                   {c.clientId && (
                     <Link to="/freelancer/messages" className="fl-btn fl-btn--outline fl-btn--sm">
                       <MessageSquare size={14} /> Contact Client
@@ -403,6 +458,15 @@ export default function FreelancerWork() {
                           <Play size={14} /> Start Timer
                         </button>
                       )}
+                      {!timerActive && (
+                        <button
+                          className="fl-btn fl-btn--outline fl-btn--sm"
+                          onClick={() => { setManualLogFor(c); setManualLog({ startTime: '', endTime: '', notes: '' }); }}
+                          title="Log time you already worked, e.g. if you forgot to start the timer"
+                        >
+                          <Clock size={14} /> Log Time
+                        </button>
+                      )}
 
                       {c.endRequest?.status !== 'pending' && c.dispute?.status !== 'pending' && (
                         <button
@@ -434,6 +498,58 @@ export default function FreelancerWork() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {gigOrders.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '1rem' }}>Gig Orders</h3>
+          <div className="fl-card-list">
+            {gigOrders.map((g) => {
+              const escrow = g.payment ? ESCROW[g.payment.status] : null;
+              const canDeliver = g.status === 'in-progress' && g.payment?.status === 'deposit_paid';
+              return (
+                <div key={g._id} className="fl-card fl-contract">
+                  <div className="fl-contract__top">
+                    <div>
+                      <h3 className="fl-contract__title">{g.title || 'Unknown Gig Order'}</h3>
+                      <p className="fl-contract__meta">
+                        <ShoppingBag size={14} style={{ marginRight: '4px' }} /> Gig Order ({g.gigTier || 'basic'}) · {g.category || 'Unknown'}
+                        {g.clientId && ` · ${g.clientId.firstName || ''} ${g.clientId.lastName || ''}`}
+                      </p>
+                    </div>
+                    <StatusBadge tone={(STAGES[g.status] || {}).tone || 'neutral'}>
+                      {g.delivery && g.status !== 'completed' ? 'Delivered — awaiting review' : (STAGES[g.status]?.label || g.status)}
+                    </StatusBadge>
+                  </div>
+                  <div className="fl-contract__money">
+                    <span><PkrIcon size={14} /> Total: <strong>Rs. {g.payment?.totalAmount ?? g.budget?.min ?? '—'}</strong></span>
+                    {escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
+                    {g.payment?.status === 'released' && (
+                      <span style={{ color: 'var(--color-success)' }}>You received: <strong>Rs. {Number(g.payment.freelancerPayout).toLocaleString()}</strong></span>
+                    )}
+                  </div>
+                  {g.delivery && g.status !== 'completed' && (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginBottom: '0.75rem' }}>
+                      Delivered {new Date(g.delivery.submittedAt).toLocaleString()} — waiting for the client to review.
+                    </p>
+                  )}
+                  <div className="fl-contract__actions">
+                    {canDeliver && !g.delivery && (
+                      <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => { setDeliverFor({ ...g, isGig: true }); setDelivery({ message: '', links: '' }); }}>
+                        <UploadCloud size={14} /> Submit Delivery
+                      </button>
+                    )}
+                    {canDeliver && g.delivery && (
+                      <button className="fl-btn fl-btn--outline fl-btn--sm" onClick={() => { setDeliverFor({ ...g, isGig: true }); setDelivery({ message: g.delivery.message || '', links: (g.delivery.links || []).join('\n') }); }}>
+                        <RefreshCw size={14} /> Resubmit Delivery
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -536,6 +652,52 @@ export default function FreelancerWork() {
           <div className="fl-actions">
             <button type="submit" className="fl-btn fl-btn--danger" disabled={delivering}>Raise Dispute</button>
             <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setDisputeModal(null)} disabled={delivering}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!manualLogFor} title={`Log Time — ${manualLogFor?.title || ''}`} onClose={() => { if (!loggingManual) setManualLogFor(null); }}>
+        <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
+          Use this if you forgot to start the timer, or worked offline. It's billed from escrow immediately, same as timer-tracked time.
+        </p>
+        <form onSubmit={(e) => { e.preventDefault(); submitManualLog(); }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="fl-label">Start Time</label>
+            <input
+              className="fl-input"
+              type="datetime-local"
+              value={manualLog.startTime}
+              max={manualLog.endTime || undefined}
+              onChange={(e) => setManualLog((p) => ({ ...p, startTime: e.target.value }))}
+              required
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="fl-label">End Time</label>
+            <input
+              className="fl-input"
+              type="datetime-local"
+              value={manualLog.endTime}
+              min={manualLog.startTime || undefined}
+              onChange={(e) => setManualLog((p) => ({ ...p, endTime: e.target.value }))}
+              required
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label className="fl-label">Notes (Optional)</label>
+            <textarea
+              className="fl-input"
+              rows="3"
+              value={manualLog.notes}
+              onChange={(e) => setManualLog((p) => ({ ...p, notes: e.target.value }))}
+              placeholder="What did you work on?"
+            />
+          </div>
+          <div className="fl-actions">
+            <button type="submit" className="fl-btn fl-btn--primary" disabled={loggingManual}>
+              {loggingManual ? 'Logging...' : 'Log Time'}
+            </button>
+            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setManualLogFor(null)} disabled={loggingManual}>Cancel</button>
           </div>
         </form>
       </Modal>

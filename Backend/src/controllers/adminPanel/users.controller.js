@@ -21,6 +21,12 @@ const AdminAuditLog = require('../../models/AdminAuditLog');
 const { auditLog } = require('../../utils/adminAudit');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 
+// Admin-only endpoint (gated by the isolated admin-panel auth), so this is
+// defense-in-depth rather than a live public exposure — still worth
+// escaping so admin search input can't cause pathological regex
+// backtracking against the User collection.
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const USER_EXPORT_COLUMNS = [
   { key: '_id', label: 'ID' },
   { key: 'email', label: 'Email' },
@@ -76,7 +82,7 @@ const getUsers = async (req, res) => {
 
     // Text search
     if (search) {
-      const regex = new RegExp(search.trim(), 'i');
+      const regex = new RegExp(escapeRegex(search.trim()), 'i');
       filter.$or = [
         { email: regex },
         { firstName: regex },

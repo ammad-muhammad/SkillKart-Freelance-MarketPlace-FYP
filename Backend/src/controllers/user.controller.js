@@ -4,6 +4,12 @@ const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, BadRequestError } = require('../utils/apiError');
 const { USER_ROLES } = require('../utils/constants');
 
+// These endpoints are admin-only (already gated by requireRole upstream), so
+// this is defense-in-depth rather than a live public-facing exposure — still
+// worth escaping so an admin's search input can't cause pathological regex
+// backtracking against the User collection.
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // Roles this marketplace-facing controller may assign. Deliberately excludes
 // 'superadmin' — that role has no real User document at all (see
 // auth.middleware.js's userId==='superadmin' synthetic-user short-circuit);
@@ -51,10 +57,11 @@ const listUsers = asyncHandler(async (req, res) => {
   if (status === 'active') query.isActive = true;
   if (status === 'blocked') query.isBlocked = true;
   if (search) {
+    const safeSearch = escapeRegex(search);
     query.$or = [
-      { email: { $regex: search, $options: 'i' } },
-      { firstName: { $regex: search, $options: 'i' } },
-      { lastName: { $regex: search, $options: 'i' } }
+      { email: { $regex: safeSearch, $options: 'i' } },
+      { firstName: { $regex: safeSearch, $options: 'i' } },
+      { lastName: { $regex: safeSearch, $options: 'i' } }
     ];
   }
   
@@ -232,11 +239,12 @@ const searchUsers = asyncHandler(async (req, res) => {
   const limit = Math.min(Math.max(parseInt(limitNum) || 10, 1), 100);
   const skip = (page - 1) * limit;
   
+  const safeQ = escapeRegex(q);
   const query = {
     $or: [
-      { email: { $regex: q, $options: 'i' } },
-      { firstName: { $regex: q, $options: 'i' } },
-      { lastName: { $regex: q, $options: 'i' } }
+      { email: { $regex: safeQ, $options: 'i' } },
+      { firstName: { $regex: safeQ, $options: 'i' } },
+      { lastName: { $regex: safeQ, $options: 'i' } }
     ]
   };
   

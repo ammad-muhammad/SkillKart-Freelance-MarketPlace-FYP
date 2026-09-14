@@ -278,11 +278,15 @@ export const AuthProvider = ({ children }) => {
     } finally {
       tokenManager.clearTokens();
       setUser(null);
-      
+      // A stale redirect from a previous session (e.g. "Apply Now" set this
+      // before the user wandered off and logged out instead) must not
+      // silently redirect an unrelated future login.
+      try { sessionStorage.removeItem('postLoginRedirect'); } catch { /* non-fatal */ }
+
       // Notify other tabs to logout
       localStorage.setItem('logout-event', Date.now().toString());
       setTimeout(() => localStorage.removeItem('logout-event'), 100);
-      
+
       toast.info(message);
       navigate('/login');
     }

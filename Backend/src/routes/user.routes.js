@@ -112,6 +112,7 @@ router.delete('/:id',
 // Block user
 router.put('/:id/block',
   requireRole('admin', 'superadmin'),
+  requireHigherRole,
   blockUserValidation,
   validate,
   userController.blockUser
@@ -120,6 +121,7 @@ router.put('/:id/block',
 // Unblock user
 router.put('/:id/unblock',
   requireRole('admin', 'superadmin'),
+  requireHigherRole,
   unblockUserValidation,
   validate,
   userController.unblockUser

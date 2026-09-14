@@ -1,0 +1,15 @@
+/* Capacitor (Android/iOS) build only — see utils/platform.js's isMobileApp().
+   main.jsx adds html.is-native-app when running inside the native wrapper.
+
+   backdrop-filter/blur is used across ~40 files (Modal, CustomSelect,
+   ComboSelect, Loader, SuspendedOverlay, sidebars, navbar, ...) and is a
+   well-known severe jank source on Android's WebView — every open/close of a
+   modal or dropdown recomposites a blurred layer, which is the primary cause
+   of reported stutter on-device. The web (Vercel) build never gets this
+   class, so desktop/mobile-browser visuals are unaffected. */
+html.is-native-app *,
+html.is-native-app *::before,
+html.is-native-app *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

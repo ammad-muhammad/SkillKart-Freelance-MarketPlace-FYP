@@ -9,10 +9,11 @@ import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import {
   Clock, Tag, Briefcase, ChevronLeft,
-  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText, X
+  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText, X, Edit2, RotateCcw
 } from 'lucide-react';
 import PkrIcon from '../../../Components/common/PkrIcon';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import ConfirmDialog from '../../../Components/common/ConfirmDialog/ConfirmDialog';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { safeToast as toast } from '../../../utils/safeToast';
 import useFocusTrap from '../../../hooks/useFocusTrap';
@@ -84,9 +85,24 @@ export default function JobDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  // null = submitting a fresh proposal; set = editing/resubmitting this proposal id.
+  const [editingProposalId, setEditingProposalId] = useState(null);
+  const [resubmitMode, setResubmitMode] = useState(false);
+  const [skillGateConfirm, setSkillGateConfirm] = useState(null); // { message, onConfirm } | null
   const applyModalRef = useRef(null);
   const closeApplyModal = useCallback(() => { if (!submitting) setShowApplyModal(false); }, [submitting]);
   useFocusTrap(applyModalRef, showApplyModal, closeApplyModal);
+  const defaultProposalData = (jobDoc) => {
+    const isHourly = jobDoc?.budget?.type === 'hourly';
+    return {
+      coverLetter: '',
+      fixedPrice: !isHourly ? jobDoc?.budget?.min || '' : '',
+      hourlyRate: isHourly ? jobDoc?.budget?.min || '' : '',
+      estimatedDeliveryTime: '1-2 weeks',
+      estimatedWeeklyHours: '',
+      attachments: []
+    };
+  };
   const [proposalData, setProposalData] = useState({
     coverLetter: '',
     fixedPrice: '',
@@ -104,12 +120,7 @@ export default function JobDetails() {
       const res = await jobsAPI.getJobById(id);
       if (requestId !== fetchSeq.current) return; // a newer job fetch has since started — ignore this stale response
       setJob(res.data.data.job);
-      const isHourly = res.data.data.job.budget?.type === 'hourly';
-      setProposalData(prev => ({
-        ...prev,
-        hourlyRate: isHourly ? res.data.data.job.budget?.min || '' : '',
-        fixedPrice: !isHourly ? res.data.data.job.budget?.min || '' : ''
-      }));
+      setProposalData(defaultProposalData(res.data.data.job));
     } catch (error) {
       if (requestId !== fetchSeq.current) return;
       console.error('Failed to fetch job:', error);
@@ -122,6 +133,18 @@ export default function JobDetails() {
   useEffect(() => {
     fetchJob();
   }, [fetchJob]);
+
+  // Reset any open edit/resubmit modal state when navigating to a DIFFERENT
+  // job (e.g. via browser Back/Forward, which bypasses the modal's own close
+  // handler) — otherwise a still-open modal keeps editingProposalId pointed
+  // at the PREVIOUS job's proposal while proposalData gets reset to the new
+  // job's defaults, so submitting would silently edit the wrong proposal
+  // with the wrong content.
+  useEffect(() => {
+    setShowApplyModal(false);
+    setEditingProposalId(null);
+    setResubmitMode(false);
+  }, [id]);
 
   useEffect(() => {
     document.title = job?.title ? `${job.title} – SkillKart` : 'Project Details – SkillKart';
@@ -145,6 +168,26 @@ export default function JobDetails() {
       navigate('/freelancer/onboarding');
       return;
     }
+    setEditingProposalId(null);
+    setResubmitMode(false);
+    setProposalData(defaultProposalData(job));
+    setShowApplyModal(true);
+  };
+
+  // Prefill the same modal with an existing proposal's values — used both to
+  // edit a still-pending proposal and to edit+resubmit a rejected one the
+  // client explicitly allowed to be revised.
+  const openEditModal = (myProposal) => {
+    setEditingProposalId(myProposal._id);
+    setResubmitMode(myProposal.status === 'rejected');
+    setProposalData({
+      coverLetter: myProposal.coverLetter || '',
+      fixedPrice: myProposal.fixedPrice ?? '',
+      hourlyRate: myProposal.hourlyRate ?? '',
+      estimatedDeliveryTime: myProposal.estimatedDeliveryTime || '1-2 weeks',
+      estimatedWeeklyHours: myProposal.estimatedWeeklyHours ?? '',
+      attachments: myProposal.attachments || []
+    });
     setShowApplyModal(true);
   };
 
@@ -221,11 +264,20 @@ export default function JobDetails() {
         payload.estimatedDeliveryTime = proposalData.estimatedDeliveryTime;
       }
 
-      await proposalsAPI.submitProposal(payload);
-      toast.success('Proposal submitted successfully! 🚀');
-      setShowApplyModal(false);
-      // Send the freelancer to their applications so they can track status.
-      navigate('/freelancer/proposals');
+      if (editingProposalId) {
+        await proposalsAPI.updateProposal(editingProposalId, payload);
+        toast.success(resubmitMode ? 'Proposal revised and resubmitted! 🚀' : 'Proposal updated.');
+        setShowApplyModal(false);
+        setEditingProposalId(null);
+        setResubmitMode(false);
+        await fetchJob(); // refresh myProposal so the sidebar button reflects the new state
+      } else {
+        await proposalsAPI.submitProposal(payload);
+        toast.success('Proposal submitted successfully! 🚀');
+        setShowApplyModal(false);
+        // Send the freelancer to their applications so they can track status.
+        navigate('/freelancer/proposals');
+      }
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to submit proposal.';
       const gate = error.response?.data?.errors;
@@ -249,10 +301,13 @@ export default function JobDetails() {
           const levelNote = gate.requiredLevel
             ? ` This project needs ${{ entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[gate.requiredLevel]}-level verification.`
             : '';
-          if (window.confirm(`You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`)) {
-            const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
-            navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
-          }
+          setSkillGateConfirm({
+            message: `You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`,
+            onConfirm: () => {
+              const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
+            },
+          });
         } else if (candidates[0]) {
           // None of the required skills are on their profile at all — a test
           // can't be generated for a skill they don't have listed yet (that's
@@ -261,17 +316,20 @@ export default function JobDetails() {
           // (unverified, same as any profile-edit skill add) and take them
           // straight to its test instead.
           const skillLabel = candidates[0];
-          if (window.confirm(`This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`)) {
-            try {
-              const existingSkillNames = profile?.skills || [];
-              await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
-              await refreshProfile();
-              const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
-              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
-            } catch (addErr) {
-              toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
-            }
-          }
+          setSkillGateConfirm({
+            message: `This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`,
+            onConfirm: async () => {
+              try {
+                const existingSkillNames = profile?.skills || [];
+                await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
+                await refreshProfile();
+                const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+                navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
+              } catch (addErr) {
+                toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
+              }
+            },
+          });
         } else {
           toast.error(msg);
         }
@@ -311,7 +369,7 @@ export default function JobDetails() {
 
   const isClient = user?.role === 'client';
   const isFreelancer = user?.role === 'freelancer';
-  const hasApplied = job.hasApplied;
+  const myProposal = job.myProposal;
   const isSaved = Array.isArray(savedProjects) && savedProjects.some(sj => (sj._id || sj) === job._id);
 
   const handleToggleSave = async () => {
@@ -447,20 +505,31 @@ export default function JobDetails() {
                 ) : (
                   <>
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                      <button 
-                        className={`jd-apply__btn ${hasApplied && job.status === 'open' ? 'jd-apply__btn--applied' : ''}`}
-                        onClick={hasApplied ? undefined : handleApplyClick}
-                        disabled={job.status !== 'open' || hasApplied}
-                        style={{ flex: 1 }}
-                      >
-                        {job.status !== 'open' ? (
-                          'Closed'
-                        ) : hasApplied ? (
-                          <><CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied</>
-                        ) : (
-                          'Apply Now'
-                        )}
-                      </button>
+                      {job.status !== 'open' ? (
+                        <button className="jd-apply__btn" disabled style={{ flex: 1 }}>Closed</button>
+                      ) : !myProposal ? (
+                        <button className="jd-apply__btn" onClick={handleApplyClick} style={{ flex: 1 }}>Apply Now</button>
+                      ) : myProposal.status === 'pending' ? (
+                        <button
+                          className="jd-apply__btn"
+                          onClick={() => openEditModal(myProposal)}
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                        >
+                          <Edit2 size={16} /> Edit Proposal
+                        </button>
+                      ) : myProposal.status === 'rejected' && myProposal.canResubmit ? (
+                        <button
+                          className="jd-apply__btn"
+                          onClick={() => openEditModal(myProposal)}
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                        >
+                          <RotateCcw size={16} /> Edit & Resubmit
+                        </button>
+                      ) : (
+                        <button className="jd-apply__btn jd-apply__btn--applied" disabled style={{ flex: 1 }}>
+                          <CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied
+                        </button>
+                      )}
                     </div>
                     <p className="jd-apply__note">
                       {job.proposalsCount || 0} proposals already submitted.
@@ -481,11 +550,11 @@ export default function JobDetails() {
             className="jd-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Submit Proposal"
+            aria-label={editingProposalId ? (resubmitMode ? 'Edit & Resubmit Proposal' : 'Edit Proposal') : 'Submit Proposal'}
             tabIndex={-1}
           >
             <div className="jd-modal__header">
-              <h3>Submit Proposal</h3>
+              <h3>{editingProposalId ? (resubmitMode ? 'Edit & Resubmit Proposal' : 'Edit Proposal') : 'Submit Proposal'}</h3>
               <button onClick={closeApplyModal} aria-label="Close" disabled={submitting}><X size={20} /></button>
             </div>
             <form onSubmit={handleApply} className="jd-modal__body">
@@ -585,13 +654,31 @@ export default function JobDetails() {
               <div className="jd-modal__footer">
                 <button type="button" onClick={closeApplyModal} disabled={submitting} className="jd-btn--ghost">Cancel</button>
                 <button type="submit" disabled={submitting} className="jd-btn--primary">
-                  {submitting ? 'Submitting...' : 'Send Proposal'}
+                  {submitting
+                    ? (editingProposalId ? 'Saving...' : 'Submitting...')
+                    : editingProposalId
+                      ? (resubmitMode ? 'Resubmit Proposal' : 'Save Changes')
+                      : 'Send Proposal'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!skillGateConfirm}
+        title="Skill verification required"
+        message={skillGateConfirm?.message}
+        confirmLabel="Take the test"
+        danger={false}
+        onConfirm={() => {
+          const action = skillGateConfirm?.onConfirm;
+          setSkillGateConfirm(null);
+          action?.();
+        }}
+        onClose={() => setSkillGateConfirm(null)}
+      />
 
       <Footer />
     </>

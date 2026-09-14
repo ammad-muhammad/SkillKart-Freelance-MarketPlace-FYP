@@ -41,9 +41,9 @@ exports.getFullGraph = asyncHandler(async (req, res) => {
  */
 exports.resolveSkill = asyncHandler(async (req, res) => {
   const { q } = req.query;
-  if (!q) return sendError(res, 'Query parameter q is required', 400);
+  if (!q) return sendError(res, { message: 'Query parameter q is required', statusCode: 400 });
   const node = await taxonomy.resolvePublicSkillNode(q);
-  if (!node) return sendError(res, `No skill found for "${q}"`, 404);
+  if (!node) return sendError(res, { message: `No skill found for "${q}"`, statusCode: 404 });
   sendSuccess(res, { message: 'Resolved', data: { node } });
 });
 
@@ -53,7 +53,7 @@ exports.resolveSkill = asyncHandler(async (req, res) => {
  */
 exports.getAncestors = asyncHandler(async (req, res) => {
   const node = await SkillNode.findOne({ slug: req.params.slug, status: 'active' });
-  if (!node) return sendError(res, 'Skill not found', 404);
+  if (!node) return sendError(res, { message: 'Skill not found', statusCode: 404 });
   const ancestors = await taxonomy.getAncestors(node._id);
   sendSuccess(res, { message: 'Ancestors', data: { node, ancestors } });
 });
@@ -64,7 +64,7 @@ exports.getAncestors = asyncHandler(async (req, res) => {
  */
 exports.getDescendants = asyncHandler(async (req, res) => {
   const node = await SkillNode.findOne({ slug: req.params.slug, status: 'active' });
-  if (!node) return sendError(res, 'Skill not found', 404);
+  if (!node) return sendError(res, { message: 'Skill not found', statusCode: 404 });
   const descendants = await taxonomy.getDescendants(node._id);
   sendSuccess(res, { message: 'Descendants', data: { node, descendants } });
 });
@@ -75,7 +75,7 @@ exports.getDescendants = asyncHandler(async (req, res) => {
  */
 exports.getPrerequisites = asyncHandler(async (req, res) => {
   const node = await SkillNode.findOne({ slug: req.params.slug, status: 'active' });
-  if (!node) return sendError(res, 'Skill not found', 404);
+  if (!node) return sendError(res, { message: 'Skill not found', statusCode: 404 });
   const prerequisites = await taxonomy.getPrerequisites(node._id);
   sendSuccess(res, { message: 'Prerequisites', data: { node, prerequisites } });
 });
@@ -86,7 +86,7 @@ exports.getPrerequisites = asyncHandler(async (req, res) => {
  */
 exports.getRelated = asyncHandler(async (req, res) => {
   const node = await SkillNode.findOne({ slug: req.params.slug, status: 'active' });
-  if (!node) return sendError(res, 'Skill not found', 404);
+  if (!node) return sendError(res, { message: 'Skill not found', statusCode: 404 });
   const related = await taxonomy.getRelated(node._id);
   sendSuccess(res, { message: 'Related skills', data: { node, related } });
 });
@@ -97,7 +97,7 @@ exports.getRelated = asyncHandler(async (req, res) => {
  */
 exports.getRecommendations = asyncHandler(async (req, res) => {
   const node = await SkillNode.findOne({ slug: req.params.slug, status: 'active' });
-  if (!node) return sendError(res, 'Skill not found', 404);
+  if (!node) return sendError(res, { message: 'Skill not found', statusCode: 404 });
   const recommendations = await taxonomy.getRecommendations(node._id);
   sendSuccess(res, { message: 'Recommendations', data: { node, recommendations } });
 });
@@ -108,7 +108,7 @@ exports.getRecommendations = asyncHandler(async (req, res) => {
  */
 exports.getLearningPath = asyncHandler(async (req, res) => {
   const node = await SkillNode.findOne({ slug: req.params.slug, status: 'active' });
-  if (!node) return sendError(res, 'Skill not found', 404);
+  if (!node) return sendError(res, { message: 'Skill not found', statusCode: 404 });
   const path = await taxonomy.getLearningPath(node._id);
   sendSuccess(res, { message: 'Learning path', data: { node, path } });
 });
@@ -120,7 +120,7 @@ exports.getLearningPath = asyncHandler(async (req, res) => {
  */
 exports.expandQuery = asyncHandler(async (req, res) => {
   const { query } = req.body;
-  if (!query) return sendError(res, 'query is required', 400);
+  if (!query) return sendError(res, { message: 'query is required', statusCode: 400 });
   const terms = await taxonomy.expandSearchTerms(query);
   sendSuccess(res, { message: 'Expanded terms', data: { query, terms, count: terms.length } });
 });
@@ -146,7 +146,7 @@ exports.getTaxonomyTree = asyncHandler(async (req, res) => {
 exports.calcMatchScore = asyncHandler(async (req, res) => {
   const { required, candidate } = req.body;
   if (!Array.isArray(required) || !Array.isArray(candidate)) {
-    return sendError(res, 'required and candidate must be arrays', 400);
+    return sendError(res, { message: 'required and candidate must be arrays', statusCode: 400 });
   }
   const result = await taxonomy.calcMatchScore(required, candidate);
   sendSuccess(res, { message: 'Match score calculated', data: result });
@@ -160,7 +160,7 @@ exports.calcMatchScore = asyncHandler(async (req, res) => {
 exports.validateSkill = asyncHandler(async (req, res) => {
   const { input } = req.body;
   if (!input || input.trim().length === 0) {
-    return sendError(res, 'Skill input is required', 400);
+    return sendError(res, { message: 'Skill input is required', statusCode: 400 });
   }
   const ai = getAIProvider();
   const result = await ai.validateSkill(input);

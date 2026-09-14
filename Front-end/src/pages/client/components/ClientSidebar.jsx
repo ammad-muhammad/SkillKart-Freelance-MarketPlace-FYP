@@ -4,6 +4,7 @@ import { useClient } from '../../../context/ClientContext';
 import { useAuth } from '../../../hooks/useAuth';
 import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import { useNotification } from '../../../context/NotificationContext';
+import { isMobileApp } from '../../../utils/platform';
 import {
   LayoutDashboard,
   Search,
@@ -25,9 +26,11 @@ import './ClientSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/client/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-  { to: '/browse-freelancers', icon: <Search size={20} />, label: 'Find Freelancers' },
+  // Both link to routes that aren't registered at all on the mobile build
+  // (see AppRoutes.jsx) — filtered out below rather than left as dead links.
+  { to: '/browse-freelancers', icon: <Search size={20} />, label: 'Find Freelancers', mobileHidden: true },
   { to: '/client/profile', icon: <User size={20} />, label: 'My Profile' },
-  { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile' },
+  { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile', mobileHidden: true },
   { to: '/client/projects', icon: <FolderOpen size={20} />, label: 'My Projects' },
   { to: '/client/projects/create', icon: <PlusSquare size={20} />, label: 'Post New Project' },
   { to: '/client/wallet', icon: <CreditCard size={20} />, label: 'Billing & Payments' },
@@ -92,7 +95,7 @@ const ClientSidebar = () => {
 
         {/* Navigation */}
         <nav className="cl-sidebar__nav">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter((item) => !item.mobileHidden || !isMobileApp()).map((item) => {
             if (item.to === '__public_profile__' && !user?._id) return null;
             const to = item.to === '__public_profile__' ? `/clients/${user._id}` : item.to;
             return (

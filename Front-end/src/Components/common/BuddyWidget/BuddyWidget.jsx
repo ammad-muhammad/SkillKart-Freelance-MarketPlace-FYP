@@ -20,6 +20,7 @@ export default function BuddyWidget() {
   const [sending, setSending] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const feedRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Guest usage counter (persisted so it survives navigation within the session).
   const guestUsed = () => Number(sessionStorage.getItem(GUEST_KEY) || 0);
@@ -42,6 +43,15 @@ export default function BuddyWidget() {
   useEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   }, [messages, open]);
+
+  // This is a floating, non-blocking widget (not a true modal — the rest of
+  // the page stays usable while it's open), so a hard focus-trap would be
+  // the wrong pattern here. But opening it should still move keyboard focus
+  // in (not leave it stranded on whatever was focused before), and Escape
+  // should close it — the same baseline every other dialog in this app gets.
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
 
   // If a guest logs in, clear the limit lock.
   useEffect(() => {
@@ -100,6 +110,7 @@ export default function BuddyWidget() {
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === 'Escape') { setOpen(false); }
   };
 
   return (
@@ -153,6 +164,7 @@ export default function BuddyWidget() {
 
           <div className="buddy-panel__input">
             <input
+              ref={inputRef}
               type="text"
               placeholder={limitReached ? 'Log in to continue…' : 'Ask Buddy anything…'}
               value={input}

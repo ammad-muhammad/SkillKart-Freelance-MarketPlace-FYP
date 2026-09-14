@@ -76,7 +76,7 @@ const updatePageValidation = [
     .notEmpty().withMessage('Page ID is required'),
 
   body('pageName')
-    .optional()
+    .optional({ values: 'falsy' })
     .trim()
     .isLength({ min: 2, max: 100 }).withMessage('Page name must be 2-100 characters'),
 

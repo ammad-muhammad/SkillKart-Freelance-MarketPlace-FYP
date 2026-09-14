@@ -7,6 +7,7 @@ import {
 } from '../../Components/adminPanel/AdminCommon';
 import { EditUserModal } from './AdminDetailPages';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import { safeToast as toast } from '../../utils/safeToast';
 
 const ROLES = ['all', 'freelancer', 'client'];
 
@@ -92,7 +93,7 @@ const UsersPage = () => {
       setSuspendTarget(null); setSuspendReason('');
       load();
     } catch (err) {
-      alert(err?.message || 'Action failed');
+      toast.error(err?.message || 'Action failed');
     } finally {
       setBusy(false);
     }
@@ -106,7 +107,7 @@ const UsersPage = () => {
       setDeleteTarget(null);
       load();
     } catch (err) {
-      alert(err?.message || 'Delete failed');
+      toast.error(err?.message || 'Delete failed');
     } finally {
       setBusy(false);
     }

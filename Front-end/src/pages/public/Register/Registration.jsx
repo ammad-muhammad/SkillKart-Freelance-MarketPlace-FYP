@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Briefcase, Code, ArrowLeft, AlertC
 import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
 import AuthBackground from "../AuthBackground";
+import { isMobileApp } from "../../../utils/platform";
 import "../Auth.css";
 
 const Registration = () => {
@@ -34,6 +35,14 @@ const Registration = () => {
             }
         }
     }, [isAuthenticated, user, authLoading, navigate]);
+
+    // A guest who set a pending post-login redirect (e.g. tapped "Apply Now")
+    // but then registered a brand-new account instead of logging in bypasses
+    // Login.jsx entirely — clear it here so a LATER, unrelated login in this
+    // browser doesn't get silently redirected to that stale destination.
+    useEffect(() => {
+        try { sessionStorage.removeItem('postLoginRedirect'); } catch { /* non-fatal */ }
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -104,10 +113,12 @@ const Registration = () => {
 
     return (
         <div className="auth-page">
-            <Link to="/" className="back-home-btn">
-                <ArrowLeft size={18} />
-                <span>Back to Home</span>
-            </Link>
+            {!isMobileApp() && (
+                <Link to="/" className="back-home-btn">
+                    <ArrowLeft size={18} />
+                    <span>Back to Home</span>
+                </Link>
+            )}
 
             <AuthBackground />
 

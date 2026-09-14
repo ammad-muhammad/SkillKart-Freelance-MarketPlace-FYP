@@ -16,6 +16,7 @@ import {
 } from '../../api/adminPanel';
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import { safeToast as toast } from '../../utils/safeToast';
 
 // ─── Shared bits ───────────────────────────────────────────────
 const BackButton = ({ to, label }) => {
@@ -104,6 +105,7 @@ export const UserDetailPage = () => {
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
   const [walletTarget, setWalletTarget] = useState(null); // userId when adjusting wallet
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,8 +122,10 @@ export const UserDetailPage = () => {
 
   // run a mutating action then refresh, surfacing errors
   const userAction = async (fn) => {
+    setBusy(true);
     try { await fn(); await load(); }
-    catch (e) { alert(e?.message || 'Action failed'); }
+    catch (e) { toast.error(e?.message || 'Action failed'); }
+    finally { setBusy(false); }
   };
 
   // lazy-load each tab once
@@ -160,22 +164,22 @@ export const UserDetailPage = () => {
         title={userLabel(user)}
         subtitle={user.email}
         actions={<>
-          <button className="ap-btn ap-btn-primary ap-btn-sm" onClick={() => setEditOpen(true)}>✏️ Edit Account</button>
+          <button className="ap-btn ap-btn-primary ap-btn-sm" disabled={busy} onClick={() => setEditOpen(true)}>✏️ Edit Account</button>
           {(user.role === 'freelancer' || user.role === 'client') &&
-            <button className="ap-btn ap-btn-primary ap-btn-sm" onClick={() => setProfileEditOpen(true)}>📝 Edit Profile</button>}
-          <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => setMessageOpen(true)}>💬 Message</button>
-          <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => setWalletTarget(user._id)}>💰 Adjust Wallet</button>
+            <button className="ap-btn ap-btn-primary ap-btn-sm" disabled={busy} onClick={() => setProfileEditOpen(true)}>📝 Edit Profile</button>}
+          <button className="ap-btn ap-btn-secondary ap-btn-sm" disabled={busy} onClick={() => setMessageOpen(true)}>💬 Message</button>
+          <button className="ap-btn ap-btn-secondary ap-btn-sm" disabled={busy} onClick={() => setWalletTarget(user._id)}>💰 Adjust Wallet</button>
           {user.isEmailVerified
-            ? <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => userAction(() => adminUsers.verifyEmail(id, false))}>✉️ Unverify Email</button>
-            : <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => userAction(() => adminUsers.verifyEmail(id, true))}>✅ Verify Email</button>}
+            ? <button className="ap-btn ap-btn-secondary ap-btn-sm" disabled={busy} onClick={() => userAction(() => adminUsers.verifyEmail(id, false))}>✉️ Unverify Email</button>
+            : <button className="ap-btn ap-btn-success ap-btn-sm" disabled={busy} onClick={() => userAction(() => adminUsers.verifyEmail(id, true))}>✅ Verify Email</button>}
           {user.isBlocked
-            ? <button className="ap-btn ap-btn-success ap-btn-sm" onClick={() => userAction(() => adminUsers.unsuspend(id))}>✅ Unsuspend</button>
-            : <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => {
+            ? <button className="ap-btn ap-btn-success ap-btn-sm" disabled={busy} onClick={() => userAction(() => adminUsers.unsuspend(id))}>✅ Unsuspend</button>
+            : <button className="ap-btn ap-btn-danger ap-btn-sm" disabled={busy} onClick={() => {
                 const r = prompt('Reason for suspension? (min 5 chars)');
                 if (r && r.trim().length >= 5) userAction(() => adminUsers.suspend(id, r.trim()));
-                else if (r != null) alert('Reason must be at least 5 characters.');
+                else if (r != null) toast.error('Reason must be at least 5 characters.');
               }}>⛔ Suspend</button>}
-          {!user.deletedAt && <button className="ap-btn ap-btn-danger ap-btn-sm" onClick={() => {
+          {!user.deletedAt && <button className="ap-btn ap-btn-danger ap-btn-sm" disabled={busy} onClick={() => {
             if (confirm(`Soft-delete ${user.email}? Data is preserved and reviewable in audit logs.`)) userAction(() => adminUsers.delete(id));
           }}>🗑 Delete</button>}
         </>}
@@ -501,7 +505,7 @@ export const ProfilePanel = ({ user, onEdit, onAvatar }) => {
     if (url === null) return;
     setAvatarBusy(true);
     try { await adminUsers.updateAvatar(user._id, url.trim() || null); onAvatar?.(); }
-    catch (e) { alert(e?.message || 'Failed to update avatar'); }
+    catch (e) { toast.error(e?.message || 'Failed to update avatar'); }
     finally { setAvatarBusy(false); }
   };
 
@@ -602,7 +606,7 @@ export const VerificationPanel = ({ user, onChange }) => {
   const act = async (fn) => {
     setBusy(true);
     try { await fn(); await reload(); onChange?.(); }
-    catch (e) { alert(e?.message || 'Action failed'); }
+    catch (e) { toast.error(e?.message || 'Action failed'); }
     finally { setBusy(false); }
   };
 
@@ -977,7 +981,7 @@ export const JobDetailPage = () => {
   const run = async (fn) => {
     setBusy(true);
     try { await fn(); await load(); setConfirm(null); }
-    catch (e) { alert(e?.message || 'Action failed'); }
+    catch (e) { toast.error(e?.message || 'Action failed'); }
     finally { setBusy(false); }
   };
 
@@ -1274,7 +1278,7 @@ export const ContractDetailPage = () => {
     if (!note.trim()) return;
     setBusy(true);
     try { await adminContracts.addNote(id, note.trim()); setNote(''); setNoteOpen(false); await load(); }
-    catch (e) { alert(e?.message || 'Failed to add note'); }
+    catch (e) { toast.error(e?.message || 'Failed to add note'); }
     finally { setBusy(false); }
   };
 
@@ -1282,7 +1286,7 @@ export const ContractDetailPage = () => {
   const runAction = async (fn) => {
     setBusy(true);
     try { await fn(); await load(); setConfirm(null); }
-    catch (e) { alert(e?.message || 'Action failed'); }
+    catch (e) { toast.error(e?.message || 'Action failed'); }
     finally { setBusy(false); }
   };
 
@@ -1965,7 +1969,7 @@ export const ReportDetailPage = () => {
   const assign = async () => {
     setBusy(true);
     try { await adminReports.assign(id); await load(); }
-    catch (e) { alert(e?.message || 'Failed to assign'); }
+    catch (e) { toast.error(e?.message || 'Failed to assign'); }
     finally { setBusy(false); }
   };
 
@@ -2119,7 +2123,7 @@ export const ChatDetailPage = () => {
     if (!reply.trim()) return;
     setSending(true);
     try { await adminChat.reply(conversationId, reply.trim()); setReply(''); await load(); }
-    catch (e) { alert(e?.message || 'Failed to send reply'); }
+    catch (e) { toast.error(e?.message || 'Failed to send reply'); }
     finally { setSending(false); }
   };
 
@@ -2201,7 +2205,7 @@ export const PaymentDetailPage = () => {
   const runAction = async (fn) => {
     setBusy(true);
     try { await fn(); await load(); setConfirm(null); }
-    catch (e) { alert(e?.message || 'Action failed'); }
+    catch (e) { toast.error(e?.message || 'Action failed'); }
     finally { setBusy(false); }
   };
 

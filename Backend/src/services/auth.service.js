@@ -206,7 +206,14 @@ const refreshAccessToken = async (refreshTokenStr) => {
           { revokedAt: new Date() }
         );
         if (tokenRecord.userId !== 'superadmin') {
-          await User.updateOne({ _id: tokenRecord.userId }, { $inc: { tokenVersion: 1 } }).catch(() => {});
+          // This bumps tokenVersion to invalidate every other access token
+          // this (possibly compromised) account currently has out — the
+          // strongest remediation this response takes. Silently swallowing a
+          // failure here would mean a detected token-theft event sometimes
+          // does nothing at all, with no trace it happened.
+          await User.updateOne({ _id: tokenRecord.userId }, { $inc: { tokenVersion: 1 } }).catch((err) => {
+            console.error(`[auth] Failed to bump tokenVersion after detected refresh-token reuse for user ${tokenRecord.userId}:`, err.message);
+          });
         }
       }
       throw new AuthenticationError('Session expired. Please log in again.');
@@ -370,9 +377,21 @@ const authenticateWithSupabase = async (supabaseAccessToken) => {
   // Find user by supabaseId or email
   let user = await User.findOne({ $or: [{ supabaseId }, { email }] });
 
-  // Function to mirror avatar if it's from Google
+  // Function to mirror avatar if it's from Google. `rawUrl` comes from
+  // user_metadata, which is writable by the authenticating user themselves —
+  // a substring check (the old `.includes(...)`) matches
+  // "https://attacker.example.com/x/googleusercontent.com/y.jpg" too, letting
+  // an attacker get this app's own Cloudinary account to fetch/store an
+  // arbitrary URL of their choice. Check the actual hostname instead.
   const mirrorAvatar = async (rawUrl) => {
-    if (rawUrl && rawUrl.includes('googleusercontent.com')) {
+    if (!rawUrl) return rawUrl;
+    let hostname;
+    try {
+      hostname = new URL(rawUrl).hostname;
+    } catch {
+      return rawUrl;
+    }
+    if (hostname === 'googleusercontent.com' || hostname.endsWith('.googleusercontent.com')) {
       console.log('🔄 Mirroring Google avatar to Cloudinary...');
       const mirrored = await uploadFromUrl(rawUrl, 'profile-pictures');
       return mirrored ? mirrored.secure_url : rawUrl;

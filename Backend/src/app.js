@@ -72,9 +72,6 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
-// Sanitize data to prevent MongoDB injection
-app.use(mongoSanitize());
-
 // =======================
 // Body Parsing Middleware
 // =======================
@@ -82,6 +79,13 @@ app.use(mongoSanitize());
 app.use(express.json({ limit: '10mb', verify: (req, res, buf) => { req.rawBody = buf } }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// Sanitize data to prevent MongoDB injection — MUST run after the body
+// parsers above populate req.body. express-mongo-sanitize only sanitizes
+// keys that already exist on req.body/req.query/req.params at the time it
+// runs; mounted before the parsers, req.body is still undefined and nothing
+// in it is ever sanitized.
+app.use(mongoSanitize());
 
 // Observability — persist API request records for the admin Monitoring page.
 const { apiLogger, logError } = require('./middleware/requestLogger.middleware');

@@ -91,24 +91,35 @@ const classify = (detections, video) => {
  *                        points — but both checks are intentionally tight so
  *                        even a glance to the side gets caught.
  *
- * This is a SEPARATE strike counter than useAntiCheat's, still slightly more
- * lenient given camera signals are noisier than browser events (a blink or a
- * quick head bob shouldn't cost a strike): a bad state must persist ~1.2s
- * (2 consecutive ticks at 600ms) before it counts as one violation, and 3
- * violations (not 2) trigger onAbort. A cooldown after each counted violation
- * stops one continuous episode (e.g. "stepped away for 20s") from being
- * counted many times over.
+ * This is a SEPARATE strike counter than useAntiCheat's, and its budget scales
+ * with the test length via `maxViolations` (caller passes
+ * max(2, floor(questionCount / 2))) instead of a fixed number — a longer test
+ * naturally produces more incidental head movement, so a 40-question test
+ * tolerates far more than a 4-question one. A bad state must persist ~1.2s (2
+ * consecutive ticks at 600ms) before it counts as one violation. Every
+ * violation is reported via `onViolation` (for logging + the live on-screen
+ * counter, regardless of threshold); `onWarn` fires only once, on the
+ * second-to-last tolerated violation (`maxViolations - 1`) as a final
+ * warning; `onAbort` fires once the count reaches `maxViolations`. A cooldown
+ * after each counted violation stops one continuous episode (e.g. "stepped
+ * away for 20s") from being counted many times over.
  *
  * @param {object}   opts
- * @param {boolean}  opts.active     enable/disable the guard + detection loop
- * @param {number}   opts.attemptId  bump this to start a fresh attempt (resets strikes)
- * @param {object}   opts.videoRef   ref to the <video> element the camera stream attaches to
- * @param {Function} opts.onWarn     called on the 1st/2nd violation (reason: string)
- * @param {Function} opts.onAbort    called on the 3rd violation (reason: string)
+ * @param {boolean}  opts.active        enable/disable the guard + detection loop
+ * @param {number}   opts.attemptId     bump this to start a fresh attempt (resets strikes)
+ * @param {object}   opts.videoRef      ref to the <video> element the camera stream attaches to
+ * @param {number}   opts.maxViolations total violations tolerated before abort (min 2)
+ * @param {Function} opts.onViolation   called on EVERY counted violation (count, max, reason)
+ * @param {Function} opts.onWarn        called once, on violation `maxViolations - 1` (reason: string)
+ * @param {Function} opts.onAbort       called once violations reach `maxViolations` (reason: string)
+ * @returns {{ modelsReady: boolean, cameraError: string|null, violationCount: number, maxViolations: number, startCamera: Function, stopCamera: Function }}
  */
-export default function useFaceProctor({ active, attemptId = 0, videoRef, onWarn, onAbort }) {
+export default function useFaceProctor({ active, attemptId = 0, videoRef, maxViolations = 3, onViolation, onWarn, onAbort }) {
   const [modelsReady, setModelsReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [violationCount, setViolationCount] = useState(0);
+
+  const effectiveMax = Math.max(2, maxViolations);
 
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
@@ -118,9 +129,19 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, onWarn
   const badType = useRef(null);
   const badStreak = useRef(0);
   const cooldownUntil = useRef(0);
+  // A live mirror of `active`, read inside registerBadState instead of the
+  // closed-over `active` prop. An in-flight face-api detection promise that
+  // resolves just after `active` flips false (test just aborted/unmounted)
+  // still runs against the registerBadState instance captured when its
+  // interval tick started — that instance's OWN `active` closure is stale.
+  // Reading a ref instead means every in-flight call sees the CURRENT state,
+  // so it correctly no-ops instead of counting one more violation (or
+  // resetting counters) after the guard has already been torn down.
+  const activeRef = useRef(active);
+  useEffect(() => { activeRef.current = active; }, [active]);
 
-  const cbRef = useRef({ onWarn, onAbort });
-  useEffect(() => { cbRef.current = { onWarn, onAbort }; }, [onWarn, onAbort]);
+  const cbRef = useRef({ onViolation, onWarn, onAbort });
+  useEffect(() => { cbRef.current = { onViolation, onWarn, onAbort }; }, [onViolation, onWarn, onAbort]);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,7 +180,7 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, onWarn
   }, [videoRef]);
 
   const registerBadState = useCallback((type) => {
-    if (!active) return;
+    if (!activeRef.current) return;
     const now = Date.now();
     if (now - armedAt.current < ARM_GRACE_MS) return;
 
@@ -176,13 +197,15 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, onWarn
     cooldownUntil.current = now + VIOLATION_COOLDOWN_MS;
 
     violations.current += 1;
+    setViolationCount(violations.current);
     const reason = REASONS[type] || 'Camera proctoring flagged unusual activity.';
-    if (violations.current >= 3) {
+    cbRef.current.onViolation?.(violations.current, effectiveMax, reason);
+    if (violations.current >= effectiveMax) {
       cbRef.current.onAbort?.(reason);
-    } else {
+    } else if (violations.current === effectiveMax - 1) {
       cbRef.current.onWarn?.(reason);
     }
-  }, [active]);
+  }, [effectiveMax]);
 
   const registerOk = useCallback(() => {
     badType.current = null;
@@ -220,6 +243,7 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, onWarn
   useEffect(() => {
     if (active) {
       violations.current = 0;
+      setViolationCount(0);
       badType.current = null;
       badStreak.current = 0;
       cooldownUntil.current = 0;
@@ -230,5 +254,5 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, onWarn
   // Never leave a camera light on after the component using this hook unmounts.
   useEffect(() => () => stopCamera(), [stopCamera]);
 
-  return { modelsReady, cameraError, startCamera, stopCamera };
+  return { modelsReady, cameraError, violationCount, maxViolations: effectiveMax, startCamera, stopCamera };
 }
