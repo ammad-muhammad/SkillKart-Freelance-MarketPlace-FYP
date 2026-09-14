@@ -549,7 +549,7 @@ export default function JobDetails() {
               )}
 
               <div className="jd-form-group">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <label style={{ margin: 0 }}>Cover Letter</label>
                   <button
                     type="button"
