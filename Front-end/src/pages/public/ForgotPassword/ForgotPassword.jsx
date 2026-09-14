@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, CheckCircl
 import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
 import AuthBackground from "../AuthBackground";
+import { isMobileApp } from "../../../utils/platform";
 import "../Auth.css";
 
 const ForgotPassword = () => {
@@ -71,10 +72,12 @@ const ForgotPassword = () => {
 
     return (
         <div className="auth-page">
-            <Link to="/" className="back-home-btn">
-                <ArrowLeft size={18} />
-                <span>Back to Home</span>
-            </Link>
+            {!isMobileApp() && (
+                <Link to="/" className="back-home-btn">
+                    <ArrowLeft size={18} />
+                    <span>Back to Home</span>
+                </Link>
+            )}
 
             <AuthBackground />
 

@@ -6,6 +6,7 @@ import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
 import { log } from "../../../utils/logger";
 import AuthBackground from "../AuthBackground";
+import { isMobileApp } from "../../../utils/platform";
 import "../Auth.css";
 
 const OTP = () => {
@@ -238,29 +239,31 @@ const OTP = () => {
             boxSizing: 'border-box'
         }}>
             {/* Top Left Navigation */}
-            <Link to="/" className="back-home-btn" style={{
-                position: 'fixed',
-                top: '24px',
-                left: '24px',
-                zIndex: 100,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 18px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '999px',
-                color: 'white',
-                textDecoration: 'none',
-                fontSize: '0.88rem',
-                fontWeight: 600,
-                transition: 'all 0.25s ease'
-            }}>
-                <ArrowLeft size={18} />
-                <span>Back to Home</span>
-            </Link>
+            {!isMobileApp() && (
+                <Link to="/" className="back-home-btn" style={{
+                    position: 'fixed',
+                    top: '24px',
+                    left: '24px',
+                    zIndex: 100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '999px',
+                    color: 'white',
+                    textDecoration: 'none',
+                    fontSize: '0.88rem',
+                    fontWeight: 600,
+                    transition: 'all 0.25s ease'
+                }}>
+                    <ArrowLeft size={18} />
+                    <span>Back to Home</span>
+                </Link>
+            )}
 
             <AuthBackground />
 
