@@ -259,6 +259,7 @@ Push notification server-side setup: [Backend README → Push Notifications](Bac
 ## Documentation
 
 - [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md) — comprehensive platform guide (features, roles, lifecycle) for non-developers and developers alike.
+- [`docs/PROFESSOR_EXPLANATION_ROMAN_URDU.md`](docs/PROFESSOR_EXPLANATION_ROMAN_URDU.md) — Roman Urdu walkthrough of the whole project (flow, architecture, business logic) for explaining it to a supervisor/viva.
 - [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) — end-to-end user flows and business-logic blueprint.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — step-by-step production deployment (backend → Railway/Render, frontend → Vercel).
 - [`docs/FYP_Final_Report.md`](docs/FYP_Final_Report.md) — Final Year Project report (submission-ready university document).
