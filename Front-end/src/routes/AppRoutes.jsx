@@ -1,4 +1,6 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom"
+import Loader from '../Components/common/Loader/Loader';
 import ProtectedRoute from '../hooks/ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 import { ClientProvider } from '../context/ClientContext';
@@ -69,38 +71,46 @@ import ReviewProposals from "../pages/client/ReviewProposals";
 import StripeCallback from '../pages/freelancer/StripeCallback';
 
 // Public Pages
-import Home from "../pages/public/Home/Home";
+// Auth-flow pages ship in every build (web + mobile) and are on the critical
+// path for every user, so they stay eagerly imported.
 import Login from "../pages/public/Login/Login";
 import AuthConsent from "../pages/public/AuthConsent/AuthConsent";
 import Registration from "../pages/public/Register/Registration";
 import Role from "../pages/public/Role/Role";
 import OTP from "../pages/public/OTP/OTP";
 import ForgotPassword from "../pages/public/ForgotPassword/ForgotPassword";
-import About from "../pages/public/About/About";
-import Contact from "../pages/public/Contact/Contact";
-import PrivacyPolicy from "../pages/public/Legal/PrivacyPolicy";
-import TermsOfService from "../pages/public/Legal/TermsOfService";
-import CookiePolicy from "../pages/public/Legal/CookiePolicy";
-import ServicesAgreement from "../pages/public/Legal/ServicesAgreement";
-
-import BrowseFreelancers from "../pages/public/BrowseFreelancers/BrowseFreelancers";
-import PostProject from "../pages/public/PostProject/PostProject";
-import AiMatchmaking from "../pages/public/AiMatchmaking/AiMatchmaking";
-import HelpCenter from "../pages/public/HelpCenter/HelpCenter";
-import Categories from "../pages/public/Categories/Categories";
-import BrowseProjects from "../pages/public/BrowseProjects/BrowseProjects";
-import JobDetails from "../pages/public/JobDetails/JobDetails";
-import GigDetail from "../pages/public/GigDetail/GigDetail";
-import PublicFreelancerProfile from "../pages/public/FreelancerProfile/PublicFreelancerProfile";
-import PublicClientProfile from "../pages/public/ClientProfile/PublicClientProfile";
-
 import ClientOnboarding from "../pages/public/ClientOnboarding/ClientOnboarding";
 import FreelancerOnboarding from "../pages/public/FreelancerOnboarding/FreelancerOnboarding";
+
+// Marketing/public-browsing pages are never registered at all in the mobile
+// build (see the `!isMobileApp()` block below) but were previously still
+// eagerly bundled into the main chunk regardless — lazy so their code (and
+// assets like About's large hero image) is only ever fetched on web, and
+// only once a visitor actually navigates to one of these routes.
+const Home = lazy(() => import("../pages/public/Home/Home"));
+const About = lazy(() => import("../pages/public/About/About"));
+const Contact = lazy(() => import("../pages/public/Contact/Contact"));
+const PrivacyPolicy = lazy(() => import("../pages/public/Legal/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("../pages/public/Legal/TermsOfService"));
+const CookiePolicy = lazy(() => import("../pages/public/Legal/CookiePolicy"));
+const ServicesAgreement = lazy(() => import("../pages/public/Legal/ServicesAgreement"));
+
+const BrowseFreelancers = lazy(() => import("../pages/public/BrowseFreelancers/BrowseFreelancers"));
+const PostProject = lazy(() => import("../pages/public/PostProject/PostProject"));
+const AiMatchmaking = lazy(() => import("../pages/public/AiMatchmaking/AiMatchmaking"));
+const HelpCenter = lazy(() => import("../pages/public/HelpCenter/HelpCenter"));
+const Categories = lazy(() => import("../pages/public/Categories/Categories"));
+const BrowseProjects = lazy(() => import("../pages/public/BrowseProjects/BrowseProjects"));
+const JobDetails = lazy(() => import("../pages/public/JobDetails/JobDetails"));
+const GigDetail = lazy(() => import("../pages/public/GigDetail/GigDetail"));
+const PublicFreelancerProfile = lazy(() => import("../pages/public/FreelancerProfile/PublicFreelancerProfile"));
+const PublicClientProfile = lazy(() => import("../pages/public/ClientProfile/PublicClientProfile"));
+
 // AI Tools
-import BuddyAI from "../pages/public/AiTools/BuddyAI";
-import CostEstimator from "../pages/public/AiTools/CostEstimator";
-import CategoryPage from "../pages/public/Skills/CategoryPage";
-import SkillPage from "../pages/public/Skills/SkillPage";
+const BuddyAI = lazy(() => import("../pages/public/AiTools/BuddyAI"));
+const CostEstimator = lazy(() => import("../pages/public/AiTools/CostEstimator"));
+const CategoryPage = lazy(() => import("../pages/public/Skills/CategoryPage"));
+const SkillPage = lazy(() => import("../pages/public/Skills/SkillPage"));
 
 // Fallback
 import NotFound from "../pages/public/NotFound/NotFound";
@@ -150,6 +160,7 @@ const AppRoutes = () => {
       <AdminAuthProvider>
       <ClientProvider>
         <FreelancerProvider>
+        <Suspense fallback={<Loader fullScreen text="Loading..." />}>
         <Routes>
 
           {/* ================= ADMIN PANEL ROUTES ================= */}
@@ -341,6 +352,7 @@ const AppRoutes = () => {
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<RedirectTo404 />} />
         </Routes>
+        </Suspense>
       </FreelancerProvider>
     </ClientProvider>
     </AdminAuthProvider>

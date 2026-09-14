@@ -114,7 +114,7 @@
 **Content:**
 - **In scope:** registration/onboarding, profiles, jobs, gigs, proposals, contracts, escrow payments, wallets, withdrawals, messaging, reviews, disputes, AI tools, admin panel, analytics.
 - **User roles:** Guest, Freelancer, Client, Admin, SuperAdmin.
-- **Out of scope (this phase):** native mobile app, live video calls, real-time WebSocket chat (we use efficient polling).
+- **Out of scope (this phase):** live video calls, real-time WebSocket chat (we use efficient polling), an iOS build (Android ships this phase).
 
 **Speaker notes:** We deliberately scoped a *complete web platform* rather than a thin prototype. What's out of scope is documented as future work, not gaps in the core lifecycle.
 
@@ -347,6 +347,7 @@ User/Contract ──► Report ──► AdminAuditLog
 - **Wallet, Escrow Payments & Withdrawals** · **Messaging** · **Notifications**
 - **Reviews & Ratings** · **Search & Categories** · **Disputes**
 - **AI Tools** · **Admin Panel & Analytics**
+- **Mobile Application** (Android, via Capacitor — same codebase as the web app, plus push notifications)
 - **Transactional Email** (OTP, security alerts — Gmail API / SMTP, with retry + delivery logging)
 - **Discoverability** (dynamic sitemap, robots policy, installable PWA, social share cards)
 
@@ -486,7 +487,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 **Presenter: Student 3**
 
 **Content:**
-- **Native mobile app** (React Native).
+- **iOS mobile app** — Android already ships (Capacitor); iOS reuses the same codebase.
 - **Real-time chat & video calls** (WebSockets / WebRTC) — currently efficient polling.
 - **Deeper AI matching** with embeddings/vector search.
 - **Advanced analytics** and reporting dashboards.

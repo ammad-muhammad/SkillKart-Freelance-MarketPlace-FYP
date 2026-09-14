@@ -210,6 +210,14 @@ const userSchema = new mongoose.Schema({
   },
   lockUntil: Date,
 
+  // FCM device tokens for the mobile app's push notifications (see
+  // services/push.service.js) — multiple entries per user since the same
+  // account can be logged into more than one device.
+  pushTokens: {
+    type: [String],
+    default: []
+  },
+
   // Metadata
   metadata: {
     ipAddress: String,

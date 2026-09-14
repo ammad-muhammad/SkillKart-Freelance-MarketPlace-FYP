@@ -2,7 +2,10 @@
   position: fixed;
   top: 18px;
   right: 22px;
-  z-index: 3500;
+  /* Below the mobile sidebar drawer (1400) and its backdrop (1100) — it must
+     never float on top of the slide-out menu (it was overlapping the logout
+     button). Still above ordinary page content, which has no z-index. */
+  z-index: 1000;
 }
 
 .notif-bell__btn {

@@ -270,6 +270,8 @@ This matrix is the definitive source of truth for the platform's current capabil
 - **In-App Notifications**
 - **Job & Freelancer Search / Filtering**
 - **Mutual Review & Rating System**
+- **Mobile Application (Android):** Capacitor-wrapped native app sharing the same codebase/API as the web client, freelancer, and admin-panel experiences.
+- **Push Notifications:** Firebase Cloud Messaging delivers pushes for the same events as in-app notifications — no-ops safely until a Firebase service account is configured (see Backend README → Push Notifications).
 
 ### Partially Implemented
 - **Messaging:** Functional, but relies on RESTful interval polling rather than true WebSockets.

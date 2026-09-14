@@ -6,6 +6,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare, FileText, Loader2, Paperclip, Send } from 'lucide-react';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import { openExternal } from '../../utils/externalLink';
 import '../client/ClientDashboard.css';
 
 const FreelancerMessages = () => {
@@ -234,11 +235,11 @@ const FreelancerMessages = () => {
                             const a = typeof att === 'string' ? { url: att, name: 'Attachment' } : att;
                             const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
                             return isImg ? (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer">
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
                                 <img src={a.url} alt={a.name} className="fl-msg__att-img" />
                               </a>
                             ) : (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="fl-msg__att-file">
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="fl-msg__att-file" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
                                 <FileText size={14} style={{ marginRight: '4px' }} /> {a.name || 'Document'}
                               </a>
                             );

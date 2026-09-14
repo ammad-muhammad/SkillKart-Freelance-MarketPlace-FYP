@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import AppRoutes from "./routes/AppRoutes";
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 import BuddyWidget from "./Components/common/BuddyWidget/BuddyWidget";
@@ -6,13 +7,18 @@ import NotificationBell from "./Components/common/NotificationBell/NotificationB
 import NetworkGate from "./Components/common/NetworkGate/NetworkGate";
 import MobileBootScreen from "./Components/common/MobileBootScreen/MobileBootScreen";
 import { useAuth } from './hooks/useAuth';
+import useAndroidBackButton from './hooks/useAndroidBackButton';
+import usePushNotifications from './hooks/usePushNotifications';
 import SuspendedOverlay from './Components/common/SuspendedOverlay/SuspendedOverlay';
 import { log, logStatus } from './utils/logger';
 import { isMobileApp } from './utils/platform';
 
 function App() {
-  const { user, loading, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const logged = useRef(false);
+
+  useAndroidBackButton();
+  usePushNotifications(isAuthenticated);
 
   useEffect(() => {
     if (logged.current) return;
@@ -20,6 +26,16 @@ function App() {
 
     log('💻 Frontend running on port 3001');
     logStatus({ debugMode: true, hotReloadWorking: true });
+  }, []);
+
+  // Mobile-only: match the status bar to the brand navy used by the splash
+  // screen and auth pages — otherwise its icons/clock default to a style
+  // meant for a light background and are nearly invisible on our dark one.
+  useEffect(() => {
+    if (!isMobileApp()) return;
+    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    StatusBar.setBackgroundColor({ color: '#042E4C' }).catch(() => {});
+    StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
   }, []);
 
   // Mobile-only: block the whole app tree behind the boot screen until

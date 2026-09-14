@@ -6,6 +6,7 @@ import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import { openExternal } from '../../utils/externalLink';
 
 import { LANGUAGES } from '../../data/languages';
 import { Camera, Building2, Image as ImageIcon, User, MapPin, Calendar, Globe, Edit2, AlertTriangle, Target, Check, Plus, Trash2, Zap, Clock, Search, Lightbulb, Sparkles } from 'lucide-react';
@@ -477,7 +478,7 @@ const ClientProfile = () => {
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><MapPin size={15} /> {data.location || 'Location Not Specified'}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Calendar size={15} /> Member Since: {data.memberSince || 'N/A'}</span>
                 {data.website && (
-                  <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                  <a href={data.website} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }} onClick={(e) => { e.preventDefault(); openExternal(data.website); }}>
                     <Globe size={15} /> Website
                   </a>
                 )}

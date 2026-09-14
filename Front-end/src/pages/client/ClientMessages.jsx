@@ -7,6 +7,7 @@ import { useClient } from '../../context/ClientContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare } from 'lucide-react';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import { openExternal } from '../../utils/externalLink';
 import './ClientDashboard.css';
 
 const ClientMessages = () => {
@@ -234,11 +235,11 @@ const ClientMessages = () => {
                             const a = typeof att === 'string' ? { url: att, name: 'Attachment' } : att;
                             const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
                             return isImg ? (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer">
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
                                 <img src={a.url} alt={a.name} className="cl-msg__att-img" />
                               </a>
                             ) : (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="cl-msg__att-file">
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="cl-msg__att-file" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
                                 <FileText size={16} /> <span style={{marginLeft: '4px'}}>{a.name || 'Document'}</span>
                               </a>
                             );

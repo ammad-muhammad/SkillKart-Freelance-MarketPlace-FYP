@@ -8,6 +8,7 @@ const { BadRequestError } = require('../utils/apiError');
 const { isUsernameTaken, applyUsernameUpdate } = require('../utils/username');
 const Job = require('../models/Job');
 const { syncFreelancerVerification } = require('../services/verification.service');
+const pushService = require('../services/push.service');
 /**
  * createUser: create user and send otp
  */
@@ -249,6 +250,32 @@ const updateMe = asyncHandler(async (req, res) => {
     message: 'Profile updated successfully',
     data: { user: user.toAuthJSON() }
   });
+});
+
+/**
+ * Register this device's FCM token for push notifications (mobile app only).
+ * Idempotent — calling it again with the same token is a no-op.
+ */
+const registerPushToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return sendError(res, { statusCode: 400, message: 'token is required' });
+  }
+  await pushService.registerToken(req.user._id, token);
+  sendSuccess(res, { message: 'Push token registered' });
+});
+
+/**
+ * Unregister this device's FCM token, e.g. on logout, so it stops receiving
+ * pushes for an account it's no longer signed into.
+ */
+const removePushToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return sendError(res, { statusCode: 400, message: 'token is required' });
+  }
+  await pushService.removeToken(req.user._id, token);
+  sendSuccess(res, { message: 'Push token removed' });
 });
 
 /**
@@ -886,6 +913,8 @@ module.exports = {
   supabaseAuth,
   updateRole,
   updateMe,
+  registerPushToken,
+  removePushToken,
   checkUsername,
   requestEmailChange,
   confirmEmailChange,

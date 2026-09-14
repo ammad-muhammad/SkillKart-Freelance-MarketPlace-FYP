@@ -133,6 +133,148 @@ a captcha problem can't lock users out. Action names must match the server's
 > The v3 badge must stay visible unless you disclose reCAPTCHA in your UI text —
 > Google's terms. `hideRecaptchaBadge()` exists for when that disclosure is added.
 
+## Mobile App (Android / Capacitor)
+
+The same React codebase ships as a native Android app via [Capacitor](https://capacitorjs.com/) — no separate mobile codebase or rewrite. `capacitor.config.json` sets `androidScheme: "https"`, so the WebView's requests present a fixed origin of `https://localhost` (not a real host — nothing is ever served there; it's purely a CORS identity).
+
+### Building it
+
+```bash
+npm run build:mobile   # vite build --mode mobile — loads .env.mobile instead of .env
+npm run cap:sync       # build:mobile, then `npx cap sync` copies dist/ into android/
+npm run cap:android    # cap:sync, then opens the project in Android Studio
+```
+
+`.env.mobile` needs real, live values — this build talks to your **deployed** backend,
+not localhost:
+
+| Variable | Notes |
+|----------|-------|
+| `VITE_APP_TARGET=mobile` | Tells `AppRoutes.jsx` this is the native build (see below) |
+| `VITE_API_URL` | The **production** backend URL (e.g. Railway), not `localhost:5000` |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Same as `.env.prod` |
+| `VITE_RECAPTCHA_SITE_KEY` | **Deliberately left unset** — see reCAPTCHA note below |
+
+Building the actual `.apk`, once `cap:sync` has run:
+
+```bash
+cd android
+JAVA_HOME="<path to a JDK Gradle 8.x supports>" ./gradlew.bat assembleDebug
+# → android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+> ⚠️ **JDK version gotcha.** Android Studio's bundled JDK (`Android Studio/jbr`) can
+> silently auto-update itself past what the project's pinned Gradle version
+> supports — a JDK 25 JBR broke a Gradle 8.14.3 build outright
+> (`Unsupported class file major version 69`) mid-project with no code changes
+> involved. If Gradle suddenly can't even evaluate `settings.gradle`, check
+> `java -version` for whatever `JAVA_HOME` points at first. A cached older JBR
+> under `~/.jdks/` (left behind by a previous Android Studio/IntelliJ version) is
+> often a quick fix — point `JAVA_HOME` at that instead of the current bundled one.
+
+### What's mobile-only
+
+`isMobileApp()` (`src/utils/platform.js`) is true when `VITE_APP_TARGET=mobile` (this
+build) **or** `Capacitor.isNativePlatform()` (a runtime fallback, harmless on web).
+`AppRoutes.jsx` uses it to skip registering every public-marketing route entirely in
+this build — there's no landing page, no `/browse-projects`, no public profiles, just
+the auth flow plus the client/freelancer/admin-panel dashboards. Those excluded pages
+(`About`, `BrowseProjects`, `JobDetails`, `GigDetail`, the AI Tools pages, the Skills
+pages, both public profile pages, all four legal pages) are `React.lazy()`-loaded —
+their code (and assets, including a large hero image on `About`) is fetched only when
+a **web** visitor actually navigates there, never bundled into what the mobile app
+parses at startup.
+
+Two links that point at now-excluded routes (client onboarding's "Service Agreement"
+checkbox, and the client dashboard's "Cost Estimator" link in Post Project) detect
+`isMobileApp()` and open the live website in an external browser tab instead of
+404ing against a route that was never registered.
+
+### CORS
+
+The mobile app's fixed origin (`https://localhost`) must be in the backend's
+`CORS_ORIGIN` env var, or every request gets blocked. This is a real origin string
+someone could also send from a raw script — it isn't unique to genuine app traffic —
+so it's not a security boundary on its own; normal auth + rate limiting still apply.
+
+### reCAPTCHA
+
+`VITE_RECAPTCHA_SITE_KEY` is deliberately **unset** in `.env.mobile`
+(`src/utils/recaptcha.js` no-ops entirely with no site key — no script load, no
+console errors). Google's reCAPTCHA v3 script is a browser-page product and is
+unreliable inside an embedded WebView; rather than fight that, the backend's
+`verifyRecaptcha` middleware exempts requests whose `Origin` is `https://localhost`
+outright (`Backend/src/middleware/recaptcha.middleware.js`) — the mobile app was
+otherwise hard-failing every login/register with `RECAPTCHA_FAILED` once a real
+`RECAPTCHA_SECRET_KEY` was configured in production. Rate limiting + account lockout
+remain the actual anti-abuse gate for this origin.
+
+### External links
+
+A plain `<a target="_blank">` or `window.open()` inside a Capacitor WebView has no
+tab to open — it just navigates the app itself away, with no browser chrome and no
+way back. `src/utils/externalLink.js`'s `openExternal(url)` opens a **Chrome Custom
+Tab** instead (`@capacitor/browser`) on mobile, and falls back to normal
+`window.open` on web. Used for message/document attachments, portfolio and
+certificate links, and profile website links.
+
+### Hardware back button
+
+Unhandled, Android's back button either pops WebView history or exits the process
+outright — the latter happens the instant there's no history to pop, e.g. right
+after login lands on a dashboard with a fresh history stack.
+`src/hooks/useAndroidBackButton.js` wires `@capacitor/app`'s `backButton` event to
+React Router's `navigate(-1)` instead, and minimizes the app (rather than exiting)
+on root screens (`/login`, the two dashboards, admin-panel dashboard) where there's
+nowhere sensible to navigate back to.
+
+### Status bar & app chrome
+
+`App.jsx` styles the status bar to the brand navy with light icons
+(`@capacitor/status-bar`) — left at its default, icons meant for a light background
+are nearly invisible against the app's dark screens. The app icon and splash screen
+are generated from `Front-end/assets/{icon,icon-foreground,splash}.png` via:
+
+```bash
+npx @capacitor/assets generate --android \
+  --iconBackgroundColor "#042E4C" --iconBackgroundColorDark "#042E4C" \
+  --splashBackgroundColor "#042E4C" --splashBackgroundColorDark "#042E4C"
+```
+
+Re-run this (then `cap:sync` and rebuild) whenever the brand mark changes — it
+overwrites every density bucket under `android/app/src/main/res/`.
+
+### Offline detection
+
+`src/Components/common/NetworkGate/NetworkGate.jsx` shows a dedicated "No Internet
+Connection" screen (mobile only) via `@capacitor/network`. It both listens for the
+native `networkStatusChange` event **and** polls `Network.getStatus()` every 5
+seconds as a backstop — the native event doesn't fire reliably on every Android OEM
+skin (aggressive battery optimization can suspend it), so relying on it alone can
+miss going offline.
+
+### Native-only styling
+
+`src/styles/native-app.css` applies only under `html.is-native-app` (the class
+`main.jsx` adds when `isMobileApp()` is true) and:
+- Disables `backdrop-filter` everywhere — a severe, well-documented jank source on
+  Android's WebView, and this app uses it in ~40 files (every modal, dropdown, and
+  sidebar).
+- Hides the desktop-style scrollbar — a persistent visible scrollbar reads as
+  distinctly non-native on a touchscreen; touch scrolling itself is unaffected.
+
+`android/app/src/main/AndroidManifest.xml`'s `MainActivity` also sets
+`android:windowSoftInputMode="adjustResize"` — without it, the on-screen keyboard is
+unreliable on modern Android WebViews (fails to open, or fights the layout instead
+of resizing it).
+
+### Push notifications
+
+See [Backend README → Push Notifications](../Backend/README.md#push-notifications)
+for the full setup (Firebase project, service account credential,
+`google-services.json`). Client-side registration is
+`src/hooks/usePushNotifications.js`.
+
 ## Notes
 
 - **Toasts** — use `showSafeToast` / `safeToast` from [`src/utils/safeToast.js`](src/utils/safeToast.js). It renders a plain DOM node and can't crash the tree the way `react-toastify@9` does under React 19.

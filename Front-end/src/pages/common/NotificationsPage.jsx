@@ -4,6 +4,7 @@ import { Bell, CheckCheck, Trash2, Inbox } from 'lucide-react';
 import { safeToast as toast } from '../../utils/safeToast';
 import { notificationsAPI } from '../../api/notifications';
 import { useNotification } from '../../context/NotificationContext';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import './NotificationsPage.css';
 
 const ICONS = {
@@ -26,6 +27,8 @@ export default function NotificationsPage() {
   const [unread, setUnread] = useState(0);
   const [filter, setFilter] = useState('all'); // all | unread
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const { markReadLocal, markAllReadLocal } = useNotification();
 
   const load = useCallback(async () => {
@@ -64,7 +67,7 @@ export default function NotificationsPage() {
   };
 
   const clearAll = async () => {
-    if (!window.confirm('Are you sure you want to clear all notifications?')) return;
+    setClearing(true);
     try {
       await notificationsAPI.clearAll();
       setItems([]);
@@ -73,6 +76,9 @@ export default function NotificationsPage() {
       toast.success('All notifications cleared.');
     } catch {
       toast.error('Failed to clear notifications.');
+    } finally {
+      setClearing(false);
+      setConfirmClear(false);
     }
   };
 
@@ -93,13 +99,23 @@ export default function NotificationsPage() {
             <button 
               className="np-markall" 
               style={{ background: 'var(--color-error-tint)', color: 'var(--color-error)', border: '1px solid rgba(220, 38, 38, 0.2)' }} 
-              onClick={clearAll}
+              onClick={() => setConfirmClear(true)}
             >
               <Trash2 size={16} /> Clear all
             </button>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Clear all notifications?"
+        message="This will permanently remove all of your notifications."
+        confirmLabel="Clear all"
+        loading={clearing}
+        onConfirm={clearAll}
+        onClose={() => setConfirmClear(false)}
+      />
 
       <div className="np-filters">
         {['all', 'unread'].map((f) => (

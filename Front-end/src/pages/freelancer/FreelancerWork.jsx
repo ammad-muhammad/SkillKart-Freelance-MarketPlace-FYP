@@ -16,6 +16,7 @@ import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import Button from '../../Components/common/Button/Button';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
@@ -247,14 +248,16 @@ export default function FreelancerWork() {
       </div>
 
       {contracts.length === 0 && gigOrders.length === 0 ? (
-        <div className="fl-empty-state">
-          <div className="fl-empty-state__icon"><Briefcase size={48} style={{ color: 'var(--color-primary)' }} /></div>
-          <h3>No contracts yet</h3>
-          <p>When a client hires you (via a proposal or a gig order), your work will appear here.</p>
-          {!isMobileApp() && (
-            <Link to="/browse-projects" className="fl-btn fl-btn--primary">Browse Projects</Link>
-          )}
-        </div>
+        <EmptyState
+          icon={Briefcase}
+          title="No contracts yet"
+          message="When a client hires you (via a proposal or a gig order), your work will appear here."
+          // /browse-projects isn't a route in the mobile build (marketing-only,
+          // excluded in AppRoutes.jsx) — omit the action there instead of
+          // linking to a 404.
+          actionText={!isMobileApp() ? 'Browse Projects' : undefined}
+          actionLink={!isMobileApp() ? '/browse-projects' : undefined}
+        />
       ) : (
         <div className="fl-card-list">
           {contracts.map((c) => {

@@ -6,7 +6,9 @@ import { Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen, Package, Load
 import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
+import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import { isMobileApp } from '../../utils/platform';
+import { openExternal } from '../../utils/externalLink';
 import './FreelancerDashboard.css';
 
 const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
@@ -25,7 +27,7 @@ const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
           <button className="fl-action-btn fl-action-btn--delete" onClick={() => onDelete(item._id)} title="Delete Project"><Trash2 size={14} /></button>
         </div>
         {item.url && (
-          <a href={item.url} target="_blank" rel="noopener noreferrer" className="fl-p-card__link-btn">
+          <a href={item.url} target="_blank" rel="noopener noreferrer" className="fl-p-card__link-btn" onClick={(e) => { e.preventDefault(); openExternal(item.url); }}>
             View Live Project ↗
           </a>
         )}
@@ -135,14 +137,13 @@ const FreelancerPortfolio = () => {
       {/* Main Portfolio Grid */}
       <div className="fl-portfolio-main-grid">
         {(profile?.portfolio || []).length === 0 ? (
-          <div className="fl-empty-message">
-            <div className="fl-empty-icon"><FolderOpen size={48} /></div>
-            <h3>Your Portfolio is Empty</h3>
-            <p style={{ color: 'var(--color-text-mid)', marginBottom: '1.5rem', maxWidth: '400px', marginInline: 'auto' }}>
-              Adding projects with descriptions and images helps you get noticed by clients.
-            </p>
-            <button className="fl-btn fl-btn--primary" onClick={handleOpenAdd}>Add Your First Project</button>
-          </div>
+          <EmptyState
+            icon={FolderOpen}
+            title="Your Portfolio is Empty"
+            message="Adding projects with descriptions and images helps you get noticed by clients."
+            actionText="Add Your First Project"
+            actionClick={handleOpenAdd}
+          />
         ) : (
           <div className="fl-gig-grid">
             {(profile?.portfolio || []).map((item) => (

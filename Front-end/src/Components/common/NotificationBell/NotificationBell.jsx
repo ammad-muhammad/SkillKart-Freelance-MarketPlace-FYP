@@ -40,6 +40,9 @@ export default function NotificationBell() {
   // Only show inside the authenticated client/freelancer areas.
   const inDashboard = location.pathname.startsWith('/client') || location.pathname.startsWith('/freelancer');
   const notifPath = user?.role === 'freelancer' ? '/freelancer/notifications' : '/client/notifications';
+  // Redundant (and, on mobile, visually overlapping) on the full notifications
+  // page itself — you're already looking at the list this button opens.
+  const onNotificationsPage = location.pathname === notifPath;
 
   // Close on outside click.
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function NotificationBell() {
     markAllReadLocal();
   };
 
-  if (!isAuthenticated || !inDashboard) return null;
+  if (!isAuthenticated || !inDashboard || onNotificationsPage) return null;
 
   return (
     <div className="notif-bell" ref={ref}>

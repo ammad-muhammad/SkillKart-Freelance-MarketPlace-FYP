@@ -226,6 +226,7 @@ Controllers never know which provider is active — they call `email.service.js`
   - `src/pages/`: Page-level components organized by persona (`client`, `freelancer`, `public`).
   - `src/Components/`: Reusable UI elements (buttons, modals, headers).
   - `src/utils/`: Helper functions (API interceptors, file uploaders, reCAPTCHA token minting, environment-gated logger).
+  - `android/`: The native Android project (Capacitor) — same `src/` build output, wrapped for the Android WebView. See [Front-end README → Mobile App](../Front-end/README.md#mobile-app-android--capacitor).
 - **`Backend/`**: Contains the Express.js API.
   - `src/controllers/`: The brains of the operation. Contains all business logic and database queries.
   - `src/models/`: Mongoose schemas defining the structure of the database.
@@ -234,7 +235,7 @@ Controllers never know which provider is active — they call `email.service.js`
   - `src/services/`: Reusable backend logic (Stripe, Notifications, reCAPTCHA, sitemap generation).
     - `src/services/email/`: Pluggable email providers (Gmail API / SMTP), templates, retry, and metrics. Selected by `EMAIL_PROVIDER`; adding a provider means one new file plus one registry line.
   - `src/utils/`: Standardized error handlers and API response formatters.
-  - `scripts/`: Operational tooling — demo seeding, SuperAdmin setup, and one-time Gmail refresh-token generation.
+  - `scripts/`: Operational tooling — demo seeding, SuperAdmin setup, and one-off data migrations.
 
 ---
 
@@ -311,7 +312,7 @@ SkillKart employs enterprise-grade security protocols:
 2. Migrate MongoDB standard search to MongoDB Atlas Search (Lucene) for scalability.
 
 **Enterprise / Nice-to-Have:**
-1. Mobile Application (React Native).
+1. iOS build of the mobile app (Android already ships via Capacitor — see §9 Folder Structure).
 2. AI-Assisted Job Post Generation.
 3. Automated Garbage Collection for orphaned Cloudinary files.
 
@@ -330,7 +331,7 @@ SkillKart employs enterprise-grade security protocols:
 
 Before deploying SkillKart to Production, the following must be verified:
 
-- [ ] **Email Verified:** Confirm the startup log reads `✅ Email Provider: Gmail API` (or `SMTP`). If email fails, OTPs fail and registration freezes. **On Railway, SMTP ports (465/587) are blocked — `EMAIL_PROVIDER=gmail` is required there.** Gmail needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL`; generate the refresh token once with `npm run gmail:token`.
+- [ ] **Email Verified:** Confirm the startup log reads `✅ Email Provider: Gmail API` (or `SMTP`). If email fails, OTPs fail and registration freezes. **On Railway, SMTP ports (465/587) are blocked — `EMAIL_PROVIDER=gmail` is required there.** Gmail needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL`; generate the refresh token once via [Google's OAuth Playground](https://developers.google.com/oauthplayground/) (see Backend/README.md → Email).
 - [ ] **reCAPTCHA Configured:** Set `RECAPTCHA_SECRET_KEY` (backend) and `VITE_RECAPTCHA_SITE_KEY` (frontend). Add every live domain to the key in the [reCAPTCHA admin console](https://www.google.com/recaptcha/admin) — an unlisted domain is silently rejected. Without keys, bot protection is simply off.
 - [ ] **Stripe Configured:** Swap from test keys to live keys. Update the `WEBHOOK_SECRET`.
 - [ ] **Cloudinary Configured:** Verify upload limits and storage capacity.

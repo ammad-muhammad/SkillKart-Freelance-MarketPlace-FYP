@@ -247,7 +247,6 @@ The platform defines the following roles: **Guest**, **Freelancer**, **Client**,
 
 The following are intentionally deferred to future phases and documented in Section 20:
 
-- A **native mobile application** (the current system is a responsive web app).
 - **Real-time WebSocket chat and video calls** (messaging currently uses efficient polling).
 - **Embedding/vector-based semantic search** (the current AI matchmaking uses prompt-based ranking).
 - **Full internationalization (i18n)** / multi-language support.
@@ -620,6 +619,9 @@ The platform sends OTP verification codes, login and password-change security al
 ### 12.20 Discoverability
 Public marketplace content is exposed to search engines through a database-driven XML sitemap and a crawl policy that excludes all authenticated and transactional routes. The platform is installable as a Progressive Web App, and shared links render branded preview cards on social and messaging platforms.
 
+### 12.21 Mobile Application
+A native Android application wraps the same React codebase using Capacitor rather than a separate rewrite — the client, freelancer, and admin-panel experiences are identical to the web app, while public marketing pages are excluded from the mobile bundle and lazy-loaded on web to keep both lean. Platform-specific integration covers the Android hardware back button, status bar theming, offline detection with a dedicated "no connection" screen, a branded app icon and splash screen, external links opening in an in-app browser tab rather than navigating the app away, and push notifications via Firebase Cloud Messaging tied into the same notification events (proposals, messages, payments, disputes) that drive the web in-app notification center.
+
 <div style="page-break-after: always;"></div>
 
 ---
@@ -902,7 +904,7 @@ The wider lesson is that **a locally-passing test is not evidence of correctness
 
 While SkillKart is feature-complete for its intended scope, several enhancements are planned:
 
-- **Native Mobile Application** — a React Native app for iOS and Android to complement the responsive web platform.
+- **iOS Mobile Application** — the existing Capacitor mobile app (§12.21) currently targets Android only; the same codebase can be packaged for iOS with comparatively little additional work.
 - **Real-Time Communication** — WebSocket-based real-time chat and WebRTC video calls, replacing the current efficient polling.
 - **Deeper AI Matching** — embedding/vector-based semantic search for more accurate freelancer–job matching.
 - **Real-Time Collaboration** — shared workspaces and collaborative document tools within contracts.

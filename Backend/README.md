@@ -66,7 +66,6 @@ src/
 | `npm run setup:superadmin` | Create/rotate the encrypted SuperAdmin credentials |
 | `npm run seed:demo` | Seed a full, realistic, interconnected demo dataset |
 | `npm run seed:demo:small` | Seed a small dataset for a quick smoke run |
-| `npm run gmail:token` | One-time: obtain a `GOOGLE_REFRESH_TOKEN` for the Gmail API provider |
 | `npm run lint` | Lint `src/` with ESLint |
 | `npm run format` | Format `src/` with Prettier |
 
@@ -157,16 +156,22 @@ fallbacks, so existing deployments need no changes. Port `465` requires
      production sender, either complete verification or use SMTP.
 4. **Credentials → Create credentials → OAuth client ID**
    - Type: **Web application**.
-   - Authorised redirect URI: `http://localhost:5000/oauth2callback`
-     (must match `GOOGLE_REDIRECT_URI` exactly).
-5. Put the client ID/secret in `Backend/.env`, then run:
-
-   ```bash
-   npm run gmail:token
-   ```
-
-   Open the printed URL, sign in **as the platform account**, approve. The script
-   prints `GOOGLE_REFRESH_TOKEN` and `GOOGLE_EMAIL` — paste both into `.env`.
+   - Authorised redirect URI: `https://developers.google.com/oauthplayground`
+     (this is Google's OAuth Playground callback, used only for the one-time
+     token generation in step 5 below — not contacted by the app itself).
+5. Generate the refresh token with [Google's OAuth 2.0 Playground](https://developers.google.com/oauthplayground/):
+   - Click the **gear icon** (top right) → check **Use your own OAuth credentials**
+     → paste `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+   - In the scopes box on the left, paste `https://www.googleapis.com/auth/gmail.send`
+     → **Authorize APIs**.
+   - Sign in **as the platform account**, approve.
+   - Click **Exchange authorization code for tokens** (step 2 in the Playground).
+   - Copy the **Refresh token** field → that's `GOOGLE_REFRESH_TOKEN`. `GOOGLE_EMAIL`
+     is the platform account address you just signed in as. Paste both into `.env`.
+   - If the Playground doesn't return a refresh token (only an access token), an
+     existing grant is being reused — revoke it at
+     [myaccount.google.com/permissions](https://myaccount.google.com/permissions)
+     and repeat the authorize step.
 6. Set `EMAIL_PROVIDER=gmail` and restart. Startup should log:
 
    ```
@@ -191,7 +196,7 @@ Set on Railway: `EMAIL_PROVIDER=gmail`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRE
 
 > ⚠️ **7-day expiry while the consent screen is in Testing.** Google expires refresh
 > tokens after a week for unpublished apps, so Gmail sending stops ~7 days after each
-> authorization until you re-run `npm run gmail:token` and redeploy. The app falls
+> authorization until you repeat the OAuth Playground steps above and redeploy. The app falls
 > back to SMTP automatically — but **Railway blocks outbound SMTP ports (465/587)**,
 > so on Railway there is nothing to fall back to. For anything long-running there,
 > either publish the consent screen (requires Google's restricted-scope review) or
@@ -217,14 +222,79 @@ Set on Railway: `EMAIL_PROVIDER=gmail`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRE
 | Symptom | Cause / fix |
 |---------|-------------|
 | `Email Provider: SMTP` when you set `gmail` | Fallback kicked in — the log line names the missing vars or the OAuth error. |
-| `invalid_grant: Token has been expired or revoked` | Refresh token dead. Common cause: consent screen in *Testing* (7-day expiry). Re-run `npm run gmail:token`. |
-| `npm run gmail:token` prints "No refresh token returned" | Account already granted access. Revoke at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), re-run. |
-| `redirect_uri_mismatch` | `GOOGLE_REDIRECT_URI` ≠ the URI registered on the OAuth client. They must match character for character. |
+| `invalid_grant: Token has been expired or revoked` | Refresh token dead. Common cause: consent screen in *Testing* (7-day expiry). Regenerate via the OAuth Playground steps above. |
+| Playground shows no refresh token, only an access token | Account already granted access. Revoke at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), re-authorize. |
+| `redirect_uri_mismatch` (in the Playground) | The OAuth client doesn't have `https://developers.google.com/oauthplayground` registered as an authorised redirect URI — add it. |
 | `Gmail API has not been used in project … before or it is disabled` | Step 2 skipped — enable the Gmail API. |
 | `403 Request had insufficient authentication scopes` | Something asked Gmail for more than `gmail.send` grants. The provider only ever sends — it never reads the mailbox, so `verify()` checks the token by refreshing it, not by calling a Gmail read endpoint. If you add a call like `users.getProfile`, it will fail with this. |
 | SMTP `EAUTH` / `Username and Password not accepted` | Gmail needs an **app password** (2FA required), not the account password. |
 | SMTP connects locally, times out on Railway | Some hosts block outbound `465`/`587`. Switch to `EMAIL_PROVIDER=gmail` (HTTPS). |
 | OTP emails never arrive | Check **Admin → Monitoring → Email** for the row: `failed` shows the provider error; no row at all means the send was never attempted. |
+
+## Push Notifications
+
+Firebase Cloud Messaging (FCM) push for the [Capacitor mobile app](../Front-end/README.md#mobile-app-android--capacitor) — every event that already creates an in-app notification (new proposal, message, payment released, dispute, etc.) also fires a push, from the same single choke point.
+
+### How it fits together
+
+```
+notification.service.js's notify() → Notification.create() (in-app, unchanged)
+                                    → push.service.js's sendToUser() (fire-and-forget)
+```
+
+`push.service.js` fails **open** when unconfigured — every call is a no-op, same
+pattern as reCAPTCHA/email/AI providers above. Event helpers (`onProposalReceived`,
+`onNewMessage`, ...) never call push directly and never check whether it's
+configured; they all go through `notify()`, so adding a new notification type
+automatically gets push for free.
+
+### Setup
+
+1. **Firebase Console** ([console.firebase.google.com](https://console.firebase.google.com/)) → create a project.
+2. **Add an Android app** — package name must be exactly `com.skillkart.app`. Download
+   `google-services.json` and place it at `Front-end/android/app/google-services.json`
+   (client-side; `Front-end/android/app/build.gradle` already conditionally applies
+   the Google Services Gradle plugin only if this file exists, so it's safe to be
+   absent — push is simply inert until it's added).
+3. **Project settings → Service accounts → Generate new private key** — downloads a
+   second JSON file (the **backend's** credential, unrelated to the Android config
+   above). Supply it via **either**:
+   - `FIREBASE_SERVICE_ACCOUNT_PATH` — a file path (default
+     `./secure/firebase-service-account.json`, already gitignored). Simplest for
+     local dev: just drop the downloaded file there.
+   - `FIREBASE_SERVICE_ACCOUNT_JSON` — the whole file's contents pasted as one env
+     var. Use this on Railway/hosts with no persistent disk to upload a file to.
+     Takes priority over the path if both are set.
+4. Restart. No explicit "enabled" flag — `isConfigured()` just checks whether either
+   credential source resolves to valid JSON.
+
+### Client side
+
+`Front-end/src/hooks/usePushNotifications.js` requests permission, registers with
+FCM, and `POST /auth/push-token`s the resulting device token once the user is
+authenticated (mobile only — no-ops on web). Tapping a push deep-links into the
+app using the same `link` field the in-app notification center uses. The token is
+removed (`POST /auth/push-token/remove`) when the hook unmounts (e.g. on logout).
+
+### Behaviour
+
+- **Fails open** — unconfigured, a bad service account file/JSON, or a send error
+  all degrade to "in-app notification only," never to a broken request.
+- **Multi-device** — `User.pushTokens` is an array; the same account logged into
+  several devices gets pushed on all of them.
+- **Self-pruning** — tokens FCM reports as unregistered/invalid are removed from
+  the user doc automatically, so a reinstalled or uninstalled app doesn't retry
+  forever.
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| Push never arrives, no errors logged | Nothing configured yet — this is the default no-op state. Check `isConfigured()`'s two env vars. |
+| `FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON` | The pasted value is truncated or has extra escaping. Paste the raw file contents verbatim. |
+| Android build fails with a Google Services error | `google-services.json` is present but malformed, or its package name doesn't match `com.skillkart.app`. |
+| Push works locally, not on Railway | Railway needs `FIREBASE_SERVICE_ACCOUNT_JSON` (the file path won't resolve there — no persistent disk). |
+| Token registered but device never receives pushes | Check the device actually granted notification permission (`PushNotifications.requestPermissions()` in `usePushNotifications.js`) — Android 13+ requires this explicitly. |
 
 ## Escrow & Milestone Payments
 

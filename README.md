@@ -22,6 +22,7 @@ It supports both marketplace models:
 - [Running the Apps](#running-the-apps)
 - [Seeding Demo Data](#seeding-demo-data)
 - [Available Scripts](#available-scripts)
+- [Mobile App](#mobile-app)
 - [Documentation](#documentation)
 
 ---
@@ -61,6 +62,7 @@ It supports both marketplace models:
 | Realtime-ish | Polling-based in-app messaging |
 | AI        | Provider router with env-ordered fallback — Gemini / DeepSeek / Qwen / Groq / Claude / Ollama (local) |
 | Tooling   | ESLint, Prettier, Nodemon, Swagger (API docs) |
+| Mobile    | Capacitor (Android) — same React codebase, native wrapper; Firebase Cloud Messaging for push |
 
 ## Repository Layout
 
@@ -80,6 +82,7 @@ It supports both marketplace models:
 │       ├── app.js           Express app wiring
 │       └── server.js        HTTP bootstrap
 ├── Front-end/          # React + Vite SPA (see Front-end/README.md)
+│   ├── android/         Native Android project (Capacitor) — same web build, wrapped
 │   └── src/
 │       ├── pages/          public, client, freelancer, admin, adminPanel
 │       ├── Components/     shared UI components
@@ -145,6 +148,7 @@ Each app has its own `.env`. Never commit real `.env` files — only `.env.examp
 | `CORS_ORIGIN`, `FRONTEND_URL` | Allowed origins (CSV) |
 | `PUBLIC_SITE_URL` | Canonical public origin for the sitemap/SEO |
 | `RECAPTCHA_SECRET_KEY` | Optional reCAPTCHA v3 secret; blank = disabled |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` / `FIREBASE_SERVICE_ACCOUNT_JSON` | Optional — mobile app push notifications; see [Backend README → Push Notifications](Backend/README.md#push-notifications) |
 | `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | AI provider keys |
 | `AI_PRIORITY_*` | Fallback order (numbered, 0 = first; `-1` disables a provider) |
 | `SUPABASE_*` | Optional OAuth |
@@ -233,6 +237,24 @@ node -e "console.log(require('bcryptjs').hashSync('YourStrongPassword', 12))"
 | `npm run build` | Production build |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | Lint source |
+
+## Mobile App
+
+A native Android app ships from the same Front-end codebase via
+[Capacitor](https://capacitorjs.com/) — not a separate rewrite. It covers the
+client, freelancer, and admin-panel experiences (auth flow + dashboards); public
+marketing pages aren't part of the mobile build. Includes push notifications
+(Firebase Cloud Messaging), native back-button/status-bar/offline handling, and an
+external-browser fallback for outbound links.
+
+```bash
+cd Front-end
+npm run cap:android   # builds, syncs, and opens the project in Android Studio
+```
+
+Full setup, environment variables, and platform-specific behavior:
+[Front-end README → Mobile App](Front-end/README.md#mobile-app-android--capacitor).
+Push notification server-side setup: [Backend README → Push Notifications](Backend/README.md#push-notifications).
 
 ## Documentation
 

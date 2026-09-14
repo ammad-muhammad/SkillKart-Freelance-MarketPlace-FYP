@@ -28,14 +28,22 @@ const NetworkGate = ({ children }) => {
     if (!isMobileApp()) return undefined;
 
     let listenerHandle;
+    let cancelled = false;
+    const check = () => Network.getStatus().then((status) => {
+      if (!cancelled) setIsOffline(!status.connected);
+    });
 
-    Network.getStatus().then((status) => setIsOffline(!status.connected));
-
+    check();
     Network.addListener('networkStatusChange', (status) => {
       setIsOffline(!status.connected);
     }).then((handle) => { listenerHandle = handle; });
 
-    return () => { listenerHandle?.remove(); };
+    // The native networkStatusChange event doesn't fire reliably on every
+    // Android OEM build (some skins suspend plugin listeners under battery
+    // optimization), so this alone can miss going offline. Poll as a backstop.
+    const poll = setInterval(check, 5000);
+
+    return () => { cancelled = true; listenerHandle?.remove(); clearInterval(poll); };
   }, []);
 
   if (!isMobileApp() || !isOffline) return children;

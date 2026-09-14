@@ -682,3 +682,22 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Compact inline empty states nested inside an already-carded section
+   (DashboardOverview's skills/gigs cards, profile's education/certs/portfolio
+   lists) — unlike the full-page EmptyState component, these sit inside
+   existing card chrome, so no border/background of their own. */
+.fl-empty-state {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+}
+
+.fl-no-data {
+  text-align: center;
+  padding: 1rem;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  font-style: italic;
+}
