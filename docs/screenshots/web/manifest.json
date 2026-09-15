@@ -184,5 +184,11 @@
     "audience": "admin",
     "title": "Admin Panel OTP Step",
     "caption": "After credentials are accepted, the admin panel requires a one-time code emailed to the admin address (2FA) before granting access."
+  },
+  {
+    "file": "32-swagger-api-docs.png",
+    "audience": "public",
+    "title": "Swagger API Documentation",
+    "caption": "Live, interactive API documentation generated at /api/v1/docs, covering every route group (auth, admin, jobs, gigs, contracts, payments, and more)."
   }
 ]
