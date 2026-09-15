@@ -129,20 +129,24 @@ const Registration = () => {
         }
         const supabase = createClient(supabaseUrl, supabaseKey);
         const mobile = isMobileApp();
-        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-            provider: provider,
-            options: {
-                redirectTo: mobile ? 'skillkart://auth-callback' : `${window.location.origin}/auth/consent`,
-                skipBrowserRedirect: mobile,
-            }
-        });
+        try {
+            const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: mobile ? 'skillkart://auth-callback' : `${window.location.origin}/auth/consent`,
+                    skipBrowserRedirect: mobile,
+                }
+            });
 
-        if (mobile) {
-            if (oauthError || !data?.url) {
-                setError('Could not start Google sign-up. Please try again.');
-                return;
+            if (mobile) {
+                if (oauthError || !data?.url) {
+                    setError('Could not start Google sign-up. Please try again.');
+                    return;
+                }
+                await openExternal(data.url);
             }
-            await openExternal(data.url);
+        } catch (err) {
+            setError(err?.message || 'Social sign-up failed. Please try again.');
         }
     };
 
