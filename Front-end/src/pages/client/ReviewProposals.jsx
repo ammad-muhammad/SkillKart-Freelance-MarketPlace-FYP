@@ -236,7 +236,7 @@ export default function ReviewProposals() {
                 <div className="rp-user">
                   <div className="rp-user__avatar">
                     {prop.freelancerId?.profilePicture ? (
-                      <img src={prop.freelancerId.profilePicture} alt="" />
+                      <img src={prop.freelancerId.profilePicture} alt="" loading="lazy" />
                     ) : (
                       <User size={24} />
                     )}

@@ -203,6 +203,18 @@
   margin-top: 1.5rem;
 }
 
+/* Separates a destructive action (Delete Account, ...) from the primary
+   Save/Cancel pair on wide screens. On mobile the whole row stacks full-width
+   below instead, where an auto margin has nothing to push against and just
+   shoves the button awkwardly off to one side on its own wrapped line. */
+.fl-actions__danger { margin-left: auto; }
+
+@media (max-width: 640px) {
+  .fl-actions { flex-direction: column; align-items: stretch; }
+  .fl-actions > .fl-btn { width: 100%; justify-content: center; }
+  .fl-actions__danger { margin-left: 0; }
+}
+
 /* ── Status Badge ──
    Single status vocabulary shared with StatusBadge's tone mapping used
    elsewhere (ClientProjects, FreelancerWork, etc.): success/warning/neutral. */
@@ -226,6 +238,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 1.25rem;
   background: var(--color-secondary);
   border-radius: 12px;
@@ -340,8 +353,11 @@
 }
 @media (max-width: 480px) {
   /* One stat card per row so big currency values (e.g. "Rs. 2,313.12") don't
-     wrap mid-number in a cramped half-width card. */
+     wrap mid-number in a cramped half-width card. The dashboard's own stat
+     grid only ever holds short integers (gig/bid/proposal counts), so it
+     stays 2-up instead of reverting to one huge, mostly-empty card per row. */
   .fl-stat-grid { grid-template-columns: 1fr; }
+  .fl-stat-grid--dashboard { grid-template-columns: repeat(2, 1fr); }
   .fl-work-stats { grid-template-columns: 1fr; }
   .fl-stat-card__value { font-size: 1.6rem; word-break: normal; overflow-wrap: anywhere; }
   /* Header action buttons go full-width and stack for easy tapping. */

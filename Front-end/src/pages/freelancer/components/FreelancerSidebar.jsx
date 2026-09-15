@@ -23,16 +23,18 @@ import {
   Lock,
   CheckCircle2,
   LogOut,
+  Bot,
   X
 } from 'lucide-react';
 import './FreelancerSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/freelancer/dashboard', icon: <Zap size={20} />, label: 'Dashboard' },
-  // Both link to routes that aren't registered at all on the mobile build
-  // (see AppRoutes.jsx) — filtered out below rather than left as dead links.
-  { to: '/browse-projects', icon: <Search size={20} />, label: 'Find Work', mobileHidden: true },
+  { to: '/browse-projects', icon: <Search size={20} />, label: 'Find Work' },
+  { to: '/freelancer/buddy', icon: <Bot size={20} />, label: 'Buddy AI' },
   { to: '/freelancer/profile', icon: <User size={20} />, label: 'My Profile' },
+  // The public-profile route isn't registered at all on the mobile build
+  // (see AppRoutes.jsx) — filtered out below rather than left as a dead link.
   { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile', mobileHidden: true },
   { to: '/freelancer/gigs', icon: <Package size={20} />, label: 'My Gigs' },
   { to: '/freelancer/gigs/create', icon: <PlusSquare size={20} />, label: 'Create New Gig' },

@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { safeToast as toast } from '../../../utils/safeToast';
 import ConfirmDialog from '../../../Components/common/ConfirmDialog/ConfirmDialog';
+import BackButton from '../../../Components/common/BackButton/BackButton';
+import { isMobileApp } from '../../../utils/platform';
 import './GigDetail.css';
 
 const TIER_ORDER = ['basic', 'standard', 'premium'];
@@ -135,7 +137,11 @@ export default function GigDetail() {
         <Navbar />
         <div className="gd-state">
           <p>This gig could not be found.</p>
-          <Link to="/categories" className="gd-state__link">Browse categories</Link>
+          {/* /categories isn't registered at all on the mobile build (see
+              AppRoutes.jsx) — hidden there rather than left as a dead link. */}
+          {!isMobileApp() && (
+            <Link to="/categories" className="gd-state__link">Browse categories</Link>
+          )}
         </div>
         <Footer />
       </>
@@ -160,9 +166,13 @@ export default function GigDetail() {
       <Navbar />
       <div className="gd-page">
         <div className="container">
-          <Link to="/browse-projects" className="gd-back">
-            <ChevronLeft size={18} /> Back to Marketplace
-          </Link>
+          {isMobileApp() ? (
+            <BackButton className="gd-back-btn" />
+          ) : (
+            <Link to="/browse-projects" className="gd-back">
+              <ChevronLeft size={18} /> Back to Marketplace
+            </Link>
+          )}
 
           <div className="gd-layout">
             <main className="gd-main">
@@ -173,7 +183,10 @@ export default function GigDetail() {
                 </div>
                 <h1 className="gd-title">{gig.title}</h1>
 
-                {freelancer._id ? (
+                {/* /freelancers/:id isn't registered at all on the mobile build
+                    (see AppRoutes.jsx) — fall back to the same plain (non-link)
+                    markup used below when there's no freelancer._id at all. */}
+                {freelancer._id && !isMobileApp() ? (
                   <Link to={`/freelancers/${freelancer._id}`} className="gd-seller">
                     <div className="gd-seller__avatar">
                       {freelancer.profilePicture ? (
@@ -305,7 +318,9 @@ export default function GigDetail() {
                 <button className="gd-cta__btn" onClick={handleContact}>
                   <MessageCircle size={18} /> Contact Freelancer
                 </button>
-                {freelancer._id && (
+                {/* /freelancers/:id isn't registered at all on the mobile build
+                    (see AppRoutes.jsx) — hidden there rather than left as a dead link. */}
+                {freelancer._id && !isMobileApp() && (
                   <Link to={`/freelancers/${freelancer._id}`} className="gd-cta__secondary">
                     View Profile
                   </Link>

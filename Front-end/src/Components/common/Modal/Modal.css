@@ -83,7 +83,13 @@
   .sk-modal-overlay { padding: 0.5rem; }
   .sk-modal { padding: 1.25rem 1.25rem 0 1.25rem; }
   .sk-modal__body {
-    padding: 0;
+    /* Zeroing all 4 sides here (as this used to) also wiped out the safe-area
+       bottom padding above, leaving modal footer buttons (Save/Cancel/Delete
+       Account, ...) flush against the bottom edge on every modal across both
+       client and freelancer — this is the ONE shared component all of them
+       render through, so keep left/right at 0 (full-width content, as
+       intended) but keep a real bottom inset. */
+    padding: 0 0 calc(1.25rem + env(safe-area-inset-bottom)) 0;
     margin-right: 0;
   }
 }

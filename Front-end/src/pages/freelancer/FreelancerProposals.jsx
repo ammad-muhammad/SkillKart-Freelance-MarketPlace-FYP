@@ -12,7 +12,6 @@ import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
-import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const DELIVERY_OPTIONS = ['Less than 1 week', '1-2 weeks', '1 month', '3+ months'];
@@ -219,13 +218,9 @@ export default function FreelancerProposals() {
 
               <div className="fl-prop-card__footer">
                 <div className="fl-prop-card__btns">
-                  {/* Not registered at all on the mobile build (see AppRoutes.jsx) —
-                      editing/resubmitting is still possible below without it. */}
-                  {!isMobileApp() && (
-                    <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
-                      View Project <ExternalLink size={14} />
-                    </Link>
-                  )}
+                  <Link to={`/jobs/${prop.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">
+                    View Project <ExternalLink size={14} />
+                  </Link>
                   {prop.status === 'pending' && prop.jobId?.status === 'open' && (
                     <button
                       className="fl-btn fl-btn--outline fl-btn--sm"

@@ -30,7 +30,9 @@ const ClientSavedFreelancers = () => {
           <div style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}><Bookmark size={64} /></div>
           <h3 style={{ color: 'var(--color-primary)' }}>Your list is empty</h3>
           <p style={{ color: 'var(--color-text-light)', marginTop: '0.5rem' }}>
-            Browse freelancers and click the bookmark icon to save them here.
+            {isMobileApp()
+              ? "You haven't saved any freelancers yet."
+              : 'Browse freelancers and click the bookmark icon to save them here.'}
           </p>
           {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
           {!isMobileApp() && (
@@ -57,7 +59,7 @@ const ClientSavedFreelancers = () => {
               
               <div className="cl-freelancer-card__header">
                 <div className="cl-freelancer-card__avatar">
-                  {f.avatar ? <img src={f.avatar} alt={f.name} /> : <span>{f.name.charAt(0)}</span>}
+                  {f.avatar ? <img src={f.avatar} alt={f.name} loading="lazy" /> : <span>{f.name.charAt(0)}</span>}
                 </div>
                 <div>
                   <h3 className="cl-freelancer-card__name">{f.name}</h3>

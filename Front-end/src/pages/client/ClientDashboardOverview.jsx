@@ -209,12 +209,19 @@ const ClientDashboardOverview = () => {
           margin: 0; margin-bottom: 0.25rem;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .cl-recent-proj__meta { 
+        .cl-recent-proj__meta {
           font-size: 0.78rem; color: var(--color-text-light); font-weight: 600;
-          display: flex; align-items: center; gap: 0.4rem;
           margin: 0;
+          /* Was display:flex — on narrow screens, once the icon + status
+             badge + chevron claim their space, this 3-part line ("Category •
+             Budget: Rs. X • N proposals") had too little room and
+             word-wrapped mid-phrase. A block element with inline content
+             ellipsizes cleanly as ONE unit instead. */
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-        .cl-recent-proj__dot { color: rgba(183, 201, 226, 0.6); }
+        .cl-recent-proj__dot { color: rgba(183, 201, 226, 0.6); margin: 0 0.4rem; }
         .cl-recent-proj__right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
         .cl-recent-proj__action {
           color: var(--color-text-light); transition: all 0.3s ease;
@@ -241,6 +248,13 @@ const ClientDashboardOverview = () => {
         @media (max-width: 640px) {
           .cl-dash-hero {
             justify-content: center;
+            /* The meta line (location / member-since / website) doesn't fit
+               on one row at this width and wraps to 3 stacked lines, making
+               the info column much taller than the avatar — with
+               align-items: center (the desktop default) the avatar ends up
+               vertically centered against that whole tall block instead of
+               sitting next to the name at the top. */
+            align-items: flex-start;
             gap: 0.85rem 1rem;
           }
           .cl-dash-hero__avatar { width: 56px; height: 56px; font-size: 1.25rem; }
@@ -251,12 +265,12 @@ const ClientDashboardOverview = () => {
           /* button drops to a full-width centered line under the identity row */
           .cl-dash-hero > .cl-btn { flex: 1 0 100%; justify-content: center; }
 
-          /* Recent projects rows: tighter padding + let the meta line wrap so the
-             status/budget don't get squeezed or clipped on phones. */
+          /* Recent projects rows: tighter padding so the meta line (now a
+             single ellipsizing line, see base rule above) has more room. */
           .cl-recent-proj { padding: 0.85rem 0.9rem; }
           .cl-recent-proj__left { gap: 0.7rem; }
           .cl-recent-proj__icon-wrapper { width: 38px; height: 38px; }
-          .cl-recent-proj__meta { flex-wrap: wrap; row-gap: 0.15rem; font-size: 0.72rem; }
+          .cl-recent-proj__meta { font-size: 0.72rem; }
           .cl-recent-proj__right { gap: 0.5rem; }
         }
       `}</style>

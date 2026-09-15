@@ -5,6 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Rocket, Trophy, Bot, Heart } from 'lucide-react';
 import { safeToast as toast } from '../../../utils/safeToast';
 import { publicAPI } from '../../../api/publicData';
+import { isMobileApp } from '../../../utils/platform';
 import './Footer.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -73,6 +74,12 @@ export default function Footer() {
   };
 
   useEffect(() => {
+    // Returning null from render below means footerRef never attaches to a
+    // DOM node on mobile — gsap.context() would crash trying to scope to a
+    // null ref (footerRef.current.querySelectorAll(...) on null). Skip the
+    // whole animation setup rather than just skipping the render output.
+    if (isMobileApp()) return undefined;
+
     const ctx = gsap.context(() => {
       gsap.fromTo(footerRef.current.querySelectorAll('.footer__col'),
         { y: 30, opacity: 0 },
@@ -85,6 +92,12 @@ export default function Footer() {
 
     return () => ctx.revert();
   }, []);
+
+  // Sitemap-style marketing footer (Browse Freelancers, Post a Project,
+  // Categories, ...) — none of those routes exist in the mobile build, and a
+  // handful of otherwise-public pages that DO ship there (job/gig details,
+  // browse-projects) don't need a full site footer under their content either.
+  if (isMobileApp()) return null;
 
   return (
     <footer ref={footerRef} className="footer">

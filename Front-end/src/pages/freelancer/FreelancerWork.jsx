@@ -17,7 +17,6 @@ import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import Button from '../../Components/common/Button/Button';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
-import { isMobileApp } from '../../utils/platform';
 import './FreelancerDashboard.css';
 
 const STAGES = {
@@ -223,12 +222,9 @@ export default function FreelancerWork() {
           <h1 className="fl-page-title">My Work</h1>
           <p className="fl-page-sub">Your active contracts, deliveries, and earnings.</p>
         </div>
-        {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
-        {!isMobileApp() && (
-          <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Search size={14} style={{ marginRight: '4px' }} /> Find Work
-          </Link>
-        )}
+        <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Search size={14} style={{ marginRight: '4px' }} /> Find Work
+        </Link>
       </div>
 
       {/* Earnings summary */}
@@ -252,11 +248,8 @@ export default function FreelancerWork() {
           icon={Briefcase}
           title="No contracts yet"
           message="When a client hires you (via a proposal or a gig order), your work will appear here."
-          // /browse-projects isn't a route in the mobile build (marketing-only,
-          // excluded in AppRoutes.jsx) — omit the action there instead of
-          // linking to a 404.
-          actionText={!isMobileApp() ? 'Browse Projects' : undefined}
-          actionLink={!isMobileApp() ? '/browse-projects' : undefined}
+          actionText="Browse Projects"
+          actionLink="/browse-projects"
         />
       ) : (
         <div className="fl-card-list">
@@ -415,11 +408,7 @@ export default function FreelancerWork() {
                 )}
 
                 <div className="fl-contract__footer">
-                  {/* The public job-detail route isn't registered at all on
-                      the mobile build (see AppRoutes.jsx). */}
-                  {!isMobileApp() && (
-                    <Link to={`/jobs/${c.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
-                  )}
+                  <Link to={`/jobs/${c.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
                   {c.clientId && (
                     <Link to="/freelancer/messages" className="fl-btn fl-btn--outline fl-btn--sm">
                       <MessageSquare size={14} /> Contact Client

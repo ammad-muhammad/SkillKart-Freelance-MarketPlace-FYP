@@ -14,9 +14,11 @@ import {
 import PkrIcon from '../../../Components/common/PkrIcon';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import ConfirmDialog from '../../../Components/common/ConfirmDialog/ConfirmDialog';
+import BackButton from '../../../Components/common/BackButton/BackButton';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { safeToast as toast } from '../../../utils/safeToast';
 import useFocusTrap from '../../../hooks/useFocusTrap';
+import { isMobileApp } from '../../../utils/platform';
 import './JobDetails.css';
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif'];
@@ -386,9 +388,13 @@ export default function JobDetails() {
       <Navbar />
       <div className="jd-page">
         <div className="container">
-          <Link to="/browse-projects" className="jd-back">
-            <ChevronLeft size={18} /> Back to Marketplace
-          </Link>
+          {isMobileApp() ? (
+            <BackButton className="jd-back-btn" />
+          ) : (
+            <Link to="/browse-projects" className="jd-back">
+              <ChevronLeft size={18} /> Back to Marketplace
+            </Link>
+          )}
 
           <div className="jd-layout">
             <main className="jd-main">
@@ -618,7 +624,7 @@ export default function JobDetails() {
               )}
 
               <div className="jd-form-group">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <label style={{ margin: 0 }}>Cover Letter</label>
                   <button
                     type="button"

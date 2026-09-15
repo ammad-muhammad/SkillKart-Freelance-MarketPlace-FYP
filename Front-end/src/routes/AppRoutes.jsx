@@ -52,6 +52,7 @@ import FreelancerWork from "../pages/freelancer/FreelancerWork";
 import FreelancerWallet from "../pages/freelancer/FreelancerWallet";
 import PaymentConfirm from "../pages/public/PaymentConfirm/PaymentConfirm";
 import NotificationsPage from "../pages/common/NotificationsPage";
+import BuddyChatPage from "../pages/common/BuddyChatPage/BuddyChatPage";
 
 // Client Pages
 import ClientLayout from "../layouts/ClientLayout";
@@ -154,6 +155,32 @@ const Unauthorized = () => {
   );
 };
 
+/**
+ * Mobile only. On mobile there is no marketing Home page — `/` must always
+ * resolve straight into the app rather than just parking on `/login`. That
+ * matters because several auth pages (Login/Registration/ForgotPassword) each
+ * have their own "already signed in? bounce to /" effect, and treating `/` as
+ * an unconditional alias for `/login` (regardless of auth state) turned that
+ * bounce into an infinite ping-pong: `/` → replaced by `/login` → Login sees
+ * isAuthenticated and navigates to `/` → repeat forever (confirmed live via a
+ * Playwright repro: history.pushState/replaceState firing every ~150ms). This
+ * makes `/` land wherever the user actually belongs, same as `homeLink` above.
+ */
+const MobileRoot = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <Loader fullScreen text="Loading..." />;
+  if (!user) return <Navigate to="/login" replace />;
+  // Roles with no mobile-app screens (admin/superadmin/contenteditor/
+  // publicviewer — /admin is itself excluded on mobile, see below) can't be
+  // sent to /login while authenticated — Login's own effect would immediately
+  // bounce back to `/`, recreating the same loop this component exists to
+  // prevent. /unauthorized is a static terminal page, safe to land on.
+  const dest = user.role === 'client' ? '/client/dashboard'
+    : user.role === 'freelancer' ? '/freelancer/dashboard'
+    : '/unauthorized';
+  return <Navigate to={dest} replace />;
+};
+
 const AppRoutes = () => {
   return (
     <ErrorBoundary>
@@ -212,7 +239,7 @@ const AppRoutes = () => {
               that build, so a stray deep-link to e.g. /browse-projects falls
               through to the catch-all 404 instead of rendering. */}
           <Route element={<PublicLayout />}>
-            <Route path="/" element={isMobileApp() ? <Navigate to="/login" replace /> : <Home />} />
+            <Route path="/" element={isMobileApp() ? <MobileRoot /> : <Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registration" element={<Registration />} />
             {/* Back-compat alias so any /register link resolves instead of 404ing */}
@@ -238,6 +265,16 @@ const AppRoutes = () => {
               }
             />
 
+            {/* Core marketplace pages, not "marketing" — freelancers need
+                browse-projects + job details to find and apply to work, and
+                clients need gig details to order one. Unlike the block below,
+                these ship in the mobile build too. Navbar/Footer (rendered by
+                each of these pages themselves) already no-op under
+                isMobileApp(), so no marketing chrome/dead links leak in. */}
+            <Route path="/browse-projects" element={<BrowseProjects />} />
+            <Route path="/jobs/:id" element={<JobDetails />} />
+            <Route path="/gigs/:id" element={<GigDetail />} />
+
             {!isMobileApp() && (
               <>
                 <Route path="/about" element={<About />} />
@@ -252,9 +289,6 @@ const AppRoutes = () => {
                 <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
                 <Route path="/help" element={<HelpCenter />} />
                 <Route path="/categories" element={<Categories />} />
-                <Route path="/browse-projects" element={<BrowseProjects />} />
-                <Route path="/jobs/:id" element={<JobDetails />} />
-                <Route path="/gigs/:id" element={<GigDetail />} />
                 {/* AI Tools */}
                 <Route path="/ai/buddy" element={<BuddyAI />} />
                 <Route path="/ai/cost-estimator" element={<CostEstimator />} />
@@ -304,6 +338,7 @@ const AppRoutes = () => {
             <Route path="wallet/stripe-callback" element={<StripeCallback />} />
             <Route path="skill-test" element={<SkillTest />} />
             <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="buddy" element={<BuddyChatPage />} />
           </Route>
 
           {/* ================= CLIENT ROUTES ================= */}
@@ -326,6 +361,7 @@ const AppRoutes = () => {
             <Route path="wallet" element={<ClientWallet />} />
             <Route path="messages" element={<ClientMessages />} />
             <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="buddy" element={<BuddyChatPage />} />
             <Route path="projects/:jobId/proposals" element={<ReviewProposals />} />
           </Route>
 

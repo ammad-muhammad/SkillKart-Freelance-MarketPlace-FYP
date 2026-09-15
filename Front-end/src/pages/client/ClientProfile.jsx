@@ -1078,10 +1078,25 @@ const ClientProfile = () => {
           .cl-prof-header-stats {
             justify-content: center;
           }
-          /* Force single-column form fields on mobile (a competing rule was
-             leaving the first form grid at 2 uneven columns). */
+          /* Force single-column form fields on mobile. A prior attempt set
+             grid-template-columns: 1fr !important here, which — empirically,
+             verified via Playwright — did NOT reliably resolve to a single
+             324px-wide track; getComputedStyle kept reporting two resolved
+             tracks from the base repeat(auto-fit, minmax(min(100%,260px),1fr))
+             rule even with this exact property forced via JS with maximum
+             priority. Dropping display:grid entirely for display:block sidesteps
+             whatever auto-fit/minmax recalculation quirk that was — confirmed
+             this DOES stack children full-width, one per line (each
+             .cl-form-group is its own flex-column box regardless, so this
+             doesn't change their own internal label/input layout). */
           .cl-form-grid {
-            grid-template-columns: 1fr !important;
+            display: block !important;
+          }
+          .cl-form-grid > .cl-form-group {
+            margin-bottom: 1.25rem;
+          }
+          .cl-form-grid > .cl-form-group:last-child {
+            margin-bottom: 0;
           }
         }
 

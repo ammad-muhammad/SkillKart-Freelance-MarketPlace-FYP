@@ -70,6 +70,7 @@
 .cl-wizard-nav {
   display: flex;
   justify-content: space-between;
+  gap: 0.75rem;
   padding-top: 1.5rem;
   margin-top: 2rem;
   border-top: 2px solid rgba(183, 201, 226, 0.35);

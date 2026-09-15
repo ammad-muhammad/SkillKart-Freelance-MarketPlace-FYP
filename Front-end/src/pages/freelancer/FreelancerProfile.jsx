@@ -658,7 +658,7 @@ const FreelancerProfile = () => {
             {profile.portfolio.slice(0, 3).map((item, i) => (
               <div key={item._id || i} className="fl-mini-p-card">
                 <div className="fl-mini-p-card__img">
-                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} /> : <span><ImageIcon size={24} color="var(--color-text-light)" /></span>}
+                  {item.images?.[0] ? <img src={item.images[0]} alt={item.title} loading="lazy" /> : <span><ImageIcon size={24} color="var(--color-text-light)" /></span>}
                 </div>
                 <div className="fl-mini-p-card__info">
                   <h4 className="fl-mini-p-card__title">{item.title}</h4>
@@ -813,7 +813,7 @@ const FreelancerProfile = () => {
             {saving ? 'Saving...' : <><Check size={16} style={{marginRight:6}} /> Save Changes</>}
           </button>
           <button className="fl-btn fl-btn--ghost" onClick={cancel}>Cancel</button>
-          <button className="fl-btn fl-btn--danger" style={{ marginLeft: 'auto' }} onClick={() => { setDeleteStep(1); setDeleteOtp(''); setDeleteModal(true); }}>
+          <button className="fl-btn fl-btn--danger fl-actions__danger" onClick={() => { setDeleteStep(1); setDeleteOtp(''); setDeleteModal(true); }}>
             <Trash2 size={16} style={{marginRight:6}} /> Delete Account
           </button>
         </div>

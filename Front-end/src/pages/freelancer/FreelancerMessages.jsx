@@ -171,7 +171,7 @@ const FreelancerMessages = () => {
                 >
                   <div className="fl-chat-item__avatar">
                     {otherUser?.profilePicture ? (
-                      <img src={otherUser.profilePicture} alt="" />
+                      <img src={otherUser.profilePicture} alt="" loading="lazy" />
                     ) : (
                       <span>{otherUser?.firstName?.charAt(0)}</span>
                     )}
@@ -236,7 +236,7 @@ const FreelancerMessages = () => {
                             const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
                             return isImg ? (
                               <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
-                                <img src={a.url} alt={a.name} className="fl-msg__att-img" />
+                                <img src={a.url} alt={a.name} className="fl-msg__att-img" loading="lazy" />
                               </a>
                             ) : (
                               <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="fl-msg__att-file" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>

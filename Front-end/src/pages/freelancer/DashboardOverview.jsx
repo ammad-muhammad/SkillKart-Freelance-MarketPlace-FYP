@@ -66,7 +66,7 @@ const DashboardOverview = () => {
           <Skeleton width="120px" height="40px" />
         </div>
 
-        <div className="fl-stat-grid">
+        <div className="fl-stat-grid fl-stat-grid--dashboard">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="fl-stat-card">
               <Skeleton width="32px" height="32px" style={{ marginBottom: '0.6rem' }} />
@@ -128,7 +128,7 @@ const DashboardOverview = () => {
       </div>
 
       {/* Stats */}
-      <div className="fl-stat-grid">
+      <div className="fl-stat-grid fl-stat-grid--dashboard">
         {statsData.map((s) => (
           <StatCard key={s.label} {...s} />
         ))}
@@ -182,14 +182,12 @@ const DashboardOverview = () => {
           <Zap size={16} style={{display:'inline',verticalAlign:'middle',color:'var(--color-primary-light)'}} /> Quick Actions
         </h3>
         <div className="fl-dashboard-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* Neither route is registered at all on the mobile build (see
-              AppRoutes.jsx) — hidden there rather than left as a dead link. */}
-          {!isMobileApp() && (
-            <Link to="/browse-projects" className="fl-btn fl-btn--primary"><Search size={16} style={{ marginRight: 6 }} /> Find Work</Link>
-          )}
+          <Link to="/browse-projects" className="fl-btn fl-btn--primary"><Search size={16} style={{ marginRight: 6 }} /> Find Work</Link>
           <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--outline"><Plus size={16} style={{ marginRight: 6 }} /> Create Gig</Link>
           <Link to="/freelancer/proposals" className="fl-btn fl-btn--ghost"><ClipboardList size={16} style={{ marginRight: 6 }} /> My Proposals</Link>
           <Link to="/freelancer/messages" className="fl-btn fl-btn--ghost"><MessageSquare size={16} style={{ marginRight: 6 }} /> Messages</Link>
+          {/* /ai-matchmaking isn't registered at all on the mobile build (see
+              AppRoutes.jsx) — hidden there rather than left as a dead link. */}
           {!isMobileApp() && (
             <Link to="/ai-matchmaking" className="fl-btn fl-btn--ghost"><Bot size={16} style={{ marginRight: 6 }} /> AI Matchmaking</Link>
           )}
@@ -283,10 +281,7 @@ const DashboardOverview = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {gigs.slice(0, 3).map((gig) => (
-              // The public gig detail route isn't registered at all on the
-              // mobile build (see AppRoutes.jsx) — fall back to the
-              // freelancer's own gigs management page, which is.
-              <Link key={gig._id || gig.id} to={isMobileApp() ? '/freelancer/gigs' : `/gigs/${gig._id || gig.id}`} className="fl-recent-gig" style={{ textDecoration: 'none' }}>
+              <Link key={gig._id || gig.id} to={`/gigs/${gig._id || gig.id}`} className="fl-recent-gig" style={{ textDecoration: 'none' }}>
                 <div className="fl-recent-gig__left">
                   <div className="fl-recent-gig__icon-wrapper">
                     <Package size={20} />
@@ -345,6 +340,7 @@ const DashboardOverview = () => {
           padding: 0.25rem 0.65rem; border-radius: 999px;
           font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
           letter-spacing: 0.05em; line-height: 1;
+          white-space: nowrap;
         }
         .fl-status-badge--active { background: var(--color-success-tint); color: var(--color-success); border: 1px solid rgba(5, 150, 105, 0.25); }
         .fl-status-badge--paused { background: var(--color-warning-tint); color: var(--color-warning); border: 1px solid rgba(217, 119, 6, 0.25); }
@@ -380,12 +376,19 @@ const DashboardOverview = () => {
           margin: 0; margin-bottom: 0.25rem;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .fl-recent-gig__meta { 
+        .fl-recent-gig__meta {
           font-size: 0.78rem; color: var(--color-text-light); font-weight: 600;
-          display: flex; align-items: center; gap: 0.4rem;
           margin: 0;
+          /* Was display:flex — on narrow screens, once the icon + status
+             badge + chevron claim their space, "From Rs. 11000" had too
+             little room left and word-wrapped mid-phrase ("From" / "Rs." /
+             "11000" each on their own line). A block element with inline
+             content ellipsizes cleanly as ONE unit instead. */
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-        .fl-recent-gig__dot { color: rgba(183, 201, 226, 0.6); }
+        .fl-recent-gig__dot { color: rgba(183, 201, 226, 0.6); margin: 0 0.4rem; }
         .fl-recent-gig__price { color: var(--color-primary); font-weight: 700; }
         .fl-recent-gig__right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
         .fl-recent-gig__action {
@@ -629,6 +632,13 @@ const DashboardOverview = () => {
         @media (max-width: 640px) {
           .fl-dashboard-hero__inner {
             justify-content: center;
+            /* The meta line (location / member-since / rating) doesn't fit on
+               one row at this width and wraps to 3 stacked lines, making the
+               info column much taller than the avatar — with align-items:
+               center (the desktop default) the avatar ends up vertically
+               centered against that whole tall block instead of sitting next
+               to the name at the top, looking mispositioned/floating. */
+            align-items: flex-start;
             gap: 0.85rem 1rem;
           }
           .fl-dashboard-hero__avatar { width: 56px; height: 56px; font-size: 1.25rem; }

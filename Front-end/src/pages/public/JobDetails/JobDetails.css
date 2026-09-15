@@ -38,6 +38,10 @@
   color: #ffffff;
 }
 
+.jd-back-btn {
+  margin-bottom: 1.25rem;
+}
+
 .jd-layout {
   display: grid;
   grid-template-columns: 1fr 320px;
