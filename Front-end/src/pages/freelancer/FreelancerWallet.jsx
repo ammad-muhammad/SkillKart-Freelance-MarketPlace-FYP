@@ -242,11 +242,11 @@ export default function FreelancerWallet() {
                       <td style={{ padding: '1rem' }}>
                         {tx.isWithdrawal ? (
                           tx.status === 'completed' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                               <ArrowDownToLine size={14} /> Completed
                             </span>
                           ) : tx.status === 'processing' || tx.status === 'pending' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-info)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-info-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-info)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-info-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                               <Clock size={14} /> Processing
                             </span>
                           ) : (
@@ -254,11 +254,11 @@ export default function FreelancerWallet() {
                           )
                         ) : (
                           tx.status === 'released' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                               <CheckCircle2 size={14} /> Released
                             </span>
                           ) : tx.status === 'deposit_paid' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-warning)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-warning-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-warning)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-warning-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                               {/* Milestones lock 100% of the amount; only the legacy gig-order
                                   flow (no milestoneId) is a true 50% deposit. */}
                               <Clock size={14} /> {tx.milestoneId ? 'In Escrow' : 'Escrow (50%)'}

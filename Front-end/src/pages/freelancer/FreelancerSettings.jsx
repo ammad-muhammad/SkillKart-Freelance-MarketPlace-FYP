@@ -281,7 +281,7 @@ const FreelancerSettings = () => {
               {recoveryEmailLoading ? 'Sending OTP...' : 'Update Recovery Email'}
             </button>
             <button
-              className={`fl-btn fl-btn--secondary${saving === 'Recovery' ? ' fl-btn--loading' : ''}`}
+              className={`fl-btn fl-btn--outline${saving === 'Recovery' ? ' fl-btn--loading' : ''}`}
               disabled={saving === 'Recovery'}
               onClick={() =>
                 saveSection('securitySettings', {

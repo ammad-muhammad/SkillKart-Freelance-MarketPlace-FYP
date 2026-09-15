@@ -792,7 +792,7 @@ const PostProject = () => {
                 <div className="cl-images-grid">
                   {form.attachments.images.map((img, i) => (
                     <div key={i} className="cl-image-thumb">
-                      <img src={img} alt="upload" />
+                      <img src={img} alt="upload" loading="lazy" />
                       <button
                         type="button"
                         className="cl-image-thumb__remove"

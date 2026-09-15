@@ -86,7 +86,7 @@ function FreelancerCard({ freelancer, list, onInvite, isSaved, onToggleSave, isC
             <div className="bf-card__header">
                 <div className="bf-card__avatar" style={{ background: avatarBg }}>
                     {avatarUrl
-                        ? <img src={avatarUrl} alt={name} style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                        ? <img src={avatarUrl} alt={name} loading="lazy" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
                         : avatar}
                     {isOnline && <span className="bf-card__online" title="Online now" />}
                 </div>

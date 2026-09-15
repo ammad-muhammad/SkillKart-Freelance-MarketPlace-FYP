@@ -40,7 +40,14 @@
 /* ── Form ── */
 .cl-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  /* min(100%, 260px) lets a column shrink below 260px on a narrow phone
+     instead of forcing 2 full 260px-min columns (520px+) into a ~350px
+     content width, which was clipping the right column (Username, Company
+     Name, Timezone, Website, ...) off the edge of the screen — the same
+     "screen too narrow for the minmax floor" bug .cl-saved-grid already
+     guards against this same way. Belt-and-suspenders with the 768px
+     max-width override below, which forces a single column outright. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 1.25rem;
 }
 .cl-form-group {
@@ -156,6 +163,7 @@
   border-radius: 999px;
   font-size: 0.72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .cl-badge--open        { background: var(--color-success-tint); color: var(--color-success); }
 .cl-badge--in-progress { background: var(--color-info-tint); color: var(--color-info); }
@@ -267,6 +275,7 @@
 /* ── Toggle ── */
 .cl-toggle {
   display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 1.25rem; background: var(--color-secondary);
   border-radius: 12px; border: 1px solid rgba(183, 201, 226, 0.35);
 }
@@ -341,6 +350,10 @@
   .cl-card { padding: 1.25rem; }
   .cl-page-title { font-size: 1.4rem; }
   .cl-btn { width: 100%; justify-content: center; }
+  /* ...except the compact/small variant — used throughout for filter pills
+     and inline row actions (Edit/Delete, status filters, ...) that are meant
+     to sit side by side, not stretch full-width and stack one per row. */
+  .cl-btn--sm { width: auto; }
   .cl-actions { flex-direction: column; }
   /* Page headers that put an action button beside the title (inline flex
      space-between) should wrap it below on phones so nothing overflows. */

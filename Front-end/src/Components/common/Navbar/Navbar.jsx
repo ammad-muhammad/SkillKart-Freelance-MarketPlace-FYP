@@ -12,6 +12,7 @@ import PkrIcon from '../PkrIcon';
 import { useAuth } from '../../../hooks/useAuth';
 import { skillsAPI } from '../../../api/skills';
 import { warn } from "../../../utils/logger";
+import { isMobileApp } from '../../../utils/platform';
 
 /**
  * Map a taxonomy category to a proper lucide icon component.
@@ -96,6 +97,11 @@ export default function Navbar({ alwaysSticky = false }) {
   const dashboardLink = user?.role === 'client' ? '/client/dashboard' : '/freelancer/dashboard';
 
   useEffect(() => {
+    // Navbar returns null on mobile (see the bottom of this component) — skip
+    // fetching data and wiring up listeners/animations for refs that will
+    // never attach to anything, rather than just hiding the render output.
+    if (isMobileApp()) return;
+
     skillsAPI.getTaxonomyTree()
       .then(res => {
         const tree = res.data?.data?.tree || [];
@@ -183,6 +189,8 @@ export default function Navbar({ alwaysSticky = false }) {
 
   /* ── GSAP entrance animation ── */
   useEffect(() => {
+    if (isMobileApp()) return undefined;
+
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
     tl.fromTo(navRef.current,
       { y: -100, opacity: 0 },
@@ -207,6 +215,8 @@ export default function Navbar({ alwaysSticky = false }) {
 
   /* ── Scroll shadow & Smart Sticky ── */
   useEffect(() => {
+    if (isMobileApp()) return undefined;
+
     const onScroll = () => {
       const currentScrollY = window.scrollY;
       const isScrollingUp = currentScrollY < lastScrollY.current;
@@ -234,6 +244,7 @@ export default function Navbar({ alwaysSticky = false }) {
 
   /* ── Trigger animation every time sticky reveal occurs ── */
   useEffect(() => {
+    if (isMobileApp()) return;
     if (visible && isSticky) {
       gsap.fromTo(navRef.current,
         { 
@@ -257,6 +268,8 @@ export default function Navbar({ alwaysSticky = false }) {
 
   /* ── Close mobile menu on resize ── */
   useEffect(() => {
+    if (isMobileApp()) return undefined;
+
     const onResize = () => { if (window.innerWidth >= 1024) setMobileOpen(false); };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -289,6 +302,14 @@ export default function Navbar({ alwaysSticky = false }) {
       <circle cx="24" cy="10" r="2.5" fill="#042E4C" />
     </svg>
   );
+
+  // A handful of otherwise-public pages (job/gig details, browse-projects) are
+  // now included in the mobile build so freelancers/clients can actually find
+  // and apply to work there — but this marketing navbar (mega-menus, links to
+  // Home/About/Login/Register, none of which exist in the mobile build) isn't
+  // meant for that context. The Android hardware back button (see
+  // useAndroidBackButton) is how users navigate back to their dashboard.
+  if (isMobileApp()) return null;
 
   return (
     <>

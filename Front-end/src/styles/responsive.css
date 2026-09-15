@@ -79,6 +79,14 @@ input,
 select,
 textarea {
   max-width: 100%;
+  /* No browser applies the page's font to form controls by default, and
+     <textarea> specifically defaults to a monospace font in every major
+     engine (unlike <input>, which more often visually blends in) — a bare,
+     unclassed <textarea> (several exist across the app, e.g. the gig editor)
+     silently renders in monospace next to normal-font inputs on the same
+     form. This is the one global place that class of bug can be fixed for
+     every current and future textarea/input/select at once. */
+  font-family: inherit;
 }
 
 /* 7. Respect reduced-motion globally --------------------------------------- */

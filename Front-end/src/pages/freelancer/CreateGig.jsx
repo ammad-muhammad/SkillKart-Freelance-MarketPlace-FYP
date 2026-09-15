@@ -376,7 +376,7 @@ const Step4 = ({ gig, set }) => {
         <div className="fl-images-grid">
           {gig.media.images.map((img, i) => (
             <div key={i} className="fl-image-thumb">
-              <img src={img} alt={`portfolio-${i}`} />
+              <img src={img} alt={`portfolio-${i}`} loading="lazy" />
               <button className="fl-image-thumb__remove" onClick={() => removeImage(i)} aria-label={`Remove image ${i + 1}`}><X size={14} /></button>
             </div>
           ))}

@@ -20,12 +20,14 @@ import {
   Lock,
   LogOut,
   Building,
+  Bot,
   X
 } from 'lucide-react';
 import './ClientSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/client/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+  { to: '/client/buddy', icon: <Bot size={20} />, label: 'Buddy AI' },
   // Both link to routes that aren't registered at all on the mobile build
   // (see AppRoutes.jsx) — filtered out below rather than left as dead links.
   { to: '/browse-freelancers', icon: <Search size={20} />, label: 'Find Freelancers', mobileHidden: true },

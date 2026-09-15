@@ -150,7 +150,7 @@ function TestimonialCard({ t }) {
             style={{ background: t.avatarBg, overflow: 'hidden' }}
           >
             {t.avatarUrl
-              ? <img src={t.avatarUrl} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={t.avatarUrl} alt={t.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : t.avatar}
           </div>
           <div>

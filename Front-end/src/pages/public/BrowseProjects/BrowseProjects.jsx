@@ -3,10 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Clock, Wallet, TrendingUp, Search } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import BackButton from '../../../Components/common/BackButton/BackButton';
 import { gsap } from 'gsap';
 import { jobsAPI } from '../../../api/jobs';
 import { JOB_CATEGORIES } from '../../../constants/jobCategories';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import { isMobileApp } from '../../../utils/platform';
 import './BrowseProjects.css';
 
 const BUDGET_TYPES = [
@@ -197,7 +199,10 @@ export default function BrowseProjects() {
         <section className="bp-hero">
           <div className="container bp-hero__inner">
             <div className="bp-hero__content">
-              <span className="bp-tag">🚀 Opportunities</span>
+              <div className="bp-hero__top-row">
+                {isMobileApp() && <BackButton />}
+                <span className="bp-tag">🚀 Opportunities</span>
+              </div>
               <h1>Find Your Next <span>Big Project</span></h1>
               <p>Explore thousands of freelance jobs from startups to enterprises. AI-matched to your unique skills.</p>
               

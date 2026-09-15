@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { aiAPI } from '../../../api/ai';
 import { useAuth } from '../../../hooks/useAuth';
+import { isMobileApp } from '../../../utils/platform';
 import './BuddyWidget.css';
 
 const GUEST_LIMIT = 3;
@@ -38,7 +39,11 @@ export default function BuddyWidget() {
   const path = location.pathname;
   const isDashboardRoute = !ONBOARDING_EXCEPTIONS.includes(path)
     && DASHBOARD_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
-  const hidden = path === '/ai/buddy' || isDashboardRoute || AUTH_SCREENS.some((p) => path.startsWith(p));
+  // Mobile has a dedicated "Buddy AI" dashboard tab (BuddyChatPage, reached
+  // via the sidebar) instead — the floating FAB doesn't fit the mobile nav
+  // model and would otherwise still show on the 3 public pages that DO ship
+  // there (browse-projects, job/gig details).
+  const hidden = isMobileApp() || path === '/ai/buddy' || isDashboardRoute || AUTH_SCREENS.some((p) => path.startsWith(p));
 
   useEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;

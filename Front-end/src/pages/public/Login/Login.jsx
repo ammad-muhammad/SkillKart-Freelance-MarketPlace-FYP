@@ -21,14 +21,26 @@ const Login = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
+    // Guards against a real race: handleSubmit's own success path already
+    // navigates (after a 1.5s "Login successful!" message, respecting a
+    // pending post-login redirect + onboarding state) once isAuthenticated
+    // flips true from THIS form's submit. Without the `isLoading` check here,
+    // this effect fires a SECOND, uninformed `navigate('/')` immediately —
+    // and since isLoading only resets on error, it stays true for the whole
+    // 1.5s window, so whichever fires last wins and can yank the user back
+    // to their dashboard away from wherever they've since navigated (caught
+    // live: clicking "Find Work" right after a fast login got overridden by
+    // handleSubmit's delayed redirect ~1.5s later). Only handle the "landed
+    // on /login already authenticated" case (e.g. back button) here — a form
+    // submission in flight/just completed owns its own redirect.
     useEffect(() => {
-        if (!authLoading) {
+        if (!authLoading && !isLoading) {
             if (isAuthenticated) {
                 navigate('/');
                 return;
             }
         }
-    }, [isAuthenticated, user, authLoading, navigate]);
+    }, [isAuthenticated, user, authLoading, isLoading, navigate]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -80,9 +92,25 @@ const Login = () => {
                 // tapped "Apply Now" on a job). Works for any onboarded role; if
                 // onboarding isn't done we send them to onboarding first.
                 const pending = sessionStorage.getItem('postLoginRedirect');
+                // ProtectedRoute captures the current path into this same key
+                // whenever it renders with no user — which also fires for a split
+                // second during logout itself (the old protected route briefly
+                // re-renders with user=null before the router finishes navigating
+                // to /login), so a /client/... path can survive logout and still
+                // be sitting here when a freelancer logs in right after (or vice
+                // versa). Never honor a stored path that belongs to the other
+                // role — it would land the new session on a route ProtectedRoute
+                // immediately bounces as /unauthorized.
+                const pendingForOtherRole = pending && (
+                    (pending.startsWith('/client/') && userRole !== 'client') ||
+                    (pending.startsWith('/freelancer/') && userRole !== 'freelancer')
+                );
+                if (pendingForOtherRole) {
+                    sessionStorage.removeItem('postLoginRedirect');
+                }
 
                 setTimeout(() => {
-                    if (pending && isOnboardingCompleted && (userRole === 'client' || userRole === 'freelancer')) {
+                    if (pending && !pendingForOtherRole && isOnboardingCompleted && (userRole === 'client' || userRole === 'freelancer')) {
                         sessionStorage.removeItem('postLoginRedirect');
                         navigate(pending);
                     } else if (userRole === 'client') {

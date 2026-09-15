@@ -76,3 +76,12 @@
   .fl-step__circle { width: 32px; height: 32px; font-size: 0.78rem; }
   .fl-step__line { top: 16px; }
 }
+
+@media (max-width: 420px) {
+  /* 5 steps at 80px min-width (400px) don't fit a ~360-390px viewport, and
+     truncate instead of visibly scrolling. The step body's own "Step N:
+     <label>" heading already repeats each label, so drop the label here
+     (redundant) and let steps size down to just their circle + connector. */
+  .fl-step { min-width: 0; }
+  .fl-step__label { display: none; }
+}

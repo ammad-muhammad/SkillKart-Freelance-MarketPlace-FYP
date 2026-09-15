@@ -1,0 +1,16 @@
+.sk-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.15s;
+}
+.sk-back-btn:hover { background: rgba(255, 255, 255, 0.22); }
+.sk-back-btn:active { transform: scale(0.94); }

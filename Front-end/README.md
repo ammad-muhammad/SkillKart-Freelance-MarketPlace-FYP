@@ -253,6 +253,14 @@ seconds as a backstop — the native event doesn't fire reliably on every Androi
 skin (aggressive battery optimization can suspend it), so relying on it alone can
 miss going offline.
 
+`Network.getStatus()` itself isn't fully trustworthy either — confirmed on at least
+one Android emulator image, it reported `connected: false` continuously while the
+emulator's actual network (verified with a raw `ping`) was fine, which flipped the
+whole app between itself and the offline screen every ~5s (visually: bad flickering).
+The gate now requires 3 **consecutive** offline readings before it actually shows
+(`OFFLINE_CONFIRM_THRESHOLD`) — any single online reading clears it immediately, so
+recovery is still instant but a lone bad reading can't take over the screen.
+
 ### Native-only styling
 
 `src/styles/native-app.css` applies only under `html.is-native-app` (the class
@@ -274,6 +282,15 @@ See [Backend README → Push Notifications](../Backend/README.md#push-notificati
 for the full setup (Firebase project, service account credential,
 `google-services.json`). Client-side registration is
 `src/hooks/usePushNotifications.js`.
+
+> ⚠️ **Gated behind `VITE_PUSH_NOTIFICATIONS_ENABLED=true`, and deliberately not
+> just try/catch.** Calling `PushNotifications.register()` before
+> `android/app/google-services.json` exists throws a native
+> `FirebaseApp is not initialized` exception on a background thread —
+> Capacitor's bridge doesn't convert it into a rejected promise there, so it's
+> an **uncaught crash that takes the whole app down**, invisible to a JS
+> try/catch. Leave the env var unset (default) until `google-services.json` is
+> actually in place and you've resynced/rebuilt since adding it.
 
 ## Notes
 

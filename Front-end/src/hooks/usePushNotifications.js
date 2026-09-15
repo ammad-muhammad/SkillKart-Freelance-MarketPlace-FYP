@@ -10,17 +10,22 @@ import { warn } from '../utils/logger';
  * authenticated, and deep-links into the app when a notification is tapped
  * (using the same `link` field the in-app NotificationBell already uses).
  *
- * Inert rather than broken until Firebase is configured: requestPermissions/
- * register still run against the native plugin, but registerPushToken() and
- * the backend's push.service.js both no-op without credentials — see
- * Backend/.env's FIREBASE_SERVICE_ACCOUNT_PATH.
+ * Gated on VITE_PUSH_NOTIFICATIONS_ENABLED, NOT just try/catch: calling
+ * PushNotifications.register() before google-services.json has been added to
+ * the Android project throws a native `FirebaseApp is not initialized`
+ * exception on a background thread that Capacitor's bridge doesn't convert
+ * into a rejected promise — it's an uncaught crash that takes the whole app
+ * down, invisible to a JS try/catch here. Set the env var once
+ * google-services.json is actually in android/app/ — see Front-end/README.md
+ * → Mobile App → Push notifications.
  */
 export default function usePushNotifications(isAuthenticated) {
   const navigate = useNavigate();
   const tokenRef = useRef(null);
+  const enabled = import.meta.env.VITE_PUSH_NOTIFICATIONS_ENABLED === 'true';
 
   useEffect(() => {
-    if (!isMobileApp() || !isAuthenticated) return undefined;
+    if (!isMobileApp() || !isAuthenticated || !enabled) return undefined;
 
     let handles = [];
 
@@ -53,5 +58,5 @@ export default function usePushNotifications(isAuthenticated) {
         authAPI.removePushToken(tokenRef.current).catch(() => {});
       }
     };
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, enabled]);
 }

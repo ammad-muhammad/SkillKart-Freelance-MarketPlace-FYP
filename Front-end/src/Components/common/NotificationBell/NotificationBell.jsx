@@ -43,6 +43,11 @@ export default function NotificationBell() {
   // Redundant (and, on mobile, visually overlapping) on the full notifications
   // page itself — you're already looking at the list this button opens.
   const onNotificationsPage = location.pathname === notifPath;
+  // On phones the bell relocates to bottom-left (below) to clear the top
+  // hamburger — which then sits directly on top of the Buddy chat page's
+  // input row. Hide it there rather than fight the overlap with padding.
+  const buddyPath = user?.role === 'freelancer' ? '/freelancer/buddy' : '/client/buddy';
+  const onBuddyPage = location.pathname === buddyPath;
 
   // Close on outside click.
   useEffect(() => {
@@ -85,7 +90,7 @@ export default function NotificationBell() {
     markAllReadLocal();
   };
 
-  if (!isAuthenticated || !inDashboard || onNotificationsPage) return null;
+  if (!isAuthenticated || !inDashboard || onNotificationsPage || onBuddyPage) return null;
 
   return (
     <div className="notif-bell" ref={ref}>

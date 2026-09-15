@@ -21,7 +21,7 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
   <div className="fl-gig-card">
     <div className="fl-gig-card__banner">
       {gig.media?.banner ? (
-        <img src={gig.media.banner} alt={gig.title} />
+        <img src={gig.media.banner} alt={gig.title} loading="lazy" />
       ) : (
         <div className="fl-gig-card__placeholder">
           <Package size={40} style={{ color: 'var(--color-text-light)' }} />
@@ -458,7 +458,7 @@ const FreelancerGigs = () => {
                 <div className="fl-edit-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
                   {(formData.media?.images || []).map((img, i) => (
                     <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-secondary)' }}>
-                      <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <button 
                         type="button"
                         onClick={() => setFormData(p => ({ ...p, media: { ...p.media, images: p.media.images.filter((_, idx) => idx !== i) } }))}
@@ -718,12 +718,14 @@ const FreelancerGigs = () => {
           font-family: var(--font-heading); font-size: var(--fs-md); font-weight: var(--fw-bold);
           color: var(--color-primary-dark); margin-bottom: var(--space-2); line-height: var(--lh-snug);
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+          text-overflow: ellipsis;
           transition: color 0.2s;
         }
         .fl-gig-card:hover .fl-gig-card__title { color: var(--color-primary-light); }
         .fl-gig-card__desc {
           font-size: var(--fs-sm); color: var(--color-text-mid); margin-bottom: var(--space-3); line-height: var(--lh-normal);
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+          text-overflow: ellipsis;
         }
         .fl-gig-card__full-desc-preview {
           display: none;
@@ -816,7 +818,7 @@ const FreelancerGigs = () => {
         .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.5rem; }
         .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field), .fl-form-group textarea {
           width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(183, 201, 226, 0.35);
-          font-size: 0.9rem; transition: all 0.2s; background: var(--color-secondary);
+          font-size: 0.9rem; font-family: var(--font-body); transition: all 0.2s; background: var(--color-secondary);
         }
         .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: var(--color-white); }
         

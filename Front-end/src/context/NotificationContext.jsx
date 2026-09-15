@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { notificationsAPI } from '../api/notifications';
 import { useAuth } from '../hooks/useAuth';
 
@@ -44,13 +44,17 @@ export const NotificationProvider = ({ children }) => {
     setUnreadCount(0);
   }, []);
 
-  const value = {
+  // NotificationBell + both sidebars (badge count) all consume this — an
+  // unmemoized object literal here would hand them a new `value` reference
+  // (and force a re-render) on every render of whatever wraps the provider,
+  // not just on an actual unreadCount change.
+  const value = useMemo(() => ({
     unreadCount,
     setUnreadCount,
     fetchUnreadCount,
     markReadLocal,
     markAllReadLocal
-  };
+  }), [unreadCount, fetchUnreadCount, markReadLocal, markAllReadLocal]);
 
   return (
     <NotificationContext.Provider value={value}>

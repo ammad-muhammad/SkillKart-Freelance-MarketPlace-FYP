@@ -3,14 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bookmark, X, Clock } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
-import { isMobileApp } from '../../utils/platform';
 import './FreelancerSavedProjects.css';
-
-// The public job-details/browse-projects routes aren't registered at all on
-// the mobile build (see AppRoutes.jsx) — a saved project can't be viewed or
-// applied to there, so its actions collapse to a plain disabled label
-// instead of a dead link.
-const disabledMobileNote = 'Not available on mobile';
 
 const STATUS_TONE = {
     open: 'success',
@@ -33,7 +26,7 @@ export default function FreelancerSavedProjects() {
                     <h1 className="fsp-title">Saved Projects</h1>
                     <p className="fsp-subtitle">Manage projects you've bookmarked for later</p>
                 </div>
-                {savedProjects.length > 0 && !isMobileApp() && (
+                {savedProjects.length > 0 && (
                     <Link to="/browse-projects" className="fsp-empty__btn" style={{ margin: 0, padding: '0.6rem 1.2rem' }}>Browse Projects</Link>
                 )}
             </header>
@@ -43,7 +36,7 @@ export default function FreelancerSavedProjects() {
                     <div className="fsp-empty__icon" style={{ color: 'var(--color-primary)' }}><Bookmark size={40} /></div>
                     <h3 className="fsp-empty__title">No saved projects yet</h3>
                     <p className="fsp-empty__text">Explore projects and bookmark the ones that interest you to apply later.</p>
-                    {!isMobileApp() && <Link to="/browse-projects" className="fsp-empty__btn">Browse Projects</Link>}
+                    <Link to="/browse-projects" className="fsp-empty__btn">Browse Projects</Link>
                 </div>
             ) : (
                 <div className="fsp-grid">
@@ -89,18 +82,10 @@ export default function FreelancerSavedProjects() {
                             </div>
 
                             <div className="fsp-card__footer">
-                                {isMobileApp() ? (
-                                    <span className="fsp-card__btn" style={{ background: 'var(--color-secondary)', color: 'var(--color-text-mid)', cursor: 'not-allowed' }}>
-                                        {disabledMobileNote}
-                                    </span>
-                                ) : (
-                                    <Link to={`/jobs/${project._id || project.id}`} className="fsp-card__btn">
-                                        View Details
-                                    </Link>
-                                )}
+                                <Link to={`/jobs/${project._id || project.id}`} className="fsp-card__btn">
+                                    View Details
+                                </Link>
                                 {(() => {
-                                    if (isMobileApp()) return null;
-
                                     const isOpen = project.status === 'open';
                                     const myProposal = proposals?.find(p => (p.jobId?._id || p.jobId) === (project._id || project.id));
 

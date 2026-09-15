@@ -27,3 +27,26 @@ html.is-native-app *::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
 }
+
+/* browse-projects/job-details/gig-detail are the only public pages that ship
+   on mobile (see AppRoutes.jsx), and each reserves ~6rem of top padding to
+   clear the fixed web Navbar — which Navbar.jsx itself no-ops under
+   isMobileApp(), so on-device that padding is just a large empty gap above
+   the content with nothing to clear. */
+html.is-native-app .bp-hero,
+html.is-native-app .jd-page,
+html.is-native-app .gd-page {
+  padding-top: 1.5rem !important;
+}
+
+/* .bp-hero's -4rem margin-bottom is a desktop "floating card overlaps the
+   hero" flourish — the sidebar filter card (.bp-sidebar) rides up into the
+   hero's own 8rem bottom padding on purpose there. On mobile the sidebar
+   becomes a plain stacked, full-width, non-sticky block (see the 1024px
+   media query below), so that same pull-up just reads as an oversized,
+   seemingly accidental gap of leftover hero background between the search
+   box and the filter card. Simplify to plain stacking. */
+html.is-native-app .bp-hero {
+  padding-bottom: 2rem !important;
+  margin-bottom: 0 !important;
+}

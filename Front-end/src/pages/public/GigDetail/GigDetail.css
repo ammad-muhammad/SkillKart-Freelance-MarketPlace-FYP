@@ -56,6 +56,10 @@
   color: #ffffff;
 }
 
+.gd-back-btn {
+  margin-bottom: 1.25rem;
+}
+
 .gd-layout {
   display: grid;
   grid-template-columns: 1fr 340px;

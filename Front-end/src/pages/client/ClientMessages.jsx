@@ -1,5 +1,5 @@
 import Loader from '../../Components/common/Loader/Loader';
-import { FileText, Paperclip, Loader2 } from 'lucide-react';
+import { FileText, Paperclip, Loader2, Send } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
@@ -171,7 +171,7 @@ const ClientMessages = () => {
                 >
                   <div className="cl-chat-item__avatar">
                     {otherUser?.profilePicture ? (
-                      <img src={otherUser.profilePicture} alt="" />
+                      <img src={otherUser.profilePicture} alt="" loading="lazy" />
                     ) : (
                       <span>{otherUser?.firstName?.charAt(0)}</span>
                     )}
@@ -236,7 +236,7 @@ const ClientMessages = () => {
                             const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
                             return isImg ? (
                               <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
-                                <img src={a.url} alt={a.name} className="cl-msg__att-img" />
+                                <img src={a.url} alt={a.name} className="cl-msg__att-img" loading="lazy" />
                               </a>
                             ) : (
                               <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="cl-msg__att-file" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
@@ -280,7 +280,9 @@ const ClientMessages = () => {
                   onChange={e => setMsgInput(e.target.value)}
                   className="cl-input"
                 />
-                <button className="cl-btn cl-btn--primary">Send</button>
+                <button className="cl-btn cl-btn--primary cl-chat-input__send" title="Send message" aria-label="Send message">
+                  <Send size={18}/>
+                </button>
               </form>
             </>
           ) : (
@@ -391,6 +393,10 @@ const ClientMessages = () => {
         .cl-chat-input { padding: 1rem; border-top: 1px solid rgba(183, 201, 226, 0.35); display: flex; align-items: center; gap: 0.75rem; }
         .cl-chat-input__attach { background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--color-text-mid); }
         .cl-chat-input__attach:disabled { cursor: wait; }
+        .cl-chat-input .cl-input { flex: 1; }
+        .cl-chat-input .cl-chat-input__send {
+          width: 42px; height: 42px; padding: 0; border-radius: 50%; flex-shrink: 0;
+        }
         .cl-msg__attachments { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.4rem; }
         .cl-msg__att-img { max-width: 200px; max-height: 200px; border-radius: 8px; display: block; }
         .cl-msg__att-file {

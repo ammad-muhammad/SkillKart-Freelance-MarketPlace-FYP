@@ -15,7 +15,7 @@ const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
   <div className="fl-gig-card fl-portfolio-project-card">
     <div className="fl-gig-card__banner">
       {item.images?.[0] ? (
-        <img src={item.images[0]} alt={item.title} className="fl-gig-card__img" />
+        <img src={item.images[0]} alt={item.title} className="fl-gig-card__img" loading="lazy" />
       ) : (
         <div className="fl-gig-card__placeholder">
           <ImageIcon size={40} className="fl-placeholder-icon" />
@@ -172,7 +172,7 @@ const FreelancerPortfolio = () => {
               <div key={gig._id} className="fl-gig-card">
                 <div className="fl-gig-card__banner">
                   {gig.media?.banner ? (
-                    <img src={gig.media.banner} alt={gig.title} className="fl-gig-card__img" />
+                    <img src={gig.media.banner} alt={gig.title} className="fl-gig-card__img" loading="lazy" />
                   ) : (
                     <div className="fl-gig-card__placeholder">
                       <Package size={40} className="fl-placeholder-icon" />
@@ -454,6 +454,7 @@ const FreelancerPortfolio = () => {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+          text-overflow: ellipsis;
           transition: color 0.2s;
         }
 
