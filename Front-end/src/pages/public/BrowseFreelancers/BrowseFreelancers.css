@@ -336,6 +336,17 @@
 
 /* ── Content Area ── */
 
+/* A grid item's default min-width is `auto`, which resolves to its content's
+   min-content size — without this, the 2-column card grid's intrinsic
+   minimum (e.g. nowrap name/rating/rate text) forces this column wider than
+   the `1fr` track actually allotted, pushing the whole layout past the
+   viewport at widths below ~1440px. body/html use overflow-x: clip (see
+   responsive.css), so that overflow was invisible instead of scrolling —
+   cards and the toolbar just got silently cropped at the right edge. */
+.bf-content {
+    min-width: 0;
+}
+
 /* Toolbar */
 .bf-toolbar {
     display: flex;

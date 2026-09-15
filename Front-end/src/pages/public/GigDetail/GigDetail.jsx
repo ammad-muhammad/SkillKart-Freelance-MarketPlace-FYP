@@ -183,10 +183,7 @@ export default function GigDetail() {
                 </div>
                 <h1 className="gd-title">{gig.title}</h1>
 
-                {/* /freelancers/:id isn't registered at all on the mobile build
-                    (see AppRoutes.jsx) — fall back to the same plain (non-link)
-                    markup used below when there's no freelancer._id at all. */}
-                {freelancer._id && !isMobileApp() ? (
+                {freelancer._id ? (
                   <Link to={`/freelancers/${freelancer._id}`} className="gd-seller">
                     <div className="gd-seller__avatar">
                       {freelancer.profilePicture ? (
@@ -318,9 +315,7 @@ export default function GigDetail() {
                 <button className="gd-cta__btn" onClick={handleContact}>
                   <MessageCircle size={18} /> Contact Freelancer
                 </button>
-                {/* /freelancers/:id isn't registered at all on the mobile build
-                    (see AppRoutes.jsx) — hidden there rather than left as a dead link. */}
-                {freelancer._id && !isMobileApp() && (
+                {freelancer._id && (
                   <Link to={`/freelancers/${freelancer._id}`} className="gd-cta__secondary">
                     View Profile
                   </Link>

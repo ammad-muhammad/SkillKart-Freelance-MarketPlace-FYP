@@ -8,6 +8,7 @@ import { isMobileApp } from '../../../utils/platform';
 import {
   LayoutDashboard,
   Search,
+  ShoppingBag,
   User,
   Eye,
   FolderOpen,
@@ -28,9 +29,8 @@ import './ClientSidebar.css';
 const NAV_ITEMS = [
   { to: '/client/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
   { to: '/client/buddy', icon: <Bot size={20} />, label: 'Buddy AI' },
-  // Both link to routes that aren't registered at all on the mobile build
-  // (see AppRoutes.jsx) — filtered out below rather than left as dead links.
-  { to: '/browse-freelancers', icon: <Search size={20} />, label: 'Find Freelancers', mobileHidden: true },
+  { to: '/browse-freelancers', icon: <Search size={20} />, label: 'Find Freelancers' },
+  { to: '/browse-gigs', icon: <ShoppingBag size={20} />, label: 'Browse Gigs' },
   { to: '/client/profile', icon: <User size={20} />, label: 'My Profile' },
   { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile', mobileHidden: true },
   { to: '/client/projects', icon: <FolderOpen size={20} />, label: 'My Projects' },
