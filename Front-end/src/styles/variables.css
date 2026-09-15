@@ -150,6 +150,12 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  /* `hidden` first as a fallback for WebViews older than `clip` support
+     (Chromium ~90/2021) — an unrecognized `clip` value drops the whole
+     declaration, silently falling back to `visible` (real horizontal
+     overflow) rather than a degraded-but-safe `hidden`. See responsive.css
+     for the full explanation (found via a real Oppo F11 Pro report). */
+  overflow-x: hidden;
   overflow-x: clip;
 }
 
@@ -161,6 +167,7 @@ body {
   background-color: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
   overflow-x: clip;
   position: relative;
 }

@@ -1,0 +1,21 @@
+{
+  "appId": "com.skillkart.admin",
+  "appName": "SkillKart Admin",
+  "webDir": "dist-admin",
+  "android": {
+    "path": "android-admin"
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": false,
+      "backgroundColor": "#042E4C",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
+}

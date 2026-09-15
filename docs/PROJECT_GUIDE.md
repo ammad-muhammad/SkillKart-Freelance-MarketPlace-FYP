@@ -21,8 +21,54 @@ SkillKart operates on a commission-based business model. A platform fee (current
 
 **Main objectives of the platform:**  
 1. Provide a frictionless onboarding experience for both user types.
-2. Ensure absolute financial security through Stripe-backed Escrow.
+2. Ensure absolute financial security through wallet-native Escrow — fixed-price jobs use per-milestone wallet debits (`Milestone` model + `services/milestone.service.js`), hourly contracts use a wallet-lock (`services/hourlyEscrow.service.js`); Stripe itself is only used for wallet top-ups and (for the legacy Gig-order flow) checkout deposits, not as the escrow mechanism.
 3. Foster transparent communication through in-app messaging and rigorous state-machine lifecycles.
+
+**High-Level Architecture:**
+
+```mermaid
+flowchart TB
+    Client([Client]):::actor
+    Freelancer([Freelancer]):::actor
+    Admin([Admin]):::actor
+
+    subgraph FE["Front-end — React 19 + Vite SPA (Front-end/src), 3 build targets"]
+        Web["Web app"]
+        MobileApp["Android app — main\n(Capacitor wrapper, same src/,\nclient + freelancer + admin-panel)"]
+        AdminApp["Android app — admin-only\n(Capacitor wrapper, same src/,\nseparate appId + signing identity)"]
+        AdminUI["Admin Panel UI (isolated auth)"]
+    end
+
+    subgraph BE["Backend — Express REST API (Backend/src)"]
+        Routes["routes/ -> middleware/ -> controllers/ -> services/"]
+        AIRouter["AI Provider Router\n(Gemini / DeepSeek / Qwen / Groq / Claude / Ollama, fallback-ordered)"]
+        EmailRouter["Email Provider Router\n(Gmail API / SMTP, factory-selected)"]
+    end
+
+    Mongo[("MongoDB\nsole system of record")]
+    Stripe["Stripe\nwallet top-ups, Gig-order 50/50 deposits,\nConnect payouts (withdrawals)"]
+    Supabase["Supabase\n(optional social OAuth only)"]
+
+    Client --> Web
+    Freelancer --> Web
+    Client --> MobileApp
+    Freelancer --> MobileApp
+    Admin --> AdminUI
+    Admin --> AdminApp
+
+    Web --> Routes
+    MobileApp --> Routes
+    AdminApp -. "isolated /admin-panel/* router + admin_token cookie" .-> Routes
+    AdminUI -. "isolated /admin-panel/* router + admin_token cookie" .-> Routes
+
+    Routes --> Mongo
+    Routes --> AIRouter
+    Routes --> EmailRouter
+    Routes --> Stripe
+    Routes -. optional .-> Supabase
+
+    classDef actor fill:#eef,stroke:#446;
+```
 
 ---
 
@@ -39,7 +85,7 @@ The platform strictly segregates user permissions via Role-Based Access Control 
 - **Cannot:** Post jobs, view other freelancers' private proposals, or arbitrarily message clients they have no active relationship with.
 
 **Client:**
-- **Can:** Create a company profile, post jobs, review incoming proposals, hire freelancers, fund Escrow via Stripe, request revisions on delivered work, approve work to release payments, and leave reviews.
+- **Can:** Create a company profile, post jobs, review incoming proposals, hire freelancers, fund Escrow (automatic wallet debit at hire for fixed-price/hourly custom Jobs; Stripe checkout deposit for Gig orders), request revisions on delivered work, approve work to release payments, and leave reviews.
 - **Cannot:** Submit proposals, view other clients' private jobs, or withdraw funds (clients receive refunds, but not standard payouts).
 
 ---
@@ -94,7 +140,7 @@ The platform operates on a linear, logical flow from discovery to payout:
 7. **Escrow Funding:** For a fixed-price hire, the backend debits the client's wallet for 100% of the price (or, if split into milestones, the first milestone's amount) the moment the proposal is accepted — no separate "pay deposit" click. Later milestones (if any) are funded on demand once the client clicks "Fund Milestone N". For an hourly hire, the backend locks one week's estimated cost from the client's wallet the moment the proposal is accepted, same as fixed-price — no Stripe involved. (Gig hires are the only ones that still generate a Stripe Session and update `Payment.status = deposit_paid` via webhook on success.) In every case, accepting a proposal requires the wallet to already cover the required amount — jobs can be posted with $0 balance, but hiring can't proceed until the wallet is funded.
 8. **Messaging:** Chats with the hired freelancer.
 9. **Reviewing Work:** Receives `delivered` status notification.
-10. **Approving Work:** Clicks approve. Backend triggers `payment.controller.js` to release funds from Escrow into the freelancer's wallet and marks `Job` as `completed`.
+10. **Approving Work:** Clicks approve. For fixed-price/milestone jobs, `delivery.controller.js` calls `approveMilestone` (`Backend/src/services/milestone.service.js`), which releases that milestone's escrow into the freelancer's wallet and — if it was the last milestone — marks the `Contract`/`Job` as `completed` (otherwise the contract advances to the next milestone). Gig orders remain on the older `payment.controller.js` `startFinal` flow instead.
 11. **Payment Release:** Funds physically move via internal ledger math.
 12. **Leaving Reviews:** Submits feedback.
 
@@ -159,8 +205,10 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
     [*] --> pending : Freelancer requests payout
-    pending --> completed : Admin processes manually
-    pending --> failed : Admin rejects/fails (refunds internal ledger)
+    pending --> processing : Stripe Connect payout (method: stripe, live mode)
+    pending --> completed : Stripe Connect payout (method: stripe, STRIPE_DUMMY simulated) or Admin processes bank_transfer/paypal manually
+    processing --> completed : Stripe payout settles
+    pending --> failed : Payout/admin rejects (refunds internal ledger)
 ```
 
 ---
@@ -178,7 +226,7 @@ SkillKart does not rely on direct peer-to-peer transfers. It utilizes an Escrow 
 - **Releases:** Client approves work (or auto-release fires) → Backend calculates platform fee → Net amount is added to the Freelancer's `walletBalance`. If it was the last milestone, the contract/job complete; otherwise the contract advances to the next milestone.
 - **Milestone Disputes:** Either party can dispute the current milestone specifically (not the whole contract) while it's under review; an admin resolves it (release / refund / split / resume / reject) without freezing the rest of a multi-milestone project. Hourly contracts, by contrast, keep a single contract-level dispute (no per-milestone breakdown, since hourly work has none).
 - **Refunds:** If a job is cancelled, the `Payment` is marked `refunded`, and the funds are added back to the Client's `walletBalance` (or refunded via Stripe if integrated).
-- **Withdrawals:** Freelancer requests payout. The internal `walletBalance` is immediately deducted to prevent double-spending, and a `Withdrawal` record is queued for Admin processing.
+- **Withdrawals:** Freelancer requests payout. The internal `walletBalance` is immediately deducted (atomically, to prevent double-spending), then `payment.controller.js`'s `withdrawFunds` executes a real, automated **Stripe Connect payout** (`createPayout()` in `Backend/src/services/stripe.service.js`) when `method === 'stripe'` — gated only by `STRIPE_DUMMY` (simulate vs. real payout), no admin step in between. The frontend (`FreelancerWallet.jsx`) hardcodes `withdrawMethod` to `'stripe'`, so this is the only method reachable from the UI today; `bank_transfer`/`paypal` remain valid API values that stay `Withdrawal`-record-only for manual Admin processing, but aren't exposed anywhere in the current UI.
 
 ---
 
@@ -239,7 +287,74 @@ Controllers never know which provider is active — they call `email.service.js`
 
 ---
 
-## 10. Database Models
+## 10. Mobile App (Android)
+
+SkillKart ships as **two separate native Android apps**, both built from the exact same `Front-end/src/` React codebase via [Capacitor](https://capacitorjs.com/) — neither is a separate rewrite or a fork of the source. A build-time flag decides which app comes out the other end:
+
+```mermaid
+flowchart TD
+    SRC["Front-end/src/ — one React codebase"]
+    SRC -->|"vite build (default)"| WEB["dist/ -> Vercel web app<br/>VITE_APP_TARGET unset"]
+    SRC -->|"vite build --mode mobile<br/>.env.mobile"| MOBILE["dist/ synced into Front-end/android/<br/>VITE_APP_TARGET=mobile<br/>appId: com.skillkart.app"]
+    SRC -->|"vite build --mode admin<br/>.env.admin"| ADMIN["dist-admin/ synced into Front-end/android-admin/<br/>VITE_APP_TARGET=admin<br/>appId: com.skillkart.admin"]
+    WEB --> WEBROUTES["AppRoutes.jsx<br/>full public site + client/freelancer dashboards"]
+    MOBILE --> MOBILEROUTES["AppRoutes.jsx<br/>public marketing routes skipped,<br/>client + freelancer + admin-panel dashboards only"]
+    ADMIN --> ADMINROUTES["AdminAppRoutes.jsx<br/>admin panel only, zero marketplace code"]
+```
+
+- **Main app** (`Front-end/android/`) — covers the client and freelancer experience plus the admin-panel dashboards (auth flow + both dashboards), the same audience the web app serves minus public marketing.
+- **Admin-only app** (`Front-end/android-admin/`) — a second, independent native project for admins who need marketplace moderation on the go. Own Gradle project, own `appId` (`com.skillkart.admin` vs. `com.skillkart.app`), own signing identity/keystore.
+
+Both apps set `androidScheme: "https"` in their own Capacitor config, so each WebView's requests present a fixed origin of `https://localhost` — not a real host, purely a CORS identity. The two apps share that identical origin string despite being distinct native binaries, so a single `CORS_ORIGIN` entry on the backend covers both.
+
+### Build-time differentiation
+
+`VITE_APP_TARGET` (unset / `mobile` / `admin`) is read at build time and drives two runtime checks in `Front-end/src/utils/platform.js`:
+
+- **`isMobileApp()`** — true when `VITE_APP_TARGET` is `mobile` **or** `admin` (or, as a runtime fallback, `Capacitor.isNativePlatform()`). Answers "am I inside *some* native Android WebView?" and gates everything that both native builds need identically: status bar styling, the hardware back button, the offline network gate, the boot screen, and native-only CSS fixes.
+- **`isAdminApp()`** — true only when `VITE_APP_TARGET=admin`. Answers "which app is this, specifically?" and is the **only** thing that decides which route tree renders: `App.jsx` renders `AdminAppRoutes.jsx` when true, `AppRoutes.jsx` otherwise. This is the one place the two native builds actually diverge in behavior — everything else described in this section applies equally to both.
+
+### What's scoped out of the mobile build (and why)
+
+Inside the main app's `AppRoutes.jsx`, `isMobileApp()` skips registering every public-marketing route entirely — no landing page, no `/browse-projects`, no public profiles, no skills/category pages, just the auth flow plus the client/freelancer/admin-panel dashboards. The reasoning: a native app is only ever opened by someone who already has an account — there's no logged-out "browsing" use case on a phone the way there is on the open web, where a stranger can land on a job listing from a Google search. The excluded pages (`About`, `BrowseProjects`, `JobDetails`, `GigDetail`, the AI Tools pages, the Skills pages, both public profile pages, all four legal pages) are `React.lazy()`-loaded, so their code and assets (including a large hero image on `About`) are only ever fetched by a **web** visitor who actually navigates there — the mobile bundle never parses them at startup. Two links that point at now-excluded routes (client onboarding's "Service Agreement" checkbox, and the client dashboard's "Cost Estimator" link) detect `isMobileApp()` and open the live website in an external browser tab instead of 404ing against a route that was never registered.
+
+The admin-only app is more extreme still: it never registers any part of `AppRoutes.jsx` at all. `AdminAppRoutes.jsx` deliberately imports **zero** client/freelancer/public code — only admin-panel pages, `AdminAuthProvider`, and `AdminProtectedRoute` — so its bundle can never pull in marketplace UI it has no use for.
+
+### Native-platform integration
+
+| Capability | Mechanism | Behavior |
+| :--- | :--- | :--- |
+| **Push notifications** | Firebase Cloud Messaging, via `src/hooks/usePushNotifications.js` (client) and `Backend/src/services/push.service.js` (server) | Wired into the exact same choke point as in-app notifications — `notification.service.js`'s `notify()` calls `Notification.create()` (in-app, unchanged) and then `push.service.js`'s `sendToUser()` (fire-and-forget). Every event in the §8 Notification System table (new proposal, message, payment released, dispute, etc.) therefore fires a push automatically, with no per-event-type push code to maintain. Tapping a push deep-links into the app via the same `link` field the in-app notification center uses. Gated behind `VITE_PUSH_NOTIFICATIONS_ENABLED` — enabling it before `google-services.json` exists is an uncaught native crash, not a caught JS error, so it's off by default. |
+| **Hardware back button** | `src/hooks/useAndroidBackButton.js` + `@capacitor/app` | Wires Android's back button to React Router's `navigate(-1)` instead of the default (pop WebView history, or exit the process outright once history is empty — which would otherwise happen immediately after login lands on a dashboard with a fresh history stack). Minimizes the app instead of exiting on root screens (login, both dashboards, admin-panel dashboard). |
+| **Offline detection** | `src/Components/common/NetworkGate/NetworkGate.jsx` + `@capacitor/network` | Shows a dedicated "No Internet Connection" screen, mobile only. Both listens for the native `networkStatusChange` event and polls every 5 seconds as a backstop (the native event doesn't fire reliably under aggressive OEM battery optimization). Requires 3 consecutive offline readings before showing, since at least one Android emulator image reported false negatives that caused visible flickering between the app and the offline screen. |
+| **Status bar theming** | `@capacitor/status-bar`, set in `App.jsx` | Status bar styled to the brand navy with light icons — left at its default, icons meant for a light background are nearly invisible against the app's dark screens. |
+| **External links** | `src/utils/externalLink.js`'s `openExternal(url)` (`@capacitor/browser`) | Opens a Chrome Custom Tab instead of a plain `<a target="_blank">`/`window.open()`, which inside a Capacitor WebView has no tab to open into — it just navigates the app itself away with no browser chrome and no way back. Falls back to normal `window.open` on web. Used for message/document attachments, portfolio/certificate links, and profile website links. |
+| **Native-only styling** | `src/styles/native-app.css`, applied under `html.is-native-app` | Disables `backdrop-filter` app-wide (a severe, well-documented jank source on Android's WebView, used in ~40 files) and hides the desktop-style scrollbar (touch scrolling is unaffected). |
+| **CORS / WebView origin** | Fixed `https://localhost` origin from `androidScheme: "https"` | Must be present in the backend's `CORS_ORIGIN`. Shared by both native apps, so one entry covers both — this string isn't unique to genuine app traffic, so it's not a security boundary on its own; normal auth and rate limiting still apply. |
+| **reCAPTCHA** | Site key deliberately left unset in `.env.mobile`/`.env.admin` | Google's reCAPTCHA v3 is a browser-page product, unreliable inside an embedded WebView. `Backend/src/middleware/recaptcha.middleware.js` exempts requests whose `Origin` is `https://localhost` outright; rate limiting and account lockout remain the real anti-abuse gate on that origin. The admin app never even calls a `verifyRecaptcha`-gated endpoint (its isolated `/admin-panel/*` auth has its own rate limiting/lockout), so there's no gate to exempt there in the first place. |
+
+### Admin app isolation
+
+The admin panel's native app is kept fully independent of the main app on purpose — separate Gradle project (`Front-end/android-admin/`), separate `appId` (`com.skillkart.admin`), separate signing identity/keystore, separate build output (`dist-admin/` vs. `dist/`) — so that building, signing, or installing one can never touch the other, and so the admin binary can never accidentally ship marketplace code (or vice versa: the main app never bundles admin-panel-only logic beyond the dashboard it already exposes to authenticated admins on the web). Because Capacitor's CLI has no `--config` flag and always reads a single hardcoded `capacitor.config.json`, `Front-end/scripts/cap-admin.cjs` works around that for the `cap:admin:*` npm scripts: it backs up the real config, swaps in `capacitor.admin.config.json`, runs the real `cap` command, then restores the original from a `try`/`finally` — so even an interrupted run can't leave the main app's config permanently overwritten.
+
+### Building it
+
+```bash
+npm run build:mobile   # vite build --mode mobile — loads .env.mobile
+npm run cap:sync       # + npx cap sync → copies dist/ into android/
+npm run cap:android    # + opens the project in Android Studio
+
+npm run build:admin       # vite build --mode admin — loads .env.admin, outputs dist-admin/
+npm run cap:admin:add     # first time only: adds the android-admin/ native project
+npm run cap:admin         # build:admin + syncs dist-admin/ into android-admin/
+npm run cap:admin:open    # opens android-admin/ in Android Studio
+```
+
+Both `.env.mobile` and `.env.admin` point at the **deployed** backend, never `localhost`. See [Front-end README → Mobile App](../Front-end/README.md#mobile-app-android--capacitor) for the full build walkthrough, including a JDK/Gradle version gotcha (Android Studio's bundled JDK can silently auto-update past what the pinned Gradle version supports) and Firebase/`google-services.json` setup for push.
+
+---
+
+## 11. Database Models
 
 - **User:** The base identity. Stores email, hashed password, role, and 2FA settings.
 - **ClientProfile / FreelancerProfile:** Extensions of the User model. Stores specific onboarding data (skills, company size, wallet balance). Linked 1:1 to User.
@@ -253,19 +368,19 @@ Controllers never know which provider is active — they call `email.service.js`
 
 ---
 
-## 11. APIs
+## 12. APIs
 
 Major API Groups:
 - **Auth API (`/api/v1/auth`):** Handles registration, login, OTP verification, password resets, and token refreshing.
 - **Jobs API (`/api/v1/jobs`):** CRUD operations for postings. Handles state transitions (deliver, approve, cancel).
 - **Proposals API (`/api/v1/proposals`):** Submission and review of bids.
-- **Payments API (`/api/v1/payments`):** Stripe Checkout generation, wallet deposits, and withdrawal requests.
+- **Payments API (`/api/v1/payments`):** Stripe Checkout generation (Gig-order deposit/final), wallet deposits and withdrawal requests (automated Stripe Connect payout for `method: stripe`), plus the wallet-native custom-Job escrow endpoints — `POST /payments/milestones/:milestoneId/fund` (fund milestone 2+ on a fixed-price contract) and `POST /payments/contracts/:contractId/lock-hourly` (lock/top-up an hourly contract's wallet-lock escrow).
 - **Messages API (`/api/v1/messages`):** Real-time chat endpoints.
 - **Webhooks (`/webhooks`):** Unprotected endpoints utilized exclusively by Stripe/Supabase to asynchronously update backend state.
 
 ---
 
-## 12. Security
+## 13. Security
 
 SkillKart employs enterprise-grade security protocols:
 - **Authentication:** Stateless JSON Web Tokens (JWT) with short-lived access tokens and long-lived refresh tokens.
@@ -279,46 +394,48 @@ SkillKart employs enterprise-grade security protocols:
 
 ---
 
-## 13. Current MVP Scope
+## 14. Current MVP Scope
 
 **What IS implemented:**
 - Full E2E Job and Escrow lifecycles: fixed-price jobs get **100% wallet escrow lock at hire**, optional **multi-milestone** splitting with sequential funding, and **7-day auto-release** on client inactivity; hourly jobs get **wallet-lock escrow** (one week's estimate locked at hire, billed down automatically per logged hour, top-up on demand, remainder refunded at contract end).
 - An **accept-time wallet gate** — job posting has no funds check at all (a client can post with $0), but accepting a proposal is blocked until the wallet covers the required amount (milestone 1 for fixed-price, one week's estimate for hourly).
 - **Fixed-price milestone disputes** — either party can freeze the current milestone specifically, and an admin resolves it (release/refund/split/resume/reject) without touching the rest of a multi-phase project. Hourly disputes are contract-level instead.
 - Secure Stripe Checkout integration (wallet top-ups; legacy deposit/final flow now used only by Gig orders).
+- **Automated Stripe Connect Withdrawals:** freelancer payouts via `method: 'stripe'` (the only method exposed in the UI) execute a real Connect payout automatically at request time — no admin step — gated only by `STRIPE_DUMMY` for local dev. `bank_transfer`/`paypal` remain valid but admin-processed-only, and aren't exposed in the current UI.
 - Protected File Uploads via Cloudinary.
 - Strict Rate Limiting and Payload Security.
 - Robust OTP Email Verification, delivered via a pluggable provider (Gmail API in production, SMTP locally).
 - Bot mitigation on login, registration, and public forms via Google reCAPTCHA v3.
 - Search-engine discoverability: a database-driven dynamic sitemap, crawl policy, PWA manifest, and social share cards.
 - Admin Panel UI with monitoring views (API, error, and email logs) and dispute resolution.
+- **Two native Android apps** (§10 Mobile App), both Capacitor wrappers of the same React codebase: a main app covering client + freelancer + admin-panel, and a separate standalone admin-only app with its own `appId` and signing identity. Both include push notifications (Firebase Cloud Messaging), hardware back-button handling, offline detection, and native status bar theming.
 
 **What intentionally does NOT exist yet:**
-- **Manual Withdrawals:** Payouts are not automated via Stripe Connect.
+- **Automated `bank_transfer`/`paypal` Withdrawals:** Those two withdrawal methods remain admin-processed and aren't exposed in the current UI (only `stripe`, which is fully automated, is reachable from the frontend).
 - **Gig Order Disputes:** Dispute resolution exists for custom Jobs (per-milestone for fixed-price, contract-level for hourly), but not yet for Gig orders.
 - **Polling-based Messaging:** Chat relies on REST requests rather than true WebSockets (Socket.io).
 
 ---
 
-## 14. Future Roadmap
+## 15. Future Roadmap
 
 **Phase 2:**
 1. Build the Admin Dashboard UI (KYC, User Moderation, Analytics).
 2. Upgrade Messaging to Socket.io for true real-time chat.
-3. Automate Withdrawals via Stripe Connect.
+3. Expose `bank_transfer`/`paypal` as selectable withdrawal methods in the UI (Stripe Connect payouts are already live for the `stripe` method).
 
 **Phase 3:**
 1. Extend dispute resolution to Gig orders (currently custom Jobs only — per-milestone for fixed-price, contract-level for hourly).
 2. Migrate MongoDB standard search to MongoDB Atlas Search (Lucene) for scalability.
 
 **Enterprise / Nice-to-Have:**
-1. iOS build of the mobile app (Android already ships via Capacitor — see §9 Folder Structure).
+1. iOS build of the mobile app (Android already ships via Capacitor as two native apps — see §10 Mobile App).
 2. AI-Assisted Job Post Generation.
 3. Automated Garbage Collection for orphaned Cloudinary files.
 
 ---
 
-## 15. Development Notes
+## 16. Development Notes
 
 **Architectural Decisions & Trade-offs:**
 - **MongoDB vs SQL:** MongoDB was chosen for flexibility in handling unstructured Profile data (Skills arrays, nested locations). Trade-off: Financial ledgers (wallet balances) lack native SQL ACID guarantees across multiple collections, requiring careful manual two-phase commit logic in controllers.
@@ -327,7 +444,7 @@ SkillKart employs enterprise-grade security protocols:
 
 ---
 
-## 16. Launch Checklist
+## 17. Launch Checklist
 
 Before deploying SkillKart to Production, the following must be verified:
 
@@ -341,5 +458,5 @@ Before deploying SkillKart to Production, the following must be verified:
 - [ ] **SEO Canonical Domain:** Set `PUBLIC_SITE_URL` to the domain to be indexed — not `FRONTEND_URL`, which is a CSV of allowed CORS origins whose first entry may be the wrong host. Then verify `curl -sI https://<frontend>/sitemap.xml` returns **`application/xml`** — `text/html` means the SPA answered instead and the rewrite order in `vercel.json` is wrong. Submit to Google Search Console only after that check passes.
 - [ ] **Admin Login on the Live Site:** Complete an OTP login and confirm you reach the dashboard rather than bouncing back to the login page. This exercises the cross-site `admin_token` cookie, which cannot fail locally (same-origin) and so is only ever provable in deployment.
 - [ ] **Database Backups:** Configure daily automated snapshots in MongoDB Atlas.
-- [ ] **Admin SOPs:** Withdrawals are still processed manually (no Stripe Connect automation yet) — have Standard Operating Procedures (SOPs) ready. Disputes (both hourly-contract and fixed-price-milestone) already have a full Admin Panel resolution UI (release/refund/split/resume/reject), so no manual DB work is needed for those.
+- [ ] **Admin SOPs:** `stripe`-method withdrawals are already automated via Stripe Connect payouts (no admin step) — confirm connected freelancer accounts have payout capability enabled before launch. `bank_transfer`/`paypal` withdrawals (not currently reachable from the UI, but valid API values) still require manual Admin processing — have Standard Operating Procedures (SOPs) ready for those. Disputes (both hourly-contract and fixed-price-milestone) already have a full Admin Panel resolution UI (release/refund/split/resume/reject), so no manual DB work is needed for those.
 - [ ] **Monitoring & Logging:** Hook up external error tracking (e.g., Sentry) to catch unhandled exceptions.

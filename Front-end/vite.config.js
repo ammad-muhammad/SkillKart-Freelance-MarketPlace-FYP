@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => ({
     react(),
     tailwindcss()
   ],
+  build: {
+    // The admin app builds to its own output dir — otherwise `vite build
+    // --mode admin` would silently overwrite the client/freelancer build's
+    // dist/, since both would default to the same folder.
+    outDir: mode === 'admin' ? 'dist-admin' : 'dist'
+  },
   esbuild: {
     // Belt-and-braces: drop any direct console.* debug calls from production
     // builds. App code should route through src/utils/logger.js instead, which

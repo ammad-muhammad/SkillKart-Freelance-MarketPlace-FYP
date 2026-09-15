@@ -6,7 +6,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // 'android'/'android-admin' are native Capacitor projects: their only .js
+  // content is synced/compiled web output (minified bundles, Gradle build
+  // intermediates), never hand-written source — never lint-worthy.
+  globalIgnores(['dist', 'dist-admin', 'android', 'android-admin']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

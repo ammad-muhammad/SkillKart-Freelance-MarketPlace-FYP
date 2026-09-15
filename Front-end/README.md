@@ -14,10 +14,14 @@ The SkillKart single-page app: a React 19 + Vite client for the marketplace, cov
 - **Chart.js** (`react-chartjs-2`) for dashboards
 - **Tailwind v4** + custom CSS
 - **lucide-react** for icons; toast notifications via a small dependency-free `utils/safeToast.js` (react-toastify@9 is unreliable under React 19)
+- **react-select** & **react-select-country-list** for searchable/country dropdowns
+- **react-easy-crop** for in-browser image cropping (avatar/portfolio uploads)
+- **clsx** for conditional className composition
+- **face-api.js** for webcam-based face/head-pose proctoring during freelancer skill tests — see [`src/pages/freelancer/useFaceProctor.js`](src/pages/freelancer/useFaceProctor.js): it runs TinyFaceDetector + tiny 68-point landmarks against the live camera feed while a skill test is in progress, flagging `no_face` / `multiple_faces` / `looking_away` as violations (a separate strike counter from `useAntiCheat.js`'s tab-switch/copy-paste detection) and aborting the attempt once a test-length-scaled violation budget is exceeded
 
 ## Prerequisites
 
-- Node.js ≥ 18, npm ≥ 9
+- Node.js ≥ 22.3.0, npm ≥ 9 — same minimum as the [Backend](../Backend/README.md#prerequisites) (see its `engines` field); the two are normally run together via the root `npm start`
 - The [backend API](../Backend/README.md) running (default `http://localhost:5000/api/v1`)
 
 ## Setup
@@ -40,10 +44,18 @@ See [`.env.example`](.env.example):
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional Supabase client for social OAuth |
 | `VITE_RECAPTCHA_SITE_KEY` | Optional reCAPTCHA v3 **public** site key. Blank = disabled |
 | `VITE_ENVIRONMENT` | Set to `production` to force console silence in a dev-mode build |
+| `VITE_APP_TARGET` | Build target. Unset = default web build. `mobile` = client/freelancer native Android app. `admin` = separate admin-panel native Android app. See [Mobile App](#mobile-app-android--capacitor) below |
+| `VITE_PUSH_NOTIFICATIONS_ENABLED` | `true` to enable native push registration (mobile/admin builds only, no-op on web). Leave unset until the relevant `google-services.json` actually exists — see the Push notifications note below; enabling it too early is a native crash, not a caught error |
 
 > Vite only exposes variables prefixed with `VITE_` to the client. Everything here
 > ships in the bundle and is publicly readable — never put a secret in a `VITE_` var.
 > (The reCAPTCHA *site* key is designed to be public; its *secret* lives in the backend.)
+
+> **`.env.prod`** (if present locally) is a manual reference file — e.g. production
+> values copied aside before a Vercel deploy — not an auto-loaded Vite mode file.
+> Vite only loads `.env.<mode>` for a mode actually passed via `--mode`, and no
+> script here uses `--mode prod` (only `--mode mobile` and `--mode admin` exist,
+> loading `.env.mobile` and `.env.admin` respectively).
 
 ## Project Structure
 
@@ -77,6 +89,11 @@ src/
 | `npm run build` | Production build → `dist/` |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Lint the source with ESLint |
+
+There's no formal frontend test suite. `playwright` is a devDependency available for
+ad hoc manual E2E/QA scripting (`npx playwright ...`) — it isn't wired into any npm
+script or CI step; it's a tool to reach for when you need to drive a real browser to
+verify a flow, not a suite that runs automatically.
 
 ## SEO & PWA assets
 
@@ -135,7 +152,35 @@ a captcha problem can't lock users out. Action names must match the server's
 
 ## Mobile App (Android / Capacitor)
 
-The same React codebase ships as a native Android app via [Capacitor](https://capacitorjs.com/) — no separate mobile codebase or rewrite. `capacitor.config.json` sets `androidScheme: "https"`, so the WebView's requests present a fixed origin of `https://localhost` (not a real host — nothing is ever served there; it's purely a CORS identity).
+The same React codebase ships as **two separate native Android apps** via
+[Capacitor](https://capacitorjs.com/) — no separate codebase or rewrite for either
+one: the client/freelancer app (`android/`, this section's original focus) and a
+standalone **admin panel** app (`android-admin/`, see below) for admins who need
+marketplace moderation on the go. Both set `androidScheme: "https"` in their own
+Capacitor config, so each WebView's requests present a fixed origin of
+`https://localhost` (not a real host — nothing is ever served there; it's purely a
+CORS identity) — the two apps share that identical origin string despite being
+distinct native projects with different `appId`s (`com.skillkart.app` vs.
+`com.skillkart.admin`).
+
+```mermaid
+flowchart TD
+    SRC["Front-end/src/ — one React codebase"]
+    SRC -->|"vite build (default)"| WEB["dist/ → Vercel web app<br/>VITE_APP_TARGET unset"]
+    SRC -->|"vite build --mode mobile<br/>.env.mobile"| MOBILE["dist/ synced into<br/>Front-end/android/<br/>VITE_APP_TARGET=mobile"]
+    SRC -->|"vite build --mode admin<br/>.env.admin"| ADMIN["dist-admin/ synced into<br/>Front-end/android-admin/<br/>VITE_APP_TARGET=admin"]
+    WEB -->|"isMobileApp() false"| WEBROUTES["AppRoutes.jsx<br/>full public site + dashboards"]
+    MOBILE -->|"isMobileApp() true<br/>isAdminApp() false"| MOBILEROUTES["AppRoutes.jsx<br/>public routes skipped,<br/>client/freelancer dashboards only"]
+    ADMIN -->|"isMobileApp() true<br/>isAdminApp() true"| ADMINROUTES["AdminAppRoutes.jsx<br/>admin panel only,<br/>zero marketplace code"]
+```
+
+`isMobileApp()` / `isAdminApp()` (both in
+[`src/utils/platform.js`](src/utils/platform.js)) are what gate the branches on the
+right — see **`isMobileApp()` vs `isAdminApp()`** further down for exactly what each
+one controls.
+
+The rest of this subsection covers the client/freelancer build (`android/`); the
+admin app's separate build is documented right after in **Admin native app**.
 
 ### Building it
 
@@ -172,18 +217,80 @@ JAVA_HOME="<path to a JDK Gradle 8.x supports>" ./gradlew.bat assembleDebug
 > under `~/.jdks/` (left behind by a previous Android Studio/IntelliJ version) is
 > often a quick fix — point `JAVA_HOME` at that instead of the current bundled one.
 
-### What's mobile-only
+### Admin native app
 
-`isMobileApp()` (`src/utils/platform.js`) is true when `VITE_APP_TARGET=mobile` (this
-build) **or** `Capacitor.isNativePlatform()` (a runtime fallback, harmless on web).
-`AppRoutes.jsx` uses it to skip registering every public-marketing route entirely in
-this build — there's no landing page, no `/browse-projects`, no public profiles, just
-the auth flow plus the client/freelancer/admin-panel dashboards. Those excluded pages
-(`About`, `BrowseProjects`, `JobDetails`, `GigDetail`, the AI Tools pages, the Skills
-pages, both public profile pages, all four legal pages) are `React.lazy()`-loaded —
-their code (and assets, including a large hero image on `About`) is fetched only when
-a **web** visitor actually navigates there, never bundled into what the mobile app
-parses at startup.
+The admin panel also ships as a **separate** native Android app — its own Capacitor
+project, its own `appId`, its own signing identity — kept fully independent of the
+client/freelancer app above so building/signing/installing one can never touch the
+other.
+
+| Piece | Purpose |
+|---|---|
+| [`capacitor.admin.config.json`](capacitor.admin.config.json) | `webDir: dist-admin`, `android.path: android-admin`, `appId: com.skillkart.admin`, appName `SkillKart Admin` |
+| `android-admin/` | The standalone native Android project — its own Gradle project and keystore, entirely separate from `android/` |
+| `.env.admin` | Real, deployed values — analogous to `.env.mobile` above; this build talks to the **production** backend |
+| `.env.admintest` | A local QA scratch env pointing at `http://localhost:5000/api/v1`, for exercising the admin app against a local backend before cutting a real build. Vite's `--mode admin` only ever loads `.env.admin` (there's no `--mode admintest` script), so using this file means temporarily copying/renaming it over `.env.admin` for a local test build, then restoring the real one before building for real |
+
+```bash
+npm run build:admin      # vite build --mode admin — loads .env.admin, outputs dist-admin/
+npm run cap:admin:add    # first time only: adds the android-admin/ native project
+npm run cap:admin        # build:admin, then syncs dist-admin/ into android-admin/
+npm run cap:admin:open   # opens android-admin/ in Android Studio
+```
+
+Capacitor's CLI has no `--config` flag — it always reads a hardcoded
+`capacitor.config.json` at the project root, so there's no built-in way to point
+`cap add`/`cap sync`/`cap open` at a second native folder. Every `cap:admin:*` script
+actually runs through [`scripts/cap-admin.cjs`](scripts/cap-admin.cjs), which works
+around that: it backs up the real `capacitor.config.json`, copies
+`capacitor.admin.config.json` over it, runs the real `npx cap <command>`, then
+restores the original file from a `try`/`finally` — so even an interrupted run
+(Ctrl-C, crash) can't leave the client/freelancer app's config permanently
+overwritten by the admin one.
+
+`vite.config.js` builds the `admin` mode to `dist-admin/` instead of `dist/`
+(`outDir: mode === 'admin' ? 'dist-admin' : 'dist'`), so `build:admin` can never
+clobber the regular web/mobile build output — both can exist on disk at once.
+
+At runtime, whenever `isAdminApp()` is true, `src/App.jsx` renders a **completely
+separate route tree**, [`src/routes/AdminAppRoutes.jsx`](src/routes/AdminAppRoutes.jsx),
+instead of `AppRoutes.jsx`. `AdminAppRoutes.jsx` deliberately imports **zero**
+client/freelancer/public code — only the admin-panel pages, `AdminAuthProvider`, and
+`AdminProtectedRoute` — so the admin app's bundle can never pull in marketplace UI it
+has no use for, and vice versa.
+
+Everything else on this page that's gated on `isMobileApp()` (status bar, hardware
+back button, offline gate, native CSS, push notifications, the `https://localhost`
+CORS origin, the reCAPTCHA no-op) applies equally to this admin build — see the next
+section for exactly why.
+
+### `isMobileApp()` vs `isAdminApp()`
+
+Two separate checks in `src/utils/platform.js`, doing two separate jobs:
+
+- **`isMobileApp()`** is true when `VITE_APP_TARGET` is **either** `mobile` **or**
+  `admin` — **or** `Capacitor.isNativePlatform()` (a runtime fallback, harmless on
+  web). It answers "am I running inside *some* native Android WebView, as opposed
+  to a browser tab?" and gates everything in this doc that's about that fact alone:
+  status bar styling, the hardware back button, the offline network gate, the boot
+  screen, and the `native-app.css` fixes further down. Both native builds need all
+  of that, so both trigger it identically.
+- **`isAdminApp()`** is true only when `VITE_APP_TARGET=admin`. It answers "which
+  app is this, specifically?" and is the **only** thing that decides which route
+  tree renders — `App.jsx` renders `AdminAppRoutes.jsx` when true, `AppRoutes.jsx`
+  otherwise. This is the one place the two native builds actually diverge in
+  behavior; everything else they share.
+
+Inside the client/freelancer build's `AppRoutes.jsx`, `isMobileApp()` is also used to
+skip registering every public-marketing route entirely — there's no landing page, no
+`/browse-projects`, no public profiles, just the auth flow plus the client/freelancer
+dashboards. Those excluded pages (`About`, `BrowseProjects`, `JobDetails`,
+`GigDetail`, the AI Tools pages, the Skills pages, both public profile pages, all
+four legal pages) are `React.lazy()`-loaded — their code (and assets, including a
+large hero image on `About`) is fetched only when a **web** visitor actually
+navigates there, never bundled into what the mobile app parses at startup. The admin
+build never registers any part of `AppRoutes.jsx` at all — it renders
+`AdminAppRoutes.jsx` exclusively (see **Admin native app** above).
 
 Two links that point at now-excluded routes (client onboarding's "Service Agreement"
 checkbox, and the client dashboard's "Cost Estimator" link in Post Project) detect
@@ -192,10 +299,13 @@ checkbox, and the client dashboard's "Cost Estimator" link in Post Project) dete
 
 ### CORS
 
-The mobile app's fixed origin (`https://localhost`) must be in the backend's
-`CORS_ORIGIN` env var, or every request gets blocked. This is a real origin string
-someone could also send from a raw script — it isn't unique to genuine app traffic —
-so it's not a security boundary on its own; normal auth + rate limiting still apply.
+Both native apps' fixed origin (`https://localhost` — see the intro above) must be
+in the backend's `CORS_ORIGIN` env var, or every request from either one gets
+blocked. Because the client/freelancer app and the admin app happen to share that
+exact origin string, one `CORS_ORIGIN` entry covers both — there's no separate admin
+origin to add. This is a real origin string someone could also send from a raw
+script — it isn't unique to genuine app traffic — so it's not a security boundary on
+its own; normal auth + rate limiting still apply.
 
 ### reCAPTCHA
 
@@ -207,7 +317,11 @@ unreliable inside an embedded WebView; rather than fight that, the backend's
 outright (`Backend/src/middleware/recaptcha.middleware.js`) — the mobile app was
 otherwise hard-failing every login/register with `RECAPTCHA_FAILED` once a real
 `RECAPTCHA_SECRET_KEY` was configured in production. Rate limiting + account lockout
-remain the actual anti-abuse gate for this origin.
+remain the actual anti-abuse gate for this origin. `.env.admin` also leaves the key
+unset, but for a simpler reason: the admin app only ever calls the isolated
+`/admin-panel/*` auth endpoints, which don't run `verifyRecaptcha` at all (admin
+login has its own rate limiting/lockout instead) — so there's no gate to exempt
+there in the first place, just no reason to load the script.
 
 ### External links
 
@@ -290,7 +404,11 @@ for the full setup (Firebase project, service account credential,
 > Capacitor's bridge doesn't convert it into a rejected promise there, so it's
 > an **uncaught crash that takes the whole app down**, invisible to a JS
 > try/catch. Leave the env var unset (default) until `google-services.json` is
-> actually in place and you've resynced/rebuilt since adding it.
+> actually in place and you've resynced/rebuilt since adding it. Since
+> `usePushNotifications.js` is gated on `isMobileApp()` (true for both native
+> builds), the exact same crash risk applies to the admin app — its own
+> `android-admin/app/google-services.json` must exist before enabling the env
+> var for an `.env.admin` build.
 
 ## Notes
 

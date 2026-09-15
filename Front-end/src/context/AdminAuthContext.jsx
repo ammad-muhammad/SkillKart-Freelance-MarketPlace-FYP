@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { adminAuth } from '../api/adminPanel';
+import { isAdminApp } from '../utils/platform';
 
 const AdminAuthContext = createContext(null);
 
@@ -14,7 +15,12 @@ export const AdminAuthProvider = ({ children }) => {
   // marketplace so normal visitors don't fire a guaranteed-401 request on every
   // page load (and can never be bounced to the admin login).
   useEffect(() => {
-    const inAdminPanel = window.location.pathname.startsWith('/admin-panel');
+    // In the standalone admin app, the very first render is at `/` for a
+    // moment before the router's redirect to /admin-panel/login lands — a
+    // plain path check here would race that and skip restoring a still-valid
+    // session, bouncing a genuinely logged-in admin back to the login form
+    // on every cold start. isAdminApp() makes the probe unconditional there.
+    const inAdminPanel = isAdminApp() || window.location.pathname.startsWith('/admin-panel');
     if (!inAdminPanel) {
       setLoading(false);
       setReady(true);

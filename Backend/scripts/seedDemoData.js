@@ -25,8 +25,18 @@
  *                   Withdrawal state, not separate stored fields.
  *   • "Transactions" → Payments + Withdrawals (the admin Transactions view is a
  *                   union of these; there is no separate Transaction model).
- *   • "Milestones" → represented via Delivery versions + ContractHistory
- *                   (no Milestone model exists).
+ *   • "Milestones" → real `Milestone` documents (one per fixed-price contract
+ *                   at minimum — the implicit "Full Project" milestone —
+ *                   sometimes split into 2-4), each with its own linked
+ *                   `Payment` (type 'job_escrow'), matching the wallet-native
+ *                   per-milestone escrow the live app actually uses. Hourly
+ *                   contracts don't get Milestones (they never do, live) —
+ *                   they get one `Payment` (type 'hourly_escrow') representing
+ *                   the accept-time weekly-estimate lock. Gig orders' legacy
+ *                   50/50 Stripe deposit/final flow is NOT seeded — no Gig
+ *                   order/purchase lifecycle exists yet in this script,
+ *                   Gigs are seeded as listings only. Flagged in the final
+ *                   summary alongside AI Usage.
  *   • "AI Usage"   → SKIPPED: no AIUsage model exists and the brief forbids
  *                   creating models. Flagged in the final summary.
  * ============================================================================
@@ -45,6 +55,7 @@ const Job = require('../src/models/Job');
 const Gig = require('../src/models/Gig');
 const Proposal = require('../src/models/Proposal');
 const Contract = require('../src/models/Contract');
+const Milestone = require('../src/models/Milestone');
 const ContractHistory = require('../src/models/ContractHistory');
 const Payment = require('../src/models/Payment');
 const Withdrawal = require('../src/models/Withdrawal');
@@ -76,7 +87,7 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 // Collections this script owns (cleared on a fresh run).
 const OWNED_MODELS = [
   User, FreelancerProfile, ClientProfile, Job, Gig, Proposal, Contract,
-  ContractHistory, Payment, Withdrawal, Delivery, TimeLog, Conversation,
+  Milestone, ContractHistory, Payment, Withdrawal, Delivery, TimeLog, Conversation,
   Message, Review, Notification, Report, AdminAuditLog, Testimonial,
 ];
 
@@ -904,6 +915,7 @@ async function run() {
   step('Proposals, Contracts, Payments & Lifecycle');
   const proposals = [];
   const contracts = [];
+  const milestones = [];
   const contractHistory = [];
   const payments = [];
   const deliveries = [];
@@ -988,8 +1000,6 @@ async function run() {
       const startAt = dateBetween(accepted.respondedAt || job.createdAt, addDays(accepted.respondedAt || job.createdAt, 4));
       const isFixed = job.budget.type === 'fixed';
       const total = round2(isFixed ? (accepted.fixedPrice || money(job.budget.min, job.budget.max, 500)) : money(20000, 120000, 1000));
-      const deposit = round2(total / 2);
-      const finalAmt = round2(total - deposit);
       const completedJob = status === 'completed';
 
       // Contract status maps from job status.
@@ -1017,33 +1027,134 @@ async function run() {
       job.contractId = contractId;
       job.hiredFreelancer = winner.user._id;
 
-      // Escrow payment
-      const payStatus = completedJob ? 'released' : (chance(0.85) ? 'deposit_paid' : 'deposit_pending');
-      const fee = round2(total * PLATFORM_FEE_RATE);
+      // Escrow — matches the live app's wallet-native model, not the legacy
+      // 50/50 Stripe deposit/final flow (that flow is Gig-orders-only now).
+      // Fixed-price: real acceptProposal() ALWAYS locks milestone 1 in full
+      // before any writes complete — there's no "accepted but unfunded" limbo
+      // state, so every seeded contract starts genuinely funded.
+      const fee = round2(total * PLATFORM_FEE_RATE); // summary-only, for notification/history copy below
       const payout = round2(total - fee);
-      const depositPaidAt = payStatus !== 'deposit_pending' ? dateBetween(startAt, addDays(startAt, 2)) : undefined;
-      const releasedAt = payStatus === 'released' ? (contractDoc.completedAt || dateBetween(startAt, NOW)) : undefined;
-      payments.push({
-        jobId: job._id, contractId, proposalId: accepted._id,
-        clientId: client.user._id, freelancerId: winner.user._id, type: 'job_escrow',
-        totalAmount: total, depositAmount: deposit, finalAmount: finalAmt,
-        feeRate: PLATFORM_FEE_RATE,
-        platformFee: payStatus === 'released' ? fee : 0,
-        freelancerPayout: payStatus === 'released' ? payout : 0,
-        currency: 'PKR', status: payStatus,
-        stripe: { simulated: true, depositSessionId: `cs_sim_${contractId}`, depositPaymentIntent: `pi_sim_${contractId}` },
-        depositPaidAt, releasedAt,
-        createdAt: startAt, updatedAt: releasedAt || depositPaidAt || startAt,
-      });
-      bump('Payments');
-      if (payStatus === 'released') { addWallet(winner.user._id, 'balance', payout); addWallet(client.user._id, 'spend', total); }
+      let currentMilestone = null;        // the milestone mirroring contractDoc.status (fixed-price only)
+      let currentMilestonePayment = null; // its linked Payment row, if funded yet
+      let milestoneCount = 0;             // how many milestones this contract has (fixed-price only)
+      let depositPaidAt;                  // "money first at risk" timestamp, either branch
+      const releasedAt = completedJob ? (contractDoc.completedAt || dateBetween(startAt, NOW)) : undefined;
 
-      // Contract history (milestone-like timeline)
+      // Contract history (real action names from milestone.service.js / hourlyEscrow.service.js)
       const hist = (action, notes, when) => contractHistory.push({ contractId, action, notes, performedBy: chance(0.5) ? client.user._id : winner.user._id, createdAt: when, updatedAt: when });
       hist('contract_started', 'Contract created from accepted proposal', startAt);
-      if (depositPaidAt) hist('deposit_funded', 'Client funded the escrow deposit', depositPaidAt);
+
+      if (isFixed) {
+        // Multi-milestone split is the exception, not the rule.
+        const splitInto = chance(0.3) ? randInt(2, 4) : 1;
+        milestoneCount = splitInto;
+        contractDoc.milestoneMode = splitInto > 1;
+
+        const amounts = [];
+        let remainder = total;
+        for (let m = 0; m < splitInto; m++) {
+          const amt = (m === splitInto - 1) ? remainder : round2(total / splitInto);
+          amounts.push(amt);
+          remainder = round2(remainder - amt);
+        }
+
+        const milestoneTitle = (order, count) => {
+          if (count === 1) return 'Full Project';
+          if (order === 1) return 'Milestone 1: Kickoff & Initial Delivery';
+          if (order === count) return `Milestone ${order}: Final Delivery & Handoff`;
+          return `Milestone ${order}: Development Phase`;
+        };
+
+        // Milestone 1 is never left pending_funding (see comment above);
+        // currentIdx is whichever milestone's state should mirror
+        // contractDoc.status — every one before it is fully released, every
+        // one after it is genuinely untouched (pending_funding, no Payment).
+        const currentIdx = completedJob ? splitInto - 1 : randInt(0, splitInto - 1);
+
+        for (let m = 0; m < splitInto; m++) {
+          const order = m + 1;
+          const mId = new mongoose.Types.ObjectId();
+          const isPast = m < currentIdx || completedJob;
+          const isCurrent = m === currentIdx && !completedJob;
+          let mStatus;
+          if (isPast) mStatus = 'released';
+          else if (isCurrent) {
+            if (['delivered', 'under_review'].includes(cStatus)) mStatus = 'submitted';
+            else if (cStatus === 'in_revision') mStatus = 'in_revision';
+            else mStatus = 'funded'; // active / paused
+          } else mStatus = 'pending_funding';
+
+          const fundedAt = mStatus === 'pending_funding' ? undefined
+            : (isPast ? dateBetween(startAt, addDays(startAt, 10 * order)) : dateBetween(startAt, addDays(startAt, 2)));
+          const submittedAt = ['submitted', 'in_revision', 'released'].includes(mStatus) && fundedAt
+            ? dateBetween(fundedAt, addDays(fundedAt, 10)) : undefined;
+          const mReleasedAt = mStatus === 'released'
+            ? (isPast ? dateBetween(submittedAt || fundedAt, completedJob ? (contractDoc.completedAt || NOW) : NOW) : releasedAt)
+            : undefined;
+
+          const milestoneDoc = {
+            _id: mId, contractId, jobId: job._id, order, amount: amounts[m],
+            title: milestoneTitle(order, splitInto),
+            description: `Milestone ${order} of ${splitInto} for "${job.title}".`,
+            status: mStatus,
+            fundedAt, submittedAt,
+            reviewDeadline: submittedAt && ['submitted', 'in_revision'].includes(mStatus) ? addDays(submittedAt, 7) : undefined,
+            approvedAt: mStatus === 'released' ? mReleasedAt : undefined,
+            releasedAt: mReleasedAt,
+          };
+          milestones.push(milestoneDoc);
+          if (order === 1) depositPaidAt = fundedAt;
+          if (m === currentIdx) currentMilestone = milestoneDoc; // even when completedJob (order===currentIdx too)
+
+          if (mStatus !== 'pending_funding') {
+            const mFee = round2(amounts[m] * PLATFORM_FEE_RATE);
+            const mPayout = round2(amounts[m] - mFee);
+            payments.push({
+              jobId: job._id, contractId, milestoneId: mId, proposalId: accepted._id,
+              clientId: client.user._id, freelancerId: winner.user._id, type: 'job_escrow',
+              totalAmount: amounts[m], depositAmount: amounts[m], finalAmount: amounts[m],
+              feeRate: PLATFORM_FEE_RATE,
+              platformFee: mStatus === 'released' ? mFee : 0,
+              freelancerPayout: mStatus === 'released' ? mPayout : 0,
+              currency: 'PKR', status: mStatus === 'released' ? 'released' : 'deposit_paid',
+              stripe: { simulated: true },
+              depositPaidAt: fundedAt, releasedAt: mReleasedAt,
+              createdAt: fundedAt, updatedAt: mReleasedAt || fundedAt,
+            });
+            bump('Payments');
+            if (m === currentIdx) currentMilestonePayment = payments[payments.length - 1];
+            hist('milestone_funded', `Milestone ${order} ("${milestoneDoc.title}") funded — Rs. ${amounts[m]}`, fundedAt);
+            if (mStatus === 'released') {
+              addWallet(winner.user._id, 'balance', mPayout);
+              addWallet(client.user._id, 'spend', amounts[m]);
+              hist(chance(0.3) ? 'milestone_auto_released' : 'milestone_released', `Milestone ${order} released — payout Rs. ${mPayout} (fee Rs. ${mFee})`, mReleasedAt);
+            }
+          }
+        }
+        contractDoc.currentMilestoneOrder = completedJob ? splitInto : currentIdx + 1;
+      } else {
+        // Hourly: one Payment representing the accept-time weekly-estimate
+        // lock (contractDoc.hourlyEscrow's numeric fields are the live
+        // running balance; this Payment is the audit-trail row for the
+        // initial lock event, same as lockHourlyEscrow() creates live).
+        depositPaidAt = startAt;
+        const lockAmount = round2((contractDoc.hourlyRate || 0) * (contractDoc.weeklyLimit || 0));
+        payments.push({
+          jobId: job._id, contractId, proposalId: accepted._id,
+          clientId: client.user._id, freelancerId: winner.user._id, type: 'hourly_escrow',
+          totalAmount: lockAmount, depositAmount: lockAmount, finalAmount: lockAmount,
+          feeRate: PLATFORM_FEE_RATE, platformFee: 0, freelancerPayout: 0,
+          currency: 'PKR', status: 'deposit_paid',
+          stripe: { simulated: true },
+          depositPaidAt, releasedAt: undefined,
+          createdAt: startAt, updatedAt: startAt,
+        });
+        bump('Payments');
+        hist('hourly_escrow_locked', `Locked Rs. ${lockAmount} (one week: Rs. ${contractDoc.hourlyRate}/hr x ${contractDoc.weeklyLimit}hrs)`, startAt);
+      }
+
       notify(winner.user._id, 'proposal_accepted', 'Your proposal was accepted', `You were hired for "${job.title}"`, { jobId: job._id, link: '/freelancer/proposals' }, accepted.respondedAt);
-      if (depositPaidAt) notify(winner.user._id, 'escrow_funded', 'Escrow funded', 'You can safely begin work now.', { jobId: job._id }, depositPaidAt);
+      notify(winner.user._id, 'escrow_funded', 'Escrow funded', 'You can safely begin work now.', { jobId: job._id }, depositPaidAt);
 
       // Deliveries (1–3 versions)
       const nDeliv = completedJob ? randInt(1, 3) : (['delivered', 'in_revision', 'under_review'].includes(contractDoc.status) ? randInt(1, 2) : 0);
@@ -1106,7 +1217,7 @@ async function run() {
       // Release + reviews for completed
       if (completedJob) {
         const relAt = releasedAt || NOW;
-        hist('escrow_released', `Escrow released. Payout ${payout} to freelancer (fee ${fee}).`, relAt);
+        hist('contract_completed', `Project marked complete — total Rs. ${total} (fee Rs. ${fee}, freelancer payout Rs. ${payout}).`, relAt);
         notify(winner.user._id, 'payment_released', 'Payment released', `Rs. ${payout.toLocaleString()} was added to your wallet.`, { jobId: job._id, link: '/freelancer/wallet' }, relAt);
         notify(client.user._id, 'project_completed', 'Project completed', `"${job.title}" is complete.`, { jobId: job._id }, relAt);
 
@@ -1128,24 +1239,66 @@ async function run() {
         }
       }
 
-      // Dispute (subset)
+      // Dispute (subset). Fixed-price disputes live on the relevant
+      // Milestone's own `dispute` sub-doc, not the contract's — hourly
+      // disputes stay contract-level (hourlyEscrow.service.js has no
+      // per-log dispute concept). See CLAUDE.md's Escrow & Payments section.
       if (disputed) {
         const raisedAt = dateBetween(lastDelivAt, NOW);
         // A completed job's dispute must have been settled to reach completion.
         const resolved = completedJob ? true : chance(0.55);
-        contractDoc.dispute = {
+        const disputeDoc = {
           raisedBy: chance(0.6) ? client.user._id : winner.user._id,
           reason: pick(['Work not as described', 'Missed deadline', 'Quality concerns', 'Scope disagreement', 'Non-responsive']),
           description: pick(['The delivered work did not match the agreed requirements and needs significant changes.', 'The freelancer missed the agreed deadline and communication stalled.', 'There is a disagreement about the project scope that we could not resolve directly.']),
           status: resolved ? 'resolved' : 'pending',
           raisedAt,
           resolvedBy: resolved ? client.user._id : undefined,
-          resolutionNotes: resolved ? pick(['Admin resolved: escrow released to freelancer.', 'Admin resolved: partial refund to client (split).', 'Admin resolved: full refund to client.', 'Dispute rejected — original terms upheld.']) : undefined,
+          resolutionNotes: undefined,
           resolvedAt: resolved ? dateBetween(raisedAt, NOW) : undefined,
         };
-        hist('dispute_raised', `Dispute raised: ${contractDoc.dispute.reason}`, raisedAt);
-        if (resolved) hist('dispute_resolved', contractDoc.dispute.resolutionNotes, contractDoc.dispute.resolvedAt);
-        disputes.push({ contractId, job, client, winner, dispute: contractDoc.dispute });
+
+        if (isFixed) {
+          // Outcome must agree with the milestone/Payment state already
+          // seeded above — never contradict a completed job's already-paid
+          // milestone, and only land on 'cancelled' (per the model's own doc:
+          // "client never funded this milestone") when nothing was ever locked.
+          if (!resolved) {
+            currentMilestone.status = 'disputed';
+          } else if (completedJob) {
+            disputeDoc.resolutionNotes = 'Admin resolved: escrow released to freelancer.';
+            // already 'released' from the main loop above — leave as-is.
+          } else if (currentMilestone.status === 'pending_funding') {
+            currentMilestone.status = 'cancelled';
+            disputeDoc.resolutionNotes = 'Admin resolved: client never funded this milestone — contract ended, no funds moved.';
+          } else if (chance(0.6)) {
+            currentMilestone.status = 'released';
+            currentMilestone.releasedAt = currentMilestone.releasedAt || dateBetween(raisedAt, NOW);
+            currentMilestone.approvedAt = currentMilestone.releasedAt;
+            if (currentMilestonePayment) {
+              currentMilestonePayment.status = 'released';
+              currentMilestonePayment.platformFee = round2(currentMilestonePayment.totalAmount * PLATFORM_FEE_RATE);
+              currentMilestonePayment.freelancerPayout = round2(currentMilestonePayment.totalAmount - currentMilestonePayment.platformFee);
+              currentMilestonePayment.releasedAt = currentMilestone.releasedAt;
+            }
+            disputeDoc.resolutionNotes = 'Admin resolved: escrow released to freelancer.';
+            contractDoc.currentMilestoneOrder = Math.min(currentMilestone.order + 1, milestoneCount);
+          } else {
+            currentMilestone.status = 'refunded';
+            if (currentMilestonePayment) currentMilestonePayment.status = 'refunded';
+            disputeDoc.resolutionNotes = 'Admin resolved: full refund to client.';
+          }
+          currentMilestone.dispute = disputeDoc;
+        } else {
+          if (resolved) {
+            disputeDoc.resolutionNotes = pick(['Admin resolved: escrow released to freelancer.', 'Admin resolved: partial refund to client (split).', 'Admin resolved: full refund to client.', 'Dispute rejected — original terms upheld.']);
+          }
+          contractDoc.dispute = disputeDoc;
+        }
+
+        hist('dispute_raised', `Dispute raised: ${disputeDoc.reason}`, raisedAt);
+        if (resolved) hist('dispute_resolved', disputeDoc.resolutionNotes, disputeDoc.resolvedAt);
+        disputes.push({ contractId, job, client, winner, dispute: disputeDoc });
         bump('Disputes');
       }
 
@@ -1195,6 +1348,11 @@ async function run() {
   const jobBulk = jobs.map(j => ({ updateOne: { filter: { _id: j._id }, update: { $set: { proposals: j.proposals, contractId: j.contractId, hiredFreelancer: j.hiredFreelancer } } } }));
   if (jobBulk.length) await Job.bulkWrite(jobBulk);
   done('Contracts', contracts.length);
+
+  step('Milestones');
+  if (milestones.length) await Milestone.insertMany(milestones);
+  bump('Milestones', milestones.length);
+  done('Milestones', milestones.length);
 
   step('Contract Timeline & Deliveries');
   if (contractHistory.length) await ContractHistory.insertMany(contractHistory);
@@ -1277,8 +1435,9 @@ async function run() {
   done('Messages', messages.length);
 
   // ---- 8. DISPUTES (reports view) -----------------------------------------
-  // Dispute state already lives on the contract; also surface as Reports for
-  // the moderation queue where a party formally reported the other.
+  // Dispute state already lives on the relevant Milestone (fixed-price) or
+  // the Contract itself (hourly); also surface as Reports for the moderation
+  // queue where a party formally reported the other.
   step('Reports');
   const reports = [];
   for (const d of disputes) {
@@ -1408,6 +1567,7 @@ function printSummary(ms) {
   line('Services (Gigs) Created', 'Services (Gigs)');
   line('Proposals Created', 'Proposals');
   line('Contracts Created', 'Contracts');
+  line('Milestones Created', 'Milestones');
   line('Payments Created', 'Payments');
   line('Wallet Txns Created', 'WalletTransactions');
   line('Withdrawals Created', 'Withdrawals');
@@ -1421,6 +1581,7 @@ function printSummary(ms) {
   line('Notifications Created', 'Notifications');
   line('Audit Logs Created', 'AuditLogs');
   console.log('  AI Usage Records           0  (no AIUsage model — skipped by design)');
+  console.log('  Gig Orders                 0  (Gigs are seeded as listings only — no order/purchase lifecycle yet)');
   console.log(`\n⏱  Completed in ${(ms / 1000).toFixed(1)}s`);
   console.log('\n✅ Demo database successfully populated.\n');
   console.log('Demo logins (password for all four: Pass123!@#):');
