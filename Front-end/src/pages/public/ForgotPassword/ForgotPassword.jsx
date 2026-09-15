@@ -99,7 +99,7 @@ const ForgotPassword = () => {
                         Don't worry, it happens to the best of us. Just enter your email and we'll help you get back into your account.
                     </p>
 
-                    <div style={{ marginTop: '2rem', display: 'flex', gap: '1.5rem' }}>
+                    <div className="auth-feature-badges" style={{ marginTop: '2rem', display: 'flex', gap: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <ShieldCheck size={20} color="var(--auth-accent)" />
                             <div>

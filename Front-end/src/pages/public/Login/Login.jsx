@@ -7,6 +7,7 @@ import { authAPI } from "../../../api/auth";
 import { useAuth } from '../../../hooks/useAuth';
 import AuthBackground from "../AuthBackground";
 import { isMobileApp } from "../../../utils/platform";
+import { openExternal } from "../../../utils/externalLink";
 import "../Auth.css";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -135,12 +136,30 @@ const Login = () => {
             return;
         }
         const supabase = createClient(supabaseUrl, supabaseKey);
-        await supabase.auth.signInWithOAuth({
+        const mobile = isMobileApp();
+        // On mobile, `window.location.origin` is `https://localhost` — the
+        // WebView's fixed, unreachable origin — so the post-auth redirect must
+        // target a custom URL scheme the app can actually catch instead (see
+        // useGoogleAuthDeepLink.js + AndroidManifest.xml's matching
+        // intent-filter). `skipBrowserRedirect` stops the SDK from trying to
+        // navigate the WebView itself to Google's consent screen (which Google
+        // blocks/mishandles inside embedded WebViews) — we open it as a Chrome
+        // Custom Tab explicitly instead, same as any other external link.
+        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: provider,
             options: {
-                redirectTo: `${window.location.origin}/auth/consent`
+                redirectTo: mobile ? 'skillkart://auth-callback' : `${window.location.origin}/auth/consent`,
+                skipBrowserRedirect: mobile,
             }
         });
+
+        if (mobile) {
+            if (oauthError || !data?.url) {
+                setError('Could not start Google sign-in. Please try again.');
+                return;
+            }
+            await openExternal(data.url);
+        }
     };
 
     return (
@@ -172,7 +191,7 @@ const Login = () => {
                         Log in to manage your projects, connect with talent, and take your business to the next level.
                     </p>
 
-                    <div style={{ marginTop: '2rem', display: 'flex', gap: '1.5rem' }}>
+                    <div className="auth-feature-badges" style={{ marginTop: '2rem', display: 'flex', gap: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <Shield size={20} color="var(--auth-accent)" />
                             <div>

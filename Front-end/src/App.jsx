@@ -10,6 +10,7 @@ import Loader from "./Components/common/Loader/Loader";
 import { useAuth } from './hooks/useAuth';
 import useAndroidBackButton from './hooks/useAndroidBackButton';
 import usePushNotifications from './hooks/usePushNotifications';
+import useGoogleAuthDeepLink from './hooks/useGoogleAuthDeepLink';
 import SuspendedOverlay from './Components/common/SuspendedOverlay/SuspendedOverlay';
 import { log, logStatus } from './utils/logger';
 import { isMobileApp, isAdminApp } from './utils/platform';
@@ -26,6 +27,7 @@ function App() {
 
   useAndroidBackButton();
   usePushNotifications(isAuthenticated);
+  useGoogleAuthDeepLink();
 
   useEffect(() => {
     if (logged.current) return;

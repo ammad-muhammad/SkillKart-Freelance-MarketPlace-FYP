@@ -51,6 +51,24 @@
     pointer-events: none;
 }
 
+/* Mobile-app fallback for .auth-mesh (see AuthBackground.jsx) — same dark
+   backdrop and a hint of the color mesh, but a plain static background-image
+   instead of an animated, blurred one: no `filter`, no continuous Framer
+   Motion animation, painted once and composited like any other flat layer.
+   Android's WebView handles the full effect very badly (large-radius
+   `filter: blur()` animating on 3 blobs + a mouse-glow + up to 15 particles,
+   all at once) — that was the actual cause of the reported jank on the
+   login/register/OTP/forgot-password screens. */
+.auth-mesh--static {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--auth-bg-dark);
+    background-image:
+        radial-gradient(circle at 20% 25%, rgba(4, 46, 76, 0.55) 0%, transparent 50%),
+        radial-gradient(circle at 85% 75%, rgba(10, 74, 115, 0.4) 0%, transparent 55%);
+}
+
 .auth-blob {
     position: absolute;
     border-radius: 50%;

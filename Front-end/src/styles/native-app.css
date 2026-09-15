@@ -50,3 +50,54 @@ html.is-native-app .bp-hero {
   padding-bottom: 2rem !important;
   margin-bottom: 0 !important;
 }
+
+/* Login/Register/ForgotPassword: Auth.css's own <=968px media query was
+   written for a narrow desktop/tablet BROWSER window, where scrolling to see
+   the rest of a page is normal — but that same query also fires inside the
+   app's narrow WebView, turning what should be a fixed, full-screen native
+   auth screen into an unintentionally scrollable one (`min-height: 100vh` +
+   `overflow: auto`, plus 80px of padding meant to clear a browser's own
+   chrome, which the app doesn't have). `100dvh` (the second, later `height`
+   declaration) reflects the WebView's actual visible viewport and wins over
+   the `100vh` fallback wherever the on-device WebView supports it; where it
+   doesn't, the `100vh` line above still applies. `--app-vh` (set from
+   `window.innerHeight` in main.jsx, not a CSS viewport unit at all) is the
+   real fix and wins over both — vh/dvh turned out to still report a taller
+   box than what's actually visible on real devices, which is exactly what
+   made centered content look pinned to the top with dead space below it
+   despite align-items: center being correct. The description paragraph
+   is the least essential content on any of these three screens (restated
+   marketing copy, not information the form needs) — dropped here, on top of
+   the reduced heading size and tightened spacing, so the actually important
+   content (heading, form, submit, social buttons) reliably fits the fixed
+   screen without needing the scroll this block removes. The two-badge trust
+   row stays (just closer to the heading above it) — it's real content, not
+   filler, and helps the shorter layout not read as sparse on a tall screen. */
+html.is-native-app .auth-page {
+  height: 100vh !important;
+  height: 100dvh !important;
+  height: var(--app-vh, 100dvh) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 16px !important;
+  /* Vertically centered (align-items: center is already the base .auth-page
+     rule — no override needed here), matching every other screen's request. */
+}
+html.is-native-app .auth-content {
+  gap: 0.75rem !important;
+}
+html.is-native-app .auth-branding {
+  gap: 0.5rem !important;
+}
+html.is-native-app .auth-title {
+  font-size: 1.6rem !important;
+}
+html.is-native-app .auth-description {
+  display: none !important;
+}
+html.is-native-app .auth-feature-badges {
+  margin-top: 1rem !important;
+}
+html.is-native-app .auth-card {
+  padding: 1.1rem 1.25rem !important;
+}
