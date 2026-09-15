@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
+import { isMobileApp } from "../../utils/platform";
 
 /**
  * AuthBackground Component
@@ -8,7 +9,21 @@ import { motion, useMotionValue, useSpring } from "framer-motion";
  * 1. Mouse Reactive Glow - Follows the cursor with a soft radial fade.
  * 2. Anti-Gravity Floating Particles - Small dots that drift upwards elegantly.
  * 3. Mesh Blobs - Interactive soft blobs for depth.
+ *
+ * The native Android WebView renders large-radius animated `filter: blur()`
+ * very badly (the same class of issue native-app.css already documents for
+ * `backdrop-filter` — every composite pass has to re-rasterize the blurred
+ * layer). Below, 3 blobs (blur 80-100px) plus a mouse-glow (blur 80px) plus
+ * up to 15 particles all animate forever, simultaneously, on every
+ * login/register/OTP/forgot-password screen — that's what was actually
+ * causing the reported jerking/jitter/glitching on-device (the post-login
+ * dashboard doesn't use this component at all, which is why it was
+ * unaffected). On mobile we skip all of that setup and just paint a cheap
+ * static gradient instead (`.auth-mesh--static` in Auth.css) — no filter, no
+ * per-frame animation, composited once.
  */
+const isMobile = isMobileApp();
+
 const AuthBackground = () => {
     // Mouse Reactive Glow values
     const mouseX = useMotionValue(0);
@@ -20,6 +35,7 @@ const AuthBackground = () => {
     const springY = useSpring(mouseY, springConfig);
 
     useEffect(() => {
+        if (isMobile) return; // no mouse on a touch device, and the point is to skip this work there
         const handleMouseMove = (e) => {
             mouseX.set(e.clientX);
             mouseY.set(e.clientY);
@@ -33,6 +49,7 @@ const AuthBackground = () => {
     const [particles, setParticles] = useState([]);
 
     useEffect(() => {
+        if (isMobile) return; // static fallback below doesn't render particles at all
         // Adjust density based on screen size
         const count = window.innerWidth < 768 ? 15 : 30;
         const newParticles = Array.from({ length: count }).map((_, i) => ({
@@ -46,6 +63,10 @@ const AuthBackground = () => {
         }));
         setParticles(newParticles);
     }, []);
+
+    if (isMobile) {
+        return <div className="auth-mesh auth-mesh--static" style={{ pointerEvents: "none" }} />;
+    }
 
     return (
         <div className="auth-mesh" style={{ overflow: "hidden", pointerEvents: "none" }}>
@@ -69,37 +90,37 @@ const AuthBackground = () => {
 
             {/* 2. EXISTING BLOBS (MAINTAINING CURRENT UI BUT AS COMPONENT) */}
             {/* These blobs provide the deep mesh effect */}
-            <motion.div 
-                animate={{ 
-                    scale: [1, 1.15, 1], 
-                    x: [0, 40, 0], 
+            <motion.div
+                animate={{
+                    scale: [1, 1.15, 1],
+                    x: [0, 40, 0],
                     y: [0, 30, 0],
                     opacity: [0.2, 0.3, 0.2]
                 }}
                 transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                className="auth-blob auth-blob--1" 
+                className="auth-blob auth-blob--1"
                 style={{ zIndex: -1 }}
             />
-            <motion.div 
-                animate={{ 
-                    scale: [1, 1.2, 1], 
-                    x: [0, -30, 0], 
+            <motion.div
+                animate={{
+                    scale: [1, 1.2, 1],
+                    x: [0, -30, 0],
                     y: [0, -20, 0],
                     opacity: [0.15, 0.25, 0.15]
                 }}
                 transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                className="auth-blob auth-blob--2" 
+                className="auth-blob auth-blob--2"
                 style={{ zIndex: -1 }}
             />
-            <motion.div 
-                animate={{ 
-                    scale: [1, 1.3, 1], 
-                    x: [0, 25, 0], 
-                    y: [0, 50, 0], 
-                    opacity: [0.1, 0.2, 0.1] 
+            <motion.div
+                animate={{
+                    scale: [1, 1.3, 1],
+                    x: [0, 25, 0],
+                    y: [0, 50, 0],
+                    opacity: [0.1, 0.2, 0.1]
                 }}
                 transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-                className="auth-blob auth-blob--3" 
+                className="auth-blob auth-blob--3"
                 style={{ zIndex: -1 }}
             />
 
@@ -108,17 +129,17 @@ const AuthBackground = () => {
                 <motion.div
                     key={p.id}
                     initial={{ top: "110%", left: `${p.x}%`, opacity: 0 }}
-                    animate={{ 
-                        top: "-10%", 
+                    animate={{
+                        top: "-10%",
                         opacity: [0, 0.12, 0.12, 0],
                         x: [0, p.drift, 0],
                         scale: [0.8, 1, 0.8]
                     }}
-                    transition={{ 
-                        duration: p.duration, 
-                        repeat: Infinity, 
-                        delay: p.delay, 
-                        ease: "linear" 
+                    transition={{
+                        duration: p.duration,
+                        repeat: Infinity,
+                        delay: p.delay,
+                        ease: "linear"
                     }}
                     style={{
                         position: "absolute",

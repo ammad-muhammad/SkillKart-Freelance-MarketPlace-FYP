@@ -19,6 +19,20 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Google/social login callback: Supabase's OAuth flow finishes in the
+                 system browser (see Login.jsx's handleSocialLogin) and redirects here
+                 instead of to https://localhost, which the WebView's fixed origin
+                 makes unreachable. Caught by useGoogleAuthDeepLink.js's App
+                 'appUrlOpen' listener; launchMode="singleTask" above ensures this
+                 re-enters the already-running MainActivity via onNewIntent rather
+                 than spawning a second instance. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="skillkart" android:host="auth-callback" />
+            </intent-filter>
         </activity>
 
         <provider
