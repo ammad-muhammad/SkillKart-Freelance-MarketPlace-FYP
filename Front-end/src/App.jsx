@@ -4,6 +4,7 @@ import AppRoutes from "./routes/AppRoutes";
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 import BuddyWidget from "./Components/common/BuddyWidget/BuddyWidget";
 import NotificationBell from "./Components/common/NotificationBell/NotificationBell";
+import CookieConsent from "./Components/common/CookieConsent/CookieConsent";
 import NetworkGate from "./Components/common/NetworkGate/NetworkGate";
 import MobileBootScreen from "./Components/common/MobileBootScreen/MobileBootScreen";
 import { useAuth } from './hooks/useAuth';
@@ -49,11 +50,15 @@ function App() {
 
   return (
     <NetworkGate>
-      {user?.isBlocked && <SuspendedOverlay reason={user.blockedReason} onLogout={logout} />}
+      {user?.isBlocked && <SuspendedOverlay reason={user.blockedReason} onLogout={() => logout()} />}
       <ScrollToTop />
       <AppRoutes />
       <BuddyWidget />
       <NotificationBell />
+      {/* Web-only: cookies/localStorage consent isn't a meaningful concept
+          inside the Capacitor WebView the same way, and the mobile build
+          already omits the marketing/legal pages this links to. */}
+      {!isMobileApp() && <CookieConsent />}
     </NetworkGate>
   );
 }

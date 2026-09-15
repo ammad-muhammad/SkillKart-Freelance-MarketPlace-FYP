@@ -104,6 +104,7 @@ const Categories = lazy(() => import("../pages/public/Categories/Categories"));
 const BrowseProjects = lazy(() => import("../pages/public/BrowseProjects/BrowseProjects"));
 const JobDetails = lazy(() => import("../pages/public/JobDetails/JobDetails"));
 const GigDetail = lazy(() => import("../pages/public/GigDetail/GigDetail"));
+const BrowseGigs = lazy(() => import("../pages/public/BrowseGigs/BrowseGigs"));
 const PublicFreelancerProfile = lazy(() => import("../pages/public/FreelancerProfile/PublicFreelancerProfile"));
 const PublicClientProfile = lazy(() => import("../pages/public/ClientProfile/PublicClientProfile"));
 
@@ -267,13 +268,17 @@ const AppRoutes = () => {
 
             {/* Core marketplace pages, not "marketing" — freelancers need
                 browse-projects + job details to find and apply to work, and
-                clients need gig details to order one. Unlike the block below,
-                these ship in the mobile build too. Navbar/Footer (rendered by
-                each of these pages themselves) already no-op under
-                isMobileApp(), so no marketing chrome/dead links leak in. */}
+                clients need to browse/order gigs and freelancers need/want
+                to see freelancer profiles. Unlike the block below, these ship
+                in the mobile build too. Navbar/Footer (rendered by each of
+                these pages themselves) already no-op under isMobileApp(), so
+                no marketing chrome/dead links leak in. */}
             <Route path="/browse-projects" element={<BrowseProjects />} />
             <Route path="/jobs/:id" element={<JobDetails />} />
             <Route path="/gigs/:id" element={<GigDetail />} />
+            <Route path="/browse-gigs" element={<BrowseGigs />} />
+            <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
+            <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
 
             {!isMobileApp() && (
               <>
@@ -284,7 +289,6 @@ const AppRoutes = () => {
                 <Route path="/cookies" element={<CookiePolicy />} />
                 <Route path="/services-agreement" element={<ServicesAgreement />} />
 
-                <Route path="/browse-freelancers" element={<BrowseFreelancers />} />
                 <Route path="/post-project" element={<PostProject />} />
                 <Route path="/ai-matchmaking" element={<AiMatchmaking />} />
                 <Route path="/help" element={<HelpCenter />} />
@@ -296,7 +300,6 @@ const AppRoutes = () => {
                 <Route path="/skills/:categorySlug" element={<CategoryPage />} />
                 <Route path="/skills/:categorySlug/:skillSlug" element={<SkillPage />} />
 
-                <Route path="/freelancers/:id" element={<PublicFreelancerProfile />} />
                 <Route path="/clients/:id" element={<PublicClientProfile />} />
               </>
             )}

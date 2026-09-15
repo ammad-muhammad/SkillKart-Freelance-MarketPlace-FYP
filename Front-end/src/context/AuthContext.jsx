@@ -287,7 +287,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('logout-event', Date.now().toString());
       setTimeout(() => localStorage.removeItem('logout-event'), 100);
 
-      toast.info(message);
+      // `logout` is a common bare onClick={logout} target — React then calls
+      // it with the click event as `message`, which used to render as
+      // "[object Object]" in the toast instead of the intended default.
+      toast.info(typeof message === 'string' ? message : 'Logged out successfully');
       navigate('/login');
     }
   };

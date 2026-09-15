@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { Bookmark, BookmarkMinus, MapPin, Star } from 'lucide-react';
-import { isMobileApp } from '../../utils/platform';
 import './ClientDashboard.css';
 
 const ClientSavedFreelancers = () => {
@@ -30,20 +29,15 @@ const ClientSavedFreelancers = () => {
           <div style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}><Bookmark size={64} /></div>
           <h3 style={{ color: 'var(--color-primary)' }}>Your list is empty</h3>
           <p style={{ color: 'var(--color-text-light)', marginTop: '0.5rem' }}>
-            {isMobileApp()
-              ? "You haven't saved any freelancers yet."
-              : 'Browse freelancers and click the bookmark icon to save them here.'}
+            Browse freelancers and click the bookmark icon to save them here.
           </p>
-          {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
-          {!isMobileApp() && (
-            <button
-              className="cl-btn cl-btn--primary"
-              style={{ marginTop: '1.5rem' }}
-              onClick={() => navigate('/browse-freelancers')}
-            >
-              Browse Talent
-            </button>
-          )}
+          <button
+            className="cl-btn cl-btn--primary"
+            style={{ marginTop: '1.5rem' }}
+            onClick={() => navigate('/browse-freelancers')}
+          >
+            Browse Talent
+          </button>
         </div>
       ) : (
         <div className="cl-saved-grid">
@@ -88,19 +82,12 @@ const ClientSavedFreelancers = () => {
 
               <div className="cl-freelancer-card__footer">
                 <span className="cl-freelancer-card__rate"><strong>Rs. {f.hourlyRate || 0}</strong> / hr</span>
-                {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
-                {isMobileApp() ? (
-                  <span className="cl-btn cl-btn--primary cl-btn--sm" style={{ opacity: 0.6, cursor: 'not-allowed' }}>
-                    Not available on mobile
-                  </span>
-                ) : (
-                  <button
-                    className="cl-btn cl-btn--primary cl-btn--sm"
-                    onClick={() => navigate(`/freelancers/${f.id}`)}
-                  >
-                    View Profile
-                  </button>
-                )}
+                <button
+                  className="cl-btn cl-btn--primary cl-btn--sm"
+                  onClick={() => navigate(`/freelancers/${f.id}`)}
+                >
+                  View Profile
+                </button>
               </div>
             </div>
           ))}

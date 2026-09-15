@@ -6,7 +6,7 @@ import {
   MessageSquareCode, Calculator, HelpCircle, Search, FileEdit, Zap,
   Code, Globe, Smartphone, Palette, PenTool, BrainCircuit, Database,
   BarChart3, Megaphone, FileText, Video, Music, Camera, Cloud, Server,
-  ShieldCheck, Briefcase, Cpu, Layers, Wrench, LayoutGrid,
+  ShieldCheck, Briefcase, Cpu, Layers, Wrench, LayoutGrid, ShoppingBag,
 } from 'lucide-react';
 import PkrIcon from '../PkrIcon';
 import { useAuth } from '../../../hooks/useAuth';
@@ -58,6 +58,7 @@ const BASE_NAV_ITEMS = [
     label: 'Find Talent',
     children: [
       { label: 'Browse Freelancers', sub: 'Explore verified profiles', href: '/browse-freelancers', icon: <Search size={18} /> },
+      { label: 'Browse Gigs',        sub: 'Pre-packaged offerings',    href: '/browse-gigs',         icon: <ShoppingBag size={18} /> },
       { label: 'Post a Project',     sub: 'Get proposals fast',        href: '/post-project',        icon: <FileEdit size={18} /> },
       { label: 'AI Matchmaking',     sub: 'Smart recommendations',     href: '/ai-matchmaking',      icon: <Zap size={18} /> },
     ],
@@ -373,7 +374,7 @@ export default function Navbar({ alwaysSticky = false }) {
             {isAuthenticated ? (
               <>
                 <Link to={dashboardLink} className="navbar__cta btn-secondary">Dashboard</Link>
-                <button onClick={logout} className="navbar__cta btn-primary">Logout</button>
+                <button onClick={() => logout()} className="navbar__cta btn-primary">Logout</button>
               </>
             ) : (
               <Link to="/login" className="navbar__cta btn-primary">Login</Link>
