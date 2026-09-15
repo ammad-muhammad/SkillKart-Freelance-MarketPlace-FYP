@@ -19,7 +19,7 @@ Express + MongoDB REST API powering the SkillKart marketplace: authentication, R
 
 ## Prerequisites
 
-- Node.js ≥ 18, npm ≥ 9
+- Node.js ≥ 22.3.0, npm ≥ 9 (see `engines` in `package.json`)
 - A MongoDB connection string (local or Atlas)
 
 ## Setup
@@ -57,6 +57,60 @@ src/
 └── server.js       HTTP server bootstrap
 ```
 
+## Authentication & RBAC
+
+JWT access + refresh tokens (`src/utils/jwt.js`, `src/middleware/auth.middleware.js`).
+`authenticate` re-fetches the user from Mongo on **every** request (never trusts the JWT
+payload alone) and checks `isActive`, `isBlocked`, lock state, and `tokenVersion` (`tv` in
+the token) — bumping `tokenVersion` invalidates every previously-issued token, which is how
+"log out all devices" and password-change work. Refresh tokens are tracked server-side in
+a `RefreshToken` collection (`jti` + `familyId`) so they can be revoked, and rotate on every
+use: reusing an already-rotated refresh token outside a short grace window is treated as a
+theft signal, which kills the whole token family and bumps `tokenVersion`.
+
+Roles: `superadmin` (bypasses all role checks — a special `userId === 'superadmin'` token
+short-circuits `authenticate` to a synthetic user with no DB lookup), `admin`,
+`contenteditor`, `freelancer`, `client`, `publicviewer`. Role → permission/resource maps
+live in `src/middleware/rbac.middleware.js`. The **admin panel** has fully separate auth
+(separate `admin_token` cookie, separate `ADMIN_JWT_SECRET`, separate middleware) — see
+`src/middleware/adminAuth.middleware.js`, never mixed with marketplace JWTs.
+
+```mermaid
+sequenceDiagram
+    participant C as Client (browser)
+    participant API as Auth API
+    participant Mid as authenticate middleware
+    participant DB as MongoDB (User / RefreshToken)
+
+    C->>API: POST /auth/login (email, password)
+    API->>DB: verify credentials (loginWithEmail)
+    alt 2FA enabled
+        API-->>C: 200 requires2FA=true (OTP emailed)
+        C->>API: POST /auth/verify-otp (otp)
+        API->>DB: verify OTP
+    end
+    API->>DB: issueTokenPair(user) -> create RefreshToken (jti, familyId)
+    API-->>C: access token + refresh token
+    Note over C: access token kept in memory,<br/>refresh token in sessionStorage (obfuscated)
+
+    C->>API: any request, Authorization: Bearer accessToken
+    API->>Mid: authenticate()
+    Mid->>Mid: verifyToken(accessToken)
+    Mid->>DB: User.findById(decoded.userId) — fresh lookup, every request
+    Mid->>Mid: check isActive / isBlocked / lockUntil / tokenVersion (tv)
+    Mid-->>API: req.user set, next()
+
+    C->>API: POST /auth/refresh-token (refreshToken)
+    API->>DB: find RefreshToken by jti, check revoked/expired
+    alt reused outside grace window (theft signal)
+        API->>DB: revoke entire token family, bump user.tokenVersion
+        API-->>C: 401 session expired — log in again
+    else valid
+        API->>DB: rotate — revoke old, create new RefreshToken (same family)
+        API-->>C: new access token + new refresh token
+    end
+```
+
 ## Scripts
 
 | Script | Description |
@@ -66,12 +120,14 @@ src/
 | `npm run setup:superadmin` | Create/rotate the encrypted SuperAdmin credentials |
 | `npm run seed:demo` | Seed a full, realistic, interconnected demo dataset |
 | `npm run seed:demo:small` | Seed a small dataset for a quick smoke run |
+| `npm run migrate:hourly-escrow` | One-time backfill: locks wallet escrow for hourly contracts created before the wallet-lock system existed (`scripts/migrateHourlyEscrow.js`). Idempotent — dry-run by default, add `-- --apply` to write. |
+| `npm run migrate:skill-verification` | One-time backfill: re-evaluates already-tested skills against the current verification threshold and flips `isVerified` where it now qualifies (`scripts/backfillSkillVerification.js`). Idempotent — dry-run by default, add `-- --apply` to write. |
 | `npm run lint` | Lint `src/` with ESLint |
 | `npm run format` | Format `src/` with Prettier |
 
 ### Demo data
 
-`scripts/seedDemoData.js` populates the existing models with a coherent marketplace — users (realistic Pakistani names), jobs, gigs (covering every category), proposals, contracts, payments, deliveries, messages, reviews, testimonials, disputes, notifications — spread across the last ~12 months, with full referential integrity (no orphaned records).
+`scripts/seedDemoData.js` populates the existing models with a coherent marketplace — users (realistic Pakistani names), jobs, gigs (covering every category), proposals, contracts, **milestones** (real `Milestone` documents for fixed-price contracts, each with a correctly-linked per-milestone `Payment`), payments (including a real wallet-lock `Payment` for hourly contracts), deliveries, messages, reviews, testimonials, disputes (contract-level for hourly, milestone-level for fixed-price — matching the real dispute model), notifications — spread across the last ~12 months, with full referential integrity (no orphaned records). Gig orders are still seeded as listings only — there's no order/purchase lifecycle in the seeder yet, so the legacy 50/50 Stripe deposit/final flow isn't exercised by demo data.
 
 ```bash
 npm run seed:demo            # full dataset (clears marketplace collections first)
@@ -296,6 +352,10 @@ removed (`POST /auth/push-token/remove`) when the hook unmounts (e.g. on logout)
 | Push works locally, not on Railway | Railway needs `FIREBASE_SERVICE_ACCOUNT_JSON` (the file path won't resolve there — no persistent disk). |
 | Token registered but device never receives pushes | Check the device actually granted notification permission (`PushNotifications.requestPermissions()` in `usePushNotifications.js`) — Android 13+ requires this explicitly. |
 
+## Redis
+
+`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB` (see `.env.example`) connect an `ioredis` client at boot (`src/config/redis.js`, `connectRedis()`/`getRedisClient()`, called from `server.js`). It's **optional and currently inert**: nothing in the codebase reads or writes through it today (no session store, no cache, no rate-limit backing) — it's infrastructure wired ahead of need for future caching. Connection failure is caught and logged as a warning ("Continuing without Redis") rather than blocking startup, and the client is cleanly closed on graceful shutdown. Leave the vars unset/default for local dev; there is nothing to configure unless you're adding a feature that needs it.
+
 ## Escrow & Milestone Payments
 
 Fixed-price **custom jobs** lock escrow from the client's **wallet balance** — no Stripe
@@ -310,6 +370,52 @@ There is **no wallet-balance check at job posting or publishing**, for either jo
 `job.controller.js`'s `createJob`/`updateJob` let a client post with a $0 wallet so the job
 is visible and can collect proposals. The wallet is only enforced when a proposal is
 **accepted**.
+
+### Gig orders — legacy Stripe 50/50 deposit/final
+
+Ordering a gig creates a synthetic `Job` document under the hood (`gig.controller.js`'s
+`createGigOrder`), so it rides the same `payment.controller.js` endpoints (`startDeposit`,
+`startFinal`, `confirmPayment`) that fixed-price jobs used before wallet-native milestone
+escrow existed. Each phase first tries an atomic wallet debit; only if the wallet can't
+cover it does it fall back to a real Stripe Checkout session (or the simulated flow under
+`STRIPE_DUMMY=true`).
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as Payment API
+    participant W as Client Wallet
+    participant S as Stripe Checkout
+    participant F as Freelancer
+
+    C->>API: POST /gigs/:id/order (tier)
+    API->>API: create synthetic Job (hiredFreelancer = gig owner)
+    API-->>C: order created — fund deposit to start work
+
+    C->>API: POST /payments/jobs/:jobId/deposit
+    API->>W: atomic debit 50% deposit
+    alt wallet balance sufficient
+        API->>API: Payment.status = deposit_paid, Contract.paymentStatus = funded
+    else insufficient balance
+        API->>S: createCheckoutSession(phase = deposit)
+        C->>S: pay via Stripe Checkout
+        S-->>API: confirmPayment(phase = deposit)
+        API->>API: Payment.status = deposit_paid
+    end
+
+    F->>API: submit delivery
+    C->>API: POST /payments/jobs/:jobId/final
+    API->>W: atomic debit remaining 50%
+    alt wallet balance sufficient
+        API->>API: Payment.status = released, fee computed, freelancer payout credited
+    else insufficient balance
+        API->>S: createCheckoutSession(phase = final)
+        C->>S: pay via Stripe Checkout
+        S-->>API: confirmPayment(phase = final)
+        API->>API: Payment.status = released
+    end
+    API->>API: Job.status = completed, stats rolled up
+```
 
 ### How it works (fixed-price milestones)
 
@@ -327,6 +433,46 @@ Proposal accepted → wallet checked for milestone 1's amount (before any writes
 - **One milestone by default** — accepting a proposal without a `milestones` array creates a single implicit "Full Project" milestone covering the whole price. Splitting into several (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000") is opt-in at accept time; amounts must sum exactly to the proposal price.
 - **Sequential, not all-upfront** — only milestone 1 auto-funds. Milestone 2+ is funded on demand via `POST /payments/milestones/:id/fund` once the client is ready, so capital isn't parked for work that hasn't started.
 - **No Mongo transactions** — none exist anywhere in this codebase. Correctness in `acceptProposal` comes from strict ordering: validate the wallet **before** creating any `Contract`/`Milestone`/`Payment` records, then debit as part of the same accept, so a failed/insufficient-balance request leaves nothing half-created.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API
+    participant W as Client Wallet
+    participant M as Milestone(s)
+    participant F as Freelancer
+    participant Cron as Auto-release cron (hourly)
+
+    C->>API: accept proposal (optional milestone split)
+    API->>W: check balance covers milestone 1's amount (before any writes)
+    API->>API: create Contract + Milestone(s) — implicit "Full Project" if no split
+    API->>W: fundMilestoneFromWallet — atomic debit milestone 1 amount
+    API->>M: milestone 1 status = funded, Payment(job_escrow) created
+
+    F->>API: submitDelivery (only allowed if milestone funded / in_revision)
+    API->>M: milestone status = submitted, reviewDeadline = now + escrow_release_days
+
+    alt client approves
+        C->>API: approve delivery
+        API->>M: approveMilestone -> releaseMilestone
+    else client silent past reviewDeadline
+        Cron->>M: scan status=submitted AND reviewDeadline elapsed
+        Cron->>M: approveMilestone(auto = true)
+    else either party disputes
+        C->>API: raiseDispute (or freelancer)
+        API->>M: milestone status = disputed (excluded from auto-release)
+        Note over API: admin resolves — release / refund / split / resume / reject
+    end
+
+    API->>W: freelancer wallet credited (amount minus platform fee)
+    alt more milestones remain
+        API->>API: Contract.currentMilestoneOrder++, milestone 2 = pending_funding
+        C->>API: POST /payments/milestones/:id/fund (when ready)
+        API->>W: fundMilestoneFromWallet for milestone 2 — sequential, never upfront
+    else last milestone
+        API->>API: Contract + Job status = completed
+    end
+```
 
 ### Hourly wallet-lock escrow
 
@@ -346,11 +492,45 @@ Proposal accepted → wallet checked for one week's estimate (hourlyRate × esti
 
 Hourly disputes stay **contract-level** (`contract.dispute`), unlike fixed-price's per-milestone disputes — branch on `contract.type` when reading dispute state.
 
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API
+    participant W as Client Wallet
+    participant Ct as Contract.hourlyEscrow
+    participant F as Freelancer
+
+    C->>API: accept proposal (hourly)
+    API->>API: estimate = hourlyRate x estimatedWeeklyHours
+    API->>W: check balance covers 1-week estimate (before any writes)
+    API->>W: lockHourlyEscrow — atomic debit estimate
+    API->>Ct: lockedBalance/totalLocked += amount, paymentStatus = wallet_locked
+    API->>API: Payment(hourly_escrow) created
+
+    F->>API: startTimer / addManualLog
+    API->>API: assertEscrowHasRoom (unbilled work <= lockedBalance)
+    alt lock has room
+        API->>Ct: drawDownForTimeLog — atomic decrement of lockedBalance
+        API->>F: freelancer wallet credited (amount minus platform fee)
+        API->>API: Payment(hourly_invoice) created, TimeLog.status = billed
+    else lock exhausted
+        API->>API: TimeLog.status = pending, needsTopUp = true
+        C->>API: POST /payments/contracts/:id/lock-hourly (top up)
+        API->>Ct: lockHourlyEscrow re-locks funds
+        API->>API: retries pending TimeLogs oldest-first via drawDownForTimeLog
+    end
+
+    C->>API: end contract
+    API->>API: settle remaining pending TimeLogs (drawDownForTimeLog)
+    API->>Ct: refundRemainingHourlyEscrow — whatever is left in the lock
+    API->>W: refund remaining balance back to client wallet (a lock is a hold, not a spend)
+```
+
 ### Models
 
 | Model | Role |
 |-------|------|
-| `Milestone` | Top-level collection (not embedded in `Contract`) — `order`, `amount`, `status` (`pending_funding → funded → submitted → approved/in_revision/disputed → released/refunded`), `reviewDeadline`, own `dispute` sub-document. Top-level so the auto-release cron and admin dispute list can query across all milestones cheaply. |
+| `Milestone` | Top-level collection (not embedded in `Contract`) — `order`, `amount`, `status` (`pending_funding → funded → submitted → approved/in_revision/disputed → released/refunded/cancelled`), `reviewDeadline`, own `dispute` sub-document. `cancelled` is set when a dispute is resolved as "client never funded this milestone" — the contract ends and no money ever moved for it. Top-level so the auto-release cron and admin dispute list can query across all milestones cheaply. |
 | `Payment` | One row **per milestone** for fixed-price jobs (`milestoneId` set, `type: 'job_escrow'`); one row per lock/top-up (`type: 'hourly_escrow'`) and per drawn-down chunk (`type: 'hourly_invoice'`) for hourly; Gig orders use `type: 'job_escrow'` via the legacy deposit/final split. A contract can have several `Payment` rows — never assume one `Payment` per `Contract`. |
 | `Contract` | `milestoneMode` (bool) + `currentMilestoneOrder` (int) for fixed-price; `hourlyEscrow` (`lockedBalance`, `totalLocked`, `totalDrawn`) + `paymentStatus` for hourly. |
 

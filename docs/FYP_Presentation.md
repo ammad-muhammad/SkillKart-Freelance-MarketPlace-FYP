@@ -12,7 +12,7 @@
 | Presenter | Sections | Est. Time |
 |-----------|----------|-----------|
 | **Student 1** | Title, Introduction, Motivation, Problem Statement, Objectives, Scope, Existing System Analysis, Proposed System | ~7 min |
-| **Student 2** | System Architecture, Frontend & Backend Architecture, Database Design, Technologies, Authentication & Security, AI Integration, Major Features/Modules | ~9 min |
+| **Student 2** | System Architecture, Frontend & Backend Architecture, Database Design, Technologies, Authentication & Security, AI Integration, Major Features/Modules, Mobile Application | ~10 min |
 | **Student 3** | Marketplace Workflow, User Roles, Live Demo, Admin Panel, Testing, Results, Performance, Challenges, Future Work, Conclusion, Q&A | ~8 min |
 
 > **Tip for slide design:** keep on-slide text to 4–6 bullet points. The detailed prose below is *speaker notes*, not slide text. Use the "Screenshot" placeholders to insert real captures from the running app.
@@ -100,7 +100,7 @@
 1. Build a full-featured, dual-sided freelance marketplace (Jobs & Gigs).
 2. Integrate **AI** for proposal drafting, cost estimation, skill validation, and matchmaking.
 3. Implement a **secure escrow payment** workflow with wallets and withdrawals.
-4. Provide **multi-factor verification** — OTP, skill tests, and identity checks.
+4. Provide **multi-factor verification** — OTP, skill tests, and an admin-managed identity checklist.
 5. Deliver a comprehensive **admin panel** for moderation and analytics.
 6. Enforce **strong security** (JWT + RBAC, hashing, rate limiting, audit logs).
 
@@ -129,7 +129,7 @@
 |--------|--------|--------|----------------|---------------|
 | Model | Gigs | Jobs/Proposals | Both | **Both** |
 | AI assistance | Limited | Limited | Minimal | **Built-in (Buddy, proposals, pricing, matching)** |
-| Skill verification | Basic | Tests (paid) | Basic | **AI skill tests + identity verification** |
+| Skill verification | Basic | Tests (paid) | Basic | **AI skill tests + admin-managed identity checklist** |
 | Fees | ~20% | ~10% + | ~10% | **Configurable, transparent** |
 | Escrow | Yes | Yes | Yes | **Yes + wallet + admin oversight** |
 
@@ -162,15 +162,15 @@
         │                                       │
    JWT in memory + refresh          ┌───────────┼───────────┐
    (obfuscated storage)             │           │           │
-                                 MongoDB     Stripe      AI Router
-                              (source of    (escrow /   (Gemini→DeepSeek→
-                                truth)       payouts)   Qwen→Groq→Claude→
-                                                             Ollama)
-                                                             │
-                                                      Supabase (optional OAuth)
+                                 MongoDB   Wallet Escrow   AI Router
+                              (source of  (milestones +  (Gemini→DeepSeek→
+                                truth)     hourly-lock;   Qwen→Groq→Claude→
+                                            Stripe for        Ollama)
+                                           top-ups/payouts/       │
+                                            gig orders)   Supabase (optional OAuth)
 ```
 
-**Speaker notes:** SkillKart is a **decoupled** system: a React single-page app talks to a stateless Express REST API over `/api/v1`. MongoDB is the single source of truth. External integrations — Stripe, an AI provider chain, and optional Supabase OAuth — are isolated behind service modules, so the core is never coupled to any one vendor.
+**Speaker notes:** SkillKart is a **decoupled** system: a React single-page app talks to a stateless Express REST API over `/api/v1`. MongoDB is the single source of truth. Escrow is primarily **wallet-native** — per-milestone locks for fixed-price work and a balance-lock for hourly work — with Stripe used for wallet top-ups, freelancer payouts, and the separate Gig-order deposit flow. These integrations, plus an AI provider chain and optional Supabase OAuth, are isolated behind service modules, so the core is never coupled to any one vendor.
 
 *[Screenshot/diagram: architecture diagram]*
 
@@ -330,9 +330,9 @@ User/Contract ──► Report ──► AdminAuditLog
 - **AI Proposal Drafting** — generates a tailored proposal for a job.
 - **AI Skill Validation & Tests** — validates/normalizes skills and auto-generates verification tests.
 - **AI CV Analysis** — parses a freelancer's CV, scores it, and auto-fills the profile.
-- **AI Matchmaking** — ranks freelancers for a project brief.
+- **Matchmaking** — ranks freelancers for a project brief via a deterministic, rules-based scoring engine (not an LLM call, unlike the features above).
 
-**Key discussion points:** AI is woven through the *whole* experience, not bolted on — onboarding (CV parse), discovery (matchmaking), bidding (proposal draft), pricing (estimator), and trust (skill tests).
+**Key discussion points:** AI is woven through the *whole* experience, not bolted on — onboarding (CV parse), discovery (matchmaking), bidding (proposal draft), pricing (estimator), and trust (skill tests). Matchmaking is the one exception to the LLM-provider pattern: it's deliberately code-driven for instant, reproducible, auditable rankings.
 
 *[Screenshot: Buddy AI chat + Cost Estimator result]*
 
@@ -347,15 +347,40 @@ User/Contract ──► Report ──► AdminAuditLog
 - **Wallet, Escrow Payments & Withdrawals** · **Messaging** · **Notifications**
 - **Reviews & Ratings** · **Search & Categories** · **Disputes**
 - **AI Tools** · **Admin Panel & Analytics**
-- **Mobile Application** (Android, via Capacitor — same codebase as the web app, plus push notifications)
+- **Mobile Application** (two native Android apps via Capacitor — see next slide)
 - **Transactional Email** (OTP, security alerts — Gmail API / SMTP, with retry + delivery logging)
 - **Discoverability** (dynamic sitemap, robots policy, installable PWA, social share cards)
 
-**Speaker notes:** The last two are the "invisible" modules — nobody clicks them, but without email nobody can even register, and without SEO nobody finds the platform at all. Hand off to Student 3 — "Now [Student 3] will walk you through the workflow and give a live demo."
+**Speaker notes:** The last two are the "invisible" modules — nobody clicks them, but without email nobody can even register, and without SEO nobody finds the platform at all. The mobile app is substantial enough that it gets its own slide next.
 
 ---
 
-## SLIDE 21 — User Roles
+## SLIDE 21 — Mobile Application
+**Presenter: Student 2**
+
+**Content:**
+- The same React codebase ships as **two independent native Android apps** via **Capacitor** — not a rewrite, not a stub.
+- **Client/Freelancer app** (`android/`) — the full client, freelancer, and admin-panel experience; public marketing pages are excluded from the bundle and lazy-loaded on web instead, keeping both lean.
+- **Standalone Admin app** (`android-admin/`) — a second, fully separate build (own `appId`, own signing key) that renders only the admin-panel route tree, for admins who need moderation on the go without installing the full app.
+- **Native platform integration:** hardware back-button handling, status bar theming, a branded splash/icon, offline detection with a dedicated "No Internet Connection" screen, external links opened via Chrome Custom Tabs, and **push notifications** (Firebase Cloud Messaging) wired into the same events (proposals, messages, payments, disputes) that drive the web notification center.
+
+**Speaker notes:** This is a second, fully realized delivery surface built from the exact same codebase — not a thin WebView wrapper. Platform-specific engineering (offline handling, native back navigation, push) is layered on via feature flags, so the web and mobile builds never diverge in business logic. Hand off to Student 3 — "Now [Student 3] will walk you through the workflow and give a live demo."
+
+![Mobile login screen with email/password form and social login options.](screenshots/mobile/01-login.png)
+*Login*
+
+![Freelancer home screen with active contracts, earnings, and quick actions.](screenshots/mobile/17-freelancer-dashboard.png)
+*Freelancer Dashboard*
+
+![Job detail screen as seen by a freelancer, with an apply/proposal entry point.](screenshots/mobile/19-freelancer-job-detail.png)
+*Job Detail (Freelancer)*
+
+![Freelancer-side navigation drawer/menu showing available sections.](screenshots/mobile/26-freelancer-nav-drawer.png)
+*Navigation Drawer (Freelancer)*
+
+---
+
+## SLIDE 22 — User Roles
 **Presenter: Student 3**
 
 **Content:**
@@ -369,7 +394,7 @@ User/Contract ──► Report ──► AdminAuditLog
 
 ---
 
-## SLIDE 22 — Marketplace Workflow
+## SLIDE 23 — Marketplace Workflow
 **Presenter: Student 3**
 
 **Content — end-to-end lifecycle:**
@@ -391,7 +416,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 23 — LIVE DEMO
+## SLIDE 24 — LIVE DEMO
 **Presenter: Student 3**
 
 **Content (demo script — on slide, keep short):**
@@ -408,7 +433,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 24 — Admin Panel
+## SLIDE 25 — Admin Panel
 **Presenter: Student 3**
 
 **Content:**
@@ -422,7 +447,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 25 — Testing
+## SLIDE 26 — Testing
 **Presenter: Student 3**
 
 **Content:**
@@ -436,14 +461,15 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 26 — Results
+## SLIDE 27 — Results
 **Presenter: Student 3**
 
 **Content:**
 - ✅ A **fully working, dual-sided** freelance marketplace (Jobs + Gigs).
-- ✅ **6 AI features** integrated with a resilient multi-provider fallback.
+- ✅ **5 LLM-backed AI features** integrated with a resilient multi-provider fallback, plus a deterministic (non-LLM) matchmaking engine.
 - ✅ Complete **escrow payment + wallet + withdrawal** flow.
 - ✅ **16+ page admin panel** with analytics and audit logging.
+- ✅ **Two native Android apps** shipped via Capacitor (client/freelancer/admin-panel + a standalone admin app), with push notifications and offline handling.
 - ✅ **~70,000 lines** of code across 280+ files; 38 data models; 23 API route groups.
 - ✅ All six project objectives **achieved and demonstrated**.
 
@@ -451,7 +477,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 27 — Performance
+## SLIDE 28 — Performance
 **Presenter: Student 3**
 
 **Content:**
@@ -465,7 +491,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 28 — Challenges Faced
+## SLIDE 29 — Challenges Faced
 **Presenter: Student 3**
 
 **Content:**
@@ -483,7 +509,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 29 — Future Enhancements
+## SLIDE 30 — Future Enhancements
 **Presenter: Student 3**
 
 **Content:**
@@ -498,7 +524,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 30 — Conclusion
+## SLIDE 31 — Conclusion
 **Presenter: Student 3**
 
 **Content:**
@@ -511,7 +537,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 ---
 
-## SLIDE 31 — Thank You / Q&A
+## SLIDE 32 — Thank You / Q&A
 **Presenter: All (led by Student 3)**
 
 **Content:**

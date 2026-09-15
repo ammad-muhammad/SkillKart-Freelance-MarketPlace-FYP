@@ -108,9 +108,9 @@ The project has been examined and is approved for submission.
 
 The freelance economy has become a significant part of the global digital workforce, particularly for students and recent graduates seeking flexible, skill-based income. However, existing freelance platforms present recurring challenges: freelancer discovery is inefficient, intelligent assistance is minimal, payment security is a persistent concern, and identity/skill verification is weak. These barriers are especially acute for newcomers who lack the experience to write competitive proposals, price their work correctly, and build initial trust.
 
-**SkillKart** is an AI-powered, dual-sided freelance marketplace built to address these problems in a single, coherent platform. It combines the two dominant freelancing models — pre-packaged **Gigs** (Fiverr-style) and custom **Jobs with Proposals** (Upwork-style) — and augments them with an integrated artificial-intelligence layer, a secure escrow-based payment system, multi-factor verification, and a comprehensive administrative panel.
+**SkillKart** is an AI-powered, dual-sided freelance marketplace built to address these problems in a single, coherent platform. It combines the two dominant freelancing models — pre-packaged **Gigs** (Fiverr-style) and custom **Jobs with Proposals** (Upwork-style) — and augments them with an integrated artificial-intelligence layer, a secure escrow-based payment system, multi-factor verification, and a comprehensive administrative panel — delivered both as a responsive web application and as two native Android apps built from the same codebase via Capacitor.
 
-The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 38 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, CV analysis, and freelancer matchmaking — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage. Payments are handled through a Stripe-backed escrow workflow with wallets and withdrawals, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
+The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 38 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, and CV analysis — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage; freelancer matchmaking is handled separately by a deterministic, rules-based scoring engine that does not call any LLM provider. Payments are handled through a wallet-native escrow system (per-milestone escrow for fixed-price work, balance-lock escrow for hourly work, plus a Stripe-backed flow for gig orders), with Stripe also handling wallet top-ups and freelancer payouts, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
 
 The completed system delivers the full engagement lifecycle — from registration and verification, through job posting and proposals, to escrow-secured contracts, delivery, reviews, and dispute resolution — under the supervision of a dedicated 16-module admin panel. All project objectives were achieved and demonstrated on realistic, seeded data. This report documents the motivation, design, implementation, testing, and results of the SkillKart project.
 
@@ -207,9 +207,9 @@ The objectives of the SkillKart project are as follows:
 
 2. **Integrate artificial intelligence** to assist users — including a conversational assistant, AI-based cost estimation, AI proposal drafting, AI skill validation and test generation, AI CV analysis, and AI freelancer matchmaking.
 
-3. **Implement a secure escrow payment system**, backed by Stripe, including wallets, deposits, escrow release, platform-fee calculation, and withdrawals.
+3. **Implement a secure escrow payment system** — a wallet-native escrow (per-milestone for fixed-price work, balance-lock for hourly work) plus a Stripe-backed flow for gig orders, with Stripe also handling wallet top-ups and payouts — including wallets, deposits, escrow release, platform-fee calculation, and withdrawals.
 
-4. **Provide multi-factor verification** to establish trust — email/OTP verification, AI-generated skill tests, and identity/profile verification.
+4. **Provide multi-factor verification** to establish trust — email/OTP verification, AI-generated skill tests, and an admin-managed identity/profile verification checklist.
 
 5. **Develop a comprehensive administrative panel** with isolated authentication for moderating users, jobs, gigs, contracts, payments, disputes, and for monitoring and analytics.
 
@@ -218,6 +218,8 @@ The objectives of the SkillKart project are as follows:
 7. **Model the complete contract lifecycle** explicitly — as a state machine — so that engagements are unambiguous, auditable, and safe.
 
 8. **Ensure resilience and reliability**, particularly for third-party services (AI, payments), so that failures degrade gracefully rather than crashing the application.
+
+9. **Deliver native mobile access** — package the same web codebase as native Android applications via Capacitor (a client/freelancer/admin-panel app and a separate, standalone admin-only app), with platform-level integration (push notifications, offline detection, native back-button navigation) rather than a bare web wrapper.
 
 <div style="page-break-after: always;"></div>
 
@@ -248,7 +250,7 @@ The platform defines the following roles: **Guest**, **Freelancer**, **Client**,
 The following are intentionally deferred to future phases and documented in Section 20:
 
 - **Real-time WebSocket chat and video calls** (messaging currently uses efficient polling).
-- **Embedding/vector-based semantic search** (the current AI matchmaking uses prompt-based ranking).
+- **Embedding/vector-based semantic search** (the current matchmaking uses deterministic, rules-based scoring rather than embeddings or LLM prompts).
 - **Full internationalization (i18n)** / multi-language support.
 
 <div style="page-break-after: always;"></div>
@@ -306,13 +308,13 @@ AI is used to actively reduce friction:
 - The **AI cost estimator** helps price projects using market context.
 - **AI skill validation and test generation** verify capabilities objectively.
 - **AI CV analysis** parses a resume, scores it, and auto-fills the profile.
-- **AI matchmaking** ranks freelancers for a given project brief.
+- **Matchmaking** ranks freelancers for a given project brief. Unlike the AI features above, this is a deterministic, rules-based scoring engine (skill overlap, rate fit, rating, verification, experience) — it does not call an LLM provider.
 
 Crucially, the AI subsystem is engineered for **resilience** (Section 13), so it enhances the experience without becoming a point of failure.
 
 ### 8.3 Secure Escrow Payments
 
-Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into up to a handful of sequential **milestones**, each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. A client cannot post a new project at all unless their wallet balance already covers its minimum budget — funding is proven before commitment, not promised after. On release, the platform fee is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw. This protects both parties and provides a clear basis for dispute resolution.
+Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into up to a handful of sequential **milestones**, each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. Posting a project carries no wallet-balance gate — a client can publish with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked, and funds locked, only once a proposal is accepted, the earliest point real money needs to be committed. On release, the platform fee is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw. This protects both parties and provides a clear basis for dispute resolution.
 
 ### 8.4 Trust, Verification, and Oversight
 
@@ -622,6 +624,22 @@ Public marketplace content is exposed to search engines through a database-drive
 ### 12.21 Mobile Application
 A native Android application wraps the same React codebase using Capacitor rather than a separate rewrite — the client, freelancer, and admin-panel experiences are identical to the web app, while public marketing pages are excluded from the mobile bundle and lazy-loaded on web to keep both lean. Platform-specific integration covers the Android hardware back button, status bar theming, offline detection with a dedicated "no connection" screen, a branded app icon and splash screen, external links opening in an in-app browser tab rather than navigating the app away, and push notifications via Firebase Cloud Messaging tied into the same notification events (proposals, messages, payments, disputes) that drive the web in-app notification center.
 
+SkillKart in fact ships **two** independent native builds from this one codebase. Alongside the client/freelancer app above, a second, fully separate Android app packages the admin panel on its own — its own Capacitor project, its own `appId` and signing key — for administrators who need moderation access on the go without installing the full marketplace app. It renders only the admin-panel route tree and shares no client/freelancer/public code with the main app, while inheriting every platform integration described above (offline detection, push notifications, native back-button handling, and so on).
+
+**Representative screens from the native Android build** *(captured from the running app; the full set of 25 screens is in `docs/screenshots/mobile/`)*:
+
+![Mobile login screen with email/password form and social login options.](screenshots/mobile/01-login.png)
+*Login*
+
+![Client home screen with an overview of active projects, spend, and quick actions.](screenshots/mobile/04-client-dashboard.png)
+*Client Dashboard*
+
+![Job detail screen showing a posted project's brief and received proposals.](screenshots/mobile/06-client-job-detail.png)
+*Job Detail (Client)*
+
+![Client-side navigation drawer/menu showing available sections.](screenshots/mobile/16-client-nav-drawer.png)
+*Navigation Drawer (Client)*
+
 <div style="page-break-after: always;"></div>
 
 ---
@@ -639,7 +657,7 @@ Artificial intelligence is a first-class part of SkillKart, integrated across on
 - **AI Skill Validation** — validates and normalizes user-entered skills (e.g., "reactjs" → "React.js"), rejecting non-professional inputs and suggesting related skills.
 - **AI Skill Test Generation & Evaluation** — auto-generates verification tests for a freelancer's skills and scores the answers, powering the skill-verification badge.
 - **AI CV Analysis** — parses an uploaded CV, extracts structured data (title, bio, skills, education, experience), scores it, classifies it, and auto-fills the freelancer's profile.
-- **AI Matchmaking** — ranks freelancers for a given project brief.
+- **Matchmaking** — ranks freelancers for a given project brief using a deterministic, rules-based scoring engine (skill overlap, rate fit, rating, verification, experience); unlike the features above, it does not call any LLM provider.
 - **AI Industry Recommendation** — suggests suitable industries for a client based on their business profile.
 
 ### 13.2 Prompt Processing
@@ -822,13 +840,14 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 | # | Objective | Status |
 |---|-----------|--------|
 | 1 | Dual-sided marketplace (Gigs + Jobs) | ✅ Achieved |
-| 2 | Integrated AI features | ✅ Achieved (assistant, cost estimator, proposal drafting, skill validation/tests, CV analysis, matchmaking) |
+| 2 | Integrated AI features | ✅ Achieved (assistant, cost estimator, proposal drafting, skill validation/tests, CV analysis; plus a separate, deterministic matchmaking engine) |
 | 3 | Secure escrow payments + wallets + withdrawals | ✅ Achieved |
-| 4 | Multi-factor verification (OTP, skill tests, identity) | ✅ Achieved |
+| 4 | Multi-factor verification (OTP, skill tests, admin-managed identity checklist) | ✅ Achieved |
 | 5 | Comprehensive admin panel | ✅ Achieved (16+ modules, isolated auth) |
 | 6 | Strong security (JWT/RBAC, hashing, rate limiting, audit logs) | ✅ Achieved |
 | 7 | Explicit contract lifecycle state machine | ✅ Achieved |
 | 8 | Resilience / graceful degradation | ✅ Achieved (AI failover, controlled 503, no crashes) |
+| 9 | Native mobile access (Android) | ✅ Achieved (two Capacitor-based apps: client/freelancer/admin-panel + standalone admin) |
 
 ### 18.2 System Statistics
 
@@ -845,6 +864,7 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 | Service modules | 20+ |
 | AI providers integrated | 6 (Gemini, DeepSeek, Qwen, Groq, Claude, Ollama) |
 | Admin panel modules | 16+ |
+| Native Android app builds | 2 (client/freelancer/admin-panel + standalone admin) |
 
 ### 18.3 Outcome
 
@@ -919,7 +939,7 @@ While SkillKart is feature-complete for its intended scope, several enhancements
 
 ## 21. Conclusion
 
-SkillKart set out to build more than a job board: a **secure, intelligent, and trustworthy** freelance marketplace that lowers the barrier for new freelancers while protecting all participants. The completed platform achieves this. It unifies the two dominant freelancing models — Gigs and Jobs/Proposals — and augments them with an integrated AI layer, a Stripe-backed escrow payment system, layered verification, a two-way review system, structured dispute resolution, and a comprehensive, isolated admin panel.
+SkillKart set out to build more than a job board: a **secure, intelligent, and trustworthy** freelance marketplace that lowers the barrier for new freelancers while protecting all participants. The completed platform achieves this. It unifies the two dominant freelancing models — Gigs and Jobs/Proposals — and augments them with an integrated AI layer, a wallet-native escrow payment system (per-milestone for fixed-price work, balance-lock for hourly work, plus a Stripe-backed flow for gig orders), layered verification, a two-way review system, structured dispute resolution, and a comprehensive, isolated admin panel — delivered not only as a web application but also as two native Android apps built from the same codebase.
 
 Technically, the project demonstrates sound engineering across the stack: a decoupled client–server architecture, a strictly layered backend, an explicit contract/payment state machine, a resilient multi-provider AI subsystem that degrades gracefully rather than failing, and defense-in-depth security with authentication, authorization, validation, rate limiting, and audit logging. The system was tested at realistic scale using a production-grade seeder with verified referential integrity, and each of the project's objectives was achieved and demonstrated.
 
@@ -989,7 +1009,7 @@ The backend exposes a versioned REST API under `/api/v1`. The main route groups 
 | `/message` | In-app messaging |
 | `/notification` | Notifications |
 | `/skill`, `/skillTest` | Skill taxonomy, validation, and tests |
-| `/matchmaking` | AI freelancer matching |
+| `/matchmaking` | Freelancer matching (deterministic scoring engine, not LLM-based) |
 | `/ai` | Public AI tools (buddy, cost estimate, brief, validate) |
 | `/testimonial` | Freelancer testimonials |
 | `/public` | Public stats, categories, top freelancers |

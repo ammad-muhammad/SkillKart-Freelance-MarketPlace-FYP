@@ -20,9 +20,10 @@ The two apps deploy **separately**. Deploy the **backend first**, get its public
 5. [Deploy the Backend — Render](#5-deploy-the-backend--render-alternative)
 6. [Deploy the Frontend — Vercel](#6-deploy-the-frontend--vercel)
 7. [Wire the Two Together (CORS)](#7-wire-the-two-together-cors)
-8. [Post-Deploy Checklist](#8-post-deploy-checklist)
-9. [Environment Variable Reference](#9-environment-variable-reference)
-10. [Troubleshooting](#10-troubleshooting)
+8. [Mobile App Build & Distribution](#8-mobile-app-build--distribution)
+9. [Post-Deploy Checklist](#9-post-deploy-checklist)
+10. [Environment Variable Reference](#10-environment-variable-reference)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
@@ -124,7 +125,7 @@ Copy `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`. Email/OTP auth
 
 ### AI (optional)
 
-Get at least one key (Gemini and Groq have generous free tiers). The provider fallback order is env-driven — see the [env reference](#9-environment-variable-reference).
+Get at least one key (Gemini and Groq have generous free tiers). The provider fallback order is env-driven — see the [env reference](#10-environment-variable-reference).
 
 ---
 
@@ -136,7 +137,7 @@ Get at least one key (Gemini and Groq have generous free tiers). The provider fa
    - **Build command**: `npm install` (default).
    - **Start command**: `npm start` (which is now `node src/server.js`).
 4. **Do NOT set `PORT`** — Railway injects it, and the server already reads `process.env.PORT`.
-5. **Variables** → add every backend env var from the [reference](#9-environment-variable-reference). At minimum:
+5. **Variables** → add every backend env var from the [reference](#10-environment-variable-reference). At minimum:
    - `NODE_ENV=production`
    - `MONGODB_URI=...`
    - `JWT_SECRET`, `JWT_REFRESH_SECRET` (32+ random chars each)
@@ -158,7 +159,7 @@ Get at least one key (Gemini and Groq have generous free tiers). The provider fa
 > **Optional** — commit a `Backend/nixpacks.toml` to pin Node:
 > ```toml
 > [phases.setup]
-> nixPkgs = ["nodejs_18"]
+> nixPkgs = ["nodejs_22"]
 > ```
 
 ---
@@ -251,17 +252,145 @@ If you later add a custom domain on Vercel, update these to the custom domain an
 
 ---
 
-## 8. Post-Deploy Checklist
+## 8. Mobile App Build & Distribution
+
+Beyond the web app above, SkillKart ships two native Android apps built from the same
+`Front-end/src/` codebase via [Capacitor](https://capacitorjs.com/): the
+client/freelancer app (`Front-end/android/`) and a standalone Admin app
+(`Front-end/android-admin/`, its own Capacitor project, `appId`, and keystore). Neither
+is deployed to a host — each is compiled locally into an `.apk`/`.aab` and distributed
+directly. Both depend on the backend from [§4](#4-deploy-the-backend--railway)/[§5](#5-deploy-the-backend--render-alternative)
+already being live and reachable, since the URL each app talks to is baked in at build
+time (below). Full architecture: [`Front-end/README.md` → Mobile App (Android / Capacitor)](../Front-end/README.md#mobile-app-android--capacitor).
+
+### 8.1 Building the release APK
+
+Both apps follow the same pattern — build the web bundle for that target, sync it into
+the native project, then compile with Gradle.
+
+**Client/freelancer app:**
+
+```bash
+npm run build:mobile   # vite build --mode mobile — loads .env.mobile
+npm run cap:sync        # build:mobile, then `npx cap sync` copies dist/ into android/
+npm run cap:android     # cap:sync, then opens the project in Android Studio
+```
+
+**Admin app** (separate native project — `android-admin/`):
+
+```bash
+npm run build:admin       # vite build --mode admin — loads .env.admin, outputs dist-admin/
+npm run cap:admin:add     # first time only: adds the android-admin/ native project
+npm run cap:admin         # build:admin, then syncs dist-admin/ into android-admin/
+npm run cap:admin:open    # opens android-admin/ in Android Studio
+```
+
+From Android Studio, use **Build → Generate Signed Bundle / APK** for a real release
+build — each project already has a `signingConfigs.release` block in its
+`app/build.gradle` wired to a local `keystore.properties` + `.jks` keystore file (both
+gitignored, not committed — you supply your own). Or drive Gradle directly once
+`cap:sync`/`cap:admin` has run:
+
+```bash
+cd android            # or android-admin for the admin app
+JAVA_HOME="<path to a JDK Gradle 8.x supports>" ./gradlew.bat assembleRelease
+# → android/app/build/outputs/apk/release/app-release.apk
+```
+
+(`assembleDebug` also works for a quick unsigned test build →
+`android/app/build/outputs/apk/debug/app-debug.apk`.)
+
+> ⚠️ **JDK version gotcha.** Android Studio's bundled JDK (`Android Studio/jbr`) can
+> silently auto-update itself past what the project's pinned Gradle version supports —
+> a JDK 25 JBR broke a Gradle 8.14.3 build outright (`Unsupported class file major
+> version 69`) with no code changes involved. If Gradle can't even evaluate
+> `settings.gradle`, check `java -version` for whatever `JAVA_HOME` points at. A cached
+> older JBR under `~/.jdks/` (left behind by a previous Android Studio/IntelliJ version)
+> is often the fix — point `JAVA_HOME` at that instead of the current bundled one. See
+> [`Front-end/README.md` → Building it](../Front-end/README.md#building-it).
+
+### 8.2 Env files — set these BEFORE building
+
+`.env.mobile` (client/freelancer) and `.env.admin` (admin) are gitignored, hold real
+values, and get **baked into the shipped APK at build time** — the same rule as
+[§6](#6-deploy-the-frontend--vercel)'s `VITE_*` vars. Both must point at your
+**deployed** backend, never `localhost`:
+
+| Variable | `.env.mobile` | `.env.admin` |
+|----------|---------------|--------------|
+| `VITE_APP_TARGET` | `mobile` | `admin` |
+| `VITE_API_URL` | your production backend, e.g. `https://<railway-app>/api/v1` | same production backend — admin API is namespaced under `/api/v1/admin-panel/*` on the same host, so no separate deploy is needed |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | same as web, for OAuth | not used by the admin app; harmless to include |
+| `VITE_RECAPTCHA_SITE_KEY` | deliberately left **unset** | deliberately left **unset** |
+| `VITE_PUSH_NOTIFICATIONS_ENABLED` | leave unset until [§8.4](#84-firebase-push-notifications-for-a-deployed-build) is done | leave unset until §8.4 is done |
+
+`.env.admintest` is a local-only QA scratch file pointed at `http://localhost:5000/api/v1`,
+for exercising the admin app against a local backend before cutting a real build —
+Vite's `--mode admin` only ever loads `.env.admin`, so use `.env.admintest` by
+temporarily swapping it in and restoring the real `.env.admin` before building for real.
+
+### 8.3 Backend config these builds need to actually work
+
+Both apps' fixed WebView origin (Capacitor's `androidScheme: "https"`) is
+`https://localhost` — not a real host, just a CORS identity, and identical for both
+apps despite their different `appId`s (`com.skillkart.app` vs `com.skillkart.admin`).
+
+- **`CORS_ORIGIN` must include `https://localhost`** — see [§2.2](#22-cors--comma-separated-origins-each-exact-no-trailing-slash).
+  Missing it blocks every request from either app.
+- **reCAPTCHA is already exempted for that origin** server-side
+  (`Backend/src/middleware/recaptcha.middleware.js`) — Google's reCAPTCHA v3 is
+  unreliable inside an embedded WebView, so both `.env.mobile`/`.env.admin` leave
+  `VITE_RECAPTCHA_SITE_KEY` unset and the backend doesn't require a token from
+  `https://localhost` in the first place. No action needed here beyond knowing it's by
+  design if you hit a captcha-shaped failure from the app.
+
+### 8.4 Firebase push notifications for a deployed build
+
+Push is optional and fails open (in-app notifications work regardless), but wiring it
+up for a real build needs two independent pieces:
+
+- **Client side, per app.** A `google-services.json` must exist at
+  `Front-end/android/app/google-services.json` (client/freelancer app, Firebase Android
+  app package `com.skillkart.app`) — and, for the admin app, its **own** separate
+  `google-services.json` at `Front-end/android-admin/app/google-services.json`
+  (package `com.skillkart.admin`) — **before** running `cap:sync`/`cap:admin` and
+  setting `VITE_PUSH_NOTIFICATIONS_ENABLED=true`. Enabling the flag without the file
+  present isn't a caught error — it's an uncaught native `FirebaseApp is not
+  initialized` crash on a background thread that takes the whole app down. See the
+  warning comments in `Front-end/.env.mobile` / `Front-end/.env.admin` and
+  [`Front-end/README.md` → Push notifications](../Front-end/README.md#push-notifications).
+- **Backend side.** The same `FIREBASE_SERVICE_ACCOUNT_JSON` (or
+  `FIREBASE_SERVICE_ACCOUNT_PATH`) variable already listed in the
+  [env-var reference](#10-environment-variable-reference) — one Firebase project's
+  service account credential serves push for both apps' users; no per-app backend
+  config is needed. See [`Backend/README.md` → Push Notifications](../Backend/README.md#push-notifications)
+  for the full Firebase Console setup.
+
+### 8.5 Where the build lands, and how it's distributed
+
+A release build lands at `android/app/build/outputs/apk/release/app-release.apk`
+(`android-admin/app/build/outputs/apk/release/app-release.apk` for the admin app), or
+under `outputs/bundle/release/` as an `.aab` if you build a bundle instead of an APK.
+This project isn't published to the Play Store — the current distribution approach is
+lightweight: example signed builds are committed straight into the repo at
+[`Apk/SkillKart-v1.0.apk`](../Apk/SkillKart-v1.0.apk) and
+[`Apk/SkillKart-Admin-v1.0.apk`](../Apk/SkillKart-Admin-v1.0.apk), which is sufficient
+for handing a working build to a professor/grader or another tester without setting up
+a Play Store listing.
+
+---
+
+## 9. Post-Deploy Checklist
 
 - [ ] `GET https://<backend>/health` → 200 JSON
 - [ ] `GET https://<backend>/api/v1/docs` → Swagger UI loads
 - [ ] Backend startup log shows `✅ Email Provider: Gmail API` — **not** `SMTP`. Railway blocks outbound SMTP ports, so an SMTP fallback there means OTP emails silently fail and nobody can register.
 - [ ] Frontend loads at the Vercel URL; **hard-refresh a deep link** (e.g. `/browse-freelancers`) — no 404 (confirms the SPA rewrite)
 - [ ] Register / log in from the frontend — no CORS error in the browser console
-- [ ] **Log in, then hard-refresh** — you stay logged in (confirms the refresh token survives the reload; if you bounce to `/login`, see §10)
+- [ ] **Log in, then hard-refresh** — you stay logged in (confirms the refresh token survives the reload; if you bounce to `/login`, see §11)
 - [ ] Deep features work: browse gigs, post a job (confirms DB writes)
 - [ ] `setup:superadmin` was run → SuperAdmin login works
-- [ ] Admin panel reachable at `https://your-app.vercel.app/admin-panel/login`, and **OTP login lands on the dashboard** (confirms the cross-site `admin_token` cookie — see §10 if it bounces back to login)
+- [ ] Admin panel reachable at `https://your-app.vercel.app/admin-panel/login`, and **OTP login lands on the dashboard** (confirms the cross-site `admin_token` cookie — see §11 if it bounces back to login)
 - [ ] If using Stripe: webhook shows deliveries in the Stripe dashboard
 - [ ] AI tools show results **or** degrade gracefully to "AI is temporarily out of service" (never a crash)
 
@@ -297,7 +426,7 @@ curl -s https://<frontend>/robots.txt | grep Sitemap
 
 ---
 
-## 9. Environment Variable Reference
+## 10. Environment Variable Reference
 
 ### Backend (Railway / Render)
 
@@ -312,7 +441,7 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `JWT_REFRESH_SECRET` | ✅ | 32+ random chars (different from above) |
 | `JWT_EXPIRE` / `JWT_REFRESH_EXPIRE` | ❌ | defaults `7d` / `30d` |
 | `ENCRYPTION_KEY` | ✅ | 32+ chars — encrypts SuperAdmin creds |
-| `CORS_ORIGIN` | ✅ | Single frontend origin, no trailing slash |
+| `CORS_ORIGIN` | ✅ | Comma-separated list of allowed origins, no trailing slash |
 | `FRONTEND_URL` | ✅ | Same as `CORS_ORIGIN` |
 | `STRIPE_DUMMY` | ✅ | `true` to simulate payments, else `false` |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | ⬤ | needed only if `STRIPE_DUMMY=false` |
@@ -373,7 +502,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Cause & Fix |
 |---------|-------------|
