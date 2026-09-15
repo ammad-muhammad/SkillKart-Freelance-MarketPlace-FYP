@@ -137,28 +137,32 @@ const Login = () => {
         }
         const supabase = createClient(supabaseUrl, supabaseKey);
         const mobile = isMobileApp();
-        // On mobile, `window.location.origin` is `https://localhost` — the
-        // WebView's fixed, unreachable origin — so the post-auth redirect must
-        // target a custom URL scheme the app can actually catch instead (see
-        // useGoogleAuthDeepLink.js + AndroidManifest.xml's matching
-        // intent-filter). `skipBrowserRedirect` stops the SDK from trying to
-        // navigate the WebView itself to Google's consent screen (which Google
-        // blocks/mishandles inside embedded WebViews) — we open it as a Chrome
-        // Custom Tab explicitly instead, same as any other external link.
-        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-            provider: provider,
-            options: {
-                redirectTo: mobile ? 'skillkart://auth-callback' : `${window.location.origin}/auth/consent`,
-                skipBrowserRedirect: mobile,
-            }
-        });
+        try {
+            // On mobile, `window.location.origin` is `https://localhost` — the
+            // WebView's fixed, unreachable origin — so the post-auth redirect must
+            // target a custom URL scheme the app can actually catch instead (see
+            // useGoogleAuthDeepLink.js + AndroidManifest.xml's matching
+            // intent-filter). `skipBrowserRedirect` stops the SDK from trying to
+            // navigate the WebView itself to Google's consent screen (which Google
+            // blocks/mishandles inside embedded WebViews) — we open it as a Chrome
+            // Custom Tab explicitly instead, same as any other external link.
+            const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: mobile ? 'skillkart://auth-callback' : `${window.location.origin}/auth/consent`,
+                    skipBrowserRedirect: mobile,
+                }
+            });
 
-        if (mobile) {
-            if (oauthError || !data?.url) {
-                setError('Could not start Google sign-in. Please try again.');
-                return;
+            if (mobile) {
+                if (oauthError || !data?.url) {
+                    setError('Could not start Google sign-in. Please try again.');
+                    return;
+                }
+                await openExternal(data.url);
             }
-            await openExternal(data.url);
+        } catch (err) {
+            setError(err?.message || 'Social login failed. Please try again.');
         }
     };
 

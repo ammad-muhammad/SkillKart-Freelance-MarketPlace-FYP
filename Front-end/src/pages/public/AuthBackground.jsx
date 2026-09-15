@@ -65,7 +65,12 @@ const AuthBackground = () => {
     }, []);
 
     if (isMobile) {
-        return <div className="auth-mesh auth-mesh--static" style={{ pointerEvents: "none" }} />;
+        // Deliberately NOT the base `.auth-mesh` class — its ::before/::after
+        // pseudo-elements (a blur(60px) gradient + a noise-texture overlay)
+        // are exactly the kind of filter cost this static fallback exists to
+        // avoid. `.auth-mesh--static` is fully self-contained (own position/
+        // background), so it doesn't need `.auth-mesh` for anything.
+        return <div className="auth-mesh--static" style={{ pointerEvents: "none" }} />;
     }
 
     return (
