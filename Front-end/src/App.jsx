@@ -1,18 +1,24 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import AppRoutes from "./routes/AppRoutes";
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 import BuddyWidget from "./Components/common/BuddyWidget/BuddyWidget";
 import NotificationBell from "./Components/common/NotificationBell/NotificationBell";
 import CookieConsent from "./Components/common/CookieConsent/CookieConsent";
 import NetworkGate from "./Components/common/NetworkGate/NetworkGate";
 import MobileBootScreen from "./Components/common/MobileBootScreen/MobileBootScreen";
+import Loader from "./Components/common/Loader/Loader";
 import { useAuth } from './hooks/useAuth';
 import useAndroidBackButton from './hooks/useAndroidBackButton';
 import usePushNotifications from './hooks/usePushNotifications';
 import SuspendedOverlay from './Components/common/SuspendedOverlay/SuspendedOverlay';
 import { log, logStatus } from './utils/logger';
-import { isMobileApp } from './utils/platform';
+import { isMobileApp, isAdminApp } from './utils/platform';
+
+// Lazy + picked by build target so the untaken tree is never fetched/parsed:
+// the admin app (VITE_APP_TARGET=admin) never pulls in client/freelancer/
+// public code, and vice versa. See AdminAppRoutes.jsx for what it contains.
+const AppRoutes = lazy(() => import("./routes/AppRoutes"));
+const AdminAppRoutes = lazy(() => import("./routes/AdminAppRoutes"));
 
 function App() {
   const { user, isAuthenticated, loading, logout } = useAuth();
@@ -52,7 +58,9 @@ function App() {
     <NetworkGate>
       {user?.isBlocked && <SuspendedOverlay reason={user.blockedReason} onLogout={() => logout()} />}
       <ScrollToTop />
-      <AppRoutes />
+      <Suspense fallback={<Loader fullScreen text="Loading..." />}>
+        {isAdminApp() ? <AdminAppRoutes /> : <AppRoutes />}
+      </Suspense>
       <BuddyWidget />
       <NotificationBell />
       {/* Web-only: cookies/localStorage consent isn't a meaningful concept

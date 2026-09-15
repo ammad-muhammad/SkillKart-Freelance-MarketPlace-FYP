@@ -24,13 +24,26 @@
    NOTE: overflow-x lives on <body> only — NOT on #root — because an overflow
    value on the scroll ancestor of a `position: sticky` element silently breaks
    sticky, and several pages (filter rails, onboarding steppers, admin panel)
-   rely on sticky. Body-level clipping leaves the sticky containing block intact. */
+   rely on sticky. Body-level clipping leaves the sticky containing block intact.
+
+   `overflow-x: clip` is what actually avoids the sticky-breaking side effect,
+   but it's a newer value (Chromium ~90, 2021) than plain `hidden` — an Android
+   WebView that predates it (real device found: Oppo F11 Pro, an older/OEM
+   WebView build) treats the whole declaration as invalid and drops it, which
+   falls all the way back to the initial `visible` — i.e. exactly the
+   real, visible horizontal overflow this rule exists to prevent, not a
+   degraded-but-safe fallback. `hidden` first, `clip` second: browsers that
+   understand `clip` use it (cascade order, sticky preserved as before);
+   browsers that don't fall back to `hidden` (sticky degrades to non-sticky,
+   but the page no longer bleeds off the screen — a strict improvement over
+   silently getting neither). */
 html,
 body {
   max-width: 100%;
 }
 body {
   margin: 0;
+  overflow-x: hidden;
   overflow-x: clip;
   /* Better wrapping for long unbroken strings (URLs, IDs, emails) on narrow
      screens so they don't force horizontal overflow. */
