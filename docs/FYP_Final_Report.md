@@ -110,9 +110,9 @@ The freelance economy has become a significant part of the global digital workfo
 
 **SkillKart** is an AI-powered, dual-sided freelance marketplace built to address these problems in a single, coherent platform. It combines the two dominant freelancing models — pre-packaged **Gigs** (Fiverr-style) and custom **Jobs with Proposals** (Upwork-style) — and augments them with an integrated artificial-intelligence layer, a secure escrow-based payment system, multi-factor verification, and a comprehensive administrative panel — delivered both as a responsive web application and as two native Android apps built from the same codebase via Capacitor.
 
-The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 38 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, and CV analysis — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage; freelancer matchmaking is handled separately by a deterministic, rules-based scoring engine that does not call any LLM provider. Payments are handled through a wallet-native escrow system (per-milestone escrow for fixed-price work, balance-lock escrow for hourly work, plus a Stripe-backed flow for gig orders), with Stripe also handling wallet top-ups and freelancer payouts, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
+The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 39 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, and CV analysis — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage; freelancer matchmaking is handled separately by a deterministic, rules-based scoring engine that does not call any LLM provider. Payments are handled through a wallet-native escrow system (per-milestone escrow for fixed-price work, balance-lock escrow for hourly work, plus a Stripe-backed flow for gig orders), with Stripe also handling wallet top-ups and freelancer payouts, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
 
-The completed system delivers the full engagement lifecycle — from registration and verification, through job posting and proposals, to escrow-secured contracts, delivery, reviews, and dispute resolution — under the supervision of a dedicated 16-module admin panel. All project objectives were achieved and demonstrated on realistic, seeded data. This report documents the motivation, design, implementation, testing, and results of the SkillKart project.
+The completed system delivers the full engagement lifecycle — from registration and verification, through job posting and proposals, to escrow-secured contracts, delivery, reviews, and dispute resolution — under the supervision of a dedicated 17-module admin panel. All project objectives were achieved and demonstrated on realistic, seeded data. This report documents the motivation, design, implementation, testing, and results of the SkillKart project.
 
 **Keywords:** Freelance Marketplace, MERN Stack, Artificial Intelligence, Escrow Payments, Role-Based Access Control, Web Application, MongoDB, React.
 
@@ -243,7 +243,7 @@ The following capabilities are fully within the scope of this project and are im
 
 ### 6.2 User Roles
 
-The platform defines the following roles: **Guest**, **Freelancer**, **Client**, **Admin**, and **SuperAdmin** (with an additional content-editor role reserved for CMS tasks).
+The platform defines the following roles: **PublicViewer (Guest)**, **Freelancer**, **Client**, **Admin**, and **SuperAdmin** (with an additional content-editor role reserved for CMS tasks).
 
 ### 6.3 Out of Scope (Current Phase)
 
@@ -308,13 +308,13 @@ AI is used to actively reduce friction:
 - The **AI cost estimator** helps price projects using market context.
 - **AI skill validation and test generation** verify capabilities objectively.
 - **AI CV analysis** parses a resume, scores it, and auto-fills the profile.
-- **Matchmaking** ranks freelancers for a given project brief. Unlike the AI features above, this is a deterministic, rules-based scoring engine (skill overlap, rate fit, rating, verification, experience) — it does not call an LLM provider.
+- **Matchmaking** ranks freelancers for a given project brief. Unlike the AI features above, this is a deterministic, rules-based scoring engine (skill overlap, rate fit, rating, verification, experience, availability) — it does not call an LLM provider.
 
 Crucially, the AI subsystem is engineered for **resilience** (Section 13), so it enhances the experience without becoming a point of failure.
 
 ### 8.3 Secure Escrow Payments
 
-Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into up to a handful of sequential **milestones**, each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. Posting a project carries no wallet-balance gate — a client can publish with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked, and funds locked, only once a proposal is accepted, the earliest point real money needs to be committed. On release, the platform fee is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw. This protects both parties and provides a clear basis for dispute resolution.
+Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into up to a handful of sequential **milestones**, each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. Posting a project carries no wallet-balance gate — a client can publish with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked, and funds locked, only once a proposal is accepted, the earliest point real money needs to be committed. On release, the platform fee (a default 0.5% of the milestone amount) is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw; the platform operates in PKR (Pakistani Rupee). This protects both parties and provides a clear basis for dispute resolution.
 
 ### 8.4 Trust, Verification, and Oversight
 
@@ -328,7 +328,7 @@ Trust is built through layered verification (email/OTP, skill tests, identity), 
 
 ### 9.1 Architectural Overview
 
-SkillKart follows a **decoupled client–server architecture**. A React single-page application (SPA) communicates with a stateless Express REST API over HTTPS, using JSON. MongoDB is the single source of truth for all persistent data. External integrations — payments (Stripe), AI (a multi-provider router), and optional social login (Supabase) — are isolated behind dedicated service modules so that the core application is never tightly coupled to any single third-party vendor.
+SkillKart follows a **decoupled client–server architecture**. A React single-page application (SPA) communicates with a stateless Express REST API over HTTPS, using JSON. MongoDB is the single source of truth for all persistent data. External integrations — payments (Stripe), AI (a multi-provider router), optional social login (Supabase, social OAuth only), transactional email (a provider router over SMTP/Gmail), file/image uploads (Cloudinary), and push notifications (Firebase) — are isolated behind dedicated service modules so that the core application is never tightly coupled to any single third-party vendor.
 
 ```
    ┌────────────────────────┐        HTTPS / REST (JSON)        ┌────────────────────────┐
@@ -342,7 +342,7 @@ SkillKart follows a **decoupled client–server architecture**. A React single-p
                             ┌──────▼──────┐        ┌────────▼───────┐  ┌─────▼──────┐            ┌────────▼────────┐
                             │   MongoDB   │        │     Stripe      │  │  AI Router │            │    Supabase     │
                             │ (Mongoose,  │        │  (escrow /      │  │ (Gemini →  │            │  (optional      │
-                            │  38 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
+                            │  39 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
                             │             │        │                 │  │ Qwen →     │            │                 │
                             └─────────────┘        └─────────────────┘  │ Groq →     │            └─────────────────┘
                                                                         │ Claude →   │
@@ -350,7 +350,45 @@ SkillKart follows a **decoupled client–server architecture**. A React single-p
                                                                         └────────────┘
 ```
 
-*[Insert: high-resolution system architecture diagram]*
+The diagram below (reproduced from the project's root `README.md`) shows the full picture: the three client build targets that compile from the single `Front-end/src/` codebase, the Express API they all talk to, MongoDB as the sole system of record, and the external services isolated behind their own service modules.
+
+```mermaid
+flowchart TB
+    subgraph Clients["Clients — one Front-end/src/ codebase, three build targets"]
+        SRC["React 19 + Vite source"]
+        SRC -->|"vite build<br/>(default)"| WEB["Web SPA<br/>(browser, Vercel)"]
+        SRC -->|"vite build --mode mobile<br/>→ Capacitor sync"| CAP1["Capacitor<br/>(native WebView bridge)"]
+        SRC -->|"vite build --mode admin<br/>→ Capacitor sync"| CAP2["Capacitor<br/>(native WebView bridge)"]
+        CAP1 --> AND["Android App<br/>(client + freelancer + admin-panel)"]
+        CAP2 --> ADMINAND["Admin Android App<br/>(admin panel only)"]
+    end
+
+    subgraph Backend["Backend — Express REST API"]
+        API["/api/v1/* + /api/v1/admin-panel/*<br/>JWT auth + RBAC"]
+    end
+
+    WEB -->|HTTPS / REST| API
+    AND -->|"HTTPS / REST<br/>(fixed origin https://localhost)"| API
+    ADMINAND -->|"HTTPS / REST<br/>(fixed origin https://localhost)"| API
+
+    API --> MONGO[("MongoDB<br/>source of truth")]
+
+    subgraph External["External Services"]
+        SUPA["Supabase<br/>(social OAuth only —<br/>no marketplace data)"]
+        STRIPE["Stripe<br/>(wallet top-ups,<br/>gig deposits/payouts)"]
+        AI["AI Provider Router<br/>Gemini → DeepSeek → Qwen →<br/>Groq → Claude → Ollama"]
+        EMAIL["Email Provider Router<br/>SMTP / Gmail API"]
+        CLOUD["Cloudinary<br/>(uploads)"]
+        FIRE["Firebase<br/>(push notifications)"]
+    end
+
+    API --> SUPA
+    API --> STRIPE
+    API --> AI
+    API --> EMAIL
+    API --> CLOUD
+    API --> FIRE
+```
 
 ### 9.2 React Frontend
 
@@ -369,11 +407,11 @@ Request → Route → Middleware (auth, RBAC, validation, rate-limit, sanitizati
         → Model (Mongoose)  → MongoDB
 ```
 
-It comprises **23 route modules**, **23 controllers**, **20+ service modules**, and **38 Mongoose models**. Controllers remain thin and delegate business logic to services (for example, `stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, and `email.service`). Cross-cutting concerns — structured logging (Winston), API documentation (Swagger), and scheduled tasks (node-cron for billing and cleanup) — are handled at the application level. The server binds to `0.0.0.0` and reads its port from the environment, making it deployment-ready.
+It comprises **23 route modules**, **24 controllers**, **27 service modules**, and **39 Mongoose models**. Controllers remain thin and delegate business logic to services (for example, `stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, and `email.service`). Cross-cutting concerns — structured logging (Winston), API documentation (Swagger), and scheduled tasks (node-cron for billing and cleanup) — are handled at the application level. The server binds to `0.0.0.0` and reads its port from the environment, making it deployment-ready.
 
 ### 9.4 MongoDB Database
 
-**MongoDB**, accessed through **Mongoose**, stores all persistent data across 38 collections. Relationships are modeled using ObjectId references, and referential integrity is maintained at the application layer. Collections are indexed for common query patterns, and large listing endpoints use server-side pagination.
+**MongoDB**, accessed through **Mongoose**, stores all persistent data across 39 collections. Relationships are modeled using ObjectId references, and referential integrity is maintained at the application layer. Collections are indexed for common query patterns, and large listing endpoints use server-side pagination.
 
 ### 9.5 Authentication Subsystem
 
@@ -381,7 +419,7 @@ Authentication is JWT-based, with a short-lived access token held in memory and 
 
 ### 9.6 Admin Panel Subsystem
 
-The admin panel is served under an isolated route namespace (`/admin-panel/*`) with its own authentication provider, protected routes, and scoped styling. It provides 16+ management modules and is architecturally separated from the public application to prevent any leakage of privilege.
+The admin panel is served under an isolated route namespace (`/admin-panel/*`) with its own authentication provider, protected routes, and scoped styling. It provides 17 management modules and is architecturally separated from the public application to prevent any leakage of privilege.
 
 ### 9.7 AI Integration Subsystem
 
@@ -395,20 +433,21 @@ AI features are delivered through a **provider router** that presents a uniform 
 
 ### 10.1 Overview
 
-SkillKart's data layer consists of **38 MongoDB collections** managed through Mongoose schemas. The design is reference-based (normalized where it aids integrity, denormalized where it aids read performance), with enums enforcing valid states and indexes supporting frequent queries. Below, the major collections are described, followed by their relationships.
+SkillKart's data layer consists of **39 MongoDB collections** managed through Mongoose schemas. The design is reference-based (normalized where it aids integrity, denormalized where it aids read performance), with enums enforcing valid states and indexes supporting frequent queries. Below, the major collections are described, followed by their relationships.
 
 ### 10.2 Major Collections / Models
 
 **Identity & Profiles**
 
 - **User** — the core identity: email, hashed password, `role` (`superadmin` | `admin` | `contenteditor` | `freelancer` | `client` | `publicviewer`), authentication provider, and verification flags.
+- **RefreshToken** — the server-side store backing refresh-token rotation, extending Section 9.5's client-side description: each issued refresh token is persisted here so a reuse of an already-rotated token (a strong signal of a stolen token) can be detected and the affected session family revoked, rather than trusting the JWT's claims alone.
 - **FreelancerProfile** — freelancer-specific data: title, skills (with proficiency and verification), rating, completed-project count, total earnings, **wallet balance**, Stripe onboarding status, verification details, and onboarding progress.
 - **ClientProfile** — client-specific data: company type (`Individual` | `Startup` | `SME` | `Enterprise`), budget range, wallet balance, total spent, projects posted, and verification status.
 
 **Marketplace**
 
-- **Job** — a client's custom requirement: title, description, budget (`fixed`/`hourly`), experience level, skills, category, and `status` (`draft` | `open` | `in-progress` | `completed` | `cancelled` | `expired` | `closed`).
-- **Gig** — a freelancer's packaged service: title, descriptions, category, tiered `pricing` (basic/standard/premium), media, `status` (`draft`/`active`/`paused`), and aggregate stats (views, orders, rating).
+- **Job** — a client's custom requirement: title, description, budget (`fixed`/`hourly`), experience level, skills, category, `source` (`project` | `gig`), and `status` (`draft` | `open` | `in-progress` | `completed` | `cancelled` | `expired` | `closed`). A `source: 'gig'` Job is created automatically when a client orders a Gig, reusing the same escrow → delivery → completion → stats lifecycle instead of a parallel one; only `source: 'project'` Jobs (a client's own posted requirement, matched via Proposals) go on to spawn a **Contract**.
+- **Gig** — a freelancer's packaged service: title, descriptions, category, tiered `pricing` (basic/standard/premium), media, `status` (`draft`/`active`/`paused`), and aggregate stats (views, orders, rating). Ordering a Gig does not create a separate "order" entity — it creates a Job (see above) linked back to the Gig and chosen pricing tier.
 - **Proposal** — a freelancer's bid on a job: cover letter, price, estimated delivery, and `status` (`pending` | `accepted` | `rejected` | `withdrawn`).
 
 **Engagement Lifecycle**
@@ -421,8 +460,8 @@ SkillKart's data layer consists of **38 MongoDB collections** managed through Mo
 
 **Payments & Wallet**
 
-- **Payment** — an escrow or wallet transaction: `type` (`job_escrow` | `wallet_deposit` | `hourly_escrow` | `hourly_invoice`), a `milestoneId` link (one Payment per milestone, for fixed-price contracts), amounts (total, deposit, final), **platform fee**, **freelancer payout**, and `status` (`deposit_pending` → `deposit_paid` → `released` / `refunded`) for gig/deposit-based payments, or `wallet_locked` → `released` for milestone and hourly wallet-lock payments.
-- **Withdrawal** — a freelancer cash-out: amount, `method` (`bank_transfer` | `paypal` | `stripe`), and `status` (`pending` | `completed` | `failed` | `cancelled`).
+- **Payment** — an escrow or wallet transaction: `type` (`job_escrow` | `wallet_deposit` | `hourly_escrow` | `hourly_invoice`), a `milestoneId` link (one Payment per milestone, for fixed-price contracts), amounts (total, deposit, final), **platform fee** (`feeRate`, default 0.5%), **freelancer payout**, and a single shared `status` enum (`deposit_pending` → `deposit_paid` → `released` / `refunded`) reused by every payment type — milestone and hourly wallet-lock payments do not introduce a separate "locked" status; locking funds is simply recorded as `deposit_paid`, and releasing them moves the same row to `released`.
+- **Withdrawal** — a freelancer cash-out: amount, `method` (`bank_transfer` | `paypal` | `stripe`), and `status` (`pending` | `processing` | `completed` | `failed` | `cancelled`).
 - *(Wallet balances are maintained as fields on the freelancer/client profiles, updated transactionally by payment/withdrawal operations.)*
 
 **Communication & Feedback**
@@ -435,8 +474,10 @@ SkillKart's data layer consists of **38 MongoDB collections** managed through Mo
 **Verification & Taxonomy**
 
 - **SkillNode** & **SkillRelationship** — the skill/category taxonomy graph used for browsing and matching.
+- **TaxonomyProposal** — AI-suggested skill/category taxonomy entries (raised when a user enters a skill the graph doesn't recognize) queued for admin review before being merged into `SkillNode`/`SkillRelationship`.
 - **SkillTestAttempt** — records of AI-generated skill tests and their outcomes.
 - **OTP** & **OnboardingProgress** / **ClientOnboardingDraft** — verification and onboarding state.
+- **FileUpload** — tracks Cloudinary-backed uploads (avatars, CVs, portfolio items, delivery/message attachments), linking each stored asset back to its owning user and record.
 
 **Administration & Operations**
 
@@ -456,7 +497,7 @@ Contract (fixed-price) ──1:N──► Milestone ──1:1──► Payment �
 Contract (hourly) ──1:N──► Payment ──► updates Wallet balances ──► Withdrawal
 Contract ──1:N──► Delivery, TimeLog, ContractHistory
 Contract ──1:1──► Conversation ──1:N──► Message
-Contract ──1:N──► Review
+Job ──1:N──► Review
 Contract ──(embedded, hourly)──► Dispute ──► Report ──► AdminAuditLog
 Milestone ──(embedded, fixed-price)──► Dispute ──► Report ──► AdminAuditLog
 Freelancer ──1:N──► Gig
@@ -465,7 +506,49 @@ SkillNode ──N:N──► SkillRelationship (taxonomy graph)
 
 The **Contract** is the central hub: an accepted proposal creates a contract, which then drives payment, deliveries, messaging, reviews, and — when necessary — disputes. This design keeps the engagement lifecycle unified and traceable.
 
-*[Insert: Entity-Relationship (ER) diagram covering the major collections]*
+```mermaid
+erDiagram
+    USER {
+        string role "client, freelancer, admin, superadmin"
+        string email
+        boolean isBlocked
+    }
+    CONTRACT {
+        string type "fixed, hourly"
+        string status "active, delivered, completed, cancelled"
+        number currentMilestoneOrder
+    }
+    MILESTONE {
+        number order
+        number amount
+        string status "pending_funding, funded, submitted, released"
+    }
+    PAYMENT {
+        string type "job_escrow, hourly_escrow, hourly_invoice, wallet_deposit"
+        string status "deposit_pending, deposit_paid, released, refunded"
+    }
+    USER ||--o| FREELANCER_PROFILE : has
+    USER ||--o| CLIENT_PROFILE : has
+    CLIENT_PROFILE ||--o{ JOB : posts
+    JOB ||--o{ PROPOSAL : receives
+    FREELANCER_PROFILE ||--o{ PROPOSAL : submits
+    FREELANCER_PROFILE ||--o{ GIG : publishes
+    PROPOSAL ||--o| CONTRACT : accepted_becomes
+    JOB ||--o| CONTRACT : spawns
+    CONTRACT ||--o{ MILESTONE : funds
+    MILESTONE ||--o| PAYMENT : linked_escrow
+    CONTRACT ||--o{ PAYMENT : hourly_lock_invoice
+    CONTRACT ||--o{ DELIVERY : submitted_work
+    CONTRACT ||--o{ TIME_LOG : hourly_logs
+    CONTRACT ||--o| CONVERSATION : chat_thread
+    CONVERSATION ||--o{ MESSAGE : contains
+    JOB ||--o{ REVIEW : mutual_rating
+    USER ||--o{ WITHDRAWAL : requests
+    USER ||--o{ REPORT : files
+    USER ||--o{ NOTIFICATION : receives
+```
+
+Note: `Contract.status` has no literal `disputed` value — a contract or milestone in dispute keeps its normal status while the dispute itself lives in an embedded `dispute` sub-document (on the `Contract` for hourly work, on the specific `Milestone` for fixed-price work), consistent with the relationships shown in Section 10.3.
 
 <div style="page-break-after: always;"></div>
 
@@ -489,7 +572,7 @@ This section explains each major technology and the rationale for its selection.
 
 ### 11.2 Backend
 
-- **Node.js (≥18)** — the JavaScript runtime, enabling a unified language across the stack.
+- **Node.js (≥22.3)** — the JavaScript runtime, enabling a unified language across the stack.
 - **Express 4** — a minimal, flexible web framework used to build the layered REST API.
 - **Mongoose 8** — an ODM for MongoDB that adds schema definitions, validation, hooks, and relationship modeling.
 
@@ -525,21 +608,30 @@ Two engineering constraints drove this design:
 - **Web App Manifest** — declares the platform as an installable Progressive Web App with brand theming, maskable icons, and application shortcuts.
 - **Open Graph & Twitter Card metadata** — controls link-preview rendering when pages are shared on social platforms and messaging apps.
 
-### 11.5 Payments
+### 11.7 Payments
 
 - **Stripe** — payment processing for escrow and payouts, integrated behind a service layer with a **dummy/simulated mode** (`STRIPE_DUMMY`) that allows the full payment flow to be demonstrated without live transactions.
 
-### 11.6 Artificial Intelligence
+### 11.8 Artificial Intelligence
 
 - **AI Provider Router** — an in-house abstraction over multiple providers: **Google Gemini**, **DeepSeek**, **Alibaba Qwen**, **Groq**, **Anthropic Claude**, and **Ollama** (local). Each provider is wrapped in a common interface; the router selects and fails over according to configurable priorities.
 
-### 11.7 Tooling & Operations
+### 11.9 File Storage & Media
+
+- **Cloudinary** — hosted media storage and delivery for all uploaded assets (freelancer avatars, CVs, portfolio images, gig media, message/delivery attachments). The backend uploads through a thin service wrapper (tracked via the `FileUpload` model, Section 10.2) rather than the request handlers touching the Cloudinary SDK directly.
+
+### 11.10 Push Notifications
+
+- **Firebase Cloud Messaging (FCM)** — delivers push notifications to the native Android apps (client/freelancer/admin and the standalone admin app), hooked into the platform's single `notification.service.js` choke point alongside in-app and email notifications, and designed to fail open if push delivery is unavailable.
+
+### 11.11 Tooling & Operations
 
 - **ESLint & Prettier** — linting and formatting for code quality and consistency.
 - **Nodemon** — automatic restart during development.
 - **Swagger (OpenAPI)** — interactive API documentation served at `/api/v1/docs`.
 - **Winston** — structured application logging.
 - **node-cron** — scheduled jobs (e.g., weekly billing, cleanup).
+- **Redis (ioredis)** — wired up at server boot for future caching; it is not yet used to cache any live read path, an intentionally honest scope limitation rather than an oversight.
 
 <div style="page-break-after: always;"></div>
 
@@ -568,16 +660,16 @@ Clients post detailed jobs specifying budget (fixed or hourly), experience level
 Freelancers publish packaged services with **three pricing tiers** (Basic / Standard / Premium), descriptions, media, and FAQs. Gigs display aggregate statistics (views, orders, rating) and can be paused or drafted.
 
 ### 12.7 Proposals
-Freelancers submit proposals to jobs — including a cover letter (optionally **AI-drafted**), price, and estimated delivery. Clients review and accept or reject proposals; acceptance creates a contract.
+Freelancers submit proposals to jobs — including a cover letter (optionally **AI-drafted**), price, and estimated delivery. Clients review and accept or reject proposals; acceptance creates a contract. Rejection is not always terminal: a client can reject **with resubmission allowed** (`canResubmit`), which lets the freelancer revise the same proposal and resubmit it back into `pending` — gated by the same skill-verification check required to apply in the first place, so an expired or never-earned verification can't be sidestepped by resubmitting instead of applying fresh.
 
 ### 12.8 Contracts
 The contract is the engagement's backbone, modeling the full lifecycle as a **state machine**. It tracks type (fixed/hourly), agreed price and deadline, deliveries, revisions, time logs, completion, and cancellation. Hourly contracts carry a single embedded dispute record; fixed-price contracts instead track disputes per **milestone** (Section 12.10a), since a project split into several phases can have any one of them independently disputed while the rest continue normally.
 
 ### 12.9 Wallet
-Each freelancer and client has a **wallet** balance maintained on their profile. Escrow debits/credits and withdrawals all move through this internal ledger. Administrators can freeze wallets when necessary. Posting a job carries **no wallet-balance gate** — a client can publish a job with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked only once the client goes to **accept** a proposal (Sections 12.10a–12.10b), which is the earliest point real money needs to be committed.
+Each freelancer and client has a **wallet** balance maintained on their profile. Escrow debits/credits and withdrawals all move through this internal ledger. Withdrawals are not all handled the same way: a `stripe`-method withdrawal is fully automated — a real Stripe Connect payout is issued immediately, with no admin step, and its status goes straight to `processing`/`completed` — while `bank_transfer` and `paypal` withdrawals are queued for manual admin approval (Section 14.2); neither of those two manual methods is currently exposed in the freelancer UI. Administrators can freeze wallets when necessary. Posting a job carries **no wallet-balance gate** — a client can publish a job with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked only once the client goes to **accept** a proposal (Sections 12.10a–12.10b), which is the earliest point real money needs to be committed.
 
 ### 12.10 Payments & Escrow
-Gig orders follow the original **deposit-then-release** model: escrow is funded on request (`deposit_pending` → `deposit_paid`), held until the client approves delivery, then released (**platform fee** deducted, **freelancer payout** credited) or refunded. Custom-job contracts instead use one of two newer, wallet-native escrow models depending on contract type — **milestone escrow** for fixed-price jobs (12.10a) and **wallet-lock escrow** for hourly jobs (12.10b), both described next. Stripe processes real transactions for wallet top-ups, with a simulated mode (`STRIPE_DUMMY`) for demonstration.
+Gig orders follow the original **deposit-then-release** model, split **50/50**: the client funds a 50% deposit on request (`deposit_pending` → `deposit_paid`), held until the client approves delivery, then pays the remaining 50% and the full escrow is released (**platform fee** deducted, **freelancer payout** credited) or refunded. Custom-job contracts instead use one of two newer, wallet-native escrow models depending on contract type — **milestone escrow** for fixed-price jobs (12.10a) and **wallet-lock escrow** for hourly jobs (12.10b), both described next. Stripe processes real transactions for wallet top-ups, with a simulated mode (`STRIPE_DUMMY`) for demonstration.
 
 ### 12.10a Milestone-Based Escrow (Fixed-Price Jobs)
 When a client accepts a proposal for a fixed-price job, **100% of the first milestone's price is locked in escrow immediately** — debited from the client's wallet as part of accepting, so the money is never a promise (the acceptance itself is rejected up front if the wallet cannot cover it). For larger engagements, the client can split the price into up to a handful of sequential **milestones** at accept-time (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000"); only the first milestone is funded upfront, and each subsequent milestone is funded by the client only once the previous one is approved and released — capital is never locked for work that hasn't started yet.
@@ -603,8 +695,16 @@ On completion, both parties can leave a **two-way review** (1–5 stars plus a c
 ### 12.14 Search & Categories
 A structured **taxonomy** of categories and skills powers browsing and search across freelancers, gigs, and jobs. The category system is dynamic and reflects real marketplace activity.
 
+### 12.14a Skill Graph & Taxonomy Curation
+Underneath the taxonomy sits a proper **skill graph**. `SkillNode` documents are typed vertices — `industry`, `category`, `profession`, `skill`, `technology`, `tool`, or `concept` — each carrying aliases and synonyms for fuzzy resolution, a relevance `weight`, and a hierarchical `canonicalParent`, with `active`/`deprecated`/`merged` status so a node can be retired or folded into another without breaking existing references. `SkillRelationship` documents are typed edges between nodes, letting the graph express relationships beyond a flat parent-child tree. New nodes and edges are never written straight into the live graph — they first pass through a **`TaxonomyProposal`** approval queue, sourced from four triggers (`gig_creation`, `job_posting`, `profile_update`, `periodic_analysis`) and carrying an `aiReasoning` explanation, sitting `pending_review` until an administrator approves or rejects it.
+
+This queue is reviewed through `/admin/taxonomy` (`TaxonomyAdmin.jsx`) — a separate, **non-isolated** legacy content-editor surface that authenticates with the ordinary marketplace JWT and RBAC (`admin`/`superadmin`/`contenteditor` roles), distinct from the isolated `/admin-panel/*` system described in Section 14.
+
+### 12.14b Content Management (CMS)
+A separate, fully-built **versioned content management system** exists on the backend: `CMSContent` pages support create/update/publish/unpublish/scheduled-publish/version-restore/export operations with a full `modificationHistory`, gated by dedicated `cms:*` permissions tied to the `contenteditor` role — the same non-isolated marketplace-RBAC surface as the taxonomy tool above, not the isolated admin panel. As of this writing the API has **no frontend consumer**: there is no editor UI to author pages, and no public page renders CMS content. It is documented here honestly as backend-only infrastructure, built ahead of the UI that would consume it, rather than as a shipped content feature.
+
 ### 12.15 Disputes
-When an engagement goes wrong, either party can raise a **dispute**, providing a reason and details. For hourly contracts the dispute is raised on the contract as a whole; for fixed-price contracts it is scoped to the **specific milestone** currently under review (delivered or in revision) — locking only that milestone rather than freezing an entire multi-phase project over one disputed phase. Disputes are tracked with a status and routed to administrators, who resolve them (release the escrow to the freelancer, refund the client, split it by percentage, or resume/reject the dispute) with recorded resolution notes; a resolved milestone dispute lets the contract continue normally into its next milestone (or completes the contract if it was the last one).
+When an engagement goes wrong, either party can raise a **dispute**, providing a reason and details. For hourly contracts the dispute is raised on the contract as a whole; for fixed-price contracts it is scoped to the **specific milestone** currently under review (delivered or in revision) — locking only that milestone rather than freezing an entire multi-phase project over one disputed phase. Disputes are tracked with a status and routed to administrators, who resolve them — release the escrow to the freelancer, refund the client, split it by percentage, resume/reject the dispute, or (fixed-price only, when the disputed milestone was never funded and so has no escrow to release/refund/split) **cancel the contract outright** — with recorded resolution notes; a resolved milestone dispute lets the contract continue normally into its next milestone (or completes the contract if it was the last one).
 
 ### 12.16 Admin Panel
 A comprehensive, isolated administrative interface (detailed in Section 14) for moderating and monitoring every aspect of the platform.
@@ -616,7 +716,7 @@ Dashboards visualize platform activity — users, jobs, gigs, contracts, revenue
 Users manage account settings, notification preferences, and security options (e.g., toggling two-factor authentication); administrators manage platform-wide settings such as fees and feature flags.
 
 ### 12.19 Transactional Email
-The platform sends OTP verification codes, login and password-change security alerts, and contact-form relays. Delivery runs through a provider abstraction (Gmail API in deployment, SMTP locally — see §11.5), with automatic retry on transient failures, and every send attempt recorded to an `EmailLog` collection surfaced in the admin panel's monitoring view.
+The platform sends OTP verification codes, login and password-change security alerts, and relays for the public **contact form** and **newsletter signup** — each submission is captured to its own collection (`ContactMessage`/`NewsletterSubscriber`) and emailed to the admin inbox, though neither currently has a dedicated browsing or moderation view in the admin panel. Delivery runs through a provider abstraction (Gmail API in deployment, SMTP locally — see §11.5), with automatic retry on transient failures, and every send attempt recorded to an `EmailLog` collection surfaced in the admin panel's monitoring view.
 
 ### 12.20 Discoverability
 Public marketplace content is exposed to search engines through a database-driven XML sitemap and a crawl policy that excludes all authenticated and transactional routes. The platform is installable as a Progressive Web App, and shared links render branded preview cards on social and messaging platforms.
@@ -626,19 +726,29 @@ A native Android application wraps the same React codebase using Capacitor rathe
 
 SkillKart in fact ships **two** independent native builds from this one codebase. Alongside the client/freelancer app above, a second, fully separate Android app packages the admin panel on its own — its own Capacitor project, its own `appId` and signing key — for administrators who need moderation access on the go without installing the full marketplace app. It renders only the admin-panel route tree and shares no client/freelancer/public code with the main app, while inheriting every platform integration described above (offline detection, push notifications, native back-button handling, and so on).
 
+**Figure 12.21 — One codebase, three build targets.** A single `VITE_APP_TARGET` environment flag decides which of the three ships from the exact same `Front-end/src/` source: the public web app, the client/freelancer/admin-panel native app, or the standalone admin-only native app. `isMobileApp()`/`isAdminApp()` (both derived from that same flag) then decide which route tree actually renders inside the app.
+
+```mermaid
+flowchart TD
+    SRC["Front-end/src/ — one React codebase"]
+    SRC -->|"vite build (default)"| WEB["dist/ → Vercel web app<br/>VITE_APP_TARGET unset"]
+    SRC -->|"vite build --mode mobile<br/>.env.mobile"| MOBILE["dist/ synced into<br/>Front-end/android/<br/>VITE_APP_TARGET=mobile"]
+    SRC -->|"vite build --mode admin<br/>.env.admin"| ADMIN["dist-admin/ synced into<br/>Front-end/android-admin/<br/>VITE_APP_TARGET=admin"]
+    WEB -->|"isMobileApp() false"| WEBROUTES["AppRoutes.jsx<br/>full public site + dashboards"]
+    MOBILE -->|"isMobileApp() true<br/>isAdminApp() false"| MOBILEROUTES["AppRoutes.jsx<br/>public routes skipped,<br/>client/freelancer dashboards only"]
+    ADMIN -->|"isMobileApp() true<br/>isAdminApp() true"| ADMINROUTES["AdminAppRoutes.jsx<br/>admin panel only,<br/>zero marketplace code"]
+```
+
 **Representative screens from the native Android build** *(captured from the running app; the full set of 25 screens is in `docs/screenshots/mobile/`)*:
 
-![Mobile login screen with email/password form and social login options.](screenshots/mobile/01-login.png)
-*Login*
-
-![Client home screen with an overview of active projects, spend, and quick actions.](screenshots/mobile/04-client-dashboard.png)
-*Client Dashboard*
-
-![Job detail screen showing a posted project's brief and received proposals.](screenshots/mobile/06-client-job-detail.png)
-*Job Detail (Client)*
-
-![Client-side navigation drawer/menu showing available sections.](screenshots/mobile/16-client-nav-drawer.png)
-*Navigation Drawer (Client)*
+<table>
+<tr>
+<td width="25%" align="center"><img src="screenshots/mobile/01-login.png" width="180" alt="Mobile Login"><br><sub><i>Login — email/password + social login</i></sub></td>
+<td width="25%" align="center"><img src="screenshots/mobile/04-client-dashboard.png" width="180" alt="Client Dashboard"><br><sub><i>Client dashboard — active projects, spend, quick actions</i></sub></td>
+<td width="25%" align="center"><img src="screenshots/mobile/06-client-job-detail.png" width="180" alt="Job Detail"><br><sub><i>Job detail — brief + received proposals</i></sub></td>
+<td width="25%" align="center"><img src="screenshots/mobile/16-client-nav-drawer.png" width="180" alt="Navigation Drawer"><br><sub><i>Native navigation drawer</i></sub></td>
+</tr>
+</table>
 
 <div style="page-break-after: always;"></div>
 
@@ -659,6 +769,7 @@ Artificial intelligence is a first-class part of SkillKart, integrated across on
 - **AI CV Analysis** — parses an uploaded CV, extracts structured data (title, bio, skills, education, experience), scores it, classifies it, and auto-fills the freelancer's profile.
 - **Matchmaking** — ranks freelancers for a given project brief using a deterministic, rules-based scoring engine (skill overlap, rate fit, rating, verification, experience); unlike the features above, it does not call any LLM provider.
 - **AI Industry Recommendation** — suggests suitable industries for a client based on their business profile.
+- **Skill-Test Proctoring** — while a timed skill test is in progress, a webcam face-detection guard (TinyFaceDetector plus 68-point facial landmarks, running entirely client-side) flags `no_face`, `multiple_faces`, and `looking_away` states, alongside a separate tab-switch/window-blur/copy-paste anti-cheat guard; each keeps its own independent violation-strike counter and aborts the attempt after repeated violations. Like Matchmaking, this is not backed by any AI provider call — the face-detection model runs locally in the browser, not through the provider router.
 
 ### 13.2 Prompt Processing
 
@@ -684,27 +795,32 @@ The provider abstraction makes it straightforward to add new providers or models
 
 ### 14.1 Design Rationale
 
-The admin panel is deliberately built as a **separate, isolated application** within the frontend, served under `/admin-panel/*` with its own authentication provider, protected routes, and scoped styling. This isolation is a security decision: the marketplace user's JWT can never grant administrative access, and admin UI/logic can never leak into the public application. Administrative identity is managed through dedicated `AdminUser`/`AdminSession` records, and the SuperAdmin's credentials are stored **encrypted**.
+The admin panel is deliberately built as a **separate, isolated application** within the frontend, served under `/admin-panel/*` with its own authentication provider, protected routes, and scoped styling. This isolation is a security decision: the marketplace user's JWT can never grant administrative access, and admin UI/logic can never leak into the public application. Regular administrators are DB-backed: dedicated `AdminUser`/`AdminSession` records model their identity and login sessions. The **SuperAdmin is deliberately not one of them** — a single bootstrap account whose credentials are encrypted (AES-256) and stored in a local file **outside the database**, so the platform's highest-privilege login can still authenticate even during a database outage or breach.
+
+This isolation covers the admin panel proper; it does not extend to two older, narrower admin-capable surfaces — skill-taxonomy curation and the CMS (Sections 12.14a–12.14b) — which predate the panel and were intentionally left outside its isolation boundary, authenticating instead through ordinary marketplace JWT and RBAC (`admin`/`superadmin`/`contenteditor` roles).
 
 ### 14.2 Modules
 
 The panel provides the following management modules:
 
 - **Dashboard** — a high-level overview of platform health and key metrics.
-- **User Management** — view, search, filter (all/freelancers/clients), verify, suspend, or block users.
+- **User Management** — view, search, filter (all/freelancers/clients), verify, and block/unblock users (a single `isBlocked` toggle, not two separate "suspend" and "block" actions).
 - **Job Management** — monitor and moderate posted jobs.
 - **Gig Management** — monitor and moderate published gigs/services.
-- **Contract Management** — inspect contracts and their lifecycle state.
+- **Contract Management** — inspect contracts and their lifecycle state, edit contract details, pause/resume/cancel a contract, **force-complete** a contract (settles or refunds any outstanding escrow and finalizes the linked job), **reassign** it to a different freelancer, and attach admin notes to its history.
 - **Payment Management** — review escrow deposits, releases, and refunds.
-- **Wallets** — inspect and, when necessary, freeze user wallets.
-- **Withdrawals** — review and process freelancer withdrawal requests.
+- **Wallets** — inspect, freeze/unfreeze, and manually **adjust** a user's wallet balance (an atomic credit/debit, audit-logged at critical severity) for corrections outside the normal escrow flow.
+- **Withdrawals** — review and process freelancer withdrawal requests; in practice only `bank_transfer`/`paypal` withdrawals reach this manual queue, since `stripe` withdrawals are automated end-to-end (Section 12.9) and never need admin action.
 - **Transactions** — a unified view of financial activity (payments + withdrawals).
 - **Reviews** — moderate reviews (e.g., hide policy-violating content).
-- **Chats** — oversight of conversations for dispute investigation.
+- **Chats** — oversight of conversations for dispute investigation, plus the ability to message a user directly or reply into an existing conversation as SkillKart Support.
+- **Notification Broadcast** — send a platform-wide announcement to every user, delivered through the same notification pipeline as ordinary events.
 - **Reports** — handle user/content reports with priority and resolution tracking.
-- **Disputes** — investigate and resolve contract disputes (release / refund / split).
+- **Disputes** — investigate and resolve contract disputes (release / refund / split / cancel contract).
 - **Monitoring** — system health, error logs, and API logs.
 - **Audit Logs** — an immutable record of every sensitive administrative action.
+- **Session Management** — view an admin's login session history and force-logout a specific session.
+- **Global Search** — a single search bar across users, jobs, contracts, payments, withdrawals, reports, and reviews.
 - **Analytics** — visual analytics across users, jobs, revenue, and disputes.
 - **Settings** — platform-wide configuration (fees, weights, feature flags).
 
@@ -712,7 +828,14 @@ The panel provides the following management modules:
 
 Every sensitive administrative action (e.g., suspending a user, releasing a payment, resolving a dispute) is written to the **AdminAuditLog** with the actor, action, resource, and severity. This provides full accountability and traceability — essential for a platform that handles money and moderation.
 
-*[Insert: admin dashboard screenshot + one management-page screenshot]*
+<table>
+<tr>
+<td width="50%" align="center"><img src="screenshots/web/30-admin-login.png" width="380" alt="Admin Panel Login"><br><sub><i>The isolated admin panel login screen (credentials step).</i></sub></td>
+<td width="50%" align="center"><img src="screenshots/web/31-admin-login-otp-step.png" width="380" alt="Admin Panel OTP Step"><br><sub><i>After credentials are accepted, the admin panel requires a one-time code emailed to the admin address (2FA) before granting access.</i></sub></td>
+</tr>
+</table>
+
+The deeper admin modules (dashboard, user management, etc.) are not pictured here: they sit behind exactly the isolated, emailed-2FA login shown above, which cannot be stepped through by an automated screenshot capture without the reviewer's own inbox — a direct, practical demonstration that the admin panel's authentication isolation works as designed.
 
 <div style="page-break-after: always;"></div>
 
@@ -729,8 +852,9 @@ Security in SkillKart is layered across transport, authentication, authorization
 - Optional **Supabase OAuth** for social login.
 
 ### 15.2 Authorization (RBAC)
-- **Role-based access control** with distinct roles (guest, freelancer, client, admin, superadmin). Every protected route is guarded by role middleware on the backend, and by route guards on the frontend.
+- **Role-based access control** with six distinct roles — `superadmin`, `admin`, `contenteditor`, `freelancer`, `client`, `publicviewer` — rather than a simple guest/user/admin split; `contenteditor` and `publicviewer` exist specifically to gate the CMS module (Section 12.14b) at different permission levels (author/publish vs. read-only public content). Every protected route is guarded by role middleware on the backend, and by route guards on the frontend.
 - **Strict role separation** between the marketplace and the admin panel, with the admin panel using an entirely separate authentication flow and an **encrypted SuperAdmin** credential store.
+- **A narrower, legacy exception:** two admin-capable features — skill-taxonomy curation and the CMS (Sections 12.14a–12.14b) — intentionally sit outside the admin panel's isolation, authenticating instead through this same ordinary marketplace RBAC (`admin`/`superadmin`/`contenteditor`). This predates the panel and is a known, bounded-scope exception rather than an oversight in the panel's isolation.
 
 ### 15.3 Input Validation & Injection Protection
 - **express-validator** enforces request schemas.
@@ -772,7 +896,7 @@ On login, credentials are verified; if two-factor authentication is enabled, an 
 A client posts a job specifying budget, experience level, skills, and category (optionally using AI auto-fill to infer these from a description). The job becomes publicly visible and open to proposals.
 
 ### 16.4 Proposal
-A freelancer discovers a job (via browsing, search, or AI matchmaking) and submits a proposal — cover letter (optionally AI-drafted), price, and estimated delivery. The client is notified.
+A freelancer discovers a job (via browsing, search, or the matchmaking engine) and submits a proposal — cover letter (optionally AI-drafted), price, and estimated delivery. The client is notified.
 
 ### 16.5 Contract Creation
 The client reviews proposals and accepts one. Acceptance creates a **contract** linking the job, proposal, client, and freelancer, and initializes its lifecycle state.
@@ -790,12 +914,43 @@ Each milestone (or each logged hour, for hourly work) is **released** individual
 Both parties leave a two-way review. Ratings aggregate into their profiles, informing future discovery and trust.
 
 ### 16.10 Dispute
-If either party is dissatisfied, they can raise a **dispute** on the contract, providing a reason and details. The contract enters a dispute state, and the matter is escalated to administrators.
+If either party is dissatisfied, they can raise a **dispute**, providing a reason and details. The scope of that dispute depends on contract type, mirroring Section 12.15: for a fixed-price contract it is scoped to the **specific milestone** currently under review, so the rest of a multi-milestone project keeps moving rather than freezing outright; for an hourly contract, which has no discrete milestone to target, the dispute is instead raised on the **contract as a whole**. Either way, the matter is escalated to administrators.
 
 ### 16.11 Admin Moderation
 An administrator investigates the dispute (including messages and deliveries) and resolves it — releasing escrow to the freelancer, refunding the client, or splitting — recording resolution notes. Every such action is written to the audit log.
 
-*[Insert: workflow / sequence diagram of the full lifecycle]*
+The sequence diagram below traces the fixed-price path described above (16.1–16.11) end to end — the platform's primary and most complex flow — from job posting through escrow lock, delivery, release, and review.
+
+```mermaid
+sequenceDiagram
+    actor Client
+    actor Freelancer
+    participant API as Backend API
+    participant DB as MongoDB
+
+    Client->>API: Post job (no wallet balance check)
+    Freelancer->>API: Submit proposal
+    Client->>API: Accept proposal
+    API->>API: Check client wallet balance
+    API->>DB: Create Contract + fund Milestone 1
+    API-->>Freelancer: Notify - hired, escrow funded
+    Freelancer->>API: Submit delivery
+    API->>DB: Milestone status -> submitted
+    alt Client reviews in time
+        Client->>API: Approve delivery
+    else 7 days pass with no response
+        API->>API: Auto-release cron fires
+    end
+    API->>DB: Release escrow to Freelancer wallet (minus platform fee)
+    API->>DB: Milestone status -> released
+    alt more milestones remain
+        Client->>API: Fund next milestone
+    else last milestone
+        API->>DB: Contract and Job -> completed
+    end
+    Client->>API: Leave review
+    Freelancer->>API: Leave review
+```
 
 <div style="page-break-after: always;"></div>
 
@@ -819,10 +974,10 @@ A production-grade **demo seeder** was developed to populate a realistic, fully-
 The AI subsystem was tested by **forcing complete provider outages** (invalid keys, unreachable endpoints) and confirming that the API returned a controlled `503`, the frontend displayed the "AI out of service" notice, dependent features degraded gracefully, and **the server never crashed**. Similar failure-mode testing covered authorization (role-based redirects) and third-party payment simulation.
 
 ### 17.6 UI & Responsiveness Testing
-The interface was verified across desktop and mobile viewports using **browser automation** to capture and inspect real rendered screens, and multiple responsiveness and layout issues were identified and fixed.
+The interface was verified across desktop and mobile viewports using **browser automation** to capture and inspect real rendered screens, and multiple responsiveness and layout issues were identified and fixed. This is an ongoing practice rather than a single pass — the same technique continued to surface and fix issues throughout development, including a mobile viewport-height/auth-layout bug and an animated-background WebView jank issue found this same week.
 
 ### 17.7 Bug Fixing
-Numerous defects were found and resolved during testing — including a modal-overlay CSS containment bug (fixed with React Portals), a stale-authentication race after role changes, a toast-library incompatibility with React 19, and several responsiveness issues. Each is documented in Section 19.
+Numerous defects have been found and resolved throughout testing — including a modal-overlay CSS containment bug (fixed with React Portals), a stale-authentication race after role changes, a toast-library incompatibility with React 19, and several responsiveness issues. Each is documented in Section 19.
 
 ### 17.8 Performance Testing
 Listing endpoints were verified with paginated, indexed queries; bulk operations (e.g., the seeder) were confirmed to use efficient batch inserts; and the production frontend build was verified to be code-split and minified.
@@ -840,10 +995,10 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 | # | Objective | Status |
 |---|-----------|--------|
 | 1 | Dual-sided marketplace (Gigs + Jobs) | ✅ Achieved |
-| 2 | Integrated AI features | ✅ Achieved (assistant, cost estimator, proposal drafting, skill validation/tests, CV analysis; plus a separate, deterministic matchmaking engine) |
+| 2 | Integrated AI features | ✅ Achieved (assistant, cost estimator, proposal drafting, brief auto-fill, skill validation/tests, CV analysis, industry recommendation; plus separate, non-LLM matchmaking and skill-test proctoring) |
 | 3 | Secure escrow payments + wallets + withdrawals | ✅ Achieved |
 | 4 | Multi-factor verification (OTP, skill tests, admin-managed identity checklist) | ✅ Achieved |
-| 5 | Comprehensive admin panel | ✅ Achieved (16+ modules, isolated auth) |
+| 5 | Comprehensive admin panel | ✅ Achieved (17 modules, isolated auth) |
 | 6 | Strong security (JWT/RBAC, hashing, rate limiting, audit logs) | ✅ Achieved |
 | 7 | Explicit contract lifecycle state machine | ✅ Achieved |
 | 8 | Resilience / graceful degradation | ✅ Achieved (AI failover, controlled 503, no crashes) |
@@ -853,15 +1008,15 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 
 | Metric | Value (approximate) |
 |--------|---------------------|
-| Total source files | 280+ |
-| Backend source files | 152 |
-| Frontend source files | 128 |
-| Lines of code (backend) | ~28,000 |
-| Lines of code (frontend) | ~42,000 |
-| Data models (collections) | 38 |
+| Total source files | ~367 (.js/.jsx only; ~443 counting all file types) |
+| Backend source files | 183 |
+| Frontend source files | 184 (.js/.jsx; ~260 counting all file types) |
+| Lines of code (backend) | ~34,450 |
+| Lines of code (frontend) | ~46,116 |
+| Data models (collections) | 39 |
 | API route groups | 23 |
-| Controllers | 23 |
-| Service modules | 20+ |
+| Controllers | 24 |
+| Service modules | 27 |
 | AI providers integrated | 6 (Gemini, DeepSeek, Qwen, Groq, Claude, Ollama) |
 | Admin panel modules | 16+ |
 | Native Android app builds | 2 (client/freelancer/admin-panel + standalone admin) |
@@ -870,7 +1025,17 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 
 The result is a **complete, working, production-oriented** freelance marketplace — not a prototype. It delivers the full engagement lifecycle with AI assistance, secure payments, layered verification, and comprehensive administration, and it demonstrates sound software-engineering practices throughout: a layered architecture, explicit state machines, resilient third-party integration, and defense-in-depth security.
 
-*[Insert: representative screenshots — home, dashboards, contract, admin panel]*
+<table>
+<tr>
+<td width="33%" align="center"><img src="screenshots/web/01-public-home.png" width="380" alt="Public Home Page"><br><sub><i>The SkillKart marketing landing page for logged-out visitors.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/13-client-dashboard.png" width="380" alt="Client Dashboard"><br><sub><i>The client's home dashboard overview after logging in.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/20-freelancer-dashboard.png" width="380" alt="Freelancer Dashboard"><br><sub><i>The freelancer's home dashboard overview after logging in.</i></sub></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="screenshots/web/15-client-projects-list.png" width="380" alt="My Jobs / Active Contracts"><br><sub><i>The client's jobs list, filtered to in-progress projects — shows escrow milestone status inline per contract.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/30-admin-login.png" width="380" alt="Admin Panel Login"><br><sub><i>The isolated admin panel login screen (credentials step) — see Section 14 for why deeper admin screens aren't captured here.</i></sub></td>
+</tr>
+</table>
 
 <div style="page-break-after: always;"></div>
 
@@ -903,6 +1068,8 @@ Several substantive technical challenges were encountered and solved during deve
 ### 19.6 Realistic, Interconnected Test Data
 **Challenge:** Meaningful testing and demonstration required large volumes of coherent, interrelated data.
 **Solution:** We built a **production-grade seeder** that generates a fully interconnected dataset with referential integrity, using batch inserts for performance and covering every category so the platform looks and behaves like a mature marketplace.
+
+Test-data generation is not a one-off script written once and forgotten — it has to keep pace with the domain model it simulates. When escrow moved from a single per-contract payment to the current **per-milestone** design, the seeder itself needed a substantial rewrite: it now creates real `Milestone` documents linked to their own `Payment` rows (rather than one payment per contract), and it places disputes correctly per the current model — on the relevant milestone's own `dispute` sub-document for fixed-price contracts, but on the contract itself for hourly ones. Left unmaintained, the demo data would have silently drifted from the real schema and started demonstrating a payment model the platform no longer uses.
 
 ### 19.7 Email Delivery Blocked by the Hosting Platform
 **Challenge:** Registration is gated behind an emailed OTP, so email is not an auxiliary feature — if it fails, nobody can create an account. Our SMTP implementation worked flawlessly in local development and then silently failed once deployed. The cause was environmental rather than logical: cloud platforms (including Railway, our host) commonly **block outbound SMTP ports (465/587)** to prevent their infrastructure being used for spam. No amount of debugging the application code would have surfaced this.
@@ -996,25 +1163,25 @@ The backend exposes a versioned REST API under `/api/v1`. The main route groups 
 | Route group | Purpose |
 |-------------|---------|
 | `/auth` | Registration, login, OTP, token refresh, role change |
-| `/user` | User account operations |
-| `/freelancer` | Freelancer profile, CV parsing, public search |
-| `/client` | Client profile, AI industry recommendation |
-| `/job` | Job posting and management |
-| `/gig` | Gig creation and management |
-| `/proposal` | Proposal submission and management |
-| `/contract` | Contract lifecycle |
-| `/delivery` | Delivery submission and review |
-| `/timeTracking` | Time logs for hourly contracts |
-| `/payment` | Escrow, Stripe, and wallet operations |
-| `/message` | In-app messaging |
-| `/notification` | Notifications |
-| `/skill`, `/skillTest` | Skill taxonomy, validation, and tests |
+| `/users` | User account operations |
+| `/freelancers` | Freelancer profile, CV parsing, public search |
+| `/clients` | Client profile, AI industry recommendation |
+| `/jobs` | Job posting and management |
+| `/gigs` | Gig creation and management |
+| `/proposals` | Proposal submission and management |
+| `/contracts` | Contract lifecycle |
+| `/deliveries` | Delivery submission and review |
+| `/time-tracking` | Time logs for hourly contracts |
+| `/payments` | Escrow operations — fund milestone 2+ (`POST /payments/milestones/:milestoneId/fund`), top up hourly wallet-lock escrow (`POST /payments/contracts/:contractId/lock-hourly`), Stripe Connect payouts, and wallet deposit/withdraw |
+| `/messages` | In-app messaging |
+| `/notifications` | Notifications |
+| `/skills`, `/skill-tests` | Skill taxonomy, validation, and tests |
 | `/matchmaking` | Freelancer matching (deterministic scoring engine, not LLM-based) |
 | `/ai` | Public AI tools (buddy, cost estimate, brief, validate) |
-| `/testimonial` | Freelancer testimonials |
+| `/testimonials` | Freelancer testimonials |
 | `/public` | Public stats, categories, top freelancers |
 | `/cms` | Content management |
-| `/admin`, `/adminPanel`, `/superadmin` | Administrative operations |
+| `/admin`, `/admin-panel`, `/superadmin` | Administrative operations |
 
 Interactive documentation is served via **Swagger** at `/api/v1/docs`.
 
@@ -1022,31 +1189,40 @@ Interactive documentation is served via **Swagger** at `/api/v1/docs`.
 
 ```
 Skill-Kart----Micro-Freelance-Platform/
+├── Apk/                     Pre-built, signed release APKs (main app + admin app)
 ├── Backend/
 │   └── src/
-│       ├── config/         Application configuration
-│       ├── controllers/    HTTP request handlers (23)
+│       ├── config/          Application configuration
+│       ├── controllers/     HTTP request handlers (24)
 │       ├── middleware/      Auth, RBAC, validation, rate-limit, errors
-│       ├── models/          Mongoose schemas (37)
+│       ├── models/          Mongoose schemas (39)
 │       ├── routes/          API route definitions (23)
-│       ├── services/        Business logic (payments, AI, matching, ...)
+│       ├── services/        Business logic — payments, escrow, AI, matching, ... (27)
 │       │   └── ai/          Provider router + Gemini/DeepSeek/Qwen/Groq/Claude/Ollama
+│       ├── utils/           Shared helpers (logger, constants, apiError, ...)
 │       ├── validators/      Request validation schemas
 │       ├── webhooks/        Stripe / Supabase webhooks
-│       ├── scripts/         Seed data, SuperAdmin setup
+│       ├── scripts/         Demo data seeder, SuperAdmin setup, one-off migrations
 │       ├── app.js           Express app assembly
 │       └── server.js        HTTP bootstrap
 ├── Front-end/
+│   ├── android/             Native Android project (Capacitor) — client/freelancer/admin-panel app
+│   ├── android-admin/       Separate native Android project (Capacitor) — standalone admin-only app
+│   ├── assets/, assets-admin/   Source icon/splash images for each native build
+│   ├── public/              Static assets served as-is (favicons, robots.txt, face-api.js models)
+│   ├── scripts/             cap-admin.cjs — drives the admin app's Capacitor CLI workaround
 │   └── src/
-│       ├── pages/          public, client, freelancer, admin, adminPanel
-│       ├── Components/     Reusable UI components
-│       ├── context/        Auth, Client, Freelancer, Notification providers
-│       ├── api/            Axios API clients
-│       ├── layouts/        Route layouts / shells
-│       ├── routes/         Route config + guards
-│       ├── hooks/          Custom hooks
-│       └── utils/          Helpers (e.g., safeToast, token manager)
-└── docs/                   Project documentation
+│       ├── pages/           public, client, freelancer, admin, adminPanel
+│       ├── Components/      Reusable UI components
+│       ├── context/         Auth, Client, Freelancer, Notification providers
+│       ├── api/             Axios API clients
+│       ├── layouts/         Route layouts / shells
+│       ├── routes/          Route config + guards (AppRoutes.jsx, AdminAppRoutes.jsx)
+│       ├── hooks/           Custom hooks (auth, push notifications, back button, ...)
+│       ├── utils/           Helpers (safeToast, logger, platform detection, ...)
+│       ├── constants/       Shared constant values
+│       └── data/            Static reference data (languages, misc mock constants)
+└── docs/                    Project documentation, incl. docs/screenshots/ (web + mobile UI captures)
 ```
 
 ### Appendix C — Environment Variables (without secrets)
@@ -1055,46 +1231,72 @@ The backend is configured entirely via environment variables. The main groups ar
 
 - **Core:** `NODE_ENV`, `PORT`, `API_VERSION`
 - **Database:** `MONGODB_URI`
-- **Auth:** `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_EXPIRE`, `JWT_REFRESH_EXPIRE`, `ENCRYPTION_KEY`
-- **CORS:** `CORS_ORIGIN`, `FRONTEND_URL`
-- **Email/OTP:** `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`, `OTP_EXPIRE_MINUTES`
+- **Redis (optional caching):** `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_DB` (no `REDIS_URL` — connection is built from discrete host/port/password/db vars)
+- **Auth:** `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_EXPIRE`, `JWT_REFRESH_EXPIRE`, `SESSION_SECRET`, `ENCRYPTION_KEY`
+- **CORS / URLs:** `CORS_ORIGIN`, `FRONTEND_URL`, `CLIENT_URL`
+- **Email/OTP:** `EMAIL_PROVIDER` (`smtp` | `gmail`), `EMAIL_ENABLED`, `EMAIL_SANDBOX`, `EMAIL_SANDBOX_RECIPIENT`; SMTP transport — `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`; Gmail-API transport — `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_REDIRECT_URI`, `GOOGLE_EMAIL`; `OTP_EXPIRY_MINUTES`, `OTP_LENGTH`
 - **Payments:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_DUMMY`
-- **AI:** `GEMINI_API_KEY`, `QWEN_API_KEY`, `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `QWEN_BASE_URL`, `QWEN_MODEL`, `AI_PRIORITY_*`
-- **Optional:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `REDIS_URL`, `CLOUDINARY_*`
+- **AI:** `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `QWEN_API_KEY`, `QWEN_BASE_URL`, `QWEN_MODEL`, `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `AI_PRIORITY_*` (per-provider fallback order)
+- **Admin panel (isolated auth):** `ADMIN_JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_TIMEOUT`, `ADMIN_OTP_EXPIRY`, `ADMIN_MAX_OTP_ATTEMPTS`, `ADMIN_PANEL_URL`
+- **Push notifications:** `FIREBASE_SERVICE_ACCOUNT_PATH` / `FIREBASE_SERVICE_ACCOUNT_JSON`
+- **reCAPTCHA v3:** `RECAPTCHA_SECRET_KEY`, `RECAPTCHA_MIN_SCORE`, `RECAPTCHA_TIMEOUT_MS`
+- **SEO / sitemap:** `PUBLIC_SITE_URL`
+- **Optional:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 
 The frontend uses `VITE_API_URL` and optional `VITE_SUPABASE_*`.
 
 ### Appendix D — Major Screens
 
-*[Insert screenshots with captions:]*
-- Home / Landing page
-- Browse Freelancers / Browse Projects
-- Freelancer Dashboard
-- Client Dashboard
-- Job posting form (with AI auto-fill)
-- Gig detail (tiered pricing)
-- Contract detail (escrow status)
-- Messaging
-- Buddy AI assistant / Cost Estimator
-- Admin Dashboard + a management module
+<table>
+<tr>
+<td width="33%" align="center"><img src="screenshots/web/01-public-home.png" width="380" alt="Home / Landing Page"><br><sub><i>Home / Landing page.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/04-public-browse-projects.png" width="380" alt="Browse Projects"><br><sub><i>Browse Freelancers / Browse Projects.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/20-freelancer-dashboard.png" width="380" alt="Freelancer Dashboard"><br><sub><i>Freelancer Dashboard.</i></sub></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="screenshots/web/13-client-dashboard.png" width="380" alt="Client Dashboard"><br><sub><i>Client Dashboard.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/14-client-post-job-form.png" width="380" alt="Post a Job Form"><br><sub><i>Job posting form (with AI auto-fill).</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/03-public-gig-detail.png" width="380" alt="Gig Detail Page"><br><sub><i>Gig detail (tiered pricing).</i></sub></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="screenshots/web/25-freelancer-contracts-work.png" width="380" alt="Active Contracts / Milestones"><br><sub><i>Contract detail (escrow status).</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/17-client-messages.png" width="380" alt="Client Messages"><br><sub><i>Messaging.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/11-public-ai-buddy.png" width="380" alt="AI Buddy Assistant"><br><sub><i>Buddy AI assistant.</i></sub></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="screenshots/web/12-public-cost-estimator.png" width="380" alt="AI Cost Estimator"><br><sub><i>Cost Estimator.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/30-admin-login.png" width="380" alt="Admin Panel Login"><br><sub><i>Admin Dashboard — the isolated, emailed-2FA login shown here (see Section 14) is the reason a deeper management module isn't pictured.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/web/32-swagger-api-docs.png" width="380" alt="Swagger API Documentation"><br><sub><i>Live, interactive API documentation (Swagger UI) at /api/v1/docs.</i></sub></td>
+</tr>
+</table>
+
+Since native Android access (Objective 9) is a headline achievement of the project and not just a repackaged web view, the same major flows were also captured directly from the installed Android app:
+
+<table>
+<tr>
+<td width="33%" align="center"><img src="screenshots/mobile/01-login.png" width="260" alt="Mobile Login Screen"><br><sub><i>Login screen on the native Android app.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/mobile/04-client-dashboard.png" width="260" alt="Mobile Client Dashboard"><br><sub><i>Client dashboard on the native Android app.</i></sub></td>
+<td width="33%" align="center"><img src="screenshots/mobile/17-freelancer-dashboard.png" width="260" alt="Mobile Freelancer Dashboard"><br><sub><i>Freelancer dashboard on the native Android app.</i></sub></td>
+</tr>
+</table>
 
 ### Appendix E — Database Collections
 
-The 38 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gig`, `Proposal`, `Contract`, `Milestone`, `ContractHistory`, `Delivery`, `TimeLog`, `Payment`, `Withdrawal`, `Conversation`, `Message`, `Notification`, `Review`, `Testimonial`, `SkillNode`, `SkillRelationship`, `SkillTestAttempt`, `TaxonomyProposal`, `OTP`, `OnboardingProgress`, `ClientOnboardingDraft`, `Report`, `AdminUser`, `AdminSession`, `AdminAuditLog`, `PlatformSettings`, `SystemSettings`, `ApiLog`, `ErrorLog`, `EmailLog`, `FileUpload`, `CMSContent`, `NewsletterSubscriber`, `ContactMessage`.
+The 39 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gig`, `Proposal`, `Contract`, `Milestone`, `ContractHistory`, `Delivery`, `TimeLog`, `Payment`, `Withdrawal`, `Conversation`, `Message`, `Notification`, `Review`, `Testimonial`, `SkillNode`, `SkillRelationship`, `SkillTestAttempt`, `TaxonomyProposal`, `OTP`, `RefreshToken`, `OnboardingProgress`, `ClientOnboardingDraft`, `Report`, `AdminUser`, `AdminSession`, `AdminAuditLog`, `PlatformSettings`, `SystemSettings`, `ApiLog`, `ErrorLog`, `EmailLog`, `FileUpload`, `CMSContent`, `NewsletterSubscriber`, `ContactMessage`.
 
 ### Appendix F — Project Statistics
 
 | Metric | Value |
 |--------|-------|
-| Total source files | 280+ |
-| Total lines of code | ~70,000 |
-| Data models | 38 |
+| Total source files | ~367 (.js/.jsx only; ~443 counting all file types) |
+| Total lines of code | ~80,500 |
+| Data models | 39 |
 | API route groups | 23 |
-| Controllers | 23 |
-| Service modules | 20+ |
-| AI providers | 5 |
+| Controllers | 24 |
+| Service modules | 27 |
+| AI providers | 6 |
 | Admin modules | 16+ |
-| User roles | 5+ |
+| User roles | 6 (superadmin, admin, contenteditor, freelancer, client, publicviewer) |
 
 ---
 
