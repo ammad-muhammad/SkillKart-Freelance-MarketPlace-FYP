@@ -147,6 +147,7 @@ const ForgotPassword = () => {
                                         id="forgot-email"
                                         type="email"
                                         name="email"
+                                        autoComplete="username"
                                         required
                                         value={formData.email}
                                         onChange={handleInputChange}
@@ -165,6 +166,7 @@ const ForgotPassword = () => {
                                         id="forgot-new-password"
                                         type={showPassword ? "text" : "password"}
                                         name="newPassword"
+                                        autoComplete="new-password"
                                         required
                                         value={formData.newPassword}
                                         onChange={handleInputChange}
@@ -186,6 +188,7 @@ const ForgotPassword = () => {
                                         id="forgot-confirm-password"
                                         type={showConfirmPassword ? "text" : "password"}
                                         name="confirmPassword"
+                                        autoComplete="new-password"
                                         required
                                         value={formData.confirmPassword}
                                         onChange={handleInputChange}

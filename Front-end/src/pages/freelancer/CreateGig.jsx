@@ -8,6 +8,7 @@ import Stepper from '../../Components/common/Stepper/Stepper';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import { validateFile } from '../../utils/uploadHelper';
 import { aiAPI } from '../../api/ai';
@@ -350,7 +351,7 @@ const Step4 = ({ gig, set }) => {
             </div>
           )}
         </div>
-        <input id="cg-banner-input" ref={bannerRef} type="file" accept="image/*" hidden onChange={handleBanner} />
+        <ImageSourcePicker id="cg-banner-input" ref={bannerRef} accept="image/*" onChange={handleBanner} />
         {gig.media.banner && (
           <button
             className="fl-btn fl-btn--ghost fl-btn--sm"
@@ -372,7 +373,7 @@ const Step4 = ({ gig, set }) => {
             </button>
           )}
         </div>
-        <input id="cg-images-input" ref={imagesRef} type="file" accept="image/*" multiple hidden onChange={handleImages} />
+        <ImageSourcePicker id="cg-images-input" ref={imagesRef} accept="image/*" multiple onChange={handleImages} />
         <div className="fl-images-grid">
           {gig.media.images.map((img, i) => (
             <div key={i} className="fl-image-thumb">

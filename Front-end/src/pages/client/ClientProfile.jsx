@@ -6,6 +6,7 @@ import IndustryInput from '../../Components/common/IndustryInput/IndustryInput';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
 
 import { LANGUAGES } from '../../data/languages';
@@ -421,7 +422,7 @@ const ClientProfile = () => {
                   <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => avatarRef.current?.click()}>
                     <Camera size={14} style={{ marginRight: 6 }} /> Change
                   </button>
-                  <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'avatar')} />
+                  <ImageSourcePicker ref={avatarRef} accept="image/*" facing="user" onChange={(e) => handleImage(e, 'avatar')} />
                 </>
               )}
             </div>
@@ -439,7 +440,7 @@ const ClientProfile = () => {
                     <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => logoRef.current?.click()}>
                       <ImageIcon size={14} style={{ marginRight: 6 }} /> Upload
                     </button>
-                    <input ref={logoRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'companyLogo')} />
+                    <ImageSourcePicker ref={logoRef} accept="image/*" onChange={(e) => handleImage(e, 'companyLogo')} />
                   </>
                 )}
               </div>
@@ -458,7 +459,7 @@ const ClientProfile = () => {
                   <button className="cl-btn cl-btn--ghost cl-btn--sm" style={{ marginTop: '0.5rem', width: 'auto' }} onClick={() => coverRef.current?.click()}>
                     <ImageIcon size={14} style={{ marginRight: 6 }} /> Upload
                   </button>
-                  <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => handleImage(e, 'coverPhoto')} />
+                  <ImageSourcePicker ref={coverRef} accept="image/*" onChange={(e) => handleImage(e, 'coverPhoto')} />
                 </>
               )}
             </div>

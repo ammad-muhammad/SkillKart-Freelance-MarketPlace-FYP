@@ -7,6 +7,7 @@ import { useClient } from '../../context/ClientContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare } from 'lucide-react';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
 import './ClientDashboard.css';
 
@@ -257,10 +258,8 @@ const ClientMessages = () => {
 
               {/* Message Input */}
               <form className="cl-chat-input" onSubmit={handleSendMessage}>
-                <input
-                  type="file"
+                <ImageSourcePicker
                   ref={fileRef}
-                  style={{ display: 'none' }}
                   accept="image/*,.pdf,.doc,.docx"
                   onChange={handleAttach}
                 />

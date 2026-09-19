@@ -3,6 +3,7 @@ const ContractHistory = require('../../models/ContractHistory');
 const Payment = require('../../models/Payment');
 const TimeLog = require('../../models/TimeLog');
 const { auditLog } = require('../../utils/adminAudit');
+const notifications = require('../../services/notification.service');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 const { parsePagination } = require('../../utils/helpers');
 const { round2 } = require('../../utils/constants');
@@ -266,6 +267,13 @@ const cancelContract = async (req, res) => {
       job.status = 'cancelled';
       await job.save();
     }
+
+    // Neither party has any other way to find out — an admin cancel doesn't
+    // go through either of the freelancer/client-initiated flows (which
+    // already notify via onContractDisputed/onContractStatusChanged), so
+    // both sides need telling directly here.
+    notifications.onJobCancelled(contract.clientId, { job });
+    notifications.onJobCancelled(contract.freelancerId, { job });
 
     recordHistory(contract._id, 'cancel', `[Admin] Contract cancelled. Refunded Rs. ${refunded} to client. ${req.body.reason || ''}`.trim(), req.admin.email, { status: prev }, { status: 'cancelled', refunded });
     auditLog(req, {

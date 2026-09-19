@@ -8,6 +8,7 @@ const {
   createProposalValidation,
   updateProposalValidation,
   getProposalValidation,
+  checkEligibilityValidation,
   deleteProposalValidation,
   listProposalsValidation,
   acceptProposalValidation,
@@ -46,6 +47,16 @@ router.get('/',
 router.post('/ai/draft',
   requireRole('freelancer'),
   proposalController.draftProposal
+);
+
+// Read-only skill-gate precheck for a job, keyed by jobId (not a proposal id)
+// so the frontend can gate opening the Apply/Resubmit modal itself, before
+// the freelancer writes anything. Before /:id.
+router.get('/eligibility/:jobId',
+  requireRole('freelancer'),
+  checkEligibilityValidation,
+  validate,
+  proposalController.checkApplyEligibility
 );
 
 // Get proposal by ID

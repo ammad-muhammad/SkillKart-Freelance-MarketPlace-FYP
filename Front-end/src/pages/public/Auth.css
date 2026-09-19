@@ -219,6 +219,34 @@
 
 .auth-input:focus { border-color: var(--auth-accent); background: rgba(255,255,255,0.08); }
 
+/* Saved-credential/OTP autofill forces its own opaque background + dark text
+   via the browser's internal `-webkit-autofill` UA style — `background`/
+   `color` on the input can't override that directly. Two visible symptoms
+   without this: the field flashes pale/white against the dark glass theme,
+   and .auth-input-icon (a dim 40%-opacity white icon painted on top via
+   `position: absolute`, only readable against a DARK input) effectively
+   disappears from lack of contrast against that forced pale background. The
+   fix is the standard workaround: paint over the forced background with a
+   huge inset box-shadow (box-shadow isn't part of the UA autofill style, so
+   it always wins) and force the autofilled text back to a legible color with
+   `-webkit-text-fill-color` (plain `color` doesn't affect autofilled text).
+   The very long transition delay suppresses the brief native flash some
+   Chromium versions still show for an instant before the shadow paints. */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active,
+.otp-input-field:-webkit-autofill,
+.otp-input-field:-webkit-autofill:hover,
+.otp-input-field:-webkit-autofill:focus,
+.otp-input-field:-webkit-autofill:active {
+    -webkit-text-fill-color: #ffffff;
+    caret-color: #ffffff;
+    -webkit-box-shadow: 0 0 0 1000px #101d2c inset;
+    box-shadow: 0 0 0 1000px #101d2c inset;
+    transition: background-color 5000s ease-in-out 0s, box-shadow 5000s ease-in-out 0s;
+}
+
 .auth-password-toggle {
     position: absolute; right: 1rem;
     background: none; border: none; color: rgba(255,255,255,0.4);

@@ -7,6 +7,7 @@ import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { isMobileApp } from '../../utils/platform';
 import { openExternal } from '../../utils/externalLink';
 import './FreelancerDashboard.css';
@@ -274,12 +275,10 @@ const FreelancerPortfolio = () => {
                   </div>
                 )}
               </div>
-              <input 
+              <ImageSourcePicker
                 ref={fileInputRef}
-                type="file" 
-                accept="image/*" 
-                hidden 
-                onChange={handleImageUpload} 
+                accept="image/*"
+                onChange={handleImageUpload}
               />
               {formData.images?.[0] && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>

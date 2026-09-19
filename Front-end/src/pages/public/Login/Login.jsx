@@ -254,6 +254,7 @@ const Login = () => {
                                         id="login-email"
                                         type="email"
                                         name="email"
+                                        autoComplete="username"
                                         required
                                         value={formData.email}
                                         onChange={handleInputChange}
@@ -275,6 +276,7 @@ const Login = () => {
                                         id="login-password"
                                         type={showPassword ? "text" : "password"}
                                         name="password"
+                                        autoComplete="current-password"
                                         required
                                         value={formData.password}
                                         onChange={handleInputChange}

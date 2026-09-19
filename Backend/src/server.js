@@ -197,21 +197,9 @@ const gracefulShutdown = async (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Handle uncaught errors
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise);
-  console.error('Reason:', reason);
-  // Don't exit in production, just log
-  if (config.env === 'development') {
-    process.exit(1);
-  }
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  // Always exit on uncaught exception
-  process.exit(1);
-});
+// unhandledRejection/uncaughtException are handled in app.js (operational-error-aware,
+// persists to ErrorLog for the admin Monitoring page) — required above, so those
+// listeners are already registered by this point.
 
 // Start the server
 startServer();

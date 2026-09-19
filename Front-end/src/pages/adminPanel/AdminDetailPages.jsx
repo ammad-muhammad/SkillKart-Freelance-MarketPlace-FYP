@@ -17,6 +17,7 @@ import {
 import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
+import { downloadFile } from '../../utils/downloadFile';
 
 // ─── Shared bits ───────────────────────────────────────────────
 const BackButton = ({ to, label }) => {
@@ -2136,10 +2137,7 @@ export const ChatDetailPage = () => {
     });
     const header = `Conversation ${conversationId}\nParticipants: ${participants.map(userLabel).join(', ')}\n${'='.repeat(50)}\n\n`;
     const blob = new Blob([header + lines.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `conversation-${conversationId}.txt`; a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(blob, `conversation-${conversationId}.txt`);
   };
 
   return (

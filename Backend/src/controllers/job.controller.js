@@ -611,6 +611,9 @@ const reviewJob = asyncHandler(async (req, res) => {
 
   await recalculateRating({ revieweeId, type, jobId: id });
 
+  const reviewerName = [req.user.firstName, req.user.lastName].filter(Boolean).join(' ') || 'Someone';
+  notifications.onReviewSubmitted(revieweeId, { reviewerName, job });
+
   sendSuccess(res, { message: 'Review submitted successfully', data: { review } });
 });
 

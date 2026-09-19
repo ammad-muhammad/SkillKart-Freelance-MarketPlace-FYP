@@ -327,6 +327,13 @@ const getProposalValidation = [
     .isMongoId().withMessage('Invalid proposal ID')
 ];
 
+// Check-apply-eligibility validation
+const checkEligibilityValidation = [
+  param('jobId')
+    .notEmpty().withMessage('Job ID is required')
+    .isMongoId().withMessage('Invalid job ID')
+];
+
 // Delete proposal validation
 const deleteProposalValidation = [
   param('id')
@@ -516,6 +523,7 @@ module.exports = {
   createProposalValidation,
   updateProposalValidation,
   getProposalValidation,
+  checkEligibilityValidation,
   deleteProposalValidation,
   listProposalsValidation,
   acceptProposalValidation,
