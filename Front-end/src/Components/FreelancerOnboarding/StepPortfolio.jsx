@@ -4,6 +4,7 @@ import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X, Loader2 } from "l
 import { freelancersAPI } from "../../api/freelancers";
 import { safeToast as toast } from "../../utils/safeToast";
 import AiGenerateText from "../common/AiSuggest/AiGenerateText";
+import ImageSourcePicker from "../common/ImageSourcePicker/ImageSourcePicker";
 
 const StepPortfolio = ({ formData, setFormData, errors }) => {
   const fileInputRefs = useRef([]);
@@ -233,19 +234,17 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
                   </div>
                 )}
 
-                <label className="fob-upload-area">
+                <div className="fob-upload-area" onClick={() => fileInputRefs.current[index]?.click()}>
                   <ImagePlus size={24} className="fob-upload-icon" />
                   <span>Click to upload images</span>
                   <span className="fob-upload-formats">PNG, JPG, WEBP up to 5MB each</span>
-                  <input
-                    type="file"
-                    hidden
+                  <ImageSourcePicker
                     multiple
                     accept="image/*"
                     ref={(el) => (fileInputRefs.current[index] = el)}
                     onChange={(e) => handleImageUpload(index, e)}
                   />
-                </label>
+                </div>
               </div>
             </motion.div>
           ))}

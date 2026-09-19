@@ -8,6 +8,7 @@ import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { validateFile } from '../../utils/uploadHelper';
 import { Plus, X, Upload, Trash2, Image as ImageIcon, Eye, Star, Pause, Play, Edit2, Package } from 'lucide-react';
 import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
@@ -444,7 +445,7 @@ const FreelancerGigs = () => {
                     </div>
                   )}
                 </div>
-                <input ref={bannerRef} type="file" hidden onChange={handleBannerUpload} accept="image/*" />
+                <ImageSourcePicker ref={bannerRef} accept="image/*" onChange={handleBannerUpload} />
               </div>
 
               <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
@@ -454,7 +455,7 @@ const FreelancerGigs = () => {
                     <Plus size={14} /> Add Images
                   </button>
                 </div>
-                <input ref={imagesRef} type="file" hidden multiple onChange={handleImagesUpload} accept="image/*" />
+                <ImageSourcePicker ref={imagesRef} accept="image/*" multiple onChange={handleImagesUpload} />
                 <div className="fl-edit-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
                   {(formData.media?.images || []).map((img, i) => (
                     <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-secondary)' }}>

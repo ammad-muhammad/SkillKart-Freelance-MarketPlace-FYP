@@ -1,16 +1,46 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import * as faceapi from 'face-api.js';
+import { isMobileApp } from '../../utils/platform';
+import { error as logError } from '../../utils/logger';
 
 const MODEL_URL = '/models';
+
+// tfjs-core (bundled inside face-api.js) auto-picks the webgl backend
+// whenever a WebGL context can be created, which it usually can inside the
+// Android WebView — but on many OEM WebView builds real shader
+// compilation/execution for inference then silently throws on EVERY
+// detection tick. That used to be swallowed by the catch block below with no
+// fallback: camera visibly on, face-api never once completing a detection,
+// so no violation could ever be counted and the test could never be
+// cancelled. The tiny detector model this hook uses is specifically sized to
+// run comfortably on a phone CPU, so force the cpu backend up front on the
+// native app rather than discovering the failure reactively.
+let backendReadyPromise = null;
+const ensureBackend = () => {
+  if (!backendReadyPromise) {
+    backendReadyPromise = (async () => {
+      if (isMobileApp()) {
+        try {
+          const ok = await faceapi.tf.setBackend('cpu');
+          if (!ok) logError('[useFaceProctor] tfjs declined to switch to the cpu backend');
+        } catch (err) {
+          logError('[useFaceProctor] failed to force the cpu backend', err);
+        }
+      }
+      await faceapi.tf.ready();
+    })();
+  }
+  return backendReadyPromise;
+};
 
 // Loaded once per page load and shared across every hook instance/attempt.
 let modelsLoadPromise = null;
 const loadModels = () => {
   if (!modelsLoadPromise) {
-    modelsLoadPromise = Promise.all([
+    modelsLoadPromise = ensureBackend().then(() => Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-    ]);
+    ]));
   }
   return modelsLoadPromise;
 };
@@ -19,6 +49,18 @@ const DETECT_INTERVAL_MS = 600;
 const BAD_STREAK_THRESHOLD = 2;   // ~1.2s of a consistent bad state before it counts as one violation
 const VIOLATION_COOLDOWN_MS = 4000; // after counting a violation, don't re-count the same episode
 const ARM_GRACE_MS = 2000;        // camera focus / model warm-up grace period
+
+// One failed tick is normal (frame not decoded yet, camera refocusing). A
+// long run of failures in a row means the detection pipeline itself is
+// broken rather than one bad frame. FALLBACK_ERROR_STREAK tries a live
+// switch to the cpu backend once (covers a device where ensureBackend()
+// forced cpu but it *still* errors, or a desktop browser whose webgl is
+// flaky); HARD_ERROR_STREAK — reached only if that also keeps failing —
+// stops pretending to proctor and surfaces it like a camera failure instead
+// of silently running the rest of the test unproctored.
+let fallbackAttempted = false;
+const FALLBACK_ERROR_STREAK = 5;
+const HARD_ERROR_STREAK = 15;
 
 // How far the nose can sit off the eye-to-eye midpoint (0.5 = perfectly
 // centered) before it counts as a head turn. Small enough to catch a glance
@@ -212,6 +254,37 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, maxVio
     badStreak.current = 0;
   }, []);
 
+  const detectErrorStreak = useRef(0);
+
+  const handleDetectError = useCallback((err) => {
+    if (!activeRef.current) return;
+    detectErrorStreak.current += 1;
+
+    if (detectErrorStreak.current === 1) {
+      logError('[useFaceProctor] detection tick failed', err);
+    }
+
+    if (detectErrorStreak.current === FALLBACK_ERROR_STREAK && !fallbackAttempted) {
+      fallbackAttempted = true;
+      logError('[useFaceProctor] detection failing repeatedly — switching to the cpu backend');
+      faceapi.tf.setBackend('cpu')
+        .then((ok) => {
+          if (!ok) logError('[useFaceProctor] tfjs declined the cpu backend fallback');
+        })
+        .catch((fallbackErr) => {
+          logError('[useFaceProctor] cpu backend fallback failed', fallbackErr);
+        });
+    }
+
+    if (detectErrorStreak.current === HARD_ERROR_STREAK) {
+      // Both the default and fallback backends keep failing — detection is
+      // structurally broken on this device/browser. Say so instead of
+      // silently finishing the test with no proctoring at all.
+      logError('[useFaceProctor] detection still failing after cpu fallback — giving up on proctoring this attempt');
+      setCameraError('Face verification is not working on this device.');
+    }
+  }, []);
+
   // Detection loop.
   useEffect(() => {
     if (!active || !modelsReady) return undefined;
@@ -224,11 +297,12 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, maxVio
         const detections = await faceapi
           .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
           .withFaceLandmarks(true);
+        detectErrorStreak.current = 0;
         const state = classify(detections, video);
         if (state === 'ok') registerOk();
         else registerBadState(state);
-      } catch {
-        // Transient detection failure (e.g. video not ready) — ignore this tick.
+      } catch (err) {
+        handleDetectError(err);
       } finally {
         busyRef.current = false;
       }
@@ -237,7 +311,7 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, maxVio
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [active, modelsReady, videoRef, registerBadState, registerOk]);
+  }, [active, modelsReady, videoRef, registerBadState, registerOk, handleDetectError]);
 
   // Reset strikes only when a NEW attempt starts, mirroring useAntiCheat.
   useEffect(() => {
@@ -247,6 +321,7 @@ export default function useFaceProctor({ active, attemptId = 0, videoRef, maxVio
       badType.current = null;
       badStreak.current = 0;
       cooldownUntil.current = 0;
+      detectErrorStreak.current = 0;
       armedAt.current = Date.now();
     }
   }, [attemptId, active]);

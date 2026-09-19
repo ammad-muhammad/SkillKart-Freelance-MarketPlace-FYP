@@ -19,9 +19,12 @@ import { useFreelancer } from '../../../context/FreelancerContext';
 import { safeToast as toast } from '../../../utils/safeToast';
 import useFocusTrap from '../../../hooks/useFocusTrap';
 import { isMobileApp } from '../../../utils/platform';
+import { error as logError } from '../../../utils/logger';
 import './JobDetails.css';
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif'];
+
+const LEVEL_LABEL = { entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' };
 
 // Per-extension accent color for the generic icon block (files we can't
 // generate a real visual preview for — docx, txt, zip, etc.).
@@ -91,6 +94,10 @@ export default function JobDetails() {
   const [editingProposalId, setEditingProposalId] = useState(null);
   const [resubmitMode, setResubmitMode] = useState(false);
   const [skillGateConfirm, setSkillGateConfirm] = useState(null); // { message, onConfirm } | null
+  // True while the Apply/Resubmit precheck (GET /proposals/eligibility/:jobId)
+  // is in flight — keeps the button from opening the modal (or being
+  // double-clicked) before we know whether the skill gate blocks it.
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
   const applyModalRef = useRef(null);
   const closeApplyModal = useCallback(() => { if (!submitting) setShowApplyModal(false); }, [submitting]);
   useFocusTrap(applyModalRef, showApplyModal, closeApplyModal);
@@ -152,9 +159,101 @@ export default function JobDetails() {
     document.title = job?.title ? `${job.title} – SkillKart` : 'Project Details – SkillKart';
   }, [job?.title]);
 
+  // Shared by the Apply/Resubmit precheck (handleApplyClick / openEditModal,
+  // below) and the submit-time 403 fallback (handleApply's catch) — both see
+  // the same { allowed, requiredSkills, category, requiredLevel,
+  // verifiedSkills } shape, either from GET /proposals/eligibility/:jobId or
+  // from a create/update 403's `errors`. Picks a real skill already on the
+  // freelancer's profile to send them straight to that test, or offers to add
+  // one they don't have yet. `kind` lets callers that also have a backend
+  // error `message` decide whether to show it alongside the dialog (see
+  // handleApply, which preserves its pre-existing toast-only-when-matched
+  // behavior). Returns null when there's no required skill/category at all to
+  // build a dialog around (shouldn't happen, but a gate can't be blocked by
+  // nothing).
+  const buildSkillGateConfirm = (gate, actionLabel = 'apply') => {
+    const gerund = actionLabel === 'resubmit' ? 'resubmitting' : 'applying';
+    const candidates = [...(gate.requiredSkills || []), gate.category].filter(Boolean);
+    const myProfileSkillNames = (profile?.verifiedSkills || []).map((s) => s.name?.toLowerCase());
+    const matchedSkill = candidates.find((c) => myProfileSkillNames.includes(c.toLowerCase()));
+
+    if (matchedSkill) {
+      const levelNote = gate.requiredLevel
+        ? ` This project needs ${LEVEL_LABEL[gate.requiredLevel] || gate.requiredLevel}-level verification.`
+        : '';
+      return {
+        kind: 'matched',
+        message: `You must pass the skill test for "${matchedSkill}" before ${gerund}.${levelNote} Take the test now?`,
+        onConfirm: () => {
+          const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+          navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
+        },
+      };
+    }
+    if (candidates[0]) {
+      // None of the required skills are on their profile at all — a test
+      // can't be generated for a skill they don't have listed yet. Add it to
+      // their profile (unverified, same as any profile-edit skill add) and
+      // take them straight to its test instead.
+      const skillLabel = candidates[0];
+      return {
+        kind: 'new',
+        message: `This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`,
+        onConfirm: async () => {
+          try {
+            const existingSkillNames = profile?.skills || [];
+            await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
+            await refreshProfile();
+            const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
+            navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
+          } catch (addErr) {
+            toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
+          }
+        },
+      };
+    }
+    return null;
+  };
+
+  const skillGateFallbackMessage = (gate, actionLabel = 'apply') => {
+    const label = LEVEL_LABEL[gate.requiredLevel];
+    return label
+      ? `This project requires ${label}-level verification in at least one of its required skills before you can ${actionLabel}.`
+      : `You need to pass the skill test for this project’s required skills before you can ${actionLabel}. Verify at least one of them to continue.`;
+  };
+
+  // Runs the same skill gate the backend enforces on submit, BEFORE opening
+  // the modal — so a freelancer who isn't eligible yet is sent straight to
+  // the relevant skill test instead of writing an entire proposal (rate,
+  // delivery time, 100+ character cover letter) only to have it rejected and
+  // lost on submit. Fails OPEN on a precheck request error (network hiccup,
+  // etc.) rather than blocking Apply outright — the submit-time gate in
+  // handleApply is still there as the backstop, same as before this existed.
+  const runEligibilityGate = async (actionLabel) => {
+    setCheckingEligibility(true);
+    try {
+      const { data } = await proposalsAPI.checkEligibility(job._id || id);
+      const gate = data?.data;
+      if (gate && !gate.allowed) {
+        const confirm = buildSkillGateConfirm(gate, actionLabel);
+        if (confirm) setSkillGateConfirm(confirm);
+        else toast.error(skillGateFallbackMessage(gate, actionLabel));
+        return false;
+      }
+      return true;
+    } catch (err) {
+      logError('[JobDetails] eligibility precheck failed', err);
+      return true;
+    } finally {
+      setCheckingEligibility(false);
+    }
+  };
+
   // Gate the Apply button BEFORE opening the modal so a logged-out user is sent
-  // to login (and returned here after) instead of filling the form then bouncing.
-  const handleApplyClick = () => {
+  // to login (and returned here after) instead of filling the form then
+  // bouncing — and, past that, so a freelancer who hasn't passed the
+  // required skill test yet is sent to it before writing anything either.
+  const handleApplyClick = async () => {
     if (!user) {
       toast.info('Please log in as a freelancer to apply.');
       try { sessionStorage.setItem('postLoginRedirect', `/jobs/${id}`); } catch { /* non-fatal */ }
@@ -170,6 +269,10 @@ export default function JobDetails() {
       navigate('/freelancer/onboarding');
       return;
     }
+
+    const eligible = await runEligibilityGate('apply');
+    if (!eligible) return;
+
     setEditingProposalId(null);
     setResubmitMode(false);
     setProposalData(defaultProposalData(job));
@@ -178,10 +281,19 @@ export default function JobDetails() {
 
   // Prefill the same modal with an existing proposal's values — used both to
   // edit a still-pending proposal and to edit+resubmit a rejected one the
-  // client explicitly allowed to be revised.
-  const openEditModal = (myProposal) => {
+  // client explicitly allowed to be revised. Resubmitting re-enters the skill
+  // gate server-side exactly like a fresh apply (see updateProposal), so it
+  // gets the same precheck; a plain pending-proposal edit doesn't re-check the
+  // gate server-side either, so it opens straight away.
+  const openEditModal = async (myProposal) => {
+    const isResubmit = myProposal.status === 'rejected';
+    if (isResubmit) {
+      const eligible = await runEligibilityGate('resubmit');
+      if (!eligible) return;
+    }
+
     setEditingProposalId(myProposal._id);
-    setResubmitMode(myProposal.status === 'rejected');
+    setResubmitMode(isResubmit);
     setProposalData({
       coverLetter: myProposal.coverLetter || '',
       fixedPrice: myProposal.fixedPrice ?? '',
@@ -283,55 +395,21 @@ export default function JobDetails() {
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to submit proposal.';
       const gate = error.response?.data?.errors;
-      // Skill-gating block (403): route the freelancer to the right skill test.
+      // Skill-gating block (403): route the freelancer to the right skill
+      // test. Expected only as a defensive fallback now — handleApplyClick /
+      // openEditModal already run this same gate before the modal opens — but
+      // kept in case eligibility changed in the gap (e.g. a verification
+      // expired between opening the modal and submitting).
       if (error.response?.status === 403 && gate?.skillTestRequired) {
         setShowApplyModal(false);
-
-        // A per-skill ?skill= test only works for a skill already listed on
-        // the freelancer's profile (generateTest 400s otherwise). Find one of
-        // the job's required skills (or its category) that's already on their
-        // profile — verified or not — and send them straight to that test.
-        const candidates = [...(gate.requiredSkills || []), gate.category].filter(Boolean);
-        const myProfileSkillNames = (profile?.verifiedSkills || []).map((s) => s.name?.toLowerCase());
-        const matchedSkill = candidates.find((c) => myProfileSkillNames.includes(c.toLowerCase()));
-
-        if (matchedSkill) {
-          toast.error(msg);
-          // gate.requiredLevel ('entry'|'intermediate'|'expert') means the freelancer
-          // already has this skill verified but not at a high enough level — retaking
-          // for a better score is what unlocks it, same test/skill either way.
-          const levelNote = gate.requiredLevel
-            ? ` This project needs ${{ entry: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[gate.requiredLevel]}-level verification.`
-            : '';
-          setSkillGateConfirm({
-            message: `You must pass the skill test for "${matchedSkill}" before applying.${levelNote} Take the test now?`,
-            onConfirm: () => {
-              const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
-              navigate(`/freelancer/skill-test?skill=${encodeURIComponent(matchedSkill)}&returnTo=${returnTo}`);
-            },
-          });
-        } else if (candidates[0]) {
-          // None of the required skills are on their profile at all — a test
-          // can't be generated for a skill they don't have listed yet (that's
-          // what caused the old loop: retaking a baseline test of unrelated
-          // skills can never satisfy this gate). Add it to their profile
-          // (unverified, same as any profile-edit skill add) and take them
-          // straight to its test instead.
-          const skillLabel = candidates[0];
-          setSkillGateConfirm({
-            message: `This project requires "${skillLabel}", which isn't on your profile yet. Add it now and take the skill test?`,
-            onConfirm: async () => {
-              try {
-                const existingSkillNames = profile?.skills || [];
-                await freelancersAPI.updateProfile({ skills: [...existingSkillNames, skillLabel] });
-                await refreshProfile();
-                const returnTo = encodeURIComponent(`/jobs/${id}?openApply=1`);
-                navigate(`/freelancer/skill-test?skill=${encodeURIComponent(skillLabel)}&returnTo=${returnTo}`);
-              } catch (addErr) {
-                toast.error(addErr.response?.data?.message || 'Could not add the skill to your profile.');
-              }
-            },
-          });
+        const actionLabel = editingProposalId ? 'resubmit' : 'apply';
+        const confirm = buildSkillGateConfirm(gate, actionLabel);
+        if (confirm) {
+          // Preserve the pre-existing behavior: surface the backend's own
+          // message alongside the dialog only for the "matched" case — the
+          // "new skill" dialog already explains the situation on its own.
+          if (confirm.kind === 'matched') toast.error(msg);
+          setSkillGateConfirm(confirm);
         } else {
           toast.error(msg);
         }
@@ -514,7 +592,9 @@ export default function JobDetails() {
                       {job.status !== 'open' ? (
                         <button className="jd-apply__btn" disabled style={{ flex: 1 }}>Closed</button>
                       ) : !myProposal ? (
-                        <button className="jd-apply__btn" onClick={handleApplyClick} style={{ flex: 1 }}>Apply Now</button>
+                        <button className="jd-apply__btn" onClick={handleApplyClick} disabled={checkingEligibility} style={{ flex: 1 }}>
+                          {checkingEligibility ? 'Checking…' : 'Apply Now'}
+                        </button>
                       ) : myProposal.status === 'pending' ? (
                         <button
                           className="jd-apply__btn"
@@ -527,9 +607,10 @@ export default function JobDetails() {
                         <button
                           className="jd-apply__btn"
                           onClick={() => openEditModal(myProposal)}
+                          disabled={checkingEligibility}
                           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
                         >
-                          <RotateCcw size={16} /> Edit & Resubmit
+                          <RotateCcw size={16} /> {checkingEligibility ? 'Checking…' : 'Edit & Resubmit'}
                         </button>
                       ) : (
                         <button className="jd-apply__btn jd-apply__btn--applied" disabled style={{ flex: 1 }}>

@@ -10,6 +10,7 @@ import TagInput from '../../Components/common/TagInput/TagInput';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import { isMobileApp } from '../../utils/platform';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
 import './ClientDashboard.css';
 import './PostProject.css';
@@ -785,7 +786,7 @@ const PostProject = () => {
                   <p>Click to upload project-related images or screenshots</p>
                   <small>JPG, PNG up to 5MB</small>
                 </div>
-                <input ref={bannerRef} type="file" multiple hidden accept="image/*" onChange={handleImageUpload} />
+                <ImageSourcePicker ref={bannerRef} multiple accept="image/*" onChange={handleImageUpload} />
               </div>
 
               {form.attachments.images.length > 0 && (

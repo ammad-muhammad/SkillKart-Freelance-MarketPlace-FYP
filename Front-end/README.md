@@ -410,6 +410,119 @@ for the full setup (Firebase project, service account credential,
 > `android-admin/app/google-services.json` must exist before enabling the env
 > var for an `.env.admin` build.
 
+### Skill-test face proctoring
+
+`src/pages/freelancer/useFaceProctor.js` runs `face-api.js` (TinyFaceDetector +
+tiny 68-point landmarks) against the live camera feed during the skill test —
+see [`CLAUDE.md`](../CLAUDE.md) / `SkillTest.jsx` for the full proctoring flow.
+
+> ⚠️ **Forces the tfjs `cpu` backend on the native app.** `face-api.js` bundles
+> an old `@tensorflow/tfjs-core` that auto-picks the `webgl` backend whenever a
+> WebGL context can be created — which Android's WebView usually *can* do, but
+> on many OEM WebView builds real shader compilation/execution for inference
+> then silently throws on every single detection tick. Before this was fixed,
+> that failure was swallowed with no fallback and no logging: the camera
+> preview worked fine (plain `getUserMedia`, unrelated to tfjs), but
+> `detectAllFaces()` never once completed, so no violation could ever be
+> counted and the test could never be cancelled — proctoring looked "on" but
+> did nothing, only on Android, never on web. `useFaceProctor.js` now forces
+> `cpu` up front on `isMobileApp()` (the tiny model is cheap enough for a phone
+> CPU every 600ms) and, as defense in depth, also self-heals by switching to
+> `cpu` if 5 detection ticks in a row throw for any reason, on any platform. If
+> detection is *still* failing 15 ticks in a row after that, it gives up and
+> surfaces a camera-style error rather than silently finishing the test
+> unproctored. All of this logs through `error` from `src/utils/logger.js`
+> (survives production builds) — check `adb logcat` / `chrome://inspect` if
+> proctoring ever looks inert again.
+
+### Photo upload: camera / device picker
+
+Every image-upload site (profile avatar/cover, company logo, portfolio/project
+images, gig banner/gallery, job images, chat/job attachments) uses
+[`src/Components/common/ImageSourcePicker/ImageSourcePicker.jsx`](src/Components/common/ImageSourcePicker/ImageSourcePicker.jsx)
+instead of a raw `<input type="file">`. It's a drop-in replacement — same
+`ref.current.click()` API an existing trigger button/div already calls, so no
+other code at a call site has to change. On `isMobileApp()` it shows a small
+"Take Photo / Choose from Device" chooser (built on the shared `Modal` +
+`Button` components) before opening anything; on web `.click()` just opens the
+device file picker directly, identical to before this existed.
+
+> ⚠️ **Take Photo uses the real `@capacitor/camera` plugin, not the HTML
+> `capture` attribute.** The common alternative — a hidden
+> `<input type="file" accept="image/*" capture="environment">`, relying on the
+> WebView's own file-chooser interception (`BridgeWebChromeClient`) to launch
+> the camera — depends on that interception working, which is unreliable
+> enough across OEM Android WebView builds that it doesn't even work in the
+> MediCore-AI project this feature was modeled on. `Camera.getPhoto({ source:
+> CameraSource.Camera })` talks to the native camera intent directly through
+> Capacitor's own plugin bridge instead. The result (`photo.webPath`) is
+> `fetch()`ed into a real `Blob`/`File` and handed to the caller's existing
+> `onChange` handler via a synthesized `{ target: { files, value } }` event —
+> every handler written for a plain `<input onChange>` keeps working
+> unmodified. **Choose from Device stays a plain hidden `<input type="file">`**
+> — that path was never unreliable, and it's the only way to also support
+> non-image accept types (chat/job attachments allow PDFs/DOCs too, which the
+> Camera plugin can never produce). Resume/CV upload and the job "documents"
+> input intentionally keep a plain `<input>` with no picker at all — they
+> don't accept any image type, so a camera photo could never satisfy them.
+>
+> Requires `android.permission.CAMERA` (already declared for face-proctoring's
+> `getUserMedia`, above) and a `FileProvider` + matching
+> `res/xml/file_paths.xml` — both already present in `AndroidManifest.xml`,
+> though `file_paths.xml` originally used `<external-path>`
+> (`Environment.getExternalStorageDirectory()`, shared public storage) copied
+> from the same MediCore-AI reference, which does **not** cover where
+> `@capacitor/camera` actually writes
+> (`getExternalFilesDir(Pictures)`/`getCacheDir()`, both app-private — no
+> extra storage permission needed). Left unfixed, the very first real capture
+> would have thrown `IllegalArgumentException: Failed to find configured
+> root...` — it's now `<external-files-path path="Pictures">` +
+> `<cache-path path=".">`, matching the plugin's Android source exactly. The
+> plugin's own bundled manifest fragment adds the required API 30+
+> `<queries>` block (`IMAGE_CAPTURE`/`GET_CONTENT`/`PICK`) automatically via
+> Gradle manifest merging — nothing to add by hand for that part. Run
+> `npm run cap:sync` after ever bumping `@capacitor/camera` so the native
+> Gradle project picks up plugin changes.
+
+### File downloads / exports (native)
+
+A raw `window.open(url, '_blank')` or `<a download>` + `.click()` — fine on
+web — does nothing useful inside the native app's WebView: there's no tabs
+concept and no Downloads UI to catch a download navigation. Two different
+fixes depending on where the file comes from:
+
+- **Server-generated file at a URL** (the admin panel's CSV/report exports in
+  [`AdminPages.jsx`](src/pages/adminPanel/AdminPages.jsx)/[`UsersPage.jsx`](src/pages/adminPanel/UsersPage.jsx))
+  — use `openExternal(url)` from [`src/utils/externalLink.js`](src/utils/externalLink.js),
+  same as any other external link. On native it opens a Chrome Custom Tab,
+  which — unlike the embedded WebView — is backed by real system Chrome and
+  so has a working Download Manager; on web it's an unchanged `window.open`.
+- **Client-generated file** (built from data already on screen — a CSV or
+  text export assembled in JS, not fetched from a URL) — use `downloadFile(blob,
+  filename)` from [`src/utils/downloadFile.js`](src/utils/downloadFile.js)
+  instead. `openExternal`/`Browser.open()` can't reach a `blob:` URL at all —
+  it only exists in the WebView's own JS memory, invisible to the separate
+  Custom Tab process. `downloadFile` writes the blob to the app's private
+  cache via `@capacitor/filesystem` (`Directory.Cache` — no storage
+  permission needed, unlike public storage) then opens the native share sheet
+  via `@capacitor/share` so the user can actually save or send it (Files,
+  Drive, email, ...). Falls back to a plain browser download on web, or on
+  native if the native save/share itself fails or is cancelled (harmless
+  either way — nothing visible happens in the WebView regardless). Used by
+  the admin panel's client-side exports (conversation transcripts in
+  `AdminDetailPages.jsx`, the top-freelancers CSV in `AdminPages.jsx`).
+
+Both plugins' Android manifest requirements were already satisfied by the
+existing `FileProvider` + `res/xml/file_paths.xml` (see the camera picker
+entry above) — `Directory.Cache` writes need no extra permission, and
+`@capacitor/share`'s `FileProvider.getUriForFile()` call uses the same
+`${applicationId}.fileprovider` authority already declared. This applies to
+**both** native builds — the marketplace app (`android/`) and the separate
+admin app (`android-admin/`, see `isAdminApp()` below) — since `isMobileApp()`
+is true for both and they share this same `Front-end/` codebase; run
+`npm run cap:sync` **and** `npm run cap:admin:sync` after adding a plugin so
+both native Gradle projects pick it up.
+
 ## Notes
 
 - **Toasts** — use `showSafeToast` / `safeToast` from [`src/utils/safeToast.js`](src/utils/safeToast.js). It renders a plain DOM node and can't crash the tree the way `react-toastify@9` does under React 19.

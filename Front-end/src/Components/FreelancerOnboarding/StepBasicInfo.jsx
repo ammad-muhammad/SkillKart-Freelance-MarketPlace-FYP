@@ -8,6 +8,7 @@ import {
 import { timezones, getCurrentTimezone } from "../../utils/timezones";
 import ComboSelect from "../common/ComboSelect/ComboSelect";
 import AiGenerateText from "../common/AiSuggest/AiGenerateText";
+import ImageSourcePicker from "../common/ImageSourcePicker/ImageSourcePicker";
 
 const AVAILABILITY_OPTIONS = [
   { value: "full-time",     label: "Full Time",     desc: "40+ hrs/week",     Icon: Zap       },
@@ -98,6 +99,8 @@ const CustomDropdown = ({ value, onChange, placeholder = "Select an option", opt
 
 /* ── Step Component ───────────────────────────────────────────── */
 const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => {
+  const avatarPickerRef = useRef(null);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -161,11 +164,16 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
           ) : (
             <User size={40} color="#94a3b8" />
           )}
-          <label style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, cursor: 'pointer', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
+          <div
+            style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, cursor: 'pointer', transition: 'opacity 0.2s' }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+            onClick={() => avatarPickerRef.current?.click()}
+          >
             <Upload size={24} />
             <span style={{ fontSize: '12px', fontWeight: '600', marginTop: '4px' }}>Upload</span>
-            <input type="file" hidden onChange={handleImageUpload} accept="image/*" />
-          </label>
+            <ImageSourcePicker ref={avatarPickerRef} accept="image/*" facing="user" onChange={handleImageUpload} />
+          </div>
         </div>
         <span className="fob-label" style={{ marginTop: '12px', marginBottom: '4px' }}>Profile Picture</span>
         <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>WEBP, PNG or JPG, max 5MB</p>

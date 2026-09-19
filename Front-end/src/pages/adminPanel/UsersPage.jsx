@@ -8,6 +8,7 @@ import {
 import { EditUserModal } from './AdminDetailPages';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
+import { openExternal } from '../../utils/externalLink';
 
 const ROLES = ['all', 'freelancer', 'client'];
 
@@ -117,7 +118,7 @@ const UsersPage = () => {
     const params = { format };
     if (role && role !== 'all') params.role = role;
     if (search) params.search = search;
-    window.open(adminUsers.exportUrl(params), '_blank');
+    openExternal(adminUsers.exportUrl(params));
   };
 
   return (

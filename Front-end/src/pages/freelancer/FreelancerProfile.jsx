@@ -19,6 +19,7 @@ import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import UserAvatar from '../../Components/common/UserAvatar/UserAvatar';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import Modal from '../../Components/common/Modal/Modal';
 import './FreelancerDashboard.css';
 
@@ -242,7 +243,7 @@ const FreelancerProfile = () => {
               >
                 <Camera size={14} /> Change Cover
               </button>
-              <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCoverChange} />
+              <ImageSourcePicker ref={coverRef} accept="image/*" onChange={handleCoverChange} />
             </div>
           )}
         </div>
@@ -261,7 +262,7 @@ const FreelancerProfile = () => {
                 <button className="fl-btn fl-btn--ghost fl-btn--sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => fileRef.current?.click()}>
                   <Camera size={14} /> Change Photo
                 </button>
-                <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
+                <ImageSourcePicker ref={fileRef} accept="image/*" facing="user" onChange={handleAvatarChange} />
               </>
             )}
           </div>

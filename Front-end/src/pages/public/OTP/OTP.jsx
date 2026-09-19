@@ -405,8 +405,10 @@ const OTP = () => {
                             <input
                                 key={index}
                                 ref={el => inputRefs.current[index] = el}
+                                className="otp-input-field"
                                 type="text"
                                 inputMode="numeric"
+                                autoComplete="one-time-code"
                                 maxLength={1}
                                 value={digit}
                                 onChange={e => handleChange(index, e.target.value)}

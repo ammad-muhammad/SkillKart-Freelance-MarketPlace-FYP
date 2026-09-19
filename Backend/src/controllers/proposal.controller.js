@@ -105,6 +105,35 @@ const createProposal = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Read-only precheck: would createProposal (or updateProposal's resubmit
+ * path, below) let this freelancer through the skill gate for this job right
+ * now? Lets the frontend gate opening the Apply/Resubmit modal itself (see
+ * JobDetails.jsx) instead of the freelancer writing an entire proposal only
+ * to hit this same 403 on submit. Freelancer-only; makes no writes.
+ */
+const checkApplyEligibility = asyncHandler(async (req, res) => {
+  const { jobId } = req.params;
+
+  const job = await Job.findById(jobId).select('skills category experienceLevel');
+  if (!job) {
+    throw new NotFoundError('Job not found');
+  }
+
+  const gate = await checkSkillGate(req.user._id, job.skills, job.category, job.experienceLevel);
+
+  sendSuccess(res, {
+    message: 'Eligibility checked',
+    data: {
+      allowed: gate.allowed,
+      requiredSkills: job.skills || [],
+      category: job.category || '',
+      requiredLevel: job.experienceLevel || '',
+      verifiedSkills: gate.verifiedSkills,
+    },
+  });
+});
+
+/**
  * Update proposal
  */
 const updateProposal = asyncHandler(async (req, res) => {
@@ -644,6 +673,7 @@ const draftProposal = asyncHandler(async (req, res) => {
 
 module.exports = {
   createProposal,
+  checkApplyEligibility,
   updateProposal,
   getProposalById,
   listProposals,

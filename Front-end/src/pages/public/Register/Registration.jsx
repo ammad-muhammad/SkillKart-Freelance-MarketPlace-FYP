@@ -314,6 +314,7 @@ const Registration = () => {
                                                     id="reg-first-name"
                                                     type="text"
                                                     name="firstName"
+                                                    autoComplete="given-name"
                                                     required
                                                     value={formData.firstName}
                                                     onChange={handleInputChange}
@@ -328,6 +329,7 @@ const Registration = () => {
                                                     id="reg-last-name"
                                                     type="text"
                                                     name="lastName"
+                                                    autoComplete="family-name"
                                                     required
                                                     value={formData.lastName}
                                                     onChange={handleInputChange}
@@ -346,6 +348,7 @@ const Registration = () => {
                                                     id="reg-email"
                                                     type="email"
                                                     name="email"
+                                                    autoComplete="username"
                                                     required
                                                     value={formData.email}
                                                     onChange={handleInputChange}
@@ -363,6 +366,7 @@ const Registration = () => {
                                                     id="reg-password"
                                                     type={showPassword ? "text" : "password"}
                                                     name="password"
+                                                    autoComplete="new-password"
                                                     required
                                                     value={formData.password}
                                                     onChange={handleInputChange}
@@ -383,6 +387,7 @@ const Registration = () => {
                                                     id="reg-confirm-password"
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     name="confirmPassword"
+                                                    autoComplete="new-password"
                                                     required
                                                     value={formData.confirmPassword}
                                                     onChange={handleInputChange}

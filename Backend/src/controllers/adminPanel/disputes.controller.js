@@ -6,6 +6,7 @@ const FreelancerProfile = require('../../models/FreelancerProfile');
 const ClientProfile = require('../../models/ClientProfile');
 const ContractHistory = require('../../models/ContractHistory');
 const { auditLog } = require('../../utils/adminAudit');
+const notifications = require('../../services/notification.service');
 const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 const { finalizeJobCompletion } = require('../../services/jobCompletion.service');
 const { getEscrowReleaseDays } = require('../../services/milestone.service');
@@ -233,6 +234,10 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
   const totalMilestones = await Milestone.countDocuments({ contractId: contract._id });
   const isLastMilestone = milestone.order >= totalMilestones;
   let freelancerPayout = 0;
+  // Loaded once here (used by every case below for notifications, and by
+  // the isLastMilestone/cancel_contract branches further down) instead of
+  // each of those re-fetching it separately.
+  const job = await Job.findById(contract.jobId);
 
   switch (action) {
     case 'release_freelancer': {
@@ -248,6 +253,8 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
           { userId: contract.freelancerId },
           { $inc: { walletBalance: freelancerPayout, totalEarnings: Math.round(freelancerPayout) } }
         );
+        notifications.onDisputeResolved(contract.freelancerId, { job, resolution: 'release_freelancer', amount: freelancerPayout, recipientRole: 'freelancer' });
+        notifications.onDisputeResolved(contract.clientId, { job, resolution: 'release_freelancer', amount: freelancerPayout, recipientRole: 'client' });
       }
       milestone.status = 'released';
       milestone.releasedAt = new Date();
@@ -258,6 +265,8 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
         payment.status = 'refunded';
         await payment.save();
         await ClientProfile.updateOne({ userId: contract.clientId }, { $inc: { walletBalance: payment.totalAmount } });
+        notifications.onDisputeResolved(contract.clientId, { job, resolution: 'refund_client', amount: payment.totalAmount, recipientRole: 'client' });
+        notifications.onDisputeResolved(contract.freelancerId, { job, resolution: 'refund_client', recipientRole: 'freelancer' });
       }
       milestone.status = 'refunded';
       break;
@@ -278,6 +287,8 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
           { $inc: { walletBalance: freelancerPayout, totalEarnings: Math.round(freelancerPayout) } }
         );
         await ClientProfile.updateOne({ userId: contract.clientId }, { $inc: { walletBalance: clientRefund } });
+        notifications.onDisputeResolved(contract.freelancerId, { job, resolution: 'split', amount: freelancerPayout, recipientRole: 'freelancer' });
+        notifications.onDisputeResolved(contract.clientId, { job, resolution: 'split', amount: clientRefund, recipientRole: 'client' });
       }
       milestone.status = 'released';
       milestone.releasedAt = new Date();
@@ -296,6 +307,8 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       // client reviews it normally, with a fresh auto-release window.
       milestone.status = 'submitted';
       milestone.reviewDeadline = new Date(Date.now() + (await getEscrowReleaseDays()) * 24 * 60 * 60 * 1000);
+      notifications.onDisputeDismissed(contract.clientId, { job, recipientRole: 'client' });
+      notifications.onDisputeDismissed(contract.freelancerId, { job, recipientRole: 'freelancer' });
       break;
     }
   }
@@ -306,7 +319,6 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
     if (isLastMilestone) {
       contract.status = 'completed';
       contract.completedAt = new Date();
-      const job = await Job.findById(contract.jobId);
       if (job && job.status !== 'completed') {
         job.status = 'completed';
         job.completedAt = new Date();
@@ -326,11 +338,15 @@ async function resolveMilestoneDispute(req, res, { contract, action, notes, spli
       { contractId: contract._id, _id: { $ne: milestone._id }, status: { $in: ['pending_funding', 'funded'] } },
       { $set: { status: 'cancelled' } }
     );
-    const job = await Job.findById(contract.jobId);
     if (job && !['completed', 'cancelled'].includes(job.status)) {
       job.status = 'cancelled';
       await job.save();
     }
+    // Same as adminPanel/contracts.controller.js's cancelContract — an admin
+    // dispute resolution doesn't go through either party's own flow, so
+    // neither has any other way to find out the contract just ended.
+    notifications.onJobCancelled(contract.clientId, { job });
+    notifications.onJobCancelled(contract.freelancerId, { job });
     // Flag the client so repeat non-funding is visible to admins later.
     await ClientProfile.updateOne(
       { userId: contract.clientId },
@@ -419,11 +435,17 @@ const resolveDispute = async (req, res) => {
         freelancerPayout = result.freelancerPayout;
         contract.status = 'completed';
         contract.completedAt = new Date();
+        // releaseRemainingHourlyEscrow already notified the freelancer
+        // (onPaymentReleased) — the client has no other way to find out.
+        notifications.onDisputeResolved(contract.clientId, { job, resolution: 'release_freelancer', amount: freelancerPayout, recipientRole: 'client' });
         break;
       }
       case 'refund_client': {
         await refundRemainingHourlyEscrow({ contract, job });
         contract.status = 'cancelled';
+        // refundRemainingHourlyEscrow already notified the client
+        // (onEscrowRefunded) — the freelancer has no other way to find out.
+        notifications.onDisputeResolved(contract.freelancerId, { job, resolution: 'refund_client', recipientRole: 'freelancer' });
         break;
       }
       case 'split': {
@@ -431,14 +453,22 @@ const resolveDispute = async (req, res) => {
         freelancerPayout = result.freelancerPayout;
         contract.status = 'completed';
         contract.completedAt = new Date();
+        // splitRemainingHourlyEscrow already notified the freelancer
+        // (onPaymentReleased) — the client has no other way to find out,
+        // and needs their OWN refund share, not the freelancer's payout.
+        notifications.onDisputeResolved(contract.clientId, { job, resolution: 'split', amount: result.clientRefund, recipientRole: 'client' });
         break;
       }
       case 'resume': {
         contract.status = 'active';
+        notifications.onDisputeDismissed(contract.clientId, { job, recipientRole: 'client' });
+        notifications.onDisputeDismissed(contract.freelancerId, { job, recipientRole: 'freelancer' });
         break;
       }
       case 'reject': {
         // Dispute rejected — keep current state
+        notifications.onDisputeDismissed(contract.clientId, { job, recipientRole: 'client' });
+        notifications.onDisputeDismissed(contract.freelancerId, { job, recipientRole: 'freelancer' });
         break;
       }
     }

@@ -9,6 +9,7 @@ import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import ComboSelect from '../../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../../Components/common/AiSuggest/AiSuggestFill';
 import AiGenerateText from '../../../Components/common/AiSuggest/AiGenerateText';
+import ImageSourcePicker from '../../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { useAuth } from '../../../hooks/useAuth';
 import './PostProject.css';
 
@@ -560,11 +561,10 @@ export default function PostProject() {
                                                 <strong>Click to browse</strong> or drag & drop files here<br />
                                                 <span style={{ fontSize: '0.75rem' }}>PDF, DOC, PNG, JPG — max 10 MB each</span>
                                             </p>
-                                            <input
+                                            <ImageSourcePicker
                                                 ref={fileRef}
-                                                type="file"
                                                 multiple
-                                                style={{ display: 'none' }}
+                                                accept=""
                                                 onChange={e => handleFiles(e.target.files)}
                                             />
                                         </div>

@@ -25,6 +25,9 @@ const TYPES = {
   JOB_CANCELLED: 'job_cancelled',
   CONTRACT_DISPUTED: 'contract_disputed',
   MILESTONE_AUTO_RELEASED: 'milestone_auto_released',
+  SYSTEM_WARNING: 'system_warning',
+  DISPUTE_RESOLVED: 'dispute_resolved',
+  DISPUTE_DISMISSED: 'dispute_dismissed',
 };
 
 /**
@@ -213,6 +216,55 @@ const onContractStatusChanged = (userId, { contractId, status, recipientRole }) 
   link: recipientRole === 'client' ? '/client/projects' : '/freelancer/work',
 });
 
+// A policy violation (currently: sharing off-platform contact info in chat —
+// see message.controller.js) that stops short of a block. Kept generic
+// (just a message, no job/link) so it can cover other policy-warning cases
+// later without a new helper per violation type.
+const onSystemWarning = (userId, { message }) => notify(userId, {
+  type: TYPES.SYSTEM_WARNING,
+  title: 'Platform Warning',
+  message,
+});
+
+// Admin dispute resolution (adminPanel/disputes.controller.js) — an admin
+// action, so unlike every financial helper above (which reacts to something
+// the OTHER party already did), both sides need telling here since neither
+// went through their own flow. `amount` is the RECIPIENT'S OWN share — for
+// `split` the two sides see different numbers, never the shared total.
+const DISPUTE_RESOLUTION_COPY = {
+  release_freelancer: {
+    freelancer: (amount) => `Your dispute was resolved — PKR ${amount} was released to you from escrow.`,
+    client: (amount) => `Your dispute was resolved: PKR ${amount} was released to the freelancer from escrow.`,
+  },
+  refund_client: {
+    client: (amount) => `Your dispute was resolved — PKR ${amount} was refunded to your wallet.`,
+    freelancer: () => 'Your dispute was resolved: the client was refunded from escrow.',
+  },
+  split: {
+    freelancer: (amount) => `Your dispute was resolved with a split — PKR ${amount} was released to you from escrow.`,
+    client: (amount) => `Your dispute was resolved with a split — PKR ${amount} was refunded to your wallet.`,
+  },
+};
+
+const onDisputeResolved = (userId, { job, resolution, amount, recipientRole }) => notify(userId, {
+  type: TYPES.DISPUTE_RESOLVED,
+  title: 'Dispute Resolved',
+  message: DISPUTE_RESOLUTION_COPY[resolution]?.[recipientRole]?.(amount)
+    || `Your dispute over "${job?.title || 'a project'}" has been resolved.`,
+  link: recipientRole === 'client' ? '/client/projects' : '/freelancer/work',
+  jobId: job?._id,
+});
+
+// resume/reject — the dispute was reviewed and dismissed with no money
+// movement; the underlying work/milestone just continues as before.
+const onDisputeDismissed = (userId, { job, recipientRole }) => notify(userId, {
+  type: TYPES.DISPUTE_DISMISSED,
+  title: 'Dispute Reviewed',
+  message: `The dispute over "${job?.title || 'a project'}" was reviewed and dismissed — work continues as normal.`,
+  link: recipientRole === 'client' ? '/client/projects' : '/freelancer/work',
+  jobId: job?._id,
+});
+
 module.exports = {
   TYPES,
   notify,
@@ -235,4 +287,7 @@ module.exports = {
   onContractDisputed,
   onContractStatusChanged,
   onMilestoneAutoReleased,
+  onSystemWarning,
+  onDisputeResolved,
+  onDisputeDismissed,
 };

@@ -4,6 +4,7 @@ const ClientProfile = require('../../models/ClientProfile');
 const Withdrawal = require('../../models/Withdrawal');
 const User = require('../../models/User');
 const { auditLog } = require('../../utils/adminAudit');
+const notifications = require('../../services/notification.service');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 const { PLATFORM_FEE_RATE, round2 } = require('../../utils/constants');
 const { parsePagination } = require('../../utils/helpers');
@@ -432,6 +433,12 @@ const updateWithdrawalStatus = (newStatus) => async (req, res) => {
     // (or moving a never-charged one) can't double-refund.
     if (['cancelled', 'failed'].includes(newStatus) && !['cancelled', 'failed'].includes(prev)) {
       await FreelancerProfile.updateOne({ userId: withdrawal.userId }, { $inc: { walletBalance: withdrawal.amount } });
+    }
+
+    // Same not-already-in-this-state guard as the refund branch above, so
+    // re-approving an already-completed withdrawal can't double-notify.
+    if (newStatus === 'completed' && prev !== 'completed') {
+      notifications.onWithdrawalCompleted(withdrawal.userId, { amount: withdrawal.amount });
     }
 
     auditLog(req, {

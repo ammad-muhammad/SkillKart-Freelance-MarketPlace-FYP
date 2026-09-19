@@ -17,6 +17,8 @@ import {
 import { AdjustWalletModal } from './AdminDetailPages';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
+import { downloadFile } from '../../utils/downloadFile';
+import { openExternal } from '../../utils/externalLink';
 
 // ─── Reusable page shell ───────────────────────────────────────
 const PageShell = ({ title, desc, icon, headerRight, children }) => (
@@ -100,7 +102,7 @@ export const JobsPage = () => {
 
   return (
     <PageShell title="Jobs" desc="All platform job listings" icon="💼"
-      headerRight={<ExportButtons onExport={format => window.open(adminJobs.exportUrl({ format }), '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => openExternal(adminJobs.exportUrl({ format }))} />}>
       <AdminFilterBar>
         <input className="ap-input" style={{ maxWidth: 240 }} placeholder="Search title…"
           onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
@@ -141,7 +143,7 @@ export const ContractsPage = () => {
 
   return (
     <PageShell title="Contracts" desc="All platform contracts" icon="📋"
-      headerRight={<ExportButtons onExport={format => window.open(adminContracts.exportUrl({ format }), '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => openExternal(adminContracts.exportUrl({ format }))} />}>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="📋" emptyTitle="No contracts found"
         columns={['Type','Status','Client','Freelancer','Amount','Started','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}
@@ -216,7 +218,7 @@ export const PaymentsPage = () => {
 
   return (
     <PageShell title="Payments" desc="All escrow and payment records" icon="💳"
-      headerRight={<ExportButtons onExport={format => window.open(adminPayments.exportUrl({ format }), '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => openExternal(adminPayments.exportUrl({ format }))} />}>
       <AdminFilterBar>
         <CustomSelect
           compact
@@ -325,7 +327,7 @@ export const WithdrawalsPage = () => {
 
   return (
     <PageShell title="Withdrawals" desc="Pending and processed withdrawal requests" icon="💸"
-      headerRight={<ExportButtons onExport={format => window.open(adminWithdrawals.exportUrl({ format }), '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => openExternal(adminWithdrawals.exportUrl({ format }))} />}>
       <AdminFilterBar>
         <CustomSelect
           compact
@@ -368,7 +370,7 @@ export const TransactionsPage = () => {
 
   return (
     <PageShell title="Transactions" desc="Unified view of payments and withdrawals" icon="↕️"
-      headerRight={<ExportButtons onExport={format => window.open(adminTransactions.exportUrl({ format }), '_blank')} />}>
+      headerRight={<ExportButtons onExport={format => openExternal(adminTransactions.exportUrl({ format }))} />}>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="↕️" emptyTitle="No transactions"
         columns={['Type','Amount','Status','Date']}
         renderRow={(t, i) => (
@@ -687,14 +689,7 @@ const exportLeaderboardCSV = (topFreelancers) => {
   ];
   const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `top-freelancers-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  downloadFile(blob, `top-freelancers-${new Date().toISOString().slice(0, 10)}.csv`);
 };
 
 export const AnalyticsPage = () => {

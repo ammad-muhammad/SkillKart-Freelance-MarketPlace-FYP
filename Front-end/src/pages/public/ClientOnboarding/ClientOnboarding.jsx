@@ -22,6 +22,7 @@ import { isMobileApp } from "../../../utils/platform";
 import { openExternal } from "../../../utils/externalLink";
 import AiGenerateText from "../../../Components/common/AiSuggest/AiGenerateText";
 import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
+import ImageSourcePicker from "../../../Components/common/ImageSourcePicker/ImageSourcePicker";
 import "./ClientOnboarding.css";
 
 
@@ -36,6 +37,8 @@ const ClientOnboarding = () => {
     const [cropTarget, setCropTarget] = useState(null); // { file, field } while the crop modal is open
     const [errors, setErrors] = useState({});
     const fieldRefs = useRef({});
+    const profilePicRef = useRef(null);
+    const companyPicRef = useRef(null);
     const registerFieldRef = (name) => (el) => { fieldRefs.current[name] = el; };
     const { refreshAuth, user } = useAuth();
 
@@ -457,11 +460,11 @@ const ClientOnboarding = () => {
                                 ) : (
                                     <User size={40} color="var(--onboard-accent-primary)" />
                                 )}
-                                <label className="onboarding__avatar-overlay">
+                                <div className="onboarding__avatar-overlay" onClick={() => profilePicRef.current?.click()}>
                                     <Upload size={28} />
                                     <span>Upload</span>
-                                    <input type="file" hidden onChange={(e) => handleImageUpload(e, 'profilePic')} accept="image/*" />
-                                </label>
+                                    <ImageSourcePicker ref={profilePicRef} accept="image/*" facing="user" onChange={(e) => handleImageUpload(e, 'profilePic')} />
+                                </div>
                             </div>
                         </div>
                         <span className="onboarding__label" style={{ marginBottom: '4px' }}>Profile Image</span>
@@ -477,11 +480,11 @@ const ClientOnboarding = () => {
                                     ) : (
                                         <Building2 size={40} color="var(--onboard-accent-primary)" />
                                     )}
-                                    <label className="onboarding__avatar-overlay" style={{ borderRadius: '12px' }}>
+                                    <div className="onboarding__avatar-overlay" style={{ borderRadius: '12px' }} onClick={() => companyPicRef.current?.click()}>
                                         <Upload size={28} />
                                         <span>Upload</span>
-                                        <input type="file" hidden onChange={(e) => handleImageUpload(e, 'companyPic')} accept="image/*" />
-                                    </label>
+                                        <ImageSourcePicker ref={companyPicRef} accept="image/*" onChange={(e) => handleImageUpload(e, 'companyPic')} />
+                                    </div>
                                 </div>
                             </div>
                             <span className="onboarding__label" style={{ marginBottom: '4px' }}>Business / Company Image</span>

@@ -6,6 +6,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare, FileText, Loader2, Paperclip, Send } from 'lucide-react';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
 import '../client/ClientDashboard.css';
 
@@ -257,10 +258,8 @@ const FreelancerMessages = () => {
 
               {/* Message Input */}
               <form className="fl-chat-input" onSubmit={handleSendMessage}>
-                <input
-                  type="file"
+                <ImageSourcePicker
                   ref={fileRef}
-                  style={{ display: 'none' }}
                   accept="image/*,.pdf,.doc,.docx"
                   onChange={handleAttach}
                 />

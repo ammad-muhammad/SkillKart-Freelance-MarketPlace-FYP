@@ -135,12 +135,12 @@ const sendMessage = asyncHandler(async (req, res) => {
       throw new ForbiddenError('Your account has been blocked for repeatedly sharing contact details.');
     } else {
       await sender.save();
-      // Trigger a system warning notification
-      const Notification = require('../models/Notification');
-      await Notification.create({
-        userId: senderId,
-        type: 'system_warning',
-        title: 'Platform Warning',
+      // Routed through notify()'s single choke point (like every other
+      // notification type) instead of calling Notification.create()
+      // directly — this is what makes it push-capable, and wraps it in the
+      // same "never let a notification failure break the request" guarantee
+      // notify() already gives every other event.
+      notifications.onSystemWarning(senderId, {
         message: 'Sharing contact information in chat is against our policies. Your message was masked. Further violations will result in account suspension.'
       });
     }

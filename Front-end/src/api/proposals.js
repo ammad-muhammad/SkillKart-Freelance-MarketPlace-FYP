@@ -9,6 +9,13 @@ export const proposalsAPI = {
   draftProposal: (jobId) =>
     client.post('/proposals/ai/draft', { jobId }),
 
+  // Read-only precheck: would submitProposal/updateProposal's skill gate let
+  // this freelancer through for this job right now? Lets JobDetails.jsx gate
+  // opening the Apply/Resubmit modal itself instead of writing a whole
+  // proposal only to hit the same 403 on submit.
+  checkEligibility: (jobId) =>
+    client.get(`/proposals/eligibility/${jobId}`),
+
   // List proposals (for clients or freelancers)
   listProposals: (params) => 
     client.get('/proposals', { params }),

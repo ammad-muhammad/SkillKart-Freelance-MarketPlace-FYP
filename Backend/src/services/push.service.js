@@ -14,7 +14,7 @@ const config = require('../config');
  * (notification.service.js) never need to check `isConfigured()` themselves.
  */
 
-let admin = null;
+let getMessagingFn = null; // set by getApp() — firebase-admin/messaging's getMessaging
 let initAttempted = false;
 let app = null;
 
@@ -54,11 +54,21 @@ function getApp() {
   try {
     // Required lazily: a project that never configures push shouldn't pay
     // the require() cost, and firebase-admin is a fairly heavy dependency.
+    //
+    // firebase-admin v12+ dropped the old namespaced API this used to call
+    // (`admin.apps`, `admin.app()`, `admin.credential.cert()`,
+    // `admin.messaging()`) — `require('firebase-admin')`'s top-level export
+    // no longer has any of those properties at all in v14 (the installed
+    // version here), so every one of those calls threw
+    // "Cannot read properties of undefined". That silently degraded to the
+    // designed fail-open no-op path, indistinguishable from "not configured"
+    // — push looked inert even with a fully valid credential file. Import
+    // the modular subpaths instead, which is the only API v14 actually has.
     // eslint-disable-next-line global-require
-    admin = require('firebase-admin');
-    app = admin.apps.length
-      ? admin.app()
-      : admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    const { initializeApp, cert, getApps, getApp: getExistingApp } = require('firebase-admin/app');
+    // eslint-disable-next-line global-require
+    ({ getMessaging: getMessagingFn } = require('firebase-admin/messaging'));
+    app = getApps().length ? getExistingApp() : initializeApp({ credential: cert(serviceAccount) });
   } catch (error) {
     console.error('[push] Firebase init failed, push notifications disabled:', error.message);
     app = null;
@@ -86,7 +96,7 @@ async function sendToUser(userId, { title, body = '', link = '' }) {
     const tokens = user?.pushTokens || [];
     if (!tokens.length) return;
 
-    const response = await admin.messaging().sendEachForMulticast({
+    const response = await getMessagingFn(firebaseApp).sendEachForMulticast({
       tokens,
       notification: { title, body },
       data: link ? { link } : {},
