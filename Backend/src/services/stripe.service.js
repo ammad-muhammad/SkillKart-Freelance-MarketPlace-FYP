@@ -16,7 +16,7 @@ const STRIPE_DUMMY = process.env.STRIPE_DUMMY === 'true';
 let stripe = null;
 if (STRIPE_KEY && !STRIPE_DUMMY) {
   // Lazy require so the app still boots if the package is missing.
-  // eslint-disable-next-line global-require
+   
   stripe = require('stripe')(STRIPE_KEY);
 }
 

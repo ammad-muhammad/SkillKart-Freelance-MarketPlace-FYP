@@ -3,7 +3,7 @@ const ContractHistory = require('../models/ContractHistory');
 const Job = require('../models/Job');
 const Payment = require('../models/Payment');
 const Milestone = require('../models/Milestone');
-const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/apiError');
 const notifications = require('../services/notification.service');
@@ -152,7 +152,7 @@ const requestCancellation = asyncHandler(async (req, res) => {
  */
 const getContractHistory = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { page, limit, skip } = parsePagination(req.query);
+  const { limit, skip } = parsePagination(req.query);
 
   const contract = await Contract.findById(id);
   if (!contract) {

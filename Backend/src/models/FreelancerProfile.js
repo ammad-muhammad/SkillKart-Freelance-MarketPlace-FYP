@@ -89,7 +89,10 @@ const freelancerProfileSchema = new mongoose.Schema({
     enum: ['unverified', 'verified', 'pending'],
     default: 'unverified'
   },
-  aiClassification: { type: String },
+  // Advisory CV-quality signal from the AI resume analysis. Client-supplied, so
+  // the controller only persists a value from this set — and it is NOT a
+  // verification gate (see submitOnboardingProfile in freelancer.controller.js).
+  aiClassification: { type: String, enum: ['Strong', 'Average', 'Weak'] },
   savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }],
 
   // ========================

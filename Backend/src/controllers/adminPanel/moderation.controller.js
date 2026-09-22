@@ -615,7 +615,7 @@ const getAnalytics = async (req, res) => {
       // Real category breakdown for the market-share chart — replaces a
       // previously fully hardcoded array of fabricated names/counts.
       Job.aggregate([
-        { $match: { category: { $exists: true, $ne: null, $ne: '' } } },
+        { $match: { category: { $exists: true, $nin: [null, ''] } } },
         { $group: { _id: '$category', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 }

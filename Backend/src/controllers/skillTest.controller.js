@@ -1,7 +1,7 @@
 const { getAIProvider } = require('../services/ai');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const SkillTestAttempt = require('../models/SkillTestAttempt');
-const { sendSuccess, sendCreated } = require('../utils/apiResponse');
+const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError, NotFoundError } = require('../utils/apiError');
 const { syncFreelancerVerification } = require('../services/verification.service');

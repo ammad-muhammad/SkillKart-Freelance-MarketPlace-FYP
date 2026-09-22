@@ -1,5 +1,4 @@
 const express = require('express');
-const stripeService = require('../services/stripe.service');
 const Payment = require('../models/Payment');
 const Job = require('../models/Job');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');

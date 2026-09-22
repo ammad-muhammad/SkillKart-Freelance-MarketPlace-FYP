@@ -265,7 +265,7 @@ const convertToApiError = (error) => {
 
   // Multer errors (oversized file, wrong field name, too many files, ...) —
   // these are client mistakes, never a server fault.
-  // eslint-disable-next-line global-require
+   
   if (error instanceof require('multer').MulterError) {
     const MULTER_MESSAGES = {
       LIMIT_FILE_SIZE: 'File is too large.',

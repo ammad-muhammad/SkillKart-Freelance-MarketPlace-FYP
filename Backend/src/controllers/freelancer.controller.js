@@ -2,17 +2,15 @@ const FreelancerProfile = require('../models/FreelancerProfile');
 const User = require('../models/User');
 const Review = require('../models/Review');
 const { uploadProfilePicture, uploadPortfolioImage, cleanupOrphanedAsset } = require('../services/upload.service');
-const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
+const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
 const { applyUsernameUpdate } = require('../utils/username');
 const { syncFreelancerVerification } = require('../services/verification.service');
-const { getAIProvider } = require('../services/ai');
 const { getConnectedBalance } = require('../services/stripe.service');
 const { stripHtml } = require('../utils/sanitizeInput');
 
 // Simple in-memory cache for semantic skill expansion
-const skillExpansionCache = new Map();
 
 /**
  * Calculate profile completion percentage
@@ -148,6 +146,10 @@ const FREELANCER_PROFILE_ALLOWED_FIELDS = [
   'notificationSettings', 'securitySettings'
 ];
 
+// The only values the CV-analysis prompts are allowed to produce (see the
+// `classification` field in each AI provider's parseAndAnalyzeCV prompt).
+const AI_CV_CLASSIFICATIONS = ['Strong', 'Average', 'Weak'];
+
 /**
  * Update freelancer profile
  */
@@ -254,25 +256,23 @@ const submitOnboardingProfile = asyncHandler(async (req, res) => {
     profile.set(updates);
   }
 
-  // Smart Gating Logic (Verification Status)
-  let status = 'verified';
-  
-  // 1. Structural Completeness Check
-  const hasBio = profile.bio && profile.bio.trim().length > 0;
-  const hasTitle = profile.title && profile.title.trim().length > 0;
-  const hasSkills = profile.skills && profile.skills.length > 0;
-  const hasPortfolio = profile.portfolio && profile.portfolio.length > 0;
-  
-  if (!hasBio || !hasTitle || !hasSkills || !hasPortfolio) {
-    status = 'unverified';
-  }
-
-  // 2. AI Quality Gate Check
-  if (updates.aiAnalysis) {
-    profile.aiClassification = updates.aiAnalysis.classification;
-    if (profile.aiClassification === 'Weak') {
-      status = 'unverified';
-    }
+  // The AI CV analysis never actually reached this point: `updates` only carries
+  // fields listed in FREELANCER_PROFILE_ALLOWED_FIELDS, which omits `aiAnalysis`
+  // (rightly — it's an input DTO, not a profile field), so `updates.aiAnalysis`
+  // was always undefined and `aiClassification` was never written once. Read it
+  // off the raw body instead, and — exactly like the skills block above — don't
+  // trust it: the browser runs the CV parse and posts the result, so only a
+  // value from the known set is persisted.
+  //
+  // It is ADVISORY ONLY and deliberately does NOT gate verification.
+  // syncFreelancerVerification() below is the single source of truth (and
+  // already enforces bio/title/skills/portfolio more strictly than the local
+  // `status` this replaced ever did). Gating on this instead would be both
+  // bypassable — a client can just post "Strong" — and perverse, since
+  // uploading a CV is optional: it would penalise only the freelancers who
+  // actually use the feature.
+  if (AI_CV_CLASSIFICATIONS.includes(rawUpdates.aiAnalysis?.classification)) {
+    profile.aiClassification = rawUpdates.aiAnalysis.classification;
   }
 
   profile.profileCompletion = calculateCompletion(profile, await User.findById(userId));

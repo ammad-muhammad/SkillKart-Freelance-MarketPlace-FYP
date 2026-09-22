@@ -40,7 +40,7 @@ async function notify(userId, { type, title, message = '', link = '', jobId, gig
     await Notification.create({ userId, type, title, message, link, jobId, gigId, proposalId });
   } catch (e) {
     // Never let a notification failure bubble up into the request.
-    // eslint-disable-next-line no-console
+     
     console.error('[notify] failed:', e.message);
   }
   // Fire-and-forget: pushService no-ops entirely when Firebase isn't

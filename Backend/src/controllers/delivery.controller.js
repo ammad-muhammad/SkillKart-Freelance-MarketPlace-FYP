@@ -11,7 +11,6 @@ const { approveMilestone, getEscrowReleaseDays } = require('../services/mileston
 const { drawDownForTimeLog, refundRemainingHourlyEscrow, getUnbilledAmount } = require('../services/hourlyEscrow.service');
 const TimeLog = require('../models/TimeLog');
 
-const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 // The milestone the freelancer/client are currently working through on a
 // fixed-price contract. Milestones are sequential — there's always exactly
@@ -246,7 +245,7 @@ const reviewDelivery = asyncHandler(async (req, res) => {
  */
 const getContractDeliveries = asyncHandler(async (req, res) => {
   const { contractId } = req.params;
-  const { page, limit, skip } = parsePagination(req.query);
+  const { limit, skip } = parsePagination(req.query);
 
   const contract = await Contract.findById(contractId);
   if (!contract) throw new NotFoundError('Contract not found');

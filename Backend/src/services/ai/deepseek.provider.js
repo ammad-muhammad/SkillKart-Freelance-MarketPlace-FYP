@@ -10,20 +10,24 @@ const { difficultyInstruction } = require('../../utils/skillTestDifficulty');
  * 13 methods as Gemini) so it can run standalone, not just as a thin fallback
  * like Qwen/Groq/Claude.
  *
- * Model names: `deepseek-chat` / `deepseek-reasoner` were RETIRED 2026-07-24
- * in favour of `deepseek-v4-flash` (fast/cheap) and `deepseek-v4-pro`
- * (bigger, ~3x the cost). Reasoning is now a request-level toggle (`thinking`)
- * rather than baked into the model name, and BOTH v4 models default to
- * thinking ENABLED — silently leaving it on burns extra reasoning tokens/
- * latency for no benefit on the short classification/extraction tasks this
- * file does, so every call below explicitly disables it.
+ * Model names: `deepseek-chat` / `deepseek-reasoner` were retired 2026-07-24
+ * for `deepseek-v4-flash` / `deepseek-v4-pro`; `deepseek-v4-flash` was then
+ * superseded 2026-09-10 by `deepseek-flash` (DeepSeek-V4.1-Flash, 1M context,
+ * natively multimodal). The old `deepseek-v4-flash` and the experimental
+ * `deepseek-v4-flash-vision-exp` are only TEMPORARILY routed to it with no
+ * announced sunset date, so always send the canonical `deepseek-flash`.
+ * `deepseek-v4-pro` is unchanged (text-only, ~3x the cost). Reasoning is a
+ * request-level toggle (`thinking`) rather than baked into the model name,
+ * and BOTH models default to thinking ENABLED — silently leaving it on burns
+ * extra reasoning tokens/latency for no benefit on the short classification/
+ * extraction tasks this file does, so every call below explicitly disables it.
  *
  * Config:
  *   DEEPSEEK_API_KEY      (required to be active) — bearer token.
  *   DEEPSEEK_BASE_URL     default 'https://api.deepseek.com'.
- *   DEEPSEEK_MODEL_LITE   default 'deepseek-v4-flash' — validateSkill, search
+ *   DEEPSEEK_MODEL_LITE   default 'deepseek-flash' — validateSkill, search
  *                         expansion, recommendations, taxonomy.
- *   DEEPSEEK_MODEL_HEAVY  default 'deepseek-v4-flash' — CV parsing, skill test
+ *   DEEPSEEK_MODEL_HEAVY  default 'deepseek-flash' — CV parsing, skill test
  *                         gen/grading, Buddy chat, proposals, cost estimator.
  *                         Bump to 'deepseek-v4-pro' if quality needs it.
  *   DEEPSEEK_THINKING     default 'disabled'. Set to 'enabled' to let the
@@ -35,8 +39,8 @@ class DeepSeekProvider extends AIProvider {
     super();
     this.apiKey = process.env.DEEPSEEK_API_KEY || '';
     this.baseUrl = (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/$/, '');
-    this.liteModel = process.env.DEEPSEEK_MODEL_LITE || 'deepseek-v4-flash';
-    this.model = process.env.DEEPSEEK_MODEL_HEAVY || 'deepseek-v4-flash';
+    this.liteModel = process.env.DEEPSEEK_MODEL_LITE || 'deepseek-flash';
+    this.model = process.env.DEEPSEEK_MODEL_HEAVY || 'deepseek-flash';
     this.thinking = /^(1|true|enabled)$/i.test(process.env.DEEPSEEK_THINKING || '') ? 'enabled' : 'disabled';
     this.timeout = Number(process.env.DEEPSEEK_TIMEOUT_MS) || 60000;
   }
