@@ -4,7 +4,6 @@ const { asyncHandler } = require('../utils/helpers');
 const { JOB_CATEGORIES, CATEGORY_GROUPS } = require('../utils/constants');
 const taxonomy = require('../services/taxonomy.service');
 const SkillNode = require('../models/SkillNode');
-const SkillRelationship = require('../models/SkillRelationship');
 
 /* ─────────────────────────────────────────────────────────────────────
    PUBLIC ENDPOINTS (no auth required)

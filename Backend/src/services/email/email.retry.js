@@ -74,7 +74,7 @@ const isRetryable = (error) => {
 const sendWithRetry = async (fn, { retries = 3, baseDelay = 500, provider = 'unknown' } = {}) => {
   let attempt = 0;
 
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     try {
       const result = await fn();

@@ -5,7 +5,6 @@ const Payment = require('../../models/Payment');
 const Withdrawal = require('../../models/Withdrawal');
 const Report = require('../../models/Report');
 const Review = require('../../models/Review');
-const Conversation = require('../../models/Conversation');
 
 // Admin-only endpoint (gated by the isolated admin-panel auth), so this is
 // defense-in-depth rather than a live public exposure — still worth

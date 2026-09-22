@@ -453,7 +453,7 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` | ⬤ | social OAuth only |
 | `REDIS_URL` | ❌ | optional cache; leave blank / `ENABLE_REDIS_CACHE=false` |
 | `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys. Gemini and DeepSeek implement the full AI feature set; the rest cover only the core 6 methods |
-| `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL_LITE` / `DEEPSEEK_MODEL_HEAVY` / `DEEPSEEK_THINKING` | ❌ | DeepSeek endpoint + model tiers (default `deepseek-v4-flash`, thinking disabled). `deepseek-chat`/`deepseek-reasoner` were retired 2026-07-24 |
+| `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL_LITE` / `DEEPSEEK_MODEL_HEAVY` / `DEEPSEEK_THINKING` | ❌ | DeepSeek endpoint + model tiers (default `deepseek-flash`, thinking disabled). Model names changed twice: `deepseek-chat`/`deepseek-reasoner` retired 2026-07-24, then `deepseek-v4-flash` superseded 2026-09-10 by `deepseek-flash` (the old name is only a temporary alias) |
 | `QWEN_BASE_URL` / `QWEN_MODEL` | ❌ | Qwen endpoint + model (defaults provided) |
 | `AI_PRIORITY_GEMINI` … `AI_PRIORITY_OLLAMA` | ❌ | fallback order (0 = first; `-1` disables) |
 | `PUBLIC_SITE_URL` | ⬤ | Canonical public origin for the sitemap, e.g. `https://skillkart-fuuast.vercel.app`. **Not** `FRONTEND_URL` — that's a CSV of CORS origins whose first entry may be the wrong domain to advertise to Google. Defaults to the first `FRONTEND_URL` entry if unset |

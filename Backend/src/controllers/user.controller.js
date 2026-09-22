@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
+const { sendSuccess, sendCreated, sendPaginated } = require('../utils/apiResponse');
 const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, BadRequestError } = require('../utils/apiError');
 const { USER_ROLES } = require('../utils/constants');

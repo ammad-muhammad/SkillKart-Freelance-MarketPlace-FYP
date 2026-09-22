@@ -144,6 +144,10 @@ export const ContractsPage = () => {
   return (
     <PageShell title="Contracts" desc="All platform contracts" icon="📋"
       headerRight={<ExportButtons onExport={format => openExternal(adminContracts.exportUrl({ format }))} />}>
+      <AdminFilterBar>
+        <input className="ap-input" style={{ maxWidth: 260 }} placeholder="Search job title or user…"
+          onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
+      </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="📋" emptyTitle="No contracts found"
         columns={['Type','Status','Client','Freelancer','Amount','Started','Actions']}
         pagination={pagination} onPage={p => { setPage(p); load({ page: p }); }}

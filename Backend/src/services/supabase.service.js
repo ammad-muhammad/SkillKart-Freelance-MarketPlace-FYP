@@ -1,5 +1,5 @@
 //services/supabase.service
-const { getSupabaseClient, getSupabaseAdmin } = require('../config/supabase');
+const { getSupabaseAdmin } = require('../config/supabase');
 const User = require('../models/User');
 
 /**

@@ -2,11 +2,19 @@ const Contract = require('../../models/Contract');
 const ContractHistory = require('../../models/ContractHistory');
 const Payment = require('../../models/Payment');
 const TimeLog = require('../../models/TimeLog');
+const Job = require('../../models/Job');
+const User = require('../../models/User');
 const { auditLog } = require('../../utils/adminAudit');
 const notifications = require('../../services/notification.service');
 const { exportToCSV, exportToExcel, exportToPDF, sendExportResponse } = require('../../utils/exportHelper');
 const { parsePagination } = require('../../utils/helpers');
 const { round2 } = require('../../utils/constants');
+
+// Admin-only endpoint (gated by the isolated admin-panel auth), so this is
+// defense-in-depth rather than a live public exposure — still worth escaping so
+// admin search input can't cause pathological regex backtracking. Same helper
+// as users.controller.js / search.controller.js.
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const CONTRACT_COLUMNS = [
   { key: '_id', label: 'ID' },
@@ -34,6 +42,23 @@ const getContracts = async (req, res) => {
       filter.createdAt = {};
       if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
       if (dateTo)   filter.createdAt.$lte = new Date(dateTo);
+    }
+
+    // A Contract holds no text of its own — everything an admin would search by
+    // (job title, client/freelancer email or name) lives on a referenced doc. So
+    // resolve those to ids first and match on the refs, rather than $lookup-ing
+    // in an aggregation just to filter (which would also lose .populate()).
+    if (search && search.trim()) {
+      const rx = new RegExp(escapeRegex(search.trim()), 'i');
+      const [jobIds, userIds] = await Promise.all([
+        Job.find({ title: rx }).distinct('_id'),
+        User.find({ $or: [{ email: rx }, { firstName: rx }, { lastName: rx }] }).distinct('_id')
+      ]);
+      filter.$or = [
+        { jobId: { $in: jobIds } },
+        { clientId: { $in: userIds } },
+        { freelancerId: { $in: userIds } }
+      ];
     }
 
     const [contracts, total] = await Promise.all([

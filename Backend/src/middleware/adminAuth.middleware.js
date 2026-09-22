@@ -28,9 +28,10 @@ const authenticateAdmin = async (req, res, next) => {
     }
 
     // 2. Verify JWT — ADMIN_JWT_SECRET only, never marketplace JWT_SECRET
-    let decoded;
+    // Called for its throw-on-invalid side effect only; the decoded payload
+    // is unused because the AdminSession lookup below is the identity source.
     try {
-      decoded = jwt.verify(token, config.adminPanel.jwtSecret, {
+      jwt.verify(token, config.adminPanel.jwtSecret, {
         issuer: 'skillkart-admin',
         audience: 'admin-panel'
       });

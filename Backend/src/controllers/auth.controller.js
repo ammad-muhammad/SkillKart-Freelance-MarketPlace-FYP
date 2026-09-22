@@ -1,7 +1,7 @@
 const authService = require('../services/auth.service');
 const { handleLoginAlert, handlePasswordChangeAlert } = authService;
 const otpService = require('../services/otp.service');
-const { sendSuccess, sendCreated, sendError } = require('../utils/apiResponse');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const User = require('../models/User');
 const { BadRequestError } = require('../utils/apiError');
@@ -587,7 +587,7 @@ const refreshToken = asyncHandler(async (req, res) => {
  * Change Password
  */
 const changePassword = asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword } = req.body;
   const userId = req.user._id;
 
   // Step 1: Verify current password
@@ -763,7 +763,7 @@ const logoutAllDevices = asyncHandler(async (req, res) => {
  * Authenticate with Supabase OAuth tokens
  */
 const supabaseAuth = asyncHandler(async (req, res) => {
-  const { supabaseAccessToken, supabaseRefreshToken } = req.body;
+  const { supabaseAccessToken } = req.body;
 
   if (!supabaseAccessToken) {
     return sendError(res, {

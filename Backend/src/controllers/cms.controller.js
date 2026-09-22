@@ -1,6 +1,6 @@
 const cmsService = require('../services/cms.service');
-const { sendSuccess, sendCreated, sendNotFound, sendPaginated } = require('../utils/apiResponse');
-const { asyncHandler, parsePagination } = require('../utils/helpers');
+const { sendSuccess, sendCreated } = require('../utils/apiResponse');
+const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError } = require('../utils/apiError');
 
 /**

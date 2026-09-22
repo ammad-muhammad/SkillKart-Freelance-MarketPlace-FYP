@@ -64,9 +64,9 @@ function getApp() {
     // designed fail-open no-op path, indistinguishable from "not configured"
     // — push looked inert even with a fully valid credential file. Import
     // the modular subpaths instead, which is the only API v14 actually has.
-    // eslint-disable-next-line global-require
+     
     const { initializeApp, cert, getApps, getApp: getExistingApp } = require('firebase-admin/app');
-    // eslint-disable-next-line global-require
+     
     ({ getMessaging: getMessagingFn } = require('firebase-admin/messaging'));
     app = getApps().length ? getExistingApp() : initializeApp({ credential: cert(serviceAccount) });
   } catch (error) {

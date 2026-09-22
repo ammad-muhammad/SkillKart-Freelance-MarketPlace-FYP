@@ -1,5 +1,5 @@
 const { ForbiddenError, UnauthorizedError } = require('../utils/apiError');
-const { USER_ROLES, ROLE_HIERARCHY } = require('../utils/constants');
+const { ROLE_HIERARCHY } = require('../utils/constants');
 const User = require('../models/User');
 
 const ROLE_PERMISSIONS = {

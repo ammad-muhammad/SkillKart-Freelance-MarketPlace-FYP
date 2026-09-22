@@ -1,5 +1,5 @@
-const { body, query, param } = require('express-validator');
-const { REGEX, USER_ROLES } = require('../utils/constants');
+const { body, query } = require('express-validator');
+const { USER_ROLES } = require('../utils/constants');
 
 /**
  * Validation rules for authentication endpoints

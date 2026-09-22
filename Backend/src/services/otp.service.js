@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const OTP = require('../models/OTP');
 const { sendOTPEmail } = require('./email.service');
 const config = require('../config/index');
@@ -10,7 +9,7 @@ const generateAndSendOTP = async (email, purpose = 'email_verification') => {
   try {
     // Use the schema's createOTP static method
     // This automatically handles otpHash generation
-    const { otpRecord, otp } = await OTP.createOTP({
+    const { otp } = await OTP.createOTP({
       email,
       purpose,
       expiryMinutes: config.otp.expiryMinutes,
@@ -69,7 +68,7 @@ const resendOTP = async (email, purpose = 'email_verification') => {
     }
 
     // Generate new OTP
-    const { otpRecord, otp } = await OTP.createOTP({
+    const { otp } = await OTP.createOTP({
       email,
       purpose,
       expiryMinutes: 10

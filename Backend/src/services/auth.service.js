@@ -3,7 +3,6 @@ const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { generateToken, generateRefreshToken, verifyRefreshToken, decodeToken } = require('../utils/jwt');
 const { AuthenticationError, NotFoundError } = require('../utils/apiError');
-const bcrypt = require('bcryptjs');
 const FreelancerProfile = require('../models/FreelancerProfile');
 const ClientProfile = require('../models/ClientProfile');
 const { sendLoginAlertEmail, sendPasswordChangeAlertEmail } = require('./email.service');

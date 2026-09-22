@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/skill.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole } = require('../middleware/rbac.middleware');
 
 /* ─────────────────────────────────────────────────────────────────────
    PUBLIC — no auth

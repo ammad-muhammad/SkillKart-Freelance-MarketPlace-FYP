@@ -1,5 +1,5 @@
 const { body, query, param } = require('express-validator');
-const { USER_ROLES, USER_STATUS } = require('../utils/constants');
+const { USER_ROLES } = require('../utils/constants');
 
 /**
  * Validation rules for user management endpoints

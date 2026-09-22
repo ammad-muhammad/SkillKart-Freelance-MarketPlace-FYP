@@ -21,7 +21,7 @@ class EmailProvider {
    * @param {string} [message.from]
    * @returns {Promise<{ id: string, provider: string, accepted: string[] }>}
    */
-  // eslint-disable-next-line no-unused-vars
+   
   async send(message) {
     throw new Error(`${this.name}: send() not implemented`);
   }

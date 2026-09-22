@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireRole, requirePermission, requireHigherRole } = require('../middleware/rbac.middleware');
+const { requireRole, requireHigherRole } = require('../middleware/rbac.middleware');
 const { validate } = require('../middleware/validation.middleware');
 const {
   getUserByIdValidation,

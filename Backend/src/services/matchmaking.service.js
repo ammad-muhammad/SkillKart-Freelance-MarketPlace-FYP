@@ -22,7 +22,6 @@ const AVATAR_BGS = [
   'linear-gradient(135deg,#3b82f6,#6366f1)',
 ];
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 
 // Score candidates in bounded-size concurrent batches rather than either (a)
 // one at a time — the original approach, which made 100-candidate matching

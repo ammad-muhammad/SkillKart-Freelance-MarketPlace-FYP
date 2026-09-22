@@ -4,18 +4,15 @@ const { asyncHandler, parsePagination } = require('../utils/helpers');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
 const { uploadJobAttachment: uploadJobAttachmentToCloud } = require('../services/upload.service');
 const { recommendJobCategory, recommendJobSubcategory } = require('../services/jobCategory.service');
-const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const { recalculateRating } = require('../services/rating.service');
 const Payment = require('../models/Payment');
 const Proposal = require('../models/Proposal');
 const ClientProfile = require('../models/ClientProfile');
 const { buildGraphSearchQuery } = require('../services/search.service');
-const FreelancerProfile = require('../models/FreelancerProfile');
 const Review = require('../models/Review');
 const notifications = require('../services/notification.service');
 const { stripHtml } = require('../utils/sanitizeInput');
 
-const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Sync job statuses based on deadlines
@@ -227,7 +224,7 @@ const JOB_SORT_FIELDS = {
 
 const listJobs = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { status, category, skills, experienceLevel, budgetType, clientId, minBudget, maxBudget, sortBy, sortOrder } = req.query;
+  const { category, skills, experienceLevel, budgetType, clientId, minBudget, maxBudget, sortBy, sortOrder } = req.query;
 
   await syncJobStatuses(clientId ? { clientId } : {});
 
@@ -244,7 +241,6 @@ const listJobs = asyncHandler(async (req, res) => {
 
   // Graph-aware category filter: expand to related categories
   if (category) {
-    const { buildGraphSearchQuery: bgs } = require('../services/search.service');
     const catExpanded = await require('../services/taxonomy.service').expandSearchTerms(category);
     query.category = catExpanded.length ? { $in: catExpanded } : category;
   }

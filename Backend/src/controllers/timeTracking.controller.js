@@ -230,7 +230,7 @@ const addManualLog = asyncHandler(async (req, res) => {
  */
 const getContractLogs = asyncHandler(async (req, res) => {
   const { contractId } = req.params;
-  const { page, limit, skip } = parsePagination(req.query);
+  const { limit, skip } = parsePagination(req.query);
 
   const contract = await Contract.findById(contractId);
   if (!contract) throw new NotFoundError('Contract not found');
