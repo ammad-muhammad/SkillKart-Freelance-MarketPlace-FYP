@@ -6,6 +6,7 @@ const { requireRole } = require('../middleware/rbac.middleware');
 const { uploadSingle } = require('../middleware/upload.middleware');
 const { validate } = require('../middleware/validation.middleware');
 const { createGigValidation, updateGigValidation } = require('../validators/gig.validator');
+const { orderGigValidation, cancelGigOrderValidation } = require('../validators/gigOrder.validator');
 const upload = { single: uploadSingle };
 
 // Public routes
@@ -22,11 +23,23 @@ router.get('/my-gigs',
 // can view their own draft/paused gig; the controller enforces that check.
 router.get('/:id', optionalAuth, gigController.getGigById);
 
-// Order a gig (client buys a tier → creates a job that enters the escrow flow)
+// Order a gig (client buys a tier + states their requirements → creates a
+// 'pending_payment' job that goes live once the 50% deposit is paid)
 router.post('/:id/order',
   authenticate,
   requireRole('client'),
+  orderGigValidation,
+  validate,
   gigController.createGigOrder
+);
+
+// Cancel a gig order the client hasn't paid for yet
+router.post('/orders/:jobId/cancel',
+  authenticate,
+  requireRole('client'),
+  cancelGigOrderValidation,
+  validate,
+  gigController.cancelGigOrder
 );
 
 // Protected routes (Freelancers)

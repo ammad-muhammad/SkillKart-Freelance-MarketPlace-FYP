@@ -111,7 +111,7 @@ export const JobsPage = () => {
           value={status}
           onChange={val => { setStatus(val); load({ status: val, page: 1 }); }}
           placeholder="All statuses"
-          options={[{ value: '', label: 'All statuses' }, ...['open','in-progress','completed','closed','cancelled'].map(s => ({ value: s, label: s }))]}
+          options={[{ value: '', label: 'All statuses' }, ...['open','pending_payment','in-progress','completed','closed','cancelled'].map(s => ({ value: s, label: s }))]}
         />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="💼" emptyTitle="No jobs found"

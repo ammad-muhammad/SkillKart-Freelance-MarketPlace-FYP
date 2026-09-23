@@ -97,6 +97,18 @@ async function verifyCheckoutSession(sessionId) {
 }
 
 /**
+ * Expire an open Checkout Session so it can no longer be paid (used when a
+ * client cancels an unpaid gig order). No-op for simulated sessions; Stripe
+ * rejects expiring a session that's already complete/expired, which callers
+ * treat as best-effort anyway.
+ */
+async function expireCheckoutSession(sessionId) {
+  if (!sessionId || !isLive()) return { expired: false, simulated: true };
+  await stripe.checkout.sessions.expire(sessionId);
+  return { expired: true, simulated: false };
+}
+
+/**
  * Get the latest Charge ID from a PaymentIntent ID
  */
 async function getChargeIdFromPaymentIntent(paymentIntentId) {
@@ -243,6 +255,7 @@ async function getConnectedBalance(stripeAccountId) {
 module.exports = { 
   createCheckoutSession, 
   verifyCheckoutSession, 
+  expireCheckoutSession,
   createConnectAccount,
   createAccountLink,
   checkAccountStatus,

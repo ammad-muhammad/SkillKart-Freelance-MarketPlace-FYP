@@ -7,6 +7,7 @@ import { gsap } from 'gsap';
 import { gigsAPI } from '../../../api/gigs';
 import { publicAPI } from '../../../api/publicData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
+import { formatDeliveryTime } from '../../../utils/gigOrderCheckout';
 import './BrowseGigs.css';
 
 /* Map a raw Gig (with populated freelancerId) from the API → card shape */
@@ -81,8 +82,8 @@ function GigCard({ gig, list, onOpen }) {
                         <Star size={14} fill="#f59e0b" color="#f59e0b" /> {gig.rating.toFixed(1)}
                         <span className="count">({gig.reviewsCount})</span>
                     </span>
-                    {gig.deliveryTime != null && (
-                        <span className="bg-card__delivery"><Clock size={13} /> {gig.deliveryTime}d delivery</span>
+                    {formatDeliveryTime(gig.deliveryTime) && (
+                        <span className="bg-card__delivery"><Clock size={13} /> {formatDeliveryTime(gig.deliveryTime)} delivery</span>
                     )}
                 </div>
                 {gig.skills.length > 0 && (

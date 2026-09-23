@@ -380,6 +380,42 @@ escrow existed. Each phase first tries an atomic wallet debit; only if the walle
 cover it does it fall back to a real Stripe Checkout session (or the simulated flow under
 `STRIPE_DUMMY=true`).
 
+- **Requirements are mandatory.** `POST /gigs/:id/order` takes
+  `requirements: { description (30–5000 chars), referenceLinks?: string[] (≤5, http/https) }`
+  (`validators/gigOrder.validator.js`), stored on `Job.requirements`. `Job.description`
+  stays the gig's own text. Requirements and delivery are only returned to the two parties
+  and admins by the public `GET /jobs/:id`.
+- **Unpaid orders don't count yet.** The Job starts in `status: 'pending_payment'`. It only
+  becomes `in-progress` once the deposit lands (`services/gigOrder.service.js`'s
+  `activateGigOrder`, called from the wallet path, `confirmPayment` and the Stripe webhook).
+  That's also when `gig.stats.orders` is incremented and the freelancer is notified. Unpaid
+  orders are hidden from the freelancer's My Work.
+- **Re-ordering the same package while unpaid resumes that order** (latest requirements win)
+  instead of creating a duplicate.
+- **Clients can cancel an unpaid order** with `POST /gigs/orders/:jobId/cancel`. This sets
+  `cancelled` + `cancelledBeforePayment` and expires any open Stripe session. If a checkout
+  still completes afterwards, `activateGigOrder` revives the order, so a charge is never lost.
+- **Cleanup:** the hourly cron cancels unpaid orders older than 7 days.
+- **Delivered means `delivery.submittedAt` is set.** Older gig orders carry an empty
+  `delivery: { links: [] }` stub, which is truthy. Never check `job.delivery` alone.
+
+### Custom offers (in chat)
+
+A freelancer can send a client they're already chatting with a **custom offer**
+(`POST /offers`, `controllers/customOffer.controller.js`): title, scope, price, delivery
+days, revisions, optionally linked to one of their gigs. It's stored as a `CustomOffer` and
+posted into the conversation as a `Message` with `type: 'custom_offer'`; `getMessages`
+populates it (plus its order's status) so the chat card stays live.
+
+- **Accept** (`POST /offers/:id/accept`, client only; optional notes as `requirements`): an
+  atomic claim, so a double-click can't create two orders. It creates a gig-order Job
+  (`source: 'gig'`, `customOfferId`, no `gigTier`) in `pending_payment` at the offer's price,
+  which then goes through the same deposit → deliver → final flow as a package order.
+- **Decline / withdraw:** `POST /offers/:id/decline` (client) and `/withdraw` (freelancer).
+- **Limits:** offers expire after 7 days. There can be at most 5 open offers per chat.
+  Offers containing an email or phone number are rejected (`utils/contactInfo.js`, the
+  same detector the chat uses).
+
 ```mermaid
 sequenceDiagram
     participant C as Client
@@ -388,8 +424,8 @@ sequenceDiagram
     participant S as Stripe Checkout
     participant F as Freelancer
 
-    C->>API: POST /gigs/:id/order (tier)
-    API->>API: create synthetic Job (hiredFreelancer = gig owner)
+    C->>API: POST /gigs/:id/order (tier + requirements)
+    API->>API: create synthetic Job (pending_payment, hiredFreelancer = gig owner)
     API-->>C: order created — fund deposit to start work
 
     C->>API: POST /payments/jobs/:jobId/deposit
@@ -402,6 +438,8 @@ sequenceDiagram
         S-->>API: confirmPayment(phase = deposit)
         API->>API: Payment.status = deposit_paid
     end
+    API->>API: activateGigOrder → Job in-progress, gig stats.orders++
+    API-->>F: "new order" notification (requirements attached)
 
     F->>API: submit delivery
     C->>API: POST /payments/jobs/:jobId/final

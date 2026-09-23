@@ -16,6 +16,10 @@ const messageSchema = new mongoose.Schema({
     required: true
   },
   attachments: [mongoose.Schema.Types.Mixed],
+  // 'custom_offer' messages are rendered as an offer card; `content` is only
+  // a plain-text summary (conversation previews, push text).
+  type: { type: String, enum: ['text', 'custom_offer'], default: 'text' },
+  customOfferId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomOffer' },
   readBy: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

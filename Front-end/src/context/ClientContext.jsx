@@ -212,9 +212,15 @@ export const ClientProvider = ({ children }) => {
         duration: j.duration,
         proposals: j.proposals || [],
         source: j.source || 'project',
+        gigTier: j.gigTier || null,
+        customOfferId: j.customOfferId || null,
+        description: j.description || '',
+        requirements: j.requirements || null,
         hiredFreelancer: j.hiredFreelancer,
         payment: j.payment,
-        delivery: j.delivery || null,
+        // Only a real submission counts — older gig orders carry an empty
+        // `{ links: [] }` delivery stub (see Backend Job.js).
+        delivery: j.delivery?.submittedAt ? j.delivery : null,
         milestones: j.milestones || [],
         currentMilestone: j.currentMilestone || null,
         contractId: j.contractId?._id || null,

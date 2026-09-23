@@ -51,6 +51,7 @@ import SkillTest from "../pages/freelancer/SkillTest";
 import FreelancerWork from "../pages/freelancer/FreelancerWork";
 import FreelancerWallet from "../pages/freelancer/FreelancerWallet";
 import PaymentConfirm from "../pages/public/PaymentConfirm/PaymentConfirm";
+import PaymentCancel from "../pages/public/PaymentConfirm/PaymentCancel";
 import NotificationsPage from "../pages/common/NotificationsPage";
 import BuddyChatPage from "../pages/common/BuddyChatPage/BuddyChatPage";
 
@@ -312,6 +313,15 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute allowedRoles={['client']}>
                 <PaymentConfirm />
+              </ProtectedRoute>
+            }
+          />
+          {/* Stripe cancel redirect — nothing was charged. */}
+          <Route
+            path="/payment/cancel"
+            element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <PaymentCancel />
               </ProtectedRoute>
             }
           />

@@ -12,6 +12,9 @@ const TYPES = {
   PROPOSAL_ACCEPTED: 'proposal_accepted',
   PROPOSAL_REJECTED: 'proposal_rejected',
   GIG_ORDERED: 'gig_ordered',
+  CUSTOM_OFFER_RECEIVED: 'custom_offer_received',
+  CUSTOM_OFFER_ACCEPTED: 'custom_offer_accepted',
+  CUSTOM_OFFER_DECLINED: 'custom_offer_declined',
   DEPOSIT_FUNDED: 'deposit_funded',
   WORK_DELIVERED: 'work_delivered',
   REVISION_REQUESTED: 'revision_requested',
@@ -87,13 +90,53 @@ const onProposalResubmitted = (clientId, { job, freelancerName }) => notify(clie
   jobId: job?._id,
 });
 
-const onGigOrdered = (freelancerId, { job, gigId }) => notify(freelancerId, {
+// Fired once the order's 50% deposit is actually paid (gigOrder.service.js's
+// activateGigOrder), not when the client first clicks Order — an abandoned
+// checkout never reaches the freelancer.
+const onGigOrdered = (freelancerId, { job, gigId, hasRequirements }) => notify(freelancerId, {
   type: TYPES.GIG_ORDERED,
-  title: 'New gig order! 🛍️',
-  message: `A client ordered "${job?.title || 'your gig'}". Work starts once the deposit is funded.`,
+  title: 'New order — deposit funded! 🛍️',
+  message: hasRequirements
+    ? `A client ordered "${job?.title || 'your gig'}" and funded the 50% deposit. Read their requirements in My Work and start.`
+    : `A client ordered "${job?.title || 'your gig'}" and funded the 50% deposit. You can start now.`,
   link: '/freelancer/work',
   jobId: job?._id,
   gigId,
+});
+
+// To the client: a freelancer sent them a custom offer in chat.
+const onCustomOfferReceived = (clientId, { offer, freelancerName }) => notify(clientId, {
+  type: TYPES.CUSTOM_OFFER_RECEIVED,
+  title: 'You received a custom offer 📦',
+  message: `${freelancerName || 'A freelancer'} sent you an offer: "${offer?.title || ''}" for Rs. ${offer?.price}.`,
+  link: '/client/messages',
+  gigId: offer?.gigId,
+});
+
+// To the freelancer: the client accepted (order created, deposit next).
+const onCustomOfferAccepted = (freelancerId, { offer, job }) => notify(freelancerId, {
+  type: TYPES.CUSTOM_OFFER_ACCEPTED,
+  title: 'Custom offer accepted 🎉',
+  message: `Your offer "${offer?.title || ''}" was accepted. You'll be notified as soon as the client funds the deposit.`,
+  link: '/freelancer/messages',
+  jobId: job?._id,
+});
+
+const onCustomOfferDeclined = (freelancerId, { offer }) => notify(freelancerId, {
+  type: TYPES.CUSTOM_OFFER_DECLINED,
+  title: 'Custom offer declined',
+  message: `The client declined your offer "${offer?.title || ''}".`,
+  link: '/freelancer/messages',
+});
+
+// To the freelancer: an order they'd been told about (an accepted custom
+// offer) was cancelled by the client before any money was paid.
+const onGigOrderCancelled = (freelancerId, { job }) => notify(freelancerId, {
+  type: TYPES.JOB_CANCELLED,
+  title: 'Order cancelled before payment',
+  message: `The client cancelled "${job?.title || 'the order'}" before funding the deposit.`,
+  link: '/freelancer/messages',
+  jobId: job?._id,
 });
 
 // To the freelancer: the client funded the deposit → they may now deliver.
@@ -273,6 +316,10 @@ module.exports = {
   onProposalRejected,
   onProposalResubmitted,
   onGigOrdered,
+  onCustomOfferReceived,
+  onCustomOfferAccepted,
+  onCustomOfferDeclined,
+  onGigOrderCancelled,
   onDepositFunded,
   onWorkDelivered,
   onRevisionRequested,
