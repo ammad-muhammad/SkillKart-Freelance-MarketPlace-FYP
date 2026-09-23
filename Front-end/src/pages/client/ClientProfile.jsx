@@ -274,12 +274,14 @@ const ClientProfile = () => {
       }
     }
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
   const save = async () => {
-    if (!validate()) {
-      showToast('Please fix the errors before saving', 'error');
+    const invalid = Object.values(validate());
+    if (invalid.length) {
+      // Name the problem — the field itself may be scrolled out of view.
+      showToast(invalid.length === 1 ? invalid[0] : `${invalid[0]} (and ${invalid.length - 1} more)`, 'error');
       return;
     }
     
@@ -318,9 +320,11 @@ const ClientProfile = () => {
       } else if (result.errors) {
         const newErrors = {};
         if (Array.isArray(result.errors)) {
+          // Server field names → this form's error slots.
+          const FIELD_ALIASES = { industryType: 'industry', description: 'bio', 'socialLinks.linkedin': 'linkedin' };
           result.errors.forEach(err => {
             if (typeof err === 'object' && err.field) {
-              newErrors[err.field] = err.message;
+              newErrors[FIELD_ALIASES[err.field] || err.field] = err.message;
             } else if (typeof err === 'string') {
               const pathMatch = err.match(/at path "(.+)"/);
               if (pathMatch) {

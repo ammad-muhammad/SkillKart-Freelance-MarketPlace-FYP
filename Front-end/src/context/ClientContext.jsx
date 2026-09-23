@@ -145,7 +145,10 @@ export const ClientProvider = ({ children }) => {
           phone: dbProfile?.phone || '',
           companyName: dbProfile?.companyName || '',
           companyType: dbProfile?.companyType || '',
-          industry: dbProfile?.industryType || dbProfile?.industry || '',
+          // First NON-EMPTY of the two — `[]` is truthy, so a plain `||`
+          // let an empty industryType hide a filled-in industry.
+          industry: [dbProfile?.industryType, dbProfile?.industry]
+            .find((v) => (Array.isArray(v) ? v.length > 0 : !!v)) || '',
           customIndustry: dbProfile?.customIndustry || '',
           role: dbProfile?.role || '',
           isNewToHiring: dbProfile?.isNewToHiring || '',
@@ -380,9 +383,11 @@ export const ClientProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error("Save client profile failed:", error);
-      const message = error.response?.data?.message || 'Failed to save changes';
       const errors = error.response?.data?.errors || null;
-      
+      // "Validation failed" alone doesn't say what to fix — name the field.
+      const message = (Array.isArray(errors) && errors[0]?.message)
+        || error.response?.data?.message || 'Failed to save changes';
+
       showToast(message, 'error');
       return { success: false, message, errors };
     } finally {

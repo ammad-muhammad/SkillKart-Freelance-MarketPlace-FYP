@@ -316,7 +316,9 @@ Object.entries(CLUSTERS).forEach(([cluster, v]) => {
 });
 
 const COMPANIES = ['Nexus Labs', 'BrightPixel', 'CloudForge', 'Quantum Retail', 'Vertex Digital', 'Skyline Studios', 'Orbit Softworks', 'Apex Solutions', 'Lumen Tech', 'Pioneer Foods', 'GreenLeaf Organics', 'UrbanNest', 'DataStream Inc', 'Fintrust Group', 'MediCare Plus', 'EduSpark', 'TravelWise', 'Zenith Motors', 'Harbor Logistics', 'Pulse Media'];
-const INDUSTRIES = ['Technology', 'E-commerce', 'Healthcare', 'Finance', 'Education', 'Media & Entertainment', 'Real Estate', 'Travel', 'Food & Beverage', 'Automotive'];
+// Must be values from profile.validator.js's ALLOWED_INDUSTRIES — anything
+// else makes the client's "Save profile" fail server-side.
+const INDUSTRIES = ['Software & IT Services', 'E-commerce', 'Healthcare & HealthTech', 'FinTech', 'Education & EdTech', 'Entertainment & Media', 'Real Estate & PropTech', 'Hospitality & Tourism', 'Food & Beverage', 'Automotive'];
 const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500'];
 const LANGUAGES = [
   { language: 'English', proficiency: 'fluent' }, { language: 'Urdu', proficiency: 'native' },
@@ -651,6 +653,8 @@ function makeClient(i, spec = {}) {
     createdAt, updatedAt: createdAt,
   });
 
+  // Written to both fields: onboarding writes both, and the app reads industryType first.
+  const industries = sample(INDUSTRIES, randInt(1, 2));
   const profile = new ClientProfile({
     userId: user._id,
     companyName: companyType === 'Individual' ? undefined : (spec.companyName || pick(COMPANIES)),
@@ -658,8 +662,11 @@ function makeClient(i, spec = {}) {
     companyLogo: companyType === 'Individual' ? undefined : imgUrl(`logo-${username}`),
     coverPhoto: imgUrl(`ccover-${username}`),
     companySize: companyType === 'Individual' ? undefined : pick(COMPANY_SIZES),
-    industry: sample(INDUSTRIES, randInt(1, 2)),
+    industry: industries,
+    industryType: industries,
     role: pick(['Founder', 'CTO', 'Product Manager', 'Owner', 'Marketing Lead']),
+    isNewToHiring: pick(['Yes', 'No']),
+    urgency: pick(['Immediate', 'Exploring', 'Flexible']),
     phone: user.phone,
     website: companyType === 'Individual' ? undefined : `https://${username}.com`,
     description: `${companyType === 'Individual' ? 'Independent client' : 'A ' + companyType.toLowerCase()} hiring skilled freelancers to build and grow digital products.`,
