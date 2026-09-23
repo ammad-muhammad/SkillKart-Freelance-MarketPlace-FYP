@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,9 @@ import { safeToast as toast } from '../../utils/safeToast';
 import { skillTestAPI } from '../../api/skillTest';
 import { useFreelancer } from '../../context/FreelancerContext';
 import useAntiCheat from './useAntiCheat';
-import useFaceProctor from './useFaceProctor';
+import useProctoring from './useProctoring';
+import ProctorPanel, { PreviewStatus } from './proctoring/ProctorPanel';
+import { deriveProctoringSettings, normalizeStrictness, strictnessLabel } from './proctoring/strictness';
 import './SkillTest.css';
 
 // useAntiCheat always uses one of these exact reason strings per violation
@@ -21,11 +23,24 @@ const BROWSER_VIOLATION_TYPE = {
   'You switched away from the test window.': 'window_blur',
 };
 
-// Same idea for useFaceProctor's fixed per-type reason strings.
+// useProctoring issue type → the violation type the backend records.
 const CAMERA_VIOLATION_TYPE = {
-  'Your face was not visible on camera.': 'no_face',
-  'Multiple faces were detected in the camera.': 'multiple_faces',
-  'You appeared to look away from the screen.': 'looking_away',
+  face_missing: 'no_face',
+  extra_face: 'multiple_faces',
+  head_turn: 'head_turn',
+  eyes_away: 'eyes_away',
+  body_movement: 'body_movement',
+};
+
+const ordinal = (n) => {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' })[n % 10] || 'th'}`;
+};
+
+const seconds = (ms) => {
+  const v = Math.round(ms / 100) / 10;
+  return `${Number.isInteger(v) ? v : v.toFixed(1)}s`;
 };
 
 const PER_QUESTION_SECONDS = 20;
@@ -87,10 +102,15 @@ const SkillTest = () => {
   // Testing-only: backend sets this from SKILL_TEST_EASY_MODE — when true, the
   // correct MCQ answer is highlighted below so a tester can breeze through.
   const [easyMode, setEasyMode] = useState(false);
-  const [warning, setWarning] = useState(null);   // 1st-violation warning text
+  const [warning, setWarning] = useState(null);   // latest strike / final-warning text (in-test banner)
   const [abortReason, setAbortReason] = useState('');
   const [attemptId, setAttemptId] = useState(0);  // bumped each (re)start → resets strikes
   const [timeLeft, setTimeLeft] = useState(PER_QUESTION_SECONDS);
+  // SKILL_TEST_PROCTOR_STRICTNESS from the backend (0–1). null = still loading.
+  const [strictness, setStrictness] = useState(null);
+  const [browserStrikes, setBrowserStrikes] = useState(0);
+  const proctorSettings = useMemo(() => deriveProctoringSettings(strictness ?? 0.5), [strictness]);
+  const configLoaded = strictness !== null;
 
   const rulesVideoRef = useRef(null);
   const testVideoRef = useRef(null);
@@ -100,59 +120,73 @@ const SkillTest = () => {
     violationLog.current.push({ source, type, reason, at: Date.now() });
   };
 
-  // Anti-cheat is armed only while actually taking the test.
+  // Load the single proctoring knob once. A failed request falls back to
+  // medium (0.5), never to "off" — a network hiccup must not disable proctoring.
+  useEffect(() => {
+    let cancelled = false;
+    skillTestAPI.getProctoringConfig()
+      .then((res) => { if (!cancelled) setStrictness(normalizeStrictness(res.data?.data?.strictness)); })
+      .catch(() => { if (!cancelled) setStrictness(0.5); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const abortAttempt = (reason) => {
+    setAbortReason(reason);
+    setPhase('aborted');
+    exitFullscreen();
+    stopCamera();
+    // Discard the in-progress attempt entirely.
+    setQuestions([]);
+    setAnswers({});
+    setSelectedOptionIndex({});
+    setCurrentIndex(0);
+  };
+
+  // Tab switch / window blur / leaving full-screen. How many are tolerated
+  // comes from the same strictness value (0 = never penalised).
   const { requestFullscreen, exitFullscreen } = useAntiCheat({
     active: phase === 'testing' && !result,
     attemptId,
+    maxStrikes: proctorSettings.browserStrikes,
+    onStrike: (count, max, reason) => {
+      logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
+      setBrowserStrikes(count);
+      if (count < max - 1) setWarning(`Strike ${count} of ${max} — ${reason} Stay on this window.`);
+    },
     onWarn: (reason) => {
-      logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
-      setWarning(reason);
-      toast.warning('Final warning: leaving the test again will cancel it.');
+      setWarning(`Final warning — ${reason} Leaving the test once more will cancel it.`);
     },
-    onAbort: (reason) => {
-      logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
-      setAbortReason(reason);
-      setPhase('aborted');
-      exitFullscreen();
-      stopCamera();
-      // Discard the in-progress attempt entirely.
-      setQuestions([]);
-      setAnswers({});
-      setSelectedOptionIndex({});
-      setCurrentIndex(0);
-    },
+    onAbort: (reason) => abortAttempt(reason),
   });
 
-  // Camera/face proctoring is a separate, more lenient guard — only armed
-  // during the locked-down testing phase, using whichever <video> element is
-  // currently mounted (rules-screen preview vs in-test thumbnail). Its budget
-  // scales with test length (half the question count, min 2) so a longer
-  // test tolerates more incidental head movement than a short one.
-  const { modelsReady, cameraError, violationCount: cameraViolationCount, maxViolations: cameraMaxViolations, startCamera, stopCamera } = useFaceProctor({
-    active: phase === 'testing' && !result,
+  // Camera proctoring (face / head / eyes / body). 'preview' on the rules
+  // screen shows the live face check without counting anything; 'active'
+  // during the test counts movements and issues strikes.
+  const proctor = useProctoring({
+    settings: proctorSettings,
+    mode: !configLoaded ? 'off' : phase === 'testing' && !result ? 'active' : phase === 'rules' ? 'preview' : 'off',
     attemptId,
     videoRef: phase === 'testing' ? testVideoRef : rulesVideoRef,
-    maxViolations: Math.max(2, Math.floor((questions.length || 0) / 2)),
-    onViolation: (count, max, reason) => {
-      // Every counted violation is logged for the backend record, regardless
-      // of whether it crosses the warn/abort threshold.
-      logViolation('camera', CAMERA_VIOLATION_TYPE[reason] || 'other', reason);
+    questionCount: questions.length,
+    onStrike: (count, max, type, message) => {
+      // Every strike is logged for the backend record.
+      logViolation('camera', CAMERA_VIOLATION_TYPE[type] || 'other', message);
+      if (count < max - 1) setWarning(`Camera strike ${count} of ${max} — ${message}`);
     },
-    onWarn: (reason) => {
-      setWarning(reason);
-      toast.warning(`Last warning: one more camera issue will cancel the test.`);
+    onWarn: (message) => {
+      setWarning(`Final warning — ${message} One more camera strike will cancel the test.`);
     },
-    onAbort: (reason) => {
-      setAbortReason(reason);
-      setPhase('aborted');
-      exitFullscreen();
-      stopCamera();
-      setQuestions([]);
-      setAnswers({});
-      setSelectedOptionIndex({});
-      setCurrentIndex(0);
-    },
+    onAbort: (message) => abortAttempt(message),
   });
+  const { cameraError, startCamera, stopCamera } = proctor;
+  const proctoringOn = proctorSettings.enabled;
+  // "Start Test" waits until the face check is genuinely working — camera
+  // streaming AND at least one frame analysed — so a device where detection
+  // can't run finds out here, not silently halfway through the test.
+  const cameraReady = !proctoringOn || (
+    proctor.engineStatus === 'ready' && proctor.cameraOn && proctor.detecting && !proctor.cameraError && !proctor.engineError
+  );
+  const cameraProblem = proctoringOn ? (proctor.engineError || proctor.cameraError) : null;
 
   // Request the webcam as soon as the rules screen is shown, so the freelancer
   // can confirm they're in frame before committing to "Start Test". Camera
@@ -164,9 +198,10 @@ const SkillTest = () => {
   // and re-attached whenever the phase switches — startTest() stops the old
   // one first, and the browser doesn't re-prompt once permission is granted.
   useEffect(() => {
+    if (!configLoaded || !proctoringOn) return;
     if (phase === 'rules' || phase === 'testing') startCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, configLoaded, proctoringOn]);
 
   const fetchTest = async (skill = null, force = false) => {
     try {
@@ -197,6 +232,7 @@ const SkillTest = () => {
     setWarning(null);
     setAbortReason('');
     setResult(null);
+    setBrowserStrikes(0);
     violationLog.current = [];
 
     // MUST happen first, synchronously within this click's user-activation
@@ -250,7 +286,11 @@ const SkillTest = () => {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const res = await skillTestAPI.submitTest(answers, violationLog.current);
+      const res = await skillTestAPI.submitTest(answers, violationLog.current, {
+        movements: proctor.counts,
+        cameraStrikes: proctor.strikes,
+        browserStrikes,
+      });
       setResult(res.data.data);
       exitFullscreen();
       stopCamera();
@@ -381,12 +421,12 @@ const SkillTest = () => {
               has been <strong>cancelled</strong>. To keep verification fair, you'll start over from question 1
               with a brand-new set of questions.
             </p>
-            {cameraError && (
+            {proctoringOn && cameraError && (
               <p className="st-result-desc" style={{ color: 'var(--color-error)', fontWeight: 600 }}>
                 Camera required — please allow camera access or use a device with a working camera before restarting.
               </p>
             )}
-            <button onClick={startTest} disabled={loading || !!cameraError} className="st-btn-retry">
+            <button onClick={startTest} disabled={loading || (proctoringOn && !!cameraError)} className="st-btn-retry">
               {loading ? 'Generating new test…' : 'Restart Test from Scratch'}
             </button>
             <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
@@ -422,41 +462,65 @@ const SkillTest = () => {
 
             <ul className="st-rules-list">
               <li><Maximize2 size={18} /><span>The test runs in <strong>full-screen</strong>. Other menus are hidden — only the test is shown.</span></li>
-              <li><Eye size={18} /><span><strong>Do not switch tabs, minimize, or leave the window.</strong> The first time you do, you get one warning.</span></li>
-              <li><Ban size={18} /><span>A <strong>second</strong> violation (or exiting full-screen) <strong>cancels the test</strong> for cheating — you restart from question 1 with new questions.</span></li>
-              <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. Keep your face visible and alone in frame. Occasional movement is fine — you have a budget of camera issues (no face, another person, looking away) scaled to the test length, shown live as <strong>Movements: x/y</strong>; you'll get a last warning near the end of that budget, and exceeding it cancels the test.</span></li>
+              {proctorSettings.browserStrikes > 0 ? (
+                <li><Eye size={18} /><span><strong>Stay on the test window.</strong> Switching tabs, minimizing, or leaving full-screen counts as a strike — the <strong>{ordinal(proctorSettings.browserStrikes)} time cancels the test</strong> and you restart from question 1 with new questions. You get a final warning before that.</span></li>
+              ) : (
+                <li><Eye size={18} /><span>Please stay on the test window for the whole test.</span></li>
+              )}
+              {proctoringOn ? (
+                <>
+                  <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. It watches for your face leaving the frame, another person, head turns, eyes looking away, and moving out of position.</span></li>
+                  <li><Ban size={18} /><span>You'll see every movement counted live. Brief movements are fine — a movement becomes a <strong>strike only if it lasts {seconds(proctorSettings.holdMs)}</strong>. Your strike budget scales with the test length (shown live); you get a final warning before the last one, and running out cancels the test.</span></li>
+                </>
+              ) : (
+                <li><CameraOff size={18} /><span>Camera proctoring is <strong>turned off</strong> for this test.</span></li>
+              )}
               <li><Clock size={18} /><span>Each question has a timer — <strong>{PER_QUESTION_SECONDS}s for multiple-choice</strong>, <strong>{TEXT_QUESTION_SECONDS}s for written-answer</strong> questions. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
               <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
               <li><CheckCircle2 size={18} /><span>Score at least <strong>25%</strong> to verify this skill and unlock applying to work that requires it. Reach <strong>80%</strong> to also earn the Expert badge.</span></li>
             </ul>
 
-            <div className="st-camera-preview">
-              <video ref={rulesVideoRef} className="st-camera-preview__video" autoPlay playsInline muted />
-              {cameraError ? (
-                <div className="st-camera-preview__overlay">
-                  <CameraOff size={20} />
-                  <span>Camera required — please allow camera access or use a device with a working camera.</span>
-                </div>
-              ) : (
-                <div className="st-camera-preview__label">
-                  <Camera size={14} /> {modelsReady ? 'Camera preview' : 'Loading proctoring…'}
-                </div>
-              )}
-            </div>
+            {configLoaded && (
+              <p className="st-strictness-note">
+                Proctoring level: <strong>{strictnessLabel(proctorSettings.strictness)}</strong>
+              </p>
+            )}
 
-            {cameraError && (
-              <div className="st-camera-blocked">
-                <AlertCircle size={16} />
-                <span>{cameraError} Allow camera access in your browser (or switch to a device with a camera), then retry.</span>
-                <button type="button" onClick={startCamera} className="st-btn-ghost-sm">
-                  Retry Camera
-                </button>
-              </div>
+            {proctoringOn && (
+              <>
+                <div className="st-camera-preview">
+                  <video ref={rulesVideoRef} className="st-camera-preview__video" autoPlay playsInline muted />
+                  {cameraProblem ? (
+                    <div className="st-camera-preview__overlay">
+                      <CameraOff size={20} />
+                      <span>{cameraProblem}</span>
+                    </div>
+                  ) : (
+                    <PreviewStatus proctor={proctor} />
+                  )}
+                </div>
+
+                {cameraProblem && (
+                  <div className="st-camera-blocked">
+                    <AlertCircle size={16} />
+                    <span>{cameraProblem} Allow camera access (or switch to a device with a working camera), then retry.</span>
+                    <button type="button" onClick={proctor.retry} className="st-btn-ghost-sm">
+                      Retry Camera
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="st-rules-actions">
-              <button onClick={startTest} disabled={loading || !!cameraError} className="st-btn-submit">
-                {loading ? 'Preparing your test…' : 'I Understand — Start Test'}
+              <button onClick={startTest} disabled={loading || !configLoaded || !cameraReady} className="st-btn-submit">
+                {loading
+                  ? 'Preparing your test…'
+                  : !configLoaded
+                    ? 'Loading…'
+                    : !cameraReady && !cameraProblem
+                      ? 'Waiting for the face check…'
+                      : 'I Understand — Start Test'}
               </button>
               <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
                 Cancel
@@ -493,11 +557,12 @@ const SkillTest = () => {
      by a transform/filter on the layout (which would re-expose the sidebar). */
   return createPortal(
     <div className="st-page st-lockdown">
-      {/* Warning banner after the first violation */}
+      {/* Latest strike / final warning — toasts can't show here (the
+          lockdown overlay sits above the toast layer on purpose). */}
       {warning && (
         <div className="st-cheat-banner">
           <ShieldAlert size={18} />
-          <span><strong>Warning:</strong> {warning} Leaving again will cancel the test.</span>
+          <span>{warning}</span>
         </div>
       )}
 
@@ -510,23 +575,30 @@ const SkillTest = () => {
           </div>
         </div>
         <div className="st-header-right">
-          <div className="st-camera-thumb" title={cameraError || 'Webcam proctoring active'}>
-            <video ref={testVideoRef} autoPlay playsInline muted />
-            {cameraError && <CameraOff size={14} className="st-camera-thumb__off" />}
-          </div>
+          {proctoringOn && (
+            <div
+              className={`st-camera-thumb${cameraProblem ? ' st-camera-thumb--error' : proctor.live?.issue ? ' st-camera-thumb--warn' : ''}`}
+              title={cameraProblem || 'Webcam proctoring active'}
+            >
+              <video ref={testVideoRef} autoPlay playsInline muted />
+              {cameraProblem && <CameraOff size={14} className="st-camera-thumb__off" />}
+            </div>
+          )}
           <div className={`st-timer st-question-timer${timeLeft <= 5 ? ' st-question-timer--danger' : ''}`}>
             <Clock size={18} />
             <span>0:{String(timeLeft).padStart(2, '0')}</span>
           </div>
-          <div
-            className={`st-timer st-proctor${cameraViolationCount >= cameraMaxViolations - 1 ? ' st-question-timer--danger' : ''}`}
-            title="Camera movement/attention violations used this attempt"
-          >
-            <Eye size={18} />
-            <span>Movements: {cameraViolationCount}/{cameraMaxViolations}</span>
-          </div>
         </div>
       </div>
+
+      {proctoringOn && (
+        <ProctorPanel
+          proctor={proctor}
+          holdMs={proctorSettings.holdMs}
+          browserStrikes={browserStrikes}
+          browserMax={proctorSettings.browserStrikes}
+        />
+      )}
 
       <div className="st-progress-container">
         <div className="st-progress-bar" style={{ width: `${progress}%` }} />

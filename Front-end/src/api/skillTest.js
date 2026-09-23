@@ -16,9 +16,16 @@ export const skillTestAPI = {
     return client.get(`/skill-tests/generate?${params.toString()}`, { timeout: SKILL_TEST_TIMEOUT });
   },
 
-  // Submit test answers, along with any browser/camera proctoring violations logged during the attempt
-  submitTest: (answers, violations = []) =>
-    client.post('/skill-tests/submit', { answers, violations }, { timeout: SKILL_TEST_TIMEOUT }),
+  // The single proctoring knob (SKILL_TEST_PROCTOR_STRICTNESS, 0–1) — the
+  // page derives every camera/tab-switch threshold from it.
+  getProctoringConfig: () =>
+    client.get('/skill-tests/proctoring-config'),
+
+  // Submit test answers, along with any browser/camera proctoring strikes
+  // logged during the attempt and the live movement counters
+  // ({ movements, cameraStrikes, browserStrikes }).
+  submitTest: (answers, violations = [], proctoring = null) =>
+    client.post('/skill-tests/submit', { answers, violations, proctoring }, { timeout: SKILL_TEST_TIMEOUT }),
 
   // Get test history
   getHistory: () => 

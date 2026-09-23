@@ -663,6 +663,25 @@ Google returns `success: true` for a valid token minted for a *different* action
 the middleware checks `action` explicitly — otherwise a token from the public
 contact form could be replayed against login.
 
+## Skill-test proctoring
+
+How strict the skill test's proctoring is — camera checks (face missing, a
+second face, head turns, eyes looking away, body movement) **and** the
+tab-switch / full-screen guard — comes from a single value:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `SKILL_TEST_PROCTOR_STRICTNESS` | `0.5` | Any number from `0` to `1`. `0` = proctoring off (no camera needed, never cancelled), `0.2` easy, `0.5` medium, `0.7` strict, `1` very strict. Blank or invalid → `0.5` (never "off" by accident). |
+| `SKILL_TEST_EASY_MODE` | `false` | Testing only — trivially easy questions and the correct MCQ answer highlighted. Refuses to start in production. |
+
+The app reads the strictness from `GET /api/v1/skill-tests/proctoring-config`
+when a test opens, so changing it takes a restart — no web or APK rebuild. The
+frontend turns it into every threshold (see
+[`Front-end/README.md`](../Front-end/README.md#skill-test-face-proctoring) for the
+full table). Each submitted attempt stores the strictness used, the movement
+counters the candidate saw live, and the camera/tab strike totals
+(`SkillTestAttempt.proctoring`).
+
 ## API Documentation
 
 Interactive Swagger docs are served at `/api/v1/docs` while the server is running.

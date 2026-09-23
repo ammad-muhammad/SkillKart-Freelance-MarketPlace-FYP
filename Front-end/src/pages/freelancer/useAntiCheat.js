@@ -13,9 +13,13 @@ import { useEffect, useRef, useCallback } from 'react';
  *     events above in every OS/browser (e.g. snapping the window aside and
  *     focusing a different app)
  *
- * Policy: the FIRST violation calls `onWarn` (a single warning). The SECOND
- * violation calls `onAbort` — the caller then discards the attempt and starts a
- * brand-new test from scratch.
+ * Policy: `maxStrikes` violations cancel the test (set from the single
+ * proctoring strictness — see proctoring/strictness.js; 2 at the strictest,
+ * i.e. one warning then cancel). Every violation before the last-but-one
+ * calls `onStrike`, the last-but-one calls `onWarn` (final warning), and
+ * reaching `maxStrikes` calls `onAbort` — the caller then discards the
+ * attempt and starts a brand-new test from scratch. `maxStrikes` 0 turns the
+ * penalties off (strictness 0); the copy/paste/dev-tools deterrents stay.
  *
  * The strike counter resets only when a NEW attempt begins (`attemptId` change),
  * never on incidental `active` toggles (e.g. a failed submit), so a strike can't
@@ -25,11 +29,13 @@ import { useEffect, useRef, useCallback } from 'react';
  * @param {object}   opts
  * @param {boolean}  opts.active     enable/disable the guard
  * @param {number}   opts.attemptId  bump this to start a fresh attempt (resets strikes)
- * @param {Function} opts.onWarn     called on the 1st violation (reason: string)
- * @param {Function} opts.onAbort    called on the 2nd violation (reason: string)
+ * @param {number}   opts.maxStrikes violations that cancel the test (0 = never)
+ * @param {Function} opts.onStrike   called on every violation (count, max, reason)
+ * @param {Function} opts.onWarn     called on violation maxStrikes - 1 (reason: string)
+ * @param {Function} opts.onAbort    called on violation maxStrikes (reason: string)
  * @returns {{ requestFullscreen: () => Promise<boolean>, exitFullscreen: () => void }}
  */
-export default function useAntiCheat({ active, attemptId = 0, onWarn, onAbort }) {
+export default function useAntiCheat({ active, attemptId = 0, maxStrikes = 2, onStrike, onWarn, onAbort }) {
   const violations = useRef(0);
   const armedAt = useRef(0);
   // A single user action (e.g. alt-tab) can fire blur + visibilitychange almost
@@ -38,11 +44,11 @@ export default function useAntiCheat({ active, attemptId = 0, onWarn, onAbort })
 
   // Keep the latest callbacks in a ref so the listener effect can depend only on
   // `active` — otherwise inline callbacks would rebind all listeners every render.
-  const cbRef = useRef({ onWarn, onAbort });
-  useEffect(() => { cbRef.current = { onWarn, onAbort }; }, [onWarn, onAbort]);
+  const cbRef = useRef({ onStrike, onWarn, onAbort });
+  useEffect(() => { cbRef.current = { onStrike, onWarn, onAbort }; }, [onStrike, onWarn, onAbort]);
 
   const handleViolation = useCallback((reason) => {
-    if (!active) return;
+    if (!active || maxStrikes <= 0) return;
     const now = Date.now();
     // Grace window: ignore the focus churn from entering fullscreen right after
     // the guard is armed.
@@ -52,12 +58,14 @@ export default function useAntiCheat({ active, attemptId = 0, onWarn, onAbort })
     lastTick.current = now;
 
     violations.current += 1;
-    if (violations.current >= 2) {
+    const count = violations.current;
+    cbRef.current.onStrike?.(count, maxStrikes, reason);
+    if (count >= maxStrikes) {
       cbRef.current.onAbort?.(reason);
-    } else {
+    } else if (count === maxStrikes - 1) {
       cbRef.current.onWarn?.(reason);
     }
-  }, [active]);
+  }, [active, maxStrikes]);
 
   useEffect(() => {
     if (!active) return undefined;

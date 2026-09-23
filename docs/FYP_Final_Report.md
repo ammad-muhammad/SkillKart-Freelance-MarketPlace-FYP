@@ -1209,7 +1209,7 @@ Skill-Kart----Micro-Freelance-Platform/
 │   ├── android/             Native Android project (Capacitor) — client/freelancer/admin-panel app
 │   ├── android-admin/       Separate native Android project (Capacitor) — standalone admin-only app
 │   ├── assets/, assets-admin/   Source icon/splash images for each native build
-│   ├── public/              Static assets served as-is (favicons, robots.txt, face-api.js models)
+│   ├── public/              Static assets served as-is (favicons, robots.txt)
 │   ├── scripts/             cap-admin.cjs — drives the admin app's Capacitor CLI workaround
 │   └── src/
 │       ├── pages/           public, client, freelancer, admin, adminPanel
