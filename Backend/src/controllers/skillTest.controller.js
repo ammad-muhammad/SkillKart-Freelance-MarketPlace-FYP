@@ -5,7 +5,7 @@ const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError, NotFoundError } = require('../utils/apiError');
 const { syncFreelancerVerification } = require('../services/verification.service');
-const { isEasyMode } = require('../utils/skillTestDifficulty');
+const { isEasyMode, getProctorStrictness } = require('../utils/skillTestDifficulty');
 
 // Minimum per-skill score to be marked isVerified (unlocks applying to jobs/
 // gigs gated on that skill — see utils/skillGating.js). Deliberately low: it
@@ -154,9 +154,44 @@ const generateTest = asyncHandler(async (req, res) => {
  */
 // Violation events are client-reported (browser-integrity + camera proctoring
 // signals) — sanitize defensively rather than trusting the payload shape.
-const VIOLATION_TYPES = ['tab_switch', 'window_blur', 'fullscreen_exit', 'no_face', 'multiple_faces', 'looking_away', 'other'];
+// 'looking_away' is kept only so older attempts stay valid; new attempts
+// report head_turn / eyes_away / body_movement separately.
+const VIOLATION_TYPES = ['tab_switch', 'window_blur', 'fullscreen_exit', 'no_face', 'multiple_faces', 'head_turn', 'eyes_away', 'body_movement', 'looking_away', 'other'];
 const VIOLATION_SOURCES = ['browser', 'camera'];
-const MAX_VIOLATIONS = 50;
+const MAX_VIOLATIONS = 100;
+const MOVEMENT_KEYS = ['face_missing', 'extra_face', 'head_turn', 'eyes_away', 'body_movement'];
+
+// Live movement counters the candidate saw during the attempt (informational
+// — strikes are what cancel a test). Only known keys, non-negative ints.
+const sanitizeProctoringSummary = (summary) => {
+  const src = summary && typeof summary === 'object' ? summary : {};
+  const toCount = (v) => {
+    const n = Math.floor(Number(v));
+    return Number.isFinite(n) && n > 0 ? Math.min(n, 100000) : 0;
+  };
+  const movements = {};
+  for (const key of MOVEMENT_KEYS) movements[key] = toCount(src.movements?.[key]);
+  return {
+    // The server's own value at submit time, never the client's claim.
+    strictness: getProctorStrictness(),
+    movements,
+    cameraStrikes: toCount(src.cameraStrikes),
+    browserStrikes: toCount(src.browserStrikes),
+  };
+};
+
+/**
+ * GET /skill-tests/proctoring-config — the single proctoring knob
+ * (SKILL_TEST_PROCTOR_STRICTNESS, 0–1). The frontend derives every
+ * threshold from it, so changing difficulty needs only an env change +
+ * restart — no web or APK rebuild.
+ */
+const getProctoringConfig = asyncHandler(async (req, res) => {
+  sendSuccess(res, {
+    message: 'Proctoring config',
+    data: { strictness: getProctorStrictness() },
+  });
+});
 
 const sanitizeViolations = (violations) => {
   if (!Array.isArray(violations)) return [];
@@ -173,7 +208,7 @@ const sanitizeViolations = (violations) => {
 
 const submitTest = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { answers: finalAnswers, violations } = req.body;
+  const { answers: finalAnswers, violations, proctoring } = req.body;
 
   // Atomic claim — the per-question timer's auto-advance can call this
   // directly on timeout in the same window as a manual "Complete
@@ -262,6 +297,7 @@ const submitTest = asyncHandler(async (req, res) => {
   pendingTest.status = overallPassed ? 'completed' : 'failed';
   pendingTest.completedAt = new Date();
   pendingTest.violations = sanitizeViolations(violations);
+  pendingTest.proctoring = sanitizeProctoringSummary(proctoring);
   await pendingTest.save();
 
   // 2. Update Freelancer Profile skills with Level & Expiration Independently
@@ -325,6 +361,7 @@ const getTestHistory = asyncHandler(async (req, res) => {
 
 module.exports = {
   generateTest,
+  getProctoringConfig,
   submitTest,
   getTestHistory
 };

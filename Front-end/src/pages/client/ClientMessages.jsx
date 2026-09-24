@@ -6,6 +6,12 @@ import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
 import { MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import CustomOfferCard from '../../Components/common/CustomOffer/CustomOfferCard';
+import GigOrderModal from '../../Components/common/GigOrderModal/GigOrderModal';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
+import { offersAPI } from '../../api/offers';
+import { payGigOrderDeposit, apiErrorMessage } from '../../utils/gigOrderCheckout';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
@@ -13,7 +19,8 @@ import './ClientDashboard.css';
 
 const ClientMessages = () => {
   const { user } = useAuth();
-  const { showToast } = useClient();
+  const { showToast, fetchProfile } = useClient();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -22,6 +29,9 @@ const ClientMessages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [acceptTarget, setAcceptTarget] = useState(null); // offer being accepted
+  const [declineTarget, setDeclineTarget] = useState(null); // offer being declined
+  const [offerBusy, setOfferBusy] = useState(false);
   const chatFeedRef = useRef(null);
   const fileRef = useRef(null);
   // Tracks whether the user is currently pinned to the bottom of the feed.
@@ -120,6 +130,73 @@ const ClientMessages = () => {
       showToast(err.response?.data?.message || 'Could not send attachment. Please try again.', 'error');
     } finally {
       setUploading(false);
+    }
+  };
+
+  // After an order exists (just accepted, or accepted earlier but unpaid):
+  // pay its 50% deposit — wallet first, otherwise off to checkout.
+  const payForOrder = async (jobId, { justAccepted = false } = {}) => {
+    const pay = await payGigOrderDeposit(jobId);
+    if (pay.outcome === 'redirect') return true; // navigating to checkout
+    if (pay.outcome === 'wallet') {
+      showToast('Deposit paid from your wallet — the order has started! Track it in My Projects.', 'success');
+      fetchProfile?.();
+      navigate('/client/projects');
+      return true;
+    }
+    showToast(justAccepted
+      ? `Offer accepted, but the deposit wasn't paid: ${pay.message}`
+      : pay.message, 'error');
+    return false;
+  };
+
+  const submitAccept = async (requirements) => {
+    if (!acceptTarget) return;
+    setOfferBusy(true);
+    try {
+      const hasNotes = requirements.description || requirements.referenceLinks.length > 0;
+      const { data } = await offersAPI.accept(acceptTarget._id, hasNotes ? requirements : undefined);
+      const jobId = data?.data?.order?._id;
+      if (!jobId) {
+        showToast('Offer accepted. Pay the deposit from My Projects to start.', 'info');
+        setAcceptTarget(null);
+        return;
+      }
+      const left = await payForOrder(jobId, { justAccepted: true });
+      if (!left) {
+        setAcceptTarget(null);
+        if (activeChat) fetchMessages(activeChat._id);
+      }
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not accept the offer.'), 'error');
+      if (activeChat) fetchMessages(activeChat._id); // it may have expired/been withdrawn
+    } finally {
+      setOfferBusy(false);
+    }
+  };
+
+  const handlePayOffer = async (jobId) => {
+    setOfferBusy(true);
+    try {
+      const left = await payForOrder(jobId);
+      if (!left && activeChat) fetchMessages(activeChat._id);
+    } finally {
+      setOfferBusy(false);
+    }
+  };
+
+  const confirmDecline = async () => {
+    if (!declineTarget) return;
+    setOfferBusy(true);
+    try {
+      await offersAPI.decline(declineTarget._id);
+      showToast('Offer declined.', 'success');
+      setDeclineTarget(null);
+      if (activeChat) fetchMessages(activeChat._id);
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not decline the offer.'), 'error');
+    } finally {
+      setOfferBusy(false);
     }
   };
 
@@ -227,7 +304,21 @@ const ClientMessages = () => {
 
               {/* Messages Feed */}
               <div className="cl-chat-feed" ref={chatFeedRef} onScroll={handleFeedScroll}>
-                {messages.map(msg => (
+                {messages.map(msg => msg.type === 'custom_offer' ? (
+                  <div key={msg._id} className={`cl-msg co-msg${msg.sender._id === user._id ? ' cl-msg--own co-msg--own' : ''}`}>
+                    <CustomOfferCard
+                      offer={msg.customOfferId}
+                      viewerRole="client"
+                      busy={offerBusy}
+                      onAccept={setAcceptTarget}
+                      onDecline={setDeclineTarget}
+                      onPay={handlePayOffer}
+                    />
+                    <span className="co-msg__time">
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ) : (
                   <div key={msg._id} className={`cl-msg${msg.sender._id === user._id ? ' cl-msg--own' : ''}`}>
                     <div className="cl-msg__bubble">
                       {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
@@ -295,6 +386,33 @@ const ClientMessages = () => {
           )}
         </main>
       </div>
+
+
+      <GigOrderModal
+        open={!!acceptTarget}
+        mode="offer"
+        summary={{
+          title: acceptTarget?.title,
+          label: 'Custom offer',
+          price: acceptTarget?.price,
+          deliveryDays: acceptTarget?.deliveryDays,
+          revisions: acceptTarget?.revisions ?? 0,
+        }}
+        submitting={offerBusy}
+        onSubmit={submitAccept}
+        onClose={() => setAcceptTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!declineTarget}
+        title="Decline this offer?"
+        message={`The freelancer will be told you declined "${declineTarget?.title || ''}". You can keep chatting and they can send a new offer.`}
+        confirmLabel="Decline Offer"
+        cancelLabel="Keep Offer"
+        loading={offerBusy}
+        onConfirm={confirmDecline}
+        onClose={() => setDeclineTarget(null)}
+      />
 
       <style>{`
         .cl-messages-layout {

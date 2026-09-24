@@ -4,6 +4,7 @@ const TimeLog = require('../models/TimeLog');
 const Milestone = require('../models/Milestone');
 const Delivery = require('../models/Delivery');
 const Job = require('../models/Job');
+const CustomOffer = require('../models/CustomOffer');
 const { approveMilestone } = require('./milestone.service');
 const { drawDownForTimeLog } = require('./hourlyEscrow.service');
 
@@ -95,6 +96,35 @@ const autoReleaseStaleMilestones = async () => {
 };
 
 /**
+ * Housekeeping for gig orders + custom offers:
+ * - an unpaid ('pending_payment') gig order older than UNPAID_ORDER_TTL_DAYS
+ *   is cancelled — a Stripe checkout session only lives 24h, so nothing can
+ *   still complete it by then, and it would otherwise sit in the client's
+ *   list forever;
+ * - a pending custom offer past its expiresAt is marked 'expired' (reads
+ *   already treat it as expired; this just makes the stored status agree).
+ */
+const UNPAID_ORDER_TTL_DAYS = 7;
+const cleanupStaleOrdersAndOffers = async () => {
+  try {
+    const cutoff = new Date(Date.now() - UNPAID_ORDER_TTL_DAYS * 24 * 60 * 60 * 1000);
+    const orders = await Job.updateMany(
+      { source: 'gig', status: 'pending_payment', createdAt: { $lte: cutoff } },
+      { $set: { status: 'cancelled', cancelledBeforePayment: true } }
+    );
+    const offers = await CustomOffer.updateMany(
+      { status: 'pending', expiresAt: { $lte: new Date() } },
+      { $set: { status: 'expired' } }
+    );
+    if (orders.modifiedCount || offers.modifiedCount) {
+      console.log(`[CRON] Cancelled ${orders.modifiedCount} stale unpaid gig order(s), expired ${offers.modifiedCount} custom offer(s).`);
+    }
+  } catch (error) {
+    console.error('[CRON] Error cleaning up stale gig orders/offers:', error);
+  }
+};
+
+/**
  * Initialize cron jobs
  */
 const initCronJobs = () => {
@@ -109,10 +139,17 @@ const initCronJobs = () => {
     autoReleaseStaleMilestones();
   });
   console.log('[CRON] Milestone auto-release cron job scheduled.');
+
+  // Every hour at :30 (offset from the milestone job above)
+  cron.schedule('30 * * * *', () => {
+    cleanupStaleOrdersAndOffers();
+  });
+  console.log('[CRON] Unpaid gig order / expired offer cleanup scheduled.');
 };
 
 module.exports = {
   initCronJobs,
   generateWeeklyInvoices, // exported for testing
-  autoReleaseStaleMilestones // exported for testing
+  autoReleaseStaleMilestones, // exported for testing
+  cleanupStaleOrdersAndOffers // exported for testing
 };

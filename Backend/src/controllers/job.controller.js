@@ -199,6 +199,17 @@ const getJobById = asyncHandler(async (req, res) => {
 
   const jobObj = job.toObject();
   delete jobObj.proposals; // never expose the raw proposal id list either
+  // A gig order's requirements and delivery are private to the two parties
+  // (and admins) — this route is public for any non-draft job.
+  if (job.source === 'gig') {
+    const uid = req.user && String(req.user._id);
+    const isParty = uid && (uid === String(job.clientId?._id) || uid === String(job.hiredFreelancer?._id));
+    const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+    if (!isParty && !isAdmin) {
+      delete jobObj.requirements;
+      delete jobObj.delivery;
+    }
+  }
   jobObj.proposalsCount = proposalsCount;
   jobObj.hasApplied = !!myProposal;
   jobObj.myProposal = myProposal;
@@ -276,7 +287,13 @@ const getMyContracts = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
   const freelancerId = req.user._id;
 
-  const query = { hiredFreelancer: freelancerId };
+  // Gig orders the client hasn't paid for (or cancelled before paying) never
+  // reached the freelancer — they only go live once the deposit lands.
+  const query = {
+    hiredFreelancer: freelancerId,
+    status: { $ne: 'pending_payment' },
+    cancelledBeforePayment: { $ne: true },
+  };
   if (['project', 'gig'].includes(req.query.source)) query.source = req.query.source;
   const total = await Job.countDocuments(query);
   const jobs = await Job.find(query)
@@ -442,13 +459,20 @@ const deleteJob = asyncHandler(async (req, res) => {
   if (['in-progress', 'delivered', 'completed'].includes(job.status)) {
     throw new BadRequestError('You cannot delete a project that is in progress, delivered, or completed.');
   }
+  // An unpaid gig order may still have a Stripe checkout open — it has to go
+  // through cancel (which also expires that checkout) before it's deletable.
+  if (job.status === 'pending_payment') {
+    throw new BadRequestError('Cancel this unpaid order first, then you can delete it.');
+  }
   const activePayment = await Payment.findOne({ jobId: id, status: { $in: ['deposit_paid'] } }).select('_id');
   if (activePayment) {
     throw new BadRequestError('This project has funds in escrow and cannot be deleted.');
   }
 
-  // Cascade: remove this job's proposals so none are left orphaned.
+  // Cascade: remove this job's proposals so none are left orphaned, plus an
+  // unpaid escrow row a cancelled gig order may have left (no money moved).
   await Proposal.deleteMany({ jobId: id });
+  await Payment.deleteMany({ jobId: id, status: 'deposit_pending' });
   await Job.deleteOne({ _id: id });
 
   sendSuccess(res, {
@@ -553,7 +577,7 @@ const requestGigRevision = asyncHandler(async (req, res) => {
   if (String(job.clientId) !== String(req.user._id)) {
     throw new ForbiddenError('Only the client who ordered this gig can request a revision');
   }
-  if (!job.delivery) throw new BadRequestError('There is no delivery to request changes on yet');
+  if (!job.delivery?.submittedAt) throw new BadRequestError('There is no delivery to request changes on yet');
 
   job.delivery = undefined;
   await job.save();

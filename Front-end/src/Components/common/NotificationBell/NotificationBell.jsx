@@ -9,6 +9,7 @@ import './NotificationBell.css';
 const ICONS = {
   proposal_received: '📨', proposal_accepted: '🎉', proposal_rejected: '📋',
   gig_ordered: '🛍️', deposit_funded: '💰', work_delivered: '📦',
+  custom_offer_received: '📦', custom_offer_accepted: '🤝', custom_offer_declined: '✖️',
   revision_requested: '🔁', payment_released: '💸', project_completed: '✅',
   new_message: '💬',
 };

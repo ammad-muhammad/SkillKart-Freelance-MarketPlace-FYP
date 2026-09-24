@@ -706,3 +706,114 @@
   .st-rules-actions { flex-direction: column; align-items: stretch; }
   .st-rules-actions .st-btn-submit { width: 100%; justify-content: center; }
 }
+
+/* ═══════════════ LIVE PROCTORING PANEL ═══════════════
+   What the camera sees right now, every movement counted so far, and the
+   strike budgets that cancel the test (proctoring/ProctorPanel.jsx). */
+.st-pp {
+  width: 100%;
+  max-width: 900px;
+  margin: -16px auto 28px;
+  background: var(--color-white);
+  border: 1px solid rgba(183, 201, 226, 0.45);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(4, 46, 76, 0.06));
+}
+.st-pp__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.st-pp__status svg { flex-shrink: 0; }
+.st-pp__status--ok { background: var(--color-success-tint); color: var(--color-success); }
+.st-pp__status--warn { background: var(--color-warning-tint); color: var(--color-warning); }
+.st-pp__status--error { background: var(--color-error-tint); color: var(--color-error); }
+
+.st-pp__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.st-pp__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--color-text-mid);
+  background: var(--color-secondary);
+  border: 1px solid rgba(183, 201, 226, 0.45);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.st-pp__chip strong { color: var(--color-primary); font-variant-numeric: tabular-nums; }
+.st-pp__chip--hit { border-color: rgba(217, 119, 6, 0.35); }
+.st-pp__chip--live {
+  background: var(--color-warning-tint);
+  color: var(--color-warning);
+  border-color: rgba(217, 119, 6, 0.5);
+}
+
+.st-pp__meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+}
+.st-pp__browser { display: flex; align-items: center; gap: 6px; color: var(--color-text-mid); }
+.st-pp__meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-mid);
+}
+.st-pp__meter strong { font-variant-numeric: tabular-nums; color: var(--color-primary); }
+.st-pp__meter-bar {
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(183, 201, 226, 0.45);
+  overflow: hidden;
+}
+.st-pp__meter-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-success);
+  transition: width 0.3s ease;
+}
+.st-pp__meter--warn .st-pp__meter-bar > span { background: var(--color-warning); }
+.st-pp__meter--danger .st-pp__meter-bar > span { background: var(--color-error); }
+.st-pp__meter--danger strong { color: var(--color-error); }
+
+/* Camera thumbnail border mirrors the live status. */
+.st-camera-thumb--warn { border-color: var(--color-warning); }
+.st-camera-thumb--error { border-color: var(--color-error); }
+
+/* Rules-screen live face-check chip (proctoring/ProctorPanel.jsx PreviewStatus). */
+.st-pv--ok { background: rgba(5, 150, 105, 0.9); }
+.st-pv--warn { background: rgba(217, 119, 6, 0.92); }
+.st-pv--error { background: rgba(220, 38, 38, 0.9); }
+.st-strictness-note {
+  margin: -12px 0 18px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--color-text-mid);
+}
+.st-strictness-note strong { color: var(--color-primary); }
+
+@media (max-width: 600px) {
+  .st-pp { margin: -8px auto 20px; padding: 8px 10px; }
+  .st-pp__chip { font-size: 0.7rem; padding: 2px 8px; }
+  .st-pp__meter-bar { width: 60px; }
+}

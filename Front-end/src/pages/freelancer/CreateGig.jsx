@@ -11,6 +11,7 @@ import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModa
 import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import { validateFile } from '../../utils/uploadHelper';
+import { formatDeliveryTime } from '../../utils/gigOrderCheckout';
 import { aiAPI } from '../../api/ai';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import './FreelancerDashboard.css';
@@ -483,7 +484,7 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
               <p className="fl-review-pricing__tier-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>{icon} {label}</p>
               <p className="fl-review-pricing__tier-val">Rs. {gig.pricing[key].price || '—'}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
-                {gig.pricing[key].deliveryTime || '—'} days · {gig.pricing[key].revisions || '—'} revisions
+                {formatDeliveryTime(gig.pricing[key].deliveryTime) || '— days'} · {gig.pricing[key].revisions || '—'} revisions
               </p>
             </div>
           ))}

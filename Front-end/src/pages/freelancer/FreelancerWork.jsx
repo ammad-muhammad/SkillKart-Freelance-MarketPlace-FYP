@@ -17,6 +17,7 @@ import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import Button from '../../Components/common/Button/Button';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import OrderRequirements from '../../Components/common/OrderRequirements/OrderRequirements';
 import './FreelancerDashboard.css';
 
 const STAGES = {
@@ -70,7 +71,11 @@ export default function FreelancerWork() {
         jobsAPI.getMyHiredJobs({ source: 'gig', limit: 50 }).catch(() => null),
       ]);
       setContracts(Array.isArray(data?.data) ? data.data : []);
-      setGigOrders(Array.isArray(gigRes?.data?.data) ? gigRes.data.data : []);
+      // Only a real submission counts as delivered — older gig orders carry
+      // an empty `{ links: [] }` delivery stub (see Backend Job.js).
+      setGigOrders(Array.isArray(gigRes?.data?.data)
+        ? gigRes.data.data.map((g) => ({ ...g, delivery: g.delivery?.submittedAt ? g.delivery : null }))
+        : []);
     } catch { /* handled by the global error handler */ } finally { setLoading(false); }
   }, []);
 
@@ -506,7 +511,7 @@ export default function FreelancerWork() {
                     <div>
                       <h3 className="fl-contract__title">{g.title || 'Unknown Gig Order'}</h3>
                       <p className="fl-contract__meta">
-                        <ShoppingBag size={14} style={{ marginRight: '4px' }} /> Gig Order ({g.gigTier || 'basic'}) · {g.category || 'Unknown'}
+                        <ShoppingBag size={14} style={{ marginRight: '4px' }} /> {g.customOfferId ? 'Custom Offer' : `Gig Order (${g.gigTier || 'basic'})`}{g.category ? ` · ${g.category}` : ''}
                         {g.clientId && ` · ${g.clientId.firstName || ''} ${g.clientId.lastName || ''}`}
                       </p>
                     </div>
@@ -514,6 +519,14 @@ export default function FreelancerWork() {
                       {g.delivery && g.status !== 'completed' ? 'Delivered — awaiting review' : (STAGES[g.status]?.label || g.status)}
                     </StatusBadge>
                   </div>
+                  {/* Open by default while there's work to do — this is the brief. */}
+                  <OrderRequirements
+                    requirements={g.requirements}
+                    scope={g.customOfferId ? g.description : undefined}
+                    title={g.customOfferId ? 'Offer scope & client notes' : 'Client requirements'}
+                    defaultOpen={g.status === 'in-progress' && !g.delivery}
+                    emptyText={g.customOfferId ? 'No extra notes — work to the scope in your offer.' : undefined}
+                  />
                   <div className="fl-contract__money">
                     <span><PkrIcon size={14} /> Total: <strong>Rs. {g.payment?.totalAmount ?? g.budget?.min ?? '—'}</strong></span>
                     {escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}

@@ -412,28 +412,69 @@ for the full setup (Firebase project, service account credential,
 
 ### Skill-test face proctoring
 
-`src/pages/freelancer/useFaceProctor.js` runs `face-api.js` (TinyFaceDetector +
-tiny 68-point landmarks) against the live camera feed during the skill test —
-see [`CLAUDE.md`](../CLAUDE.md) / `SkillTest.jsx` for the full proctoring flow.
+Camera proctoring during the skill test uses **Google MediaPipe Face
+Landmarker** (`@mediapipe/tasks-vision`): 478 face landmarks, eye-direction
+scores (blendshapes) and a head-pose matrix per frame. It replaced
+`face-api.js`, which can't see pupils and never ran reliably in Android's
+WebView.
 
-> ⚠️ **Forces the tfjs `cpu` backend on the native app.** `face-api.js` bundles
-> an old `@tensorflow/tfjs-core` that auto-picks the `webgl` backend whenever a
-> WebGL context can be created — which Android's WebView usually *can* do, but
-> on many OEM WebView builds real shader compilation/execution for inference
-> then silently throws on every single detection tick. Before this was fixed,
-> that failure was swallowed with no fallback and no logging: the camera
-> preview worked fine (plain `getUserMedia`, unrelated to tfjs), but
-> `detectAllFaces()` never once completed, so no violation could ever be
-> counted and the test could never be cancelled — proctoring looked "on" but
-> did nothing, only on Android, never on web. `useFaceProctor.js` now forces
-> `cpu` up front on `isMobileApp()` (the tiny model is cheap enough for a phone
-> CPU every 600ms) and, as defense in depth, also self-heals by switching to
-> `cpu` if 5 detection ticks in a row throw for any reason, on any platform. If
-> detection is *still* failing 15 ticks in a row after that, it gives up and
-> surfaces a camera-style error rather than silently finishing the test
-> unproctored. All of this logs through `error` from `src/utils/logger.js`
-> (survives production builds) — check `adb logcat` / `chrome://inspect` if
-> proctoring ever looks inert again.
+| File | Role |
+|---|---|
+| `src/pages/freelancer/proctoring/strictness.js` | One strictness value (0–1) → every threshold |
+| `src/pages/freelancer/proctoring/analyzeFrame.js` | One frame → issues: `face_missing`, `extra_face`, `head_turn`, `eyes_away`, `body_movement` (pure, testable) |
+| `src/pages/freelancer/proctoring/faceEngine.js` | Lazy-loads MediaPipe; CPU on the native app, GPU→CPU fallback on web |
+| `src/pages/freelancer/useProctoring.js` | Camera + detection loop, live movement counters, strikes |
+| `src/pages/freelancer/proctoring/ProctorPanel.jsx` | Live panel during the test + face-check chip on the rules screen |
+| `src/pages/freelancer/useAntiCheat.js` | Tab switch / window blur / leaving full-screen |
+
+**One knob: `SKILL_TEST_PROCTOR_STRICTNESS` in `Backend/.env`** (0–1, default
+0.5; blank/invalid → 0.5). The page fetches it from
+`GET /skill-tests/proctoring-config` when the test opens, so changing it
+needs only a backend restart — no web or APK rebuild.
+
+| | 0 | 0.2 easy | 0.5 medium | 0.7 strict | 1 very strict |
+|---|---|---|---|---|---|
+| Camera checks | off (no camera needed) | on | on | on | on |
+| Frame checked every | — | 1.4 s | 0.9 s | 0.7 s | 0.4 s |
+| A problem must last … to be a strike | — | 5 s | 3 s | 2 s | 1 s |
+| Head turn allowed | — | 38° | 26° | 20° | 12° |
+| Off-centre allowed | — | 42% | 30% | 22% | 15% |
+| Camera strikes (per question) | — | 1.0 | 0.5 | 0.4 | 0.2 (min 2) |
+| Tab / window: cancelled on the | never | 5th | 3rd | 3rd | 2nd |
+
+Values in between interpolate smoothly (0.35 is a little stricter than 0.3).
+A **movement** is counted every time an issue starts and shown live to the
+candidate; only an issue that *continues* past the hold time becomes a
+**strike**. The candidate gets a final warning before the last strike, and
+running out cancels the attempt. The level used, the movement counters and
+the strike totals are saved on the `SkillTestAttempt` (`proctoring`).
+
+**Assets are same-origin, never a CDN** (the APK must work offline).
+`vite.config.js`'s `mediapipeAssets` plugin serves them in dev and copies them
+into the build (not `--mode admin`): the WebAssembly runtime from
+`node_modules/@mediapipe/tasks-vision/wasm` (SIMD + no-SIMD builds) and the
+model from `vendor/mediapipe/face_landmarker.task` (committed, 3.7 MB).
+
+> ⚠️ **Android WebView quirks this handles:**
+> - The native app starts MediaPipe on the **CPU** delegate. A WebView can
+>   usually create a GPU context and then fail real inference silently —
+>   exactly how the old face-api.js proctoring stayed "on" but never
+>   detected anything on Android.
+> - `getUserMedia` asks for `facingMode: 'user'` — some WebViews otherwise
+>   open the back camera.
+> - The WebView can **freeze the camera feed for 3–4 s** (measured on the
+>   emulator, real camera and test feed alike). Frames are tracked with
+>   `requestVideoFrameCallback`: while the feed is frozen the strike clock
+>   pauses; a freeze longer than 10 s during the test counts as a missing
+>   face, so covering/freezing the camera can't dodge proctoring.
+> - "Start Test" stays disabled until the camera is streaming **and** a frame
+>   has actually been analysed, so a device where detection can't run finds
+>   out on the rules screen, never silently mid-test.
+>
+> Failures log through `error` from `src/utils/logger.js` (survives
+> production builds) — check `chrome://inspect` / `adb logcat` if
+> proctoring ever looks inert. MediaPipe itself prints one harmless
+> `INFO: Created TensorFlow Lite XNNPACK delegate for CPU.` as a console error.
 
 ### Photo upload: camera / device picker
 

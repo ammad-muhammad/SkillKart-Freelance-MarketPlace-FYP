@@ -10,6 +10,10 @@ import { jobsAPI } from '../../api/jobs';
 import { paymentsAPI } from '../../api/payments';
 import { contractsAPI } from '../../api/contracts';
 import { deliveriesAPI } from '../../api/deliveries';
+import { gigsAPI } from '../../api/gigs';
+import { payGigOrderDeposit, apiErrorMessage } from '../../utils/gigOrderCheckout';
+import OrderRequirements from '../../Components/common/OrderRequirements/OrderRequirements';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import Modal from '../../Components/common/Modal/Modal';
 import TagInput from '../../Components/common/TagInput/TagInput';
@@ -27,13 +31,25 @@ import './ClientDashboard.css';
 const PROJECT_STATUS_TONE = {
   open: 'success',
   draft: 'neutral',
+  pending_payment: 'warning',
   'in-progress': 'info',
+  cancelled: 'neutral',
   completed: 'success',
   expired: 'warning',
   closed: 'neutral',
 };
 
-const STATUS_FILTERS = ['all', 'draft', 'open', 'in-progress', 'delivered', 'completed', 'expired', 'closed'];
+const STATUS_FILTERS = ['all', 'draft', 'open', 'pending_payment', 'in-progress', 'delivered', 'completed', 'expired', 'closed', 'cancelled'];
+const FILTER_LABELS = { all: 'All', 'in-progress': 'In Progress', draft: 'Drafts', pending_payment: 'Awaiting Payment' };
+
+// A gig order (package or accepted custom offer) whose 50% deposit hasn't
+// been paid yet. Orders from before 'pending_payment' existed sit in
+// 'in-progress' with no paid deposit, so those count too.
+const isAwaitingDeposit = (proj) =>
+  proj.source === 'gig' && (
+    proj.status === 'pending_payment' ||
+    (proj.status === 'in-progress' && !proj.delivery && (!proj.payment || proj.payment.status === 'deposit_pending'))
+  );
 const EXPERIENCE_OPTIONS = ['Entry', 'Intermediate', 'Expert'];
 
 // `<input type="date">` needs YYYY-MM-DD; the API stores an ISO timestamp.
@@ -63,6 +79,9 @@ const ClientProjects = () => {
   const [disputeModal, setDisputeModal] = useState(null); // proj
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeDesc, setDisputeDesc] = useState('');
+  const [payingOrderId, setPayingOrderId] = useState(null);
+  const [cancelOrderModal, setCancelOrderModal] = useState(null); // proj
+  const [cancellingOrder, setCancellingOrder] = useState(false);
   const { user } = useAuth(); // Need user to check requestedBy
 
   const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter);
@@ -99,7 +118,7 @@ const ClientProjects = () => {
         deliveryId: delivery?._id,
         title: proj.title,
         isCompleted: proj.status === 'completed',
-        delivery: isGig ? job.delivery : delivery,
+        delivery: isGig ? (job.delivery?.submittedAt ? job.delivery : null) : delivery,
         revisionCount: revisionCount,
         freelancerName,
         isGig,
@@ -187,6 +206,37 @@ const ClientProjects = () => {
       showToast(err.response?.data?.message || 'Could not fund this milestone.', 'error');
     } finally {
       setActioning(false);
+    }
+  };
+
+  // Pay (or retry paying) the 50% deposit on a gig order that's still
+  // waiting for it — e.g. the client abandoned the Stripe checkout.
+  const payOrderDeposit = async (proj) => {
+    if (payingOrderId) return;
+    setPayingOrderId(proj.id);
+    const pay = await payGigOrderDeposit(proj.id);
+    if (pay.outcome === 'redirect') return; // navigating to checkout
+    setPayingOrderId(null);
+    if (pay.outcome === 'wallet') {
+      showToast('Deposit paid from your wallet — the freelancer can start now!', 'success');
+      await fetchProfile();
+    } else {
+      showToast(pay.message, 'error');
+    }
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!cancelOrderModal) return;
+    setCancellingOrder(true);
+    try {
+      await gigsAPI.cancelOrder(cancelOrderModal.id);
+      showToast('Order cancelled. You were not charged.', 'success');
+      setCancelOrderModal(null);
+      await fetchProfile();
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not cancel this order.'), 'error');
+    } finally {
+      setCancellingOrder(false);
     }
   };
 
@@ -369,7 +419,7 @@ const ClientProjects = () => {
               className={`cl-btn cl-btn--sm${filter === f ? ' cl-btn--primary' : ' cl-btn--ghost'}`}
               onClick={() => setFilter(f)}
             >
-              {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : f === 'draft' ? 'Drafts' : f.charAt(0).toUpperCase() + f.slice(1)} ({count})
+              {FILTER_LABELS[f] || f.charAt(0).toUpperCase() + f.slice(1)} ({count})
             </button>
           );
         })}
@@ -404,10 +454,14 @@ const ClientProjects = () => {
                       ? { background: 'rgba(4, 46, 76, 0.08)', color: 'var(--color-primary)' }
                       : { background: 'var(--color-secondary)', color: 'var(--color-text-mid)' }}
                   >
-                    {proj.source === 'gig' ? <span><ShoppingBag size={14} style={{ marginRight: '6px' }} /> Gig Order</span> : <span><FileEdit size={14} style={{ marginRight: '6px' }} /> Custom Project</span>}
+                    {proj.source === 'gig'
+                      ? <span><ShoppingBag size={14} style={{ marginRight: '6px' }} /> {proj.customOfferId ? 'Custom Offer' : 'Gig Order'}</span>
+                      : <span><FileEdit size={14} style={{ marginRight: '6px' }} /> Custom Project</span>}
                   </span>
-                  <StatusBadge tone={proj.status === 'in-progress' && proj.contractStatus === 'paused' ? 'warning' : (PROJECT_STATUS_TONE[proj.status] || 'neutral')}>
-                    {proj.status === 'open' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> Open</span> :
+                  <StatusBadge tone={isAwaitingDeposit(proj) || (proj.status === 'in-progress' && proj.contractStatus === 'paused') ? 'warning' : (PROJECT_STATUS_TONE[proj.status] || 'neutral')}>
+                    {isAwaitingDeposit(proj) ? <span><CreditCard size={14} style={{ marginRight: '6px' }} /> Awaiting payment</span> :
+                     proj.status === 'cancelled' ? <span><XCircle size={14} style={{ marginRight: '6px' }} /> Cancelled</span> :
+                     proj.status === 'open' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> Open</span> :
                      proj.status === 'draft' ? <span><Folder size={14} style={{ marginRight: '6px' }} /> Draft</span> :
                      proj.status === 'in-progress' && proj.contractStatus === 'paused' ? <span><Pause size={14} style={{ marginRight: '6px' }} /> Paused</span> :
                      proj.status === 'in-progress' && (proj.contractStatus === 'delivered' || (proj.source === 'gig' && proj.delivery)) ? <span><Package size={14} style={{ marginRight: '6px' }} /> Delivered — review needed</span> :
@@ -421,6 +475,32 @@ const ClientProjects = () => {
               </div>
 
               <p className="cl-proj-card__summary">{proj.summary}</p>
+
+              {proj.source === 'gig' && (
+                <OrderRequirements
+                  title={proj.customOfferId ? 'Offer scope & your notes' : 'Your requirements'}
+                  requirements={proj.requirements}
+                  scope={proj.customOfferId ? proj.description : undefined}
+                  emptyText={proj.customOfferId ? 'No extra notes added.' : 'No requirements were added to this order — message the freelancer with the details.'}
+                />
+              )}
+
+              {isAwaitingDeposit(proj) && (
+                <div style={{ background: 'var(--color-warning-tint)', border: '1px solid rgba(217, 119, 6, 0.25)', padding: '0.85rem 1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                  <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', color: 'var(--color-text-dark)' }}>
+                    <CreditCard size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
+                    This order hasn't started yet — pay the 50% deposit (<strong>Rs. {Math.round((Number(proj.budget?.min) || 0) / 2 * 100) / 100}</strong>) and the freelancer will be notified to begin.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <Button size="sm" icon={<CreditCard size={14} />} loading={payingOrderId === proj.id} disabled={!!payingOrderId && payingOrderId !== proj.id} onClick={() => payOrderDeposit(proj)}>
+                      Pay Deposit
+                    </Button>
+                    <Button variant="ghost" size="sm" icon={<XCircle size={14} />} disabled={payingOrderId === proj.id} onClick={() => setCancelOrderModal(proj)}>
+                      Cancel Order
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Skills */}
               {Array.isArray(proj.skills) && proj.skills.length > 0 && (
@@ -648,7 +728,7 @@ const ClientProjects = () => {
                     {['draft', 'open'].includes(proj.status) && (
                       <button className="cl-btn cl-btn--ghost cl-btn--sm" onClick={() => openEdit(proj)}><Edit3 size={14} style={{ marginRight: '6px' }} /> Edit</button>
                     )}
-                    {!['in-progress', 'delivered', 'completed'].includes(proj.status) && (
+                    {!['pending_payment', 'in-progress', 'delivered', 'completed'].includes(proj.status) && (
                       <button
                         className="cl-btn cl-btn--danger cl-btn--sm"
                         onClick={() => setDeleteModal(proj.id)}
@@ -663,6 +743,17 @@ const ClientProjects = () => {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!cancelOrderModal}
+        title="Cancel this order?"
+        message={`"${cancelOrderModal?.title || ''}" hasn't been paid for, so nothing will be charged. You can order again any time.`}
+        confirmLabel="Cancel Order"
+        cancelLabel="Keep Order"
+        loading={cancellingOrder}
+        onConfirm={confirmCancelOrder}
+        onClose={() => setCancelOrderModal(null)}
+      />
 
       {/* Edit Modal — full project editing */}
       <Modal

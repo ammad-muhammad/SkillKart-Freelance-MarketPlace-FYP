@@ -6,36 +6,7 @@ const { asyncHandler } = require('../utils/helpers');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/apiError');
 const { uploadJobAttachment: uploadAttachmentToCloud } = require('../services/upload.service');
 const notifications = require('../services/notification.service');
-
-// A bare run of digits (order numbers, timestamps, invoice IDs) is NOT a phone
-// number on its own — only treat a digit run as one when it's both a
-// realistic phone length (7-15 digits) AND actually formatted like a phone
-// number (a leading "+" or at least one separator between digits). Without
-// the formatting check, something like a 13-digit timestamp would otherwise
-// get masked and count as a contact-info violation.
-const PHONE_CANDIDATE_REGEX = () => /\+?\d[\d\s\-.()]{5,18}\d/g;
-
-function isLikelyPhoneNumber(candidate) {
-  const digitsOnly = candidate.replace(/\D/g, '');
-  const hasSeparator = /[\s\-.()]/.test(candidate);
-  const startsWithPlus = candidate.trim().startsWith('+');
-  return digitsOnly.length >= 7 && digitsOnly.length <= 15 && (hasSeparator || startsWithPlus);
-}
-
-function matchesLikelyPhoneNumber(text) {
-  const regex = PHONE_CANDIDATE_REGEX();
-  let m;
-  while ((m = regex.exec(text)) !== null) {
-    if (isLikelyPhoneNumber(m[0])) return true;
-  }
-  return false;
-}
-
-function maskLikelyPhoneNumbers(text) {
-  return text.replace(PHONE_CANDIDATE_REGEX(), (candidate) =>
-    isLikelyPhoneNumber(candidate) ? '*** [CONTACT INFO BLOCKED] ***' : candidate
-  );
-}
+const { containsContactInfo, maskContactInfo } = require('../utils/contactInfo');
 
 /**
  * Get all conversations for current user
@@ -68,9 +39,18 @@ const getMessages = asyncHandler(async (req, res) => {
   
   if (!conversation) throw new NotFoundError('Conversation not found');
   
+  // Offer cards need the offer's live state (and its order's, once
+  // accepted) on every poll, so status changes show up without a reload.
   const messages = await Message.find({ conversationId })
     .sort({ createdAt: 1 })
-    .populate('sender', 'firstName lastName profilePicture');
+    .populate('sender', 'firstName lastName profilePicture')
+    .populate({
+      path: 'customOfferId',
+      populate: [
+        { path: 'jobId', select: 'status cancelledBeforePayment' },
+        { path: 'gigId', select: 'title' },
+      ],
+    });
     
   // Mark as read logic
   await Message.updateMany(
@@ -108,19 +88,11 @@ const sendMessage = asyncHandler(async (req, res) => {
   let modifiedContent = content || '';
   let contactInfoDetected = false;
 
-  if (modifiedContent) {
-    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-    // A bare run of 7+ digits (order numbers, timestamps, invoice IDs...) used
-    // to be flagged as a phone number on its own — matchesLikelyPhoneNumber()
-    // only accepts a digit run in the realistic phone range (7-15 digits) AND
-    // only when it's actually formatted like a phone number (a leading "+" or
-    // at least one separator among the digits), so a contiguous ID/timestamp
-    // with no separators no longer trips it.
-    if (emailRegex.test(modifiedContent) || matchesLikelyPhoneNumber(modifiedContent)) {
-      contactInfoDetected = true;
-      modifiedContent = modifiedContent.replace(emailRegex, '*** [CONTACT INFO BLOCKED] ***');
-      modifiedContent = maskLikelyPhoneNumbers(modifiedContent);
-    }
+  // See utils/contactInfo.js for what counts (a bare ID/timestamp digit run
+  // with no phone-style formatting doesn't).
+  if (modifiedContent && containsContactInfo(modifiedContent)) {
+    contactInfoDetected = true;
+    modifiedContent = maskContactInfo(modifiedContent);
   }
 
   if (contactInfoDetected) {

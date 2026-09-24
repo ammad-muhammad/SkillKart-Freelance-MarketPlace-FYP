@@ -96,7 +96,7 @@ const getDisputeById = async (req, res) => {
     const contract = await Contract.findById(req.params.contractId)
       .populate('clientId', 'email firstName lastName profilePicture')
       .populate('freelancerId', 'email firstName lastName profilePicture')
-      .populate('jobId', 'title budget source gigId gigTier')
+      .populate('jobId', 'title budget source gigId gigTier customOfferId requirements')
       .lean();
 
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });

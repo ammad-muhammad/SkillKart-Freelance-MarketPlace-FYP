@@ -4,7 +4,13 @@ import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
-import { MessageSquare, FileText, Loader2, Paperclip, Send } from 'lucide-react';
+import { MessageSquare, FileText, Loader2, Paperclip, Send, Package } from 'lucide-react';
+import CustomOfferCard from '../../Components/common/CustomOffer/CustomOfferCard';
+import SendOfferModal from '../../Components/common/CustomOffer/SendOfferModal';
+import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
+import Button from '../../Components/common/Button/Button';
+import { offersAPI } from '../../api/offers';
+import { apiErrorMessage } from '../../utils/gigOrderCheckout';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
@@ -21,6 +27,9 @@ const FreelancerMessages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [withdrawTarget, setWithdrawTarget] = useState(null); // offer
+  const [offerBusy, setOfferBusy] = useState(false);
   const chatFeedRef = useRef(null);
   const fileRef = useRef(null);
   // Tracks whether the user is currently pinned to the bottom of the feed.
@@ -123,6 +132,21 @@ const FreelancerMessages = () => {
     }
   };
 
+  const confirmWithdraw = async () => {
+    if (!withdrawTarget) return;
+    setOfferBusy(true);
+    try {
+      await offersAPI.withdraw(withdrawTarget._id);
+      showToast('Offer withdrawn.', 'success');
+      setWithdrawTarget(null);
+      if (activeChat) fetchMessages(activeChat._id);
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not withdraw the offer.'), 'error');
+    } finally {
+      setOfferBusy(false);
+    }
+  };
+
   const filteredConversations = conversations.filter(c => {
     if (!search.trim()) return true;
     const other = c.participants.find(p => p._id !== user._id);
@@ -220,6 +244,18 @@ const FreelancerMessages = () => {
                           {isOnline ? 'Active' : 'Offline'}
                         </span>
                       </div>
+                      {otherUser?.role === 'client' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="co-header-btn"
+                          icon={<Package size={14} />}
+                          onClick={() => setShowOfferModal(true)}
+                          title="Send a custom offer"
+                        >
+                          Send Custom Offer
+                        </Button>
+                      )}
                     </>
                   );
                 })()}
@@ -227,7 +263,19 @@ const FreelancerMessages = () => {
 
               {/* Messages Feed */}
               <div className="fl-chat-feed" ref={chatFeedRef} onScroll={handleFeedScroll}>
-                {messages.map(msg => (
+                {messages.map(msg => msg.type === 'custom_offer' ? (
+                  <div key={msg._id} className={`fl-msg co-msg${msg.sender._id === user._id ? ' fl-msg--own co-msg--own' : ''}`}>
+                    <CustomOfferCard
+                      offer={msg.customOfferId}
+                      viewerRole="freelancer"
+                      busy={offerBusy}
+                      onWithdraw={setWithdrawTarget}
+                    />
+                    <span className="co-msg__time">
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ) : (
                   <div key={msg._id} className={`fl-msg${msg.sender._id === user._id ? ' fl-msg--own' : ''}`}>
                     <div className="fl-msg__bubble">
                       {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
@@ -293,6 +341,29 @@ const FreelancerMessages = () => {
           )}
         </main>
       </div>
+
+      <SendOfferModal
+        open={showOfferModal}
+        conversationId={activeChat?._id}
+        clientName={(() => {
+          const other = activeChat?.participants?.find(p => p._id !== user._id);
+          return other ? `${other.firstName || ''} ${other.lastName || ''}`.trim() : '';
+        })()}
+        showToast={showToast}
+        onSent={() => activeChat && fetchMessages(activeChat._id)}
+        onClose={() => setShowOfferModal(false)}
+      />
+
+      <ConfirmDialog
+        open={!!withdrawTarget}
+        title="Withdraw this offer?"
+        message={`"${withdrawTarget?.title || ''}" will no longer be available for the client to accept. You can send a new one any time.`}
+        confirmLabel="Withdraw"
+        cancelLabel="Keep Offer"
+        loading={offerBusy}
+        onConfirm={confirmWithdraw}
+        onClose={() => setWithdrawTarget(null)}
+      />
 
       <style>{`
         .fl-messages-layout {

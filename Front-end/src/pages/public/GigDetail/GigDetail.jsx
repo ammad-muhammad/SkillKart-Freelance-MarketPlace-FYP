@@ -2,7 +2,6 @@ import Loader from '../../../Components/common/Loader/Loader';
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { gigsAPI } from '../../../api/gigs';
-import { paymentsAPI } from '../../../api/payments';
 import { messagesAPI } from '../../../api/messages';
 import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
@@ -12,7 +11,8 @@ import {
   CheckCircle2, Tag, MessageCircle, User
 } from 'lucide-react';
 import { safeToast as toast } from '../../../utils/safeToast';
-import ConfirmDialog from '../../../Components/common/ConfirmDialog/ConfirmDialog';
+import GigOrderModal from '../../../Components/common/GigOrderModal/GigOrderModal';
+import { payGigOrderDeposit, apiErrorMessage, formatDeliveryTime } from '../../../utils/gigOrderCheckout';
 import BackButton from '../../../Components/common/BackButton/BackButton';
 import { isMobileApp } from '../../../utils/platform';
 import './GigDetail.css';
@@ -28,7 +28,7 @@ export default function GigDetail() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [ordering, setOrdering] = useState(null); // tier key being ordered
-  const [orderConfirmTier, setOrderConfirmTier] = useState(null); // tier key pending confirmation
+  const [orderConfirmTier, setOrderConfirmTier] = useState(null); // tier key whose requirements modal is open
 
   useEffect(() => {
     let active = true;
@@ -92,33 +92,38 @@ export default function GigDetail() {
     setOrderConfirmTier(tier);
   };
 
-  const proceedWithOrder = async () => {
+  // Requirements are collected by GigOrderModal first (mandatory) — the order
+  // is created in 'pending_payment' carrying them, then we go straight to the
+  // 50% deposit (wallet, or Stripe checkout). It only reaches the freelancer
+  // once that deposit is paid.
+  const proceedWithOrder = async (requirements) => {
     const tier = orderConfirmTier;
-    setOrderConfirmTier(null);
     setOrdering(tier);
+    let jobId;
     try {
-      // Create the order (a job under the hood), then go straight to the 50%
-      // deposit checkout — same escrow flow as hiring on a posted project.
-      const orderRes = await gigsAPI.orderGig(id, tier);
-      const jobId = orderRes.data?.data?.order?._id;
-      if (!jobId) { toast.error('Could not create the order. Please try again.'); return; }
-
-      const payRes = await paymentsAPI.startDeposit(jobId);
-      if (payRes.data?.data?.walletPaid) {
-        toast.success('Order placed and 50% deposit funded successfully from your wallet balance! 🚀');
-        navigate('/client/projects');
-        return;
-      }
-      const url = payRes.data?.data?.checkoutUrl;
-      if (url) { window.location.assign(url); return; }
-      toast.info('Order created. You can fund the deposit from My Projects.');
-      navigate('/client/projects');
+      const orderRes = await gigsAPI.orderGig(id, tier, requirements);
+      jobId = orderRes.data?.data?.order?._id;
     } catch (err) {
-      // The global interceptor already toasts the backend message.
-      if (!err.response) toast.error('Could not place the order.');
-    } finally {
+      toast.error(apiErrorMessage(err, 'Could not place the order.'));
       setOrdering(null);
+      return;
     }
+    if (!jobId) {
+      toast.error('Could not create the order. Please try again.');
+      setOrdering(null);
+      return;
+    }
+
+    const pay = await payGigOrderDeposit(jobId);
+    if (pay.outcome === 'redirect') return; // navigating to checkout
+    setOrderConfirmTier(null);
+    setOrdering(null);
+    if (pay.outcome === 'wallet') {
+      toast.success('Order placed and 50% deposit paid from your wallet! The freelancer has your requirements. 🚀');
+    } else {
+      toast.warning(`Your order is saved, but the deposit wasn't paid: ${pay.message} You can pay or cancel it from My Projects.`);
+    }
+    navigate('/client/projects');
   };
 
   if (loading) {
@@ -266,7 +271,7 @@ export default function GigDetail() {
                   {!isOwnGig && (
                     <div style={{ background: '#f0f9ff', padding: '0.85rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', borderLeft: '3px solid #0ea5e9' }}>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: '#0369a1', lineHeight: '1.4' }}>
-                        <strong>Tip:</strong> It's highly recommended to <button style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 'bold', cursor: 'pointer', padding: 0, textDecoration: 'underline' }} onClick={handleContact}>contact the freelancer</button> to discuss your requirements before placing an order.
+                        <strong>Tip:</strong> It's highly recommended to <button style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 'bold', cursor: 'pointer', padding: 0, textDecoration: 'underline' }} onClick={handleContact}>contact the freelancer</button> to discuss your requirements before placing an order — they can send you a custom offer if no package fits.
                       </p>
                     </div>
                   )}
@@ -278,7 +283,7 @@ export default function GigDetail() {
                       </div>
                       <div className="gd-tier__meta">
                         {tier.deliveryTime != null && (
-                          <span><Clock size={14} /> {tier.deliveryTime} day{Number(tier.deliveryTime) === 1 ? '' : 's'}</span>
+                          <span><Clock size={14} /> {formatDeliveryTime(tier.deliveryTime)}</span>
                         )}
                         {tier.revisions != null && (
                           <span><RefreshCw size={14} /> {tier.revisions} revision{Number(tier.revisions) === 1 ? '' : 's'}</span>
@@ -344,13 +349,22 @@ export default function GigDetail() {
         </div>
       </div>
 
-      <ConfirmDialog
+      <GigOrderModal
         open={!!orderConfirmTier}
-        title="Ready to order?"
-        message="Have you contacted the freelancer to discuss your project requirements? It's highly recommended to do so before placing an order."
-        confirmLabel="Proceed to checkout"
-        danger={false}
-        onConfirm={proceedWithOrder}
+        mode="package"
+        summary={(() => {
+          const t = gig.pricing?.[orderConfirmTier] || {};
+          return {
+            title: gig.title,
+            label: `${TIER_LABELS[orderConfirmTier] || ''} package`,
+            price: t.price,
+            deliveryDays: t.deliveryTime,
+            revisions: t.revisions,
+          };
+        })()}
+        submitting={!!ordering}
+        onSubmit={proceedWithOrder}
+        onContact={() => { setOrderConfirmTier(null); handleContact(); }}
         onClose={() => setOrderConfirmTier(null)}
       />
 

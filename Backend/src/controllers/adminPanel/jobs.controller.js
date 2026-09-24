@@ -68,6 +68,7 @@ const getJobById = async (req, res) => {
     const job = await Job.findById(req.params.id)
       .populate('clientId', 'email firstName lastName')
       .populate('hiredFreelancer', 'email firstName lastName')
+      .populate('customOfferId', 'title price deliveryDays revisions status createdAt')
       .lean();
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
     return res.status(200).json({ success: true, job });

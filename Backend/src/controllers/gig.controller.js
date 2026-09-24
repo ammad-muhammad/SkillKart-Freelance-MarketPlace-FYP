@@ -6,6 +6,7 @@ const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/api
 const cloudinaryService = require('../services/upload.service');
 const { checkSkillGate } = require('../utils/skillGating');
 const notifications = require('../services/notification.service');
+const { buildRequirements, createGigOrderJob, cancelUnpaidGigOrder } = require('../services/gigOrder.service');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -251,10 +252,11 @@ const getGigById = asyncHandler(async (req, res) => {
 
 /**
  * Order a gig (client buys a pricing tier).
- * Creates a Job linked to the gig (source='gig') that enters the SAME escrow +
- * delivery lifecycle as a hired project: hiredFreelancer = the gig owner,
- * clientId = the buyer, status = in-progress, budget = the chosen tier price.
- * The client then funds the 50% deposit via the existing payment flow.
+ * Creates a Job linked to the gig (source='gig') in 'pending_payment', carrying
+ * the client's requirements (what they actually want built — mandatory, see
+ * validators/gigOrder.validator.js). The client then funds the 50% deposit via
+ * the existing payment flow; only then does the order go 'in-progress' and
+ * reach the freelancer (gigOrder.service.js's activateGigOrder).
  */
 const createGigOrder = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -277,44 +279,68 @@ const createGigOrder = asyncHandler(async (req, res) => {
     throw new BadRequestError(`The "${tier}" package isn’t available for this gig`);
   }
 
-  // Debounce a double-click/accidental double-submit — no idempotency key
-  // comes from the client, so treat an identical order (same buyer, gig,
-  // tier) placed moments ago as the same click rather than a real second
-  // purchase, and just return it instead of creating a duplicate Job.
-  const recentDuplicate = await Job.findOne({
-    clientId: req.user._id,
-    gigId: gig._id,
-    gigTier: tier,
-    createdAt: { $gte: new Date(Date.now() - 30 * 1000) }
-  }).sort({ createdAt: -1 });
-  if (recentDuplicate) {
-    return sendCreated(res, 'Gig ordered successfully. Fund the deposit to start the work.', { order: recentDuplicate });
+  const requirements = buildRequirements(req.body.requirements);
+  if (!requirements?.description) {
+    throw new BadRequestError('Tell the freelancer what you need before placing the order');
   }
 
-  // Create the work item (a Job) representing this order.
-  const order = await Job.create({
-    title: `${gig.title} — ${tier.charAt(0).toUpperCase() + tier.slice(1)} package`,
-    description: gig.fullDescription || gig.shortDescription || gig.title,
+  // An unpaid order for this exact package is resumed instead of duplicated —
+  // covers a double-click as well as coming back after abandoning checkout.
+  // The latest requirements win. If the freelancer has repriced the package
+  // since, the stale order is cancelled instead (its escrow row may already
+  // be priced at the old amount) and a fresh one is created below.
+  const unpaid = await Job.findOne({
     clientId: req.user._id,
-    hiredFreelancer: gig.freelancerId,
-    budget: { min: price, max: price, type: 'fixed' },
-    skills: Array.isArray(gig.skills) ? gig.skills : [],
-    category: gig.category,
-    subcategory: gig.subcategory,
-    duration: tierData.deliveryTime || '',
-    status: 'in-progress',
-    source: 'gig',
     gigId: gig._id,
     gigTier: tier,
+    status: 'pending_payment',
+  }).sort({ createdAt: -1 });
+  if (unpaid && Number(unpaid.budget?.min) === price) {
+    unpaid.requirements = requirements;
+    await unpaid.save();
+    return sendCreated(res, 'Order updated. Fund the deposit to start the work.', { order: unpaid, resumed: true });
+  }
+  if (unpaid) {
+    await cancelUnpaidGigOrder(unpaid, req.user._id);
+  }
+
+  const order = await createGigOrderJob({
+    clientId: req.user._id,
+    freelancerId: gig.freelancerId,
+    title: `${gig.title} — ${tier.charAt(0).toUpperCase() + tier.slice(1)} package`,
+    description: gig.fullDescription || gig.shortDescription || gig.title,
+    price,
+    duration: tierData.deliveryTime,
+    skills: gig.skills,
+    category: gig.category,
+    subcategory: gig.subcategory,
+    gigId: gig._id,
+    gigTier: tier,
+    requirements,
   });
 
-  // Increment gig orders
-  await Gig.findByIdAndUpdate(gig._id, { $inc: { 'stats.orders': 1 } });
+  // Gig stats + the freelancer's "new order" notification happen when the
+  // deposit lands (activateGigOrder), not here.
+  sendCreated(res, 'Order created. Fund the deposit to start the work.', { order });
+});
 
-  // Notify the freelancer (gig owner) of the new order.
-  notifications.onGigOrdered(gig.freelancerId, { job: order, gigId: gig._id });
+/**
+ * Cancel a gig order the client hasn't paid for yet (POST /gigs/orders/:jobId/cancel).
+ */
+const cancelGigOrder = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.jobId);
+  if (!job) throw new NotFoundError('Order not found');
 
-  sendCreated(res, 'Gig ordered successfully. Fund the deposit to start the work.', { order });
+  const cancelled = await cancelUnpaidGigOrder(job, req.user._id);
+
+  // A custom-offer order was already announced to the freelancer when the
+  // offer was accepted — tell them it's off. A package order never reached
+  // them (that only happens once the deposit is paid), so stay quiet.
+  if (cancelled.customOfferId && cancelled.hiredFreelancer) {
+    notifications.onGigOrderCancelled(cancelled.hiredFreelancer, { job: cancelled });
+  }
+
+  sendSuccess(res, { message: 'Order cancelled. You were not charged.', data: { order: cancelled } });
 });
 
 /**
@@ -361,6 +387,14 @@ const deleteGig = asyncHandler(async (req, res) => {
   if (activeOrder) {
     throw new BadRequestError('This gig has an active order and cannot be deleted until it is completed or cancelled.');
   }
+
+  // Unpaid orders for this gig can't go ahead once it's gone — cancel them
+  // (nothing was charged) rather than leave the client a Pay button for a
+  // gig that no longer exists.
+  await Job.updateMany(
+    { gigId: id, status: 'pending_payment' },
+    { $set: { status: 'cancelled', cancelledBeforePayment: true } }
+  );
 
   await gig.deleteOne();
 
@@ -412,6 +446,7 @@ module.exports = {
   listGigs,
   getGigById,
   createGigOrder,
+  cancelGigOrder,
   listMyGigs,
   deleteGig,
   toggleStatus,

@@ -15,10 +15,17 @@ export const gigsAPI = {
   getGig: (id) =>
     client.get(`/gigs/${id}`),
 
-  // Order a gig tier (client) → creates a job that enters the escrow flow.
+  // Order a gig tier (client) → creates a 'pending_payment' job carrying the
+  // client's requirements; it goes live once the 50% deposit is paid.
   // tier: 'basic' | 'standard' | 'premium'
-  orderGig: (id, tier) =>
-    client.post(`/gigs/${id}/order`, { tier }),
+  // requirements: { description (min 30 chars), referenceLinks?: string[] }
+  // Caller (GigDetail.jsx) shows its own toast — suppress the global one.
+  orderGig: (id, tier, requirements) =>
+    client.post(`/gigs/${id}/order`, { tier, requirements }, { suppressErrorToast: true }),
+
+  // Cancel a gig order that hasn't been paid for yet (client).
+  cancelOrder: (jobId) =>
+    client.post(`/gigs/orders/${jobId}/cancel`, undefined, { suppressErrorToast: true }),
 
   // List my own gigs (Freelancer Dashboard)
   listMyGigs: (params) => 

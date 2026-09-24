@@ -3,6 +3,7 @@ const Payment = require('../models/Payment');
 const Job = require('../models/Job');
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
+const { activateGigOrder } = require('../services/gigOrder.service');
 const ClientProfile = require('../models/ClientProfile');
 
 const router = express.Router();
@@ -78,7 +79,8 @@ router.post('/', async (req, res) => {
         );
         if (claimedDeposit) {
           const job = await Job.findById(jobId);
-          if (job && job.hiredFreelancer) {
+          const activated = job ? await activateGigOrder(job) : false;
+          if (!activated && job && job.hiredFreelancer) {
             notifications.onDepositFunded(job.hiredFreelancer, { job });
           }
         }

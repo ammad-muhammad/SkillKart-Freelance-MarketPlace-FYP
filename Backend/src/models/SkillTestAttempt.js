@@ -30,11 +30,27 @@ const skillTestAttemptSchema = new mongoose.Schema({
   // affect scoring (a serious violation aborts the attempt client-side
   // before it ever reaches submission).
   violations: [{
-    type: { type: String, enum: ['tab_switch', 'window_blur', 'fullscreen_exit', 'no_face', 'multiple_faces', 'looking_away', 'other'] },
+    // 'looking_away' = older attempts (before head/eyes/body were split up).
+    type: { type: String, enum: ['tab_switch', 'window_blur', 'fullscreen_exit', 'no_face', 'multiple_faces', 'head_turn', 'eyes_away', 'body_movement', 'looking_away', 'other'] },
     source: { type: String, enum: ['browser', 'camera'] },
     reason: String,
     at: Date
-  }]
+  }],
+
+  // How strict proctoring was for this attempt (SKILL_TEST_PROCTOR_STRICTNESS
+  // at submit time) plus the live movement counters the candidate saw.
+  proctoring: {
+    strictness: Number,
+    movements: {
+      face_missing: Number,
+      extra_face: Number,
+      head_turn: Number,
+      eyes_away: Number,
+      body_movement: Number
+    },
+    cameraStrikes: Number,
+    browserStrikes: Number
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('SkillTestAttempt', skillTestAttemptSchema);

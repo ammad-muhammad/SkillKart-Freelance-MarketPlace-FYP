@@ -159,9 +159,12 @@ const updateClientProfileValidation = [
     .trim()
     .isLength({ max: 100 }).withMessage('Industry must not exceed 100 characters'),
 
+  // allow_underscores: the profile page's own check (`new URL()`) accepts
+  // hosts like `my_company.com`, so the server must too or the save fails
+  // with an error the form never predicted.
   body('website')
     .optional({ values: 'falsy' })
-    .isURL().withMessage('Invalid website URL'),
+    .isURL({ allow_underscores: true }).withMessage('Invalid website URL'),
 
   body('description')
     .optional()
@@ -270,8 +273,10 @@ const updateClientProfileValidation = [
     .trim()
     .isLength({ max: 200 }).withMessage('LinkedIn URL too long'),
 
+  // An untouched select on the profile page is sent as '' — treat that as
+  // "not provided" rather than an invalid value (same for urgency below).
   body('isNewToHiring')
-    .optional()
+    .optional({ values: 'falsy' })
     .isIn(['Yes', 'No'])
     .withMessage('Invalid hiring experience value'),
 
@@ -331,7 +336,7 @@ const updateClientProfileValidation = [
     .isInt({ min: 1, max: 10 }).withMessage('Technical understanding must be between 1 and 10'),
 
   body('urgency')
-    .optional()
+    .optional({ values: 'falsy' })
     .isIn(['Immediate', 'Exploring', 'Flexible'])
     .withMessage('Invalid urgency value'),
 

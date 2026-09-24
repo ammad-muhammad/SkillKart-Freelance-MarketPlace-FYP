@@ -11,6 +11,7 @@ const { createCheckoutSession, verifyCheckoutSession, createConnectAccount, crea
 const { finalizeJobCompletion } = require('../services/jobCompletion.service');
 const notifications = require('../services/notification.service');
 const { fundMilestoneFromWallet } = require('../services/milestone.service');
+const { activateGigOrder } = require('../services/gigOrder.service');
 const { estimateWeeklyLockAmount, lockHourlyEscrow, drawDownForTimeLog } = require('../services/hourlyEscrow.service');
 const { PLATFORM_FEE_RATE: FEE_RATE, getPlatformFeeRate, getWithdrawalMinAmount, round2 } = require('../utils/constants');
 
@@ -84,6 +85,11 @@ const startDeposit = asyncHandler(async (req, res) => {
   if (!job) throw new NotFoundError('Job not found');
   assertClientOwns(job, req.user._id);
   if (!job.hiredFreelancer) throw new BadRequestError('No freelancer is hired for this project yet');
+  // Only a live-but-unfunded job (or a gig order still waiting on its
+  // deposit) can take a deposit — never a cancelled/completed one.
+  if (!['pending_payment', 'in-progress'].includes(job.status)) {
+    throw new BadRequestError(`A deposit can't be paid on a "${job.status}" order.`);
+  }
 
   if (job.contractId) {
     const Contract = require('../models/Contract');
@@ -116,7 +122,10 @@ const startDeposit = asyncHandler(async (req, res) => {
       await Contract.findByIdAndUpdate(payment.contractId, { paymentStatus: 'funded' });
     }
 
-    if (job.hiredFreelancer) {
+    // A gig order goes live now; its activation sends the freelancer the
+    // "new order" notification, so only fall back to the generic one otherwise.
+    const activated = await activateGigOrder(job);
+    if (!activated && job.hiredFreelancer) {
       notifications.onDepositFunded(job.hiredFreelancer, { job });
     }
 
@@ -158,7 +167,9 @@ const startFinal = asyncHandler(async (req, res) => {
   if (payment.milestoneId) throw new BadRequestError('This project uses milestone-based escrow — use the milestone endpoints instead.');
   if (payment.status === 'deposit_pending') throw new BadRequestError('Pay the 50% deposit before the final payment');
   if (payment.status === 'released') throw new BadRequestError('This project has already been fully paid');
-  if (!job.delivery) throw new BadRequestError('Wait for the freelancer to submit delivery before releasing the final payment');
+  // submittedAt, not just `delivery` — older gig orders carry an empty
+  // `{ links: [] }` stub that's truthy without any delivery (see Job.js).
+  if (!job.delivery?.submittedAt) throw new BadRequestError('Wait for the freelancer to submit delivery before releasing the final payment');
 
   // Atomic conditional debit — a plain read-then-write here let two concurrent
   // requests (double-click, network retry) both pass the balance check before
@@ -264,8 +275,10 @@ const confirmPayment = asyncHandler(async (req, res) => {
         await Contract.findByIdAndUpdate(payment.contractId, { paymentStatus: 'funded' });
       }
 
-      // Tell the freelancer they can start/deliver now.
-      if (job.hiredFreelancer) notifications.onDepositFunded(job.hiredFreelancer, { job });
+      // Tell the freelancer they can start/deliver now (a gig order's
+      // activation sends its own, richer "new order" notification).
+      const activated = await activateGigOrder(job);
+      if (!activated && job.hiredFreelancer) notifications.onDepositFunded(job.hiredFreelancer, { job });
     }
     return sendSuccess(res, { message: 'Deposit confirmed. Work can begin.', data: { payment } });
   }

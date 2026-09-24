@@ -18,6 +18,7 @@ import { JOB_CATEGORIES } from '../../constants/jobCategories';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
 import { safeToast as toast } from '../../utils/safeToast';
 import { downloadFile } from '../../utils/downloadFile';
+import { openExternal } from '../../utils/externalLink';
 
 // ─── Shared bits ───────────────────────────────────────────────
 const BackButton = ({ to, label }) => {
@@ -1020,7 +1021,12 @@ export const JobDetailPage = () => {
           <InfoRow label="Budget">{fmt.budget(job.budget)}</InfoRow>
           <InfoRow label="Experience">{job.experienceLevel}</InfoRow>
           <InfoRow label="Duration">{job.duration}</InfoRow>
-          <InfoRow label="Source">{job.source}{job.gigTier ? ` · ${job.gigTier}` : ''}</InfoRow>
+          <InfoRow label="Source">{job.source}{job.gigTier ? ` · ${job.gigTier}` : ''}{job.customOfferId ? ' · custom offer' : ''}</InfoRow>
+          {job.customOfferId && (
+            <InfoRow label="Custom offer">
+              {job.customOfferId.title} — {fmt.currency(job.customOfferId.price)}, {job.customOfferId.deliveryDays} day(s), {job.customOfferId.revisions ?? 0} revision(s)
+            </InfoRow>
+          )}
           <InfoRow label="Deadline">{fmt.date(job.deadline)}</InfoRow>
           <InfoRow label="Posted">{fmt.datetime(job.createdAt)}</InfoRow>
         </Card>
@@ -1050,6 +1056,25 @@ export const JobDetailPage = () => {
               <AttachmentGrid urls={job.attachments} />
             </div>
           )}
+          {job.source === 'gig' && (
+            <div style={{ paddingTop: 12 }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--ap-text-secondary)', marginBottom: 6 }}>
+                Client requirements{job.requirements?.submittedAt ? ` (${fmt.datetime(job.requirements.submittedAt)})` : ''}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--ap-text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                {job.requirements?.description || 'No requirements provided.'}
+              </div>
+              {job.requirements?.referenceLinks?.length > 0 && (
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: '0.82rem' }}>
+                  {job.requirements.referenceLinks.map((l) => (
+                    <li key={l}>
+                      <a href={l} onClick={(e) => { e.preventDefault(); openExternal(l); }} style={{ color: 'var(--ap-text-link)', wordBreak: 'break-all' }}>{l}</a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -1070,7 +1095,7 @@ export const JobDetailPage = () => {
 };
 
 // ─── Edit Job modal (full field coverage) ──────────────────────
-const JOB_STATUSES = ['draft', 'open', 'in-progress', 'completed', 'cancelled', 'closed', 'expired'];
+const JOB_STATUSES = ['draft', 'open', 'pending_payment', 'in-progress', 'completed', 'cancelled', 'closed', 'expired'];
 const JOB_EXPERIENCE = ['entry', 'intermediate', 'expert'];
 const JOB_DURATIONS = ['Less than 1 month', '1-3 months', '3-6 months', 'More than 6 months'];
 

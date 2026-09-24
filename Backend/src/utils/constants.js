@@ -197,6 +197,7 @@ const CATEGORY_GROUPS = {
 const JOB_STATUS = {
   DRAFT: 'draft',
   OPEN: 'open',
+  PENDING_PAYMENT: 'pending_payment', // gig orders only, until the deposit lands
   IN_PROGRESS: 'in-progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
