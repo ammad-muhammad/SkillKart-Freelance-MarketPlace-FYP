@@ -180,8 +180,13 @@ const deleteJobValidation = [
 const listJobsValidation = [
   query('status')
     .optional()
-    .isIn(Object.values(JOB_STATUS))
+    .isIn([...Object.values(JOB_STATUS), 'all'])
     .withMessage('Invalid status filter'),
+
+  query('clientId')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid client ID'),
 
   query('category')
     .optional()

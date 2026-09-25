@@ -40,7 +40,7 @@ export const error = (...args) => {
 export const isDevMode = isDev;
 
 // Check backend health
-export const checkBackend = async (backendUrl = import.meta.env.VITE_API_URL.replace('/api/v1','')) => {
+export const checkBackend = async (backendUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace('/api/v1','')) => {
   if (!isDev) return false;
 
   try {

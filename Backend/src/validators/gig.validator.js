@@ -10,6 +10,16 @@ const pricingTierValidation = (tier, required) => {
     (required ? priceChain.notEmpty().withMessage(`${tier} price is required`) : priceChain.optional({ values: 'falsy' }))
       .isFloat({ gt: 0 }).withMessage(`${tier} price must be greater than 0`),
 
+    body(`pricing.${tier}.title`)
+      .optional()
+      .trim()
+      .isLength({ max: 120 }).withMessage(`${tier} title too long`),
+
+    body(`pricing.${tier}.description`)
+      .optional()
+      .trim()
+      .isLength({ max: 600 }).withMessage(`${tier} description too long`),
+
     body(`pricing.${tier}.deliveryTime`)
       .optional()
       .trim()

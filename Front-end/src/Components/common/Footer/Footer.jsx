@@ -152,7 +152,7 @@ export default function Footer() {
                 start earning today.
               </p>
               <div className="footer__badges">
-                <div className="footer__badge"><Trophy size={13} /> FYP Project 2025</div>
+                <div className="footer__badge"><Trophy size={13} /> FYP Project 2026</div>
                 <div className="footer__badge"><Bot size={13} /> AI-Powered</div>
               </div>
             </div>

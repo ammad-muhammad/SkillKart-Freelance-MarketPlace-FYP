@@ -85,15 +85,15 @@ export const FreelancerProvider = ({ children }) => {
   const { user, isAuthenticated, refreshUser, loading: authLoading } = useAuth();
   const fetchGenerationRef = useRef(0);
 
-  const fetchFreelancerData = useCallback(async (refreshUserFirst = false, attempt = 0) => {
+  const fetchFreelancerData = useCallback(async (refreshUserFirst = false, attempt = 0, silent = false) => {
     const generation = ++fetchGenerationRef.current;
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     try {
       if (!tokenManager.getAccessToken() && attempt < 4) {
         await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
         if (generation !== fetchGenerationRef.current) return;
-        return fetchFreelancerData(refreshUserFirst, attempt + 1);
+        return fetchFreelancerData(refreshUserFirst, attempt + 1, silent);
       }
 
       let activeUser = user;
@@ -106,7 +106,7 @@ export const FreelancerProvider = ({ children }) => {
         if (attempt < 4) {
           await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
           if (generation !== fetchGenerationRef.current) return;
-          return fetchFreelancerData(refreshUserFirst, attempt + 1);
+          return fetchFreelancerData(refreshUserFirst, attempt + 1, silent);
         }
         return;
       }
@@ -189,11 +189,11 @@ export const FreelancerProvider = ({ children }) => {
       if (attempt < 2 && generation === fetchGenerationRef.current) {
         await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
         if (generation === fetchGenerationRef.current) {
-          return fetchFreelancerData(refreshUserFirst, attempt + 1);
+          return fetchFreelancerData(refreshUserFirst, attempt + 1, silent);
         }
       }
     } finally {
-      if (generation === fetchGenerationRef.current) {
+      if (generation === fetchGenerationRef.current && !silent) {
         setLoading(false);
       }
     }

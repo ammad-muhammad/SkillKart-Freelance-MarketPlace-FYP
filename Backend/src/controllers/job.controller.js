@@ -152,7 +152,7 @@ const getJobById = asyncHandler(async (req, res) => {
   // The UI only ever needs a count and "have I already applied", both
   // computed below without exposing any other freelancer's proposal data.
   const job = await Job.findById(id)
-    .populate('clientId', 'firstName lastName profilePicture')
+    .populate('clientId', 'firstName lastName profilePicture createdAt email')
     .populate('hiredFreelancer', 'firstName lastName profilePicture');
 
   if (!job) {
@@ -183,17 +183,46 @@ const getJobById = asyncHandler(async (req, res) => {
   }
 
   // Enrich with the poster's real client stats (rating, verification, and a live
-  // count of jobs they've posted) so the "About the Client" card is dynamic.
+  // count of jobs they've posted) and company/profile details for the "About the Client" card.
   let clientStats = null;
+  let clientDetails = null;
   if (job.clientId?._id) {
     const [profile, jobsPosted] = await Promise.all([
-      ClientProfile.findOne({ userId: job.clientId._id }).select('rating verificationStatus totalProjectsPosted').lean(),
-      Job.countDocuments({ clientId: job.clientId._id }),
+      ClientProfile.findOne({ userId: job.clientId._id })
+        .select('companyName companyType role industry website location timezone isNewToHiring socialLinks rating verificationStatus totalProjectsPosted hiringFrequency createdAt')
+        .lean(),
+      Job.countDocuments({ clientId: job.clientId._id, source: { $ne: 'gig' }, status: { $ne: 'draft' } }),
     ]);
     clientStats = {
       rating: Number(profile?.rating) || 0,
       verified: profile?.verificationStatus === 'verified',
       jobsPosted: jobsPosted,
+    };
+    clientDetails = {
+      companyName: profile?.companyName || null,
+      companyType: profile?.companyType || null,
+      role: profile?.role || null,
+      industry: Array.isArray(profile?.industry)
+        ? profile.industry.filter(Boolean)
+        : (profile?.industry ? [profile.industry] : []),
+      website: profile?.website || profile?.socialLinks?.website || null,
+      location: (profile?.location?.country || profile?.location?.city)
+        ? [profile?.location?.city, profile?.location?.country].filter(Boolean).join(', ')
+        : (profile?.timezone || null),
+      timezone: profile?.timezone || null,
+      isNewToHiring: profile?.isNewToHiring || null,
+      hiringExperience: profile?.isNewToHiring === 'Yes'
+        ? 'Fresh Client (First time hiring)'
+        : profile?.isNewToHiring === 'No'
+          ? 'Experienced (Hired before)'
+          : (profile?.hiringFrequency || null),
+      socialLinks: {
+        linkedin: profile?.socialLinks?.linkedin || null,
+        twitter: profile?.socialLinks?.twitter || null,
+        website: profile?.socialLinks?.website || profile?.website || null
+      },
+      memberSince: job.clientId?.createdAt || profile?.createdAt || null,
+      email: job.clientId?.email || null,
     };
   }
 
@@ -214,6 +243,7 @@ const getJobById = asyncHandler(async (req, res) => {
   jobObj.hasApplied = !!myProposal;
   jobObj.myProposal = myProposal;
   jobObj.clientStats = clientStats;
+  jobObj.clientDetails = clientDetails;
 
   sendSuccess(res, {
     message: 'Job retrieved successfully',
@@ -239,8 +269,23 @@ const listJobs = asyncHandler(async (req, res) => {
 
   await syncJobStatuses(clientId ? { clientId } : {});
 
-  const query = { status: 'open' }; // Strictly only open jobs for public
-  if (clientId) query.clientId = clientId;
+  const query = {};
+  if (clientId) {
+    let targetUserId = clientId;
+    const clientProfile = await ClientProfile.findById(clientId).select('userId').lean();
+    if (clientProfile?.userId) {
+      targetUserId = clientProfile.userId;
+    }
+    query.clientId = targetUserId;
+    if (req.query.status && req.query.status !== 'all') {
+      query.status = req.query.status;
+    } else {
+      query.status = { $ne: 'draft' };
+    }
+  } else {
+    query.status = 'open'; // Strictly only open jobs for public marketplace
+  }
+  query.source = { $ne: 'gig' }; // Exclude gig purchases from job listings
   if (experienceLevel) query.experienceLevel = experienceLevel;
   if (budgetType) query['budget.type'] = budgetType;
 
@@ -273,9 +318,17 @@ const listJobs = asyncHandler(async (req, res) => {
     .populate('clientId', 'firstName lastName profilePicture')
     .skip(skip)
     .limit(limit)
-    .sort({ [sortField]: sortDir });
+    .sort({ [sortField]: sortDir })
+    .lean();
 
-  sendPaginated(res, { data: jobs, page, limit, total });
+  const formattedJobs = jobs.map(j => {
+    const jobObj = { ...j };
+    jobObj.proposalsCount = Array.isArray(j.proposals) ? j.proposals.length : 0;
+    delete jobObj.proposals;
+    return jobObj;
+  });
+
+  sendPaginated(res, { data: formattedJobs, page, limit, total });
 });
 
 /**
@@ -577,13 +630,20 @@ const requestGigRevision = asyncHandler(async (req, res) => {
   if (String(job.clientId) !== String(req.user._id)) {
     throw new ForbiddenError('Only the client who ordered this gig can request a revision');
   }
-  if (!job.delivery?.submittedAt) throw new BadRequestError('There is no delivery to request changes on yet');
+  const cleanNote = stripHtml(note.trim());
+  const revisionData = {
+    note: cleanNote,
+    requestedAt: new Date()
+  };
 
+  if (!job.revisions) job.revisions = [];
+  job.revisions.push(revisionData);
+  job.lastRevision = revisionData;
   job.delivery = undefined;
   await job.save();
 
   if (job.hiredFreelancer) {
-    notifications.onRevisionRequested(job.hiredFreelancer, { job });
+    notifications.onRevisionRequested(job.hiredFreelancer, { job, note: cleanNote });
   }
 
   sendSuccess(res, { message: 'Revision requested. The freelancer will make changes.', data: { job } });

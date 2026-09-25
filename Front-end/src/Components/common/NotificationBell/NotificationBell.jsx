@@ -38,8 +38,13 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
 
-  // Only show inside the authenticated client/freelancer areas.
-  const inDashboard = location.pathname.startsWith('/client') || location.pathname.startsWith('/freelancer');
+  // Only show inside the authenticated client/freelancer dashboards.
+  // Must NOT show on public website pages (/clients/:id, /freelancers/:id) or onboarding.
+  const inDashboard = 
+    !location.pathname.startsWith('/clients') &&
+    !location.pathname.startsWith('/freelancers') &&
+    !location.pathname.includes('/onboarding') &&
+    (location.pathname.startsWith('/client/') || location.pathname.startsWith('/freelancer/'));
   const notifPath = user?.role === 'freelancer' ? '/freelancer/notifications' : '/client/notifications';
   // Redundant (and, on mobile, visually overlapping) on the full notifications
   // page itself — you're already looking at the list this button opens.

@@ -243,8 +243,16 @@ const getGigById = asyncHandler(async (req, res) => {
   
   if (responseData.freelancerId) {
     const FreelancerProfile = require('../models/FreelancerProfile');
-    const profile = await FreelancerProfile.findOne({ userId: responseData.freelancerId._id }).select('rating').lean();
-    responseData.freelancerId.rating = profile ? (profile.rating || 0) : 0;
+    const profile = await FreelancerProfile.findOne({ userId: responseData.freelancerId._id })
+      .select('rating title bio hourlyRate completedProjects skills profileCompletion')
+      .lean();
+    if (profile) {
+      responseData.freelancerId.rating = profile.rating || 0;
+      responseData.freelancerId.title = profile.title || '';
+      responseData.freelancerId.bio = profile.bio || '';
+      responseData.freelancerId.completedProjects = profile.completedProjects || 0;
+      responseData.freelancerId.hourlyRate = profile.hourlyRate || null;
+    }
   }
 
   sendSuccess(res, { message: 'Gig retrieved', data: { gig: responseData } });

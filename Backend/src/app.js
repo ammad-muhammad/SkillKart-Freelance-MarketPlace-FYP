@@ -188,6 +188,7 @@ const testimonialRoutes = require('./routes/testimonial.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const customOfferRoutes = require('./routes/customOffer.routes');
+const reviewRoutes = require('./routes/review.routes');
 
 // Mount routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
@@ -213,6 +214,7 @@ app.use(`${API_PREFIX}/testimonials`, testimonialRoutes);
 app.use(`${API_PREFIX}/payments`, paymentRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/offers`, customOfferRoutes);
+app.use(`${API_PREFIX}/reviews`, reviewRoutes);
 
 // ========================
 // Admin Panel Routes (Isolated)

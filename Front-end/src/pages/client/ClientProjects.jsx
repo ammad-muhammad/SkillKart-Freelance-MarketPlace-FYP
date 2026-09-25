@@ -2,7 +2,7 @@ import Loader from '../../Components/common/Loader/Loader';
 import { FileEdit, ShoppingBag, Circle, Folder, Package, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, Calendar, Send, CreditCard, Star, Users, MessageSquare, Edit3, Trash2, Check, AlertCircle, Layers, Wallet, Pause } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -84,6 +84,25 @@ const ClientProjects = () => {
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const { user } = useAuth(); // Need user to check requestedBy
 
+  // Auto-refresh client projects in real-time every 4s when no modal is open
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (
+        document.visibilityState === 'visible' &&
+        !reviewing &&
+        !editingProject &&
+        !deleteModal &&
+        !showReviewModal &&
+        !endRequestModal &&
+        !disputeModal &&
+        !cancelOrderModal
+      ) {
+        fetchProfile(false, 0, true);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [fetchProfile, reviewing, editingProject, deleteModal, showReviewModal, endRequestModal, disputeModal, cancelOrderModal]);
+
   const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter);
 
   const openReview = async (proj) => {
@@ -112,6 +131,10 @@ const ClientProjects = () => {
       // Gig orders never get a Contract/Delivery doc (legacy 50/50 Stripe
       // flow) — their delivery lives directly on the job instead.
       const isGig = job.source === 'gig' && !contract;
+      const gigRevisionCount = Array.isArray(job.revisions) && job.revisions.length > 0
+        ? job.revisions.length
+        : (job.lastRevision ? 1 : 0);
+
       setReviewing({
         id: projectId,
         contractId: contract?._id,
@@ -119,7 +142,7 @@ const ClientProjects = () => {
         title: proj.title,
         isCompleted: proj.status === 'completed',
         delivery: isGig ? (job.delivery?.submittedAt ? job.delivery : null) : delivery,
-        revisionCount: revisionCount,
+        revisionCount: isGig ? gigRevisionCount : revisionCount,
         freelancerName,
         isGig,
       });
@@ -458,14 +481,14 @@ const ClientProjects = () => {
                       ? <span><ShoppingBag size={14} style={{ marginRight: '6px' }} /> {proj.customOfferId ? 'Custom Offer' : 'Gig Order'}</span>
                       : <span><FileEdit size={14} style={{ marginRight: '6px' }} /> Custom Project</span>}
                   </span>
-                  <StatusBadge tone={isAwaitingDeposit(proj) || (proj.status === 'in-progress' && proj.contractStatus === 'paused') ? 'warning' : (PROJECT_STATUS_TONE[proj.status] || 'neutral')}>
+                  <StatusBadge tone={isAwaitingDeposit(proj) || (proj.status === 'in-progress' && (proj.contractStatus === 'paused' || proj.contractStatus === 'in_revision' || (proj.source === 'gig' && !proj.delivery && proj.lastRevision?.note))) ? 'warning' : (PROJECT_STATUS_TONE[proj.status] || 'neutral')}>
                     {isAwaitingDeposit(proj) ? <span><CreditCard size={14} style={{ marginRight: '6px' }} /> Awaiting payment</span> :
                      proj.status === 'cancelled' ? <span><XCircle size={14} style={{ marginRight: '6px' }} /> Cancelled</span> :
                      proj.status === 'open' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> Open</span> :
                      proj.status === 'draft' ? <span><Folder size={14} style={{ marginRight: '6px' }} /> Draft</span> :
                      proj.status === 'in-progress' && proj.contractStatus === 'paused' ? <span><Pause size={14} style={{ marginRight: '6px' }} /> Paused</span> :
                      proj.status === 'in-progress' && (proj.contractStatus === 'delivered' || (proj.source === 'gig' && proj.delivery)) ? <span><Package size={14} style={{ marginRight: '6px' }} /> Delivered — review needed</span> :
-                     proj.status === 'in-progress' && proj.contractStatus === 'in_revision' ? <span><RefreshCw size={14} style={{ marginRight: '6px' }} /> In Revision</span> :
+                     proj.status === 'in-progress' && (proj.contractStatus === 'in_revision' || (proj.source === 'gig' && !proj.delivery && proj.lastRevision?.note)) ? <span><RefreshCw size={14} style={{ marginRight: '6px' }} /> In Revision</span> :
                      proj.status === 'in-progress' ? <span><Circle fill="currentColor" size={10} style={{ marginRight: '6px' }} /> In Progress</span> :
                      proj.status === 'completed' ? <span><CheckCircle size={14} style={{ marginRight: '6px' }} /> Completed</span> :
                      proj.status === 'expired' ? <span>⏰ Expired</span> :
@@ -483,6 +506,31 @@ const ClientProjects = () => {
                   scope={proj.customOfferId ? proj.description : undefined}
                   emptyText={proj.customOfferId ? 'No extra notes added.' : 'No requirements were added to this order — message the freelancer with the details.'}
                 />
+              )}
+
+              {proj.source === 'gig' && !proj.delivery && proj.lastRevision?.note && proj.status === 'in-progress' && (
+                <div style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '0.5rem',
+                  marginBottom: '1rem',
+                  fontSize: '0.88rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem', color: '#b45309', fontWeight: 600 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <RefreshCw size={14} /> Revision Requested — Waiting for Freelancer
+                    </span>
+                    {proj.lastRevision.requestedAt && (
+                      <span style={{ fontSize: '0.78rem', color: '#92400e', fontWeight: 400 }}>
+                        {new Date(proj.lastRevision.requestedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, color: '#78350f', whiteSpace: 'pre-wrap', lineHeight: 1.4, background: 'rgba(255, 255, 255, 0.7)', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid rgba(253, 230, 138, 0.8)' }}>
+                    {proj.lastRevision.note}
+                  </p>
+                </div>
               )}
 
               {isAwaitingDeposit(proj) && (
