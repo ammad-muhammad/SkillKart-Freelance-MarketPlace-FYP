@@ -99,15 +99,15 @@ export const ClientProvider = ({ children }) => {
   const { user, isAuthenticated, refreshUser, loading: authLoading } = useAuth();
   const fetchGenerationRef = useRef(0);
 
-  const fetchProfile = useCallback(async (refreshUserFirst = false, attempt = 0) => {
+  const fetchProfile = useCallback(async (refreshUserFirst = false, attempt = 0, silent = false) => {
     const generation = ++fetchGenerationRef.current;
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     try {
       if (!tokenManager.getAccessToken() && attempt < 4) {
         await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
         if (generation !== fetchGenerationRef.current) return;
-        return fetchProfile(refreshUserFirst, attempt + 1);
+        return fetchProfile(refreshUserFirst, attempt + 1, silent);
       }
 
       let activeUser = user;
@@ -120,7 +120,7 @@ export const ClientProvider = ({ children }) => {
         if (attempt < 4) {
           await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
           if (generation !== fetchGenerationRef.current) return;
-          return fetchProfile(refreshUserFirst, attempt + 1);
+          return fetchProfile(refreshUserFirst, attempt + 1, silent);
         }
         return;
       }
@@ -224,6 +224,8 @@ export const ClientProvider = ({ children }) => {
         // Only a real submission counts — older gig orders carry an empty
         // `{ links: [] }` delivery stub (see Backend Job.js).
         delivery: j.delivery?.submittedAt ? j.delivery : null,
+        lastRevision: j.lastRevision || null,
+        revisions: j.revisions || [],
         milestones: j.milestones || [],
         currentMilestone: j.currentMilestone || null,
         contractId: j.contractId?._id || null,
@@ -261,11 +263,11 @@ export const ClientProvider = ({ children }) => {
       if (attempt < 2 && generation === fetchGenerationRef.current) {
         await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
         if (generation === fetchGenerationRef.current) {
-          return fetchProfile(refreshUserFirst, attempt + 1);
+          return fetchProfile(refreshUserFirst, attempt + 1, silent);
         }
       }
     } finally {
-      if (generation === fetchGenerationRef.current) {
+      if (generation === fetchGenerationRef.current && !silent) {
         setLoading(false);
       }
     }

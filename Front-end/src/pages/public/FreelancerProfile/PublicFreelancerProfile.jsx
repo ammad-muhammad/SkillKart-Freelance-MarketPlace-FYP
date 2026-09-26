@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -10,6 +10,7 @@ import {
 
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import ReviewSection from '../../../Components/common/ReviewSection/ReviewSection';
 import { freelancersAPI } from '../../../api/freelancers';
 import { messagesAPI } from '../../../api/messages';
 import { gigsAPI } from '../../../api/gigs';
@@ -55,7 +56,36 @@ export default function PublicFreelancerProfile() {
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  const sidebarRef = useRef(null);
+
+  // Smart sticky behavior: both columns scroll naturally.
+  // When the bottom of the right sidebar card is reached, it locks in place
+  // while the left content continues scrolling down.
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+
+    const updateSticky = () => {
+      const vh = window.innerHeight;
+      const h = el.offsetHeight;
+      if (h + 100 > vh) {
+        el.style.top = `${vh - h - 24}px`;
+      } else {
+        el.style.top = '90px';
+      }
+    };
+
+    updateSticky();
+    window.addEventListener('resize', updateSticky);
+    const ro = new ResizeObserver(updateSticky);
+    ro.observe(el);
+
+    return () => {
+      window.removeEventListener('resize', updateSticky);
+      ro.disconnect();
+    };
+  }, [profile, gigs, reviews]);
 
   useEffect(() => {
     let active = true;
@@ -302,23 +332,32 @@ export default function PublicFreelancerProfile() {
                   </div>
                   <div className="pfp-card-body">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                      {gigs.map((gig) => (
-                        <Link to={`/gigs/${gig._id}`} key={gig._id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                          <div style={{ border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', transition: 'all 0.2s', background: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseOver={e => {e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.06)'}} onMouseOut={e => {e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'}}>
-                            <div style={{ height: '160px', background: 'var(--color-bg-alt)' }}>
-                              {gig.banner ? <img src={gig.banner} alt={gig.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gradient-primary)', color: 'white' }}><Briefcase size={32} /></div>}
-                            </div>
-                            <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 'var(--fw-bold)', lineHeight: 1.4, color: 'var(--color-text-dark)' }}>{gig.title}</h3>
-                              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', marginBottom: '1rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{gig.shortDescription}</p>
-                              <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)' }}>
-                                <span style={{ fontSize: '0.9rem', color: 'var(--color-text-light)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Star size={16} fill="#f59e0b" color="#f59e0b" /> <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-text-dark)' }}>{gig.stats?.rating > 0 ? gig.stats.rating.toFixed(1) : 'New'}</span> {gig.stats?.reviewsCount > 0 && `(${gig.stats.reviewsCount})`}</span>
-                                <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-primary)', fontSize: '1.1rem' }}>From Rs. {gig.pricing?.basic?.price || 0}</span>
+                      {gigs.map((gig) => {
+                        const bannerSrc = gig.media?.banner || gig.media?.images?.[0] || gig.banner;
+                        return (
+                          <Link to={`/gigs/${gig._id}`} key={gig._id} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <div style={{ border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', transition: 'all 0.2s', background: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseOver={e => {e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.06)'}} onMouseOut={e => {e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'}}>
+                              <div style={{ height: '160px', background: 'var(--color-bg-alt)', position: 'relative', overflow: 'hidden' }}>
+                                {bannerSrc ? (
+                                  <img src={bannerSrc} alt={gig.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gradient-primary)', color: 'white' }}>
+                                    <Briefcase size={32} />
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 'var(--fw-bold)', lineHeight: 1.4, color: 'var(--color-text-dark)' }}>{gig.title}</h3>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--color-text-mid)', marginBottom: '1rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{gig.shortDescription}</p>
+                                <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)' }}>
+                                  <span style={{ fontSize: '0.9rem', color: 'var(--color-text-light)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Star size={16} fill="#f59e0b" color="#f59e0b" /> <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-text-dark)' }}>{gig.stats?.rating > 0 ? gig.stats.rating.toFixed(1) : 'New'}</span> {gig.stats?.reviewsCount > 0 && `(${gig.stats.reviewsCount})`}</span>
+                                  <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--color-primary)', fontSize: '1.1rem' }}>From Rs. {gig.pricing?.basic?.price || 0}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 </motion.section>
@@ -413,10 +452,25 @@ export default function PublicFreelancerProfile() {
                   </div>
                 </motion.section>
               )}
+
+              {/* Client Reviews Section (Full CRUD, Stats, Star Distribution) */}
+              <ReviewSection
+                targetUserId={u._id || id}
+                targetName={fullName}
+                initialReviews={reviews}
+                title="Client Reviews"
+                onRatingUpdated={(updated) => {
+                  setReviews(updated);
+                  if (updated.length > 0) {
+                    const sum = updated.reduce((acc, r) => acc + (r.rating || 0), 0);
+                    setProfile(prev => prev ? ({ ...prev, rating: Number((sum / updated.length).toFixed(1)) }) : prev);
+                  }
+                }}
+              />
             </div>
 
             {/* SIDEBAR */}
-            <div className="pfp-col-side">
+            <div className="pfp-col-side" ref={sidebarRef}>
               
               <motion.section variants={itemVariants} className="pfp-card pfp-card-gradient">
                 <div className="pfp-card-header">
@@ -490,54 +544,6 @@ export default function PublicFreelancerProfile() {
                         </a>
                       ))}
                     </div>
-                  </div>
-                </motion.section>
-              )}
-
-              {reviews.length > 0 && (
-                <motion.section variants={itemVariants} className="pfp-card">
-                  <div className="pfp-card-header">
-                    <h2 className="pfp-section-title">Client Reviews</h2>
-                  </div>
-                  <div className="pfp-card-body pfp-reviews-container">
-                    {(showAllReviews ? reviews : reviews.slice(0, 3)).map((rev) => (
-                      <div key={rev._id} className="pfp-review-card">
-                        <div className="pfp-review-header">
-                          <div className="pfp-reviewer-avatar">
-                            {rev.reviewerId?.profilePicture ? (
-                              <img src={rev.reviewerId.profilePicture} alt="Client" />
-                            ) : (
-                              <span>{rev.reviewerId?.firstName?.charAt(0) || 'C'}</span>
-                            )}
-                          </div>
-                          <div className="pfp-reviewer-info">
-                            <h4>{rev.reviewerId?.firstName} {rev.reviewerId?.lastName?.charAt(0)}.</h4>
-                            <div className="pfp-review-stars">
-                              {[1, 2, 3, 4, 5].map(star => (
-                                <Star 
-                                  key={star} 
-                                  size={12} 
-                                  fill={star <= rev.rating ? "#f59e0b" : "transparent"} 
-                                  color={star <= rev.rating ? "#f59e0b" : "#cbd5e1"} 
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <p className="pfp-review-text">"{rev.comment}"</p>
-                      </div>
-                    ))}
-                    {reviews.length > 3 && (
-                      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                        <button 
-                          className="pfp-btn pfp-btn-outline" 
-                          onClick={() => setShowAllReviews(!showAllReviews)}
-                          style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                          {showAllReviews ? 'Show Less' : `Show All Reviews (${reviews.length})`}
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </motion.section>
               )}

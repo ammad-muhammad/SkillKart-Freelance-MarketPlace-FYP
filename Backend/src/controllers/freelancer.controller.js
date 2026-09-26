@@ -323,9 +323,18 @@ const PUBLIC_FREELANCER_FIELDS = [
 const getFreelancerById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const profile = await FreelancerProfile.findOne({ userId: id })
+  let profile = await FreelancerProfile.findOne({ userId: id })
     .populate('userId', 'firstName lastName profilePicture')
     .lean();
+
+  if (!profile) {
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      profile = await FreelancerProfile.findById(id)
+        .populate('userId', 'firstName lastName profilePicture')
+        .lean();
+    }
+  }
 
   if (!profile) {
     throw new NotFoundError('Freelancer not found');
@@ -338,11 +347,17 @@ const getFreelancerById = asyncHandler(async (req, res) => {
     if (profile[field] !== undefined) publicProfile[field] = profile[field];
   });
 
+  const targetUserId = profile.userId?._id || profile.userId || id;
+
   // Fetch reviews targeting this freelancer
-  const reviews = await Review.find({ revieweeId: id, type: 'client_to_freelancer' })
+  const reviews = await Review.find({ 
+    revieweeId: targetUserId, 
+    type: 'client_to_freelancer',
+    isHidden: { $ne: true }
+  })
     .populate('reviewerId', 'firstName lastName profilePicture')
     .sort({ createdAt: -1 })
-    .limit(10);
+    .limit(30);
 
   sendSuccess(res, {
     message: 'Freelancer retrieved successfully',

@@ -21,7 +21,8 @@
   min-height: 100vh;
   background-color: var(--pfp-bg);
   position: relative;
-  overflow-x: hidden;
+  overflow-x: clip;
+  padding-top: 96px;
   padding-bottom: 5rem;
   font-family: var(--font-body, system-ui, -apple-system, sans-serif);
   color: var(--pfp-text-main);
@@ -124,7 +125,7 @@
   border-radius: var(--pfp-radius-xl);
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(4, 46, 76, 0.15);
-  margin-top: 100px;
+  margin-top: 0;
   margin-bottom: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.4);
   position: relative;
@@ -185,10 +186,10 @@
 }
 
 .pub-cl-name {
-  font-size: 2.2rem;
-  font-weight: 800;
+  font-size: 1.75rem;
+  font-weight: 750;
   color: var(--pfp-primary);
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 0.2rem 0;
   letter-spacing: -0.02em;
 }
 
@@ -243,16 +244,16 @@
 }
 
 .pub-cl-title {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   color: var(--pfp-text-muted);
-  margin: 0 0 1.25rem 0;
+  margin: 0 0 0.85rem 0;
   font-weight: 500;
 }
 
 .pub-cl-meta-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .pub-cl-meta-tag {
@@ -260,10 +261,10 @@
   align-items: center;
   gap: 0.4rem;
   background: #f1f5f9;
-  padding: 0.4rem 0.8rem;
-  border-radius: 99px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--pfp-text-main);
   border: 1px solid var(--pfp-border);
 }
@@ -357,11 +358,103 @@
   border: 1px solid #bfdbfe;
 }
 
+/* Quick Stats Overview Banner */
+.pub-cl-stats-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.85rem;
+  background: white;
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  box-shadow: 0 2px 10px rgba(4, 46, 76, 0.04);
+  margin-bottom: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.pub-cl-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pub-cl-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pub-cl-stat-num {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.pub-cl-stat-lbl {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 1px;
+}
+
+/* Rich Job Card */
+.pub-cl-job-card-rich {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  transition: all 0.2s ease;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pub-cl-job-card-rich:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(4, 46, 76, 0.06);
+  transform: translateY(-1px);
+}
+
+.pub-cl-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pub-cl-badge-open {
+  background: #dcfce7;
+  color: #15803d;
+}
+.pub-cl-badge-completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.pub-cl-badge-inprogress {
+  background: #fef3c7;
+  color: #b45309;
+}
+.pub-cl-badge-closed, .pub-cl-badge-expired, .pub-cl-badge-cancelled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 /* Main Layout Grid */
 .pub-cl-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+  align-items: start;
 }
 @media (max-width: 968px) {
   .pub-cl-grid {
@@ -369,51 +462,119 @@
   }
 }
 
+.pub-cl-col-sidebar {
+  position: sticky;
+  top: 90px;
+  align-self: start;
+  z-index: 10;
+}
+
 /* Shared Card Styles */
 .pub-cl-card {
-  background: var(--pfp-card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: var(--pfp-radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: var(--pfp-shadow-md);
-  margin-bottom: 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(4, 46, 76, 0.03);
+  margin-bottom: 1.5rem;
   overflow: hidden;
 }
 
 .pub-cl-card-header {
-  padding: 1.8rem 2.2rem 0;
+  padding: 1.15rem 1.35rem 0.4rem;
 }
 
 .pub-cl-section-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--pfp-primary);
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: #0f172a;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  letter-spacing: -0.01em;
 }
 
 .pub-cl-card-body {
-  padding: 1.8rem 2.2rem;
+  padding: 0.75rem 1.35rem 1.25rem;
   color: #334155;
-  line-height: 1.7;
-  font-size: 1.05rem;
+  line-height: 1.55;
+  font-size: 0.9rem;
 }
 
 .pub-cl-about-text p {
   color: #475569;
-  line-height: 1.8;
-  font-size: 1.05rem;
+  line-height: 1.6;
+  font-size: 0.88rem;
   margin: 0;
-  text-align: justify;
+  text-align: left;
+}
+
+/* Sidebar Info Rows */
+.pub-cl-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #f8fafc;
+}
+.pub-cl-info-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.pub-cl-info-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+  margin-top: 1px;
+}
+.pub-cl-info-content {
+  flex: 1;
+  min-width: 0;
+}
+.pub-cl-info-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.pub-cl-info-value {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.4;
+}
+.pub-cl-info-sub {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 400;
+  margin-top: 1px;
+}
+.pub-cl-info-link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pub-cl-info-link:hover {
+  text-decoration: underline;
 }
 
 .pub-cl-bio {
   color: var(--pfp-text-muted);
-  line-height: 1.7;
-  font-size: 1rem;
+  line-height: 1.6;
+  font-size: 0.88rem;
   margin: 0;
   white-space: pre-wrap;
 }
@@ -670,38 +831,40 @@
   padding-bottom: 0;
 }
 .pub-cl-lang-name {
-  font-weight: 500;
-  color: var(--pfp-text-main);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
   text-transform: capitalize;
 }
 .pub-cl-lang-level {
-  font-size: 0.85rem;
-  color: var(--pfp-text-muted);
+  font-size: 0.74rem;
+  color: #475569;
   background: #f1f5f9;
-  padding: 0.2rem 0.6rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 6px;
+  font-weight: 500;
 }
 
 /* Links */
 .pub-cl-links-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 .pub-cl-web-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: var(--pfp-radius-md);
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
   text-decoration: none;
-  color: var(--pfp-text-main);
+  color: #1e293b;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   transition: background 0.2s;
 }
 .pub-cl-web-link:hover {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 .pub-cl-link-icon-wrap {
   width: 32px;
@@ -850,7 +1013,8 @@
   min-height: 100vh;
   background-color: var(--pub-cl-bg);
   position: relative;
-  overflow-x: hidden;
+  overflow-x: clip;
+  padding-top: 96px;
   padding-bottom: 5rem;
   font-family: var(--font-body, system-ui, -apple-system, sans-serif);
   color: var(--pub-cl-text-main);
@@ -949,7 +1113,7 @@
   border-radius: var(--pub-cl-radius-xl);
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(4, 46, 76, 0.15);
-  margin-top: 100px;
+  margin-top: 0;
   margin-bottom: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.4);
   position: relative;
@@ -1203,6 +1367,7 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 2rem;
+  align-items: start;
 }
 @media (max-width: 968px) {
   .pub-cl-grid {

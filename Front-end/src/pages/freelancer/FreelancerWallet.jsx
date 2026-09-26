@@ -2,7 +2,7 @@ import Loader from '../../Components/common/Loader/Loader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { paymentsAPI } from '../../api/payments';
-import { Wallet, ArrowDownToLine, CheckCircle2, Clock, Lightbulb } from 'lucide-react';
+import { Wallet, ArrowDownToLine, CheckCircle2, Clock, Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
 import { safeToast as toast } from '../../utils/safeToast';
 import EmptyState from '../../Components/common/EmptyState/EmptyState';
@@ -31,10 +31,14 @@ export default function FreelancerWallet() {
   const [payments, setPayments] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod] = useState('stripe');
   const [withdrawing, setWithdrawing] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 8;
   // Admin-configurable — fetched so this can't drift from the backend's own
   // enforced minimum (see payments.controller.js's getWithdrawalConfig).
   const [minWithdrawal, setMinWithdrawal] = useState(5);
@@ -42,8 +46,8 @@ export default function FreelancerWallet() {
   const closeWithdrawModal = useCallback(() => { if (!withdrawing) setWithdrawModal(false); }, [withdrawing]);
   useFocusTrap(withdrawModalRef, withdrawModal, closeWithdrawModal);
 
-  const loadHistory = useCallback(async () => {
-    setLoading(true);
+  const loadHistory = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await paymentsAPI.getHistory();
       setPayments(data?.data?.payments || []);
@@ -51,17 +55,20 @@ export default function FreelancerWallet() {
     } catch (err) {
       console.error('Failed to load payment history:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      setInitialLoaded(true);
     }
   }, []);
 
   useEffect(() => {
     loadHistory();
-    // Also refresh profile to ensure wallet stats are completely up to date
-    if (refreshProfile) {
-      refreshProfile();
-    }
-  }, [loadHistory, refreshProfile]);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible' && !withdrawModal) {
+        loadHistory(true);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [loadHistory, withdrawModal]);
 
   useEffect(() => {
     paymentsAPI.getWithdrawalConfig()
@@ -80,8 +87,24 @@ export default function FreelancerWallet() {
     .filter(p => p.status === 'deposit_paid')
     .reduce((sum, p) => sum + (Number(p.depositAmount) || 0), 0);
 
-  const transactions = [...payments, ...withdrawals.map(w => ({ ...w, isWithdrawal: true }))]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const getTxTime = (tx) => {
+    const raw = tx.releasedAt || tx.depositPaidAt || tx.updatedAt || tx.createdAt;
+    const t = new Date(raw).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+
+  const allTransactions = [...payments, ...withdrawals.map(w => ({ ...w, isWithdrawal: true }))]
+    .sort((a, b) => getTxTime(b) - getTxTime(a));
+
+  const filteredTransactions = allTransactions.filter(tx => {
+    if (filter === 'released') return !tx.isWithdrawal && tx.status === 'released';
+    if (filter === 'escrow') return !tx.isWithdrawal && (tx.status === 'deposit_paid' || tx.status === 'deposit_pending');
+    if (filter === 'withdrawals') return tx.isWithdrawal;
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredTransactions.length / PAGE_SIZE) || 1;
+  const paginatedTransactions = filteredTransactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleWithdrawClick = () => {
     if (walletBalance <= 0) {
@@ -121,8 +144,8 @@ export default function FreelancerWallet() {
 
       toast.success(`Successfully initiated withdrawal of Rs. ${withdrawAmount} via ${withdrawMethod}.`);
       setWithdrawModal(false);
-      // Refresh profile so the wallet balance syncs
-      if (refreshProfile) refreshProfile();
+      // Refresh profile silently so the wallet balance syncs
+      if (refreshProfile) refreshProfile(false, 0, true);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to process withdrawal.');
     } finally {
@@ -130,7 +153,7 @@ export default function FreelancerWallet() {
     }
   };
 
-  if (profileLoading || loading) {
+  if (!initialLoaded && (profileLoading || loading)) {
     return <Loader text="Loading your wallet…" fullScreen={true} />;
   }
 
@@ -202,77 +225,184 @@ export default function FreelancerWallet() {
       </div>
 
       <div className="fl-card">
-        <div className="fl-card__header" style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-secondary)' }}>
-          <h2 className="fl-card__title">Transaction History</h2>
+        <div className="fl-card__header" style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <h2 className="fl-card__title" style={{ margin: 0 }}>Transaction History</h2>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {[
+              { id: 'all', label: 'All', count: allTransactions.length },
+              { id: 'released', label: 'Earnings / Released', count: allTransactions.filter(t => !t.isWithdrawal && t.status === 'released').length },
+              { id: 'escrow', label: 'In Escrow', count: allTransactions.filter(t => !t.isWithdrawal && (t.status === 'deposit_paid' || t.status === 'deposit_pending')).length },
+              { id: 'withdrawals', label: 'Withdrawals', count: allTransactions.filter(t => t.isWithdrawal).length },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { setFilter(tab.id); setPage(1); }}
+                style={{
+                  padding: '0.35rem 0.8rem',
+                  borderRadius: '20px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  border: '1px solid',
+                  borderColor: filter === tab.id ? 'var(--color-primary)' : 'var(--color-secondary)',
+                  background: filter === tab.id ? 'var(--color-primary)' : 'transparent',
+                  color: filter === tab.id ? '#ffffff' : 'var(--color-text-mid)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
         </div>
         <div className="fl-card__body">
-          {transactions.length === 0 ? (
+          {filteredTransactions.length === 0 ? (
             <EmptyState 
               icon={PkrIcon}
-              title="No Transactions Yet"
-              message="Your payment and withdrawal history will appear here once you complete jobs and receive or withdraw funds."
+              title="No Transactions Found"
+              message={filter === 'all' ? 'Your payment and withdrawal history will appear here once you complete jobs and receive or withdraw funds.' : `No transactions found under "${filter}".`}
             />
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--color-secondary)' }}>
-                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Date</th>
-                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Type / Project</th>
-                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Client / Method</th>
-                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Amount</th>
-                    <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map(tx => (
-                    <tr key={tx._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--color-secondary)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
-                        {new Date(tx.createdAt).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-primary-dark)', fontSize: 'var(--fs-sm)' }}>
-                        {tx.isWithdrawal ? 'Funds Withdrawal' : (tx.jobId?.title || 'Unknown Project')}
-                      </td>
-                      <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
-                        {tx.isWithdrawal ? (tx.method === 'stripe' ? 'Stripe Connect' : tx.method) : `${tx.clientId?.firstName} ${tx.clientId?.lastName}`}
-                      </td>
-                      <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: tx.isWithdrawal ? 'var(--color-error)' : 'var(--color-success)' }}>
-                        {tx.isWithdrawal ? '- Rs. ' : '+ Rs. '}{tx.isWithdrawal ? tx.amount?.toLocaleString() : (tx.status === 'released' ? tx.freelancerPayout?.toLocaleString() : tx.totalAmount?.toLocaleString())}
-                      </td>
-                      <td style={{ padding: '1rem' }}>
-                        {tx.isWithdrawal ? (
-                          tx.status === 'completed' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-                              <ArrowDownToLine size={14} /> Completed
-                            </span>
-                          ) : tx.status === 'processing' || tx.status === 'pending' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-info)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-info-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-                              <Clock size={14} /> Processing
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(tx.status)}</span>
-                          )
-                        ) : (
-                          tx.status === 'released' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-                              <CheckCircle2 size={14} /> Released
-                            </span>
-                          ) : tx.status === 'deposit_paid' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-warning)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-warning-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-                              {/* Milestones lock 100% of the amount; only the legacy gig-order
-                                  flow (no milestoneId) is a true 50% deposit. */}
-                              <Clock size={14} /> {tx.milestoneId ? 'In Escrow' : 'Escrow (50%)'}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(tx.status)}</span>
-                          )
-                        )}
-                      </td>
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--color-secondary)' }}>
+                      <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Date</th>
+                      <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Type / Project</th>
+                      <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Client / Method</th>
+                      <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Amount</th>
+                      <th style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {paginatedTransactions.map(tx => {
+                      const txDate = tx.releasedAt || tx.depositPaidAt || tx.createdAt;
+                      return (
+                        <tr key={tx._id} style={{ borderBottom: '1px solid var(--color-secondary)', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--color-secondary)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                          <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
+                            <div>{new Date(txDate).toLocaleDateString()}</div>
+                            {tx.releasedAt && tx.status === 'released' && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
+                                {new Date(tx.releasedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', color: 'var(--color-primary-dark)', fontSize: 'var(--fs-sm)' }}>
+                            {tx.isWithdrawal ? 'Funds Withdrawal' : (tx.jobId?.title || 'Unknown Project')}
+                          </td>
+                          <td style={{ padding: '1rem', color: 'var(--color-text-mid)', fontSize: 'var(--fs-sm)' }}>
+                            {tx.isWithdrawal ? (tx.method === 'stripe' ? 'Stripe Connect' : tx.method) : (tx.clientId ? `${tx.clientId.firstName || ''} ${tx.clientId.lastName || ''}`.trim() : 'Client')}
+                          </td>
+                          <td style={{ padding: '1rem', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-md)', color: tx.isWithdrawal ? 'var(--color-error)' : 'var(--color-success)' }}>
+                            {tx.isWithdrawal ? '- Rs. ' : '+ Rs. '}{tx.isWithdrawal ? tx.amount?.toLocaleString() : (tx.status === 'released' ? (tx.freelancerPayout || tx.totalAmount)?.toLocaleString() : tx.totalAmount?.toLocaleString())}
+                          </td>
+                          <td style={{ padding: '1rem' }}>
+                            {tx.isWithdrawal ? (
+                              tx.status === 'completed' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                                  <ArrowDownToLine size={14} /> Completed
+                                </span>
+                              ) : tx.status === 'processing' || tx.status === 'pending' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-info)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-info-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                                  <Clock size={14} /> Processing
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(tx.status)}</span>
+                              )
+                            ) : (
+                              tx.status === 'released' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-success-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                                  <CheckCircle2 size={14} /> Released
+                                </span>
+                              ) : tx.status === 'deposit_paid' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-warning)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-bold)', background: 'var(--color-warning-tint)', padding: '0.2rem 0.6rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                                  <Clock size={14} /> {tx.milestoneId ? 'In Escrow' : 'Escrow (50%)'}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--fs-sm)', fontWeight: 'var(--fw-medium)', textTransform: 'capitalize' }}>{statusLabel(tx.status)}</span>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--color-secondary)', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)' }}>
+                    Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, filteredTransactions.length)} of {filteredTransactions.length} transactions
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--color-secondary)',
+                        background: 'transparent',
+                        color: page === 1 ? 'var(--color-text-light)' : 'var(--color-text-dark)',
+                        cursor: page === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.84rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      <ChevronLeft size={16} /> Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '6px',
+                          border: '1px solid',
+                          borderColor: page === p ? 'var(--color-primary)' : 'var(--color-secondary)',
+                          background: page === p ? 'var(--color-primary)' : 'transparent',
+                          color: page === p ? '#fff' : 'var(--color-text-mid)',
+                          fontWeight: 600,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--color-secondary)',
+                        background: 'transparent',
+                        color: page === totalPages ? 'var(--color-text-light)' : 'var(--color-text-dark)',
+                        cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                        fontSize: '0.84rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      Next <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

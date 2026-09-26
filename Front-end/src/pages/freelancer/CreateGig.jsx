@@ -28,9 +28,9 @@ const EMPTY_GIG = {
   skills: [],
   shortDescription: '',
   pricing: {
-    basic: { price: '', deliveryTime: '', revisions: '' },
-    standard: { price: '', deliveryTime: '', revisions: '' },
-    premium: { price: '', deliveryTime: '', revisions: '' },
+    basic: { title: '', description: '', price: '', deliveryTime: '', revisions: '', features: [] },
+    standard: { title: '', description: '', price: '', deliveryTime: '', revisions: '', features: [] },
+    premium: { title: '', description: '', price: '', deliveryTime: '', revisions: '', features: [] },
   },
   fullDescription: '',
   faqs: [],
@@ -105,53 +105,195 @@ const Step1 = ({ gig, set, onCategoryChange, validatingCategory, passedSkills })
   </div>
 );
 
-const PricingTierCard = ({ tier, label, data, onChange }) => (
-  <div className={`fl-pricing-tier fl-pricing-tier--${tier}`}>
-    <div className="fl-pricing-tier__header">
-      <span className="fl-pricing-tier__icon">
-        {tier === 'basic' ? '🥉' : tier === 'standard' ? '🥈' : '🥇'}
-      </span>
-      <span className="fl-pricing-tier__label">{label}</span>
+const SUGGESTED_FEATURES = [
+  'Source Code',
+  'Responsive Design',
+  'Content Upload',
+  'Design Customization',
+  'Database Setup',
+  'API Integration',
+  'Speed Optimization',
+  'SEO Friendly',
+];
+
+const PricingTierCard = ({ tier, label, data = {}, onChange }) => {
+  const [featureInput, setFeatureInput] = useState('');
+
+  const handleAddFeature = (text) => {
+    const clean = (text || featureInput).trim();
+    if (!clean) return;
+    const currentFeatures = Array.isArray(data.features) ? data.features : [];
+    if (!currentFeatures.includes(clean)) {
+      onChange({ ...data, features: [...currentFeatures, clean] });
+    }
+    setFeatureInput('');
+  };
+
+  const handleRemoveFeature = (idx) => {
+    const currentFeatures = Array.isArray(data.features) ? data.features : [];
+    onChange({ ...data, features: currentFeatures.filter((_, i) => i !== idx) });
+  };
+
+  return (
+    <div className={`fl-pricing-tier fl-pricing-tier--${tier}`} style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="fl-pricing-tier__header">
+        <span className="fl-pricing-tier__icon">
+          {tier === 'basic' ? '🥉' : tier === 'standard' ? '🥈' : '🥇'}
+        </span>
+        <span className="fl-pricing-tier__label">{label}</span>
+      </div>
+
+      <div className="fl-form-group" style={{ marginBottom: '0.65rem' }}>
+        <label className="fl-label" htmlFor={`cg-title-${tier}`}>Package Title</label>
+        <input
+          id={`cg-title-${tier}`}
+          type="text"
+          className="fl-input"
+          maxLength={100}
+          value={data.title || ''}
+          onChange={(e) => onChange({ ...data, title: e.target.value })}
+          placeholder={tier === 'basic' ? 'e.g. Basic Fixes & Setup' : tier === 'standard' ? 'e.g. Standard Web App' : 'e.g. Full-Stack Solution'}
+        />
+      </div>
+
+      <div className="fl-form-group" style={{ marginBottom: '0.65rem' }}>
+        <label className="fl-label" htmlFor={`cg-desc-${tier}`}>Description (What's included)</label>
+        <textarea
+          id={`cg-desc-${tier}`}
+          rows={2}
+          className="fl-textarea"
+          maxLength={300}
+          value={data.description || ''}
+          onChange={(e) => onChange({ ...data, description: e.target.value })}
+          placeholder="Brief description of what you will deliver in this tier..."
+          style={{ resize: 'vertical', fontSize: '0.82rem' }}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.65rem', marginBottom: '0.65rem' }}>
+        <div className="fl-form-group">
+          <label className="fl-label" htmlFor={`cg-delivery-${tier}`}>Delivery (days)</label>
+          <input
+            id={`cg-delivery-${tier}`}
+            type="number"
+            className="fl-input"
+            min={1}
+            value={data.deliveryTime || ''}
+            onChange={(e) => onChange({ ...data, deliveryTime: e.target.value })}
+            placeholder="e.g. 3"
+          />
+        </div>
+        <div className="fl-form-group">
+          <label className="fl-label" htmlFor={`cg-revisions-${tier}`}>Revisions</label>
+          <input
+            id={`cg-revisions-${tier}`}
+            type="number"
+            className="fl-input"
+            min={0}
+            max={100}
+            value={data.revisions ?? ''}
+            onChange={(e) => onChange({ ...data, revisions: e.target.value })}
+            placeholder="e.g. 2"
+          />
+        </div>
+      </div>
+
+      <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
+        <label className="fl-label" htmlFor={`cg-price-${tier}`}>Price (PKR) *</label>
+        <input
+          id={`cg-price-${tier}`}
+          type="number"
+          className="fl-input"
+          min={1}
+          value={data.price || ''}
+          onChange={(e) => onChange({ ...data, price: e.target.value })}
+          placeholder="e.g. 500"
+        />
+      </div>
+
+      <div className="fl-form-group" style={{ marginTop: 'auto' }}>
+        <label className="fl-label">Included Features ({data.features?.length || 0})</label>
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem', minHeight: '26px' }}>
+          {(data.features || []).map((feat, idx) => (
+            <span
+              key={idx}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                background: '#e0f2fe',
+                color: '#0369a1',
+                padding: '2px 8px',
+                borderRadius: '99px',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                maxWidth: '100%',
+                wordBreak: 'break-word'
+              }}
+            >
+              ✓ {feat}
+              <button
+                type="button"
+                onClick={() => handleRemoveFeature(idx)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0284c7', fontSize: '0.85rem', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {(!data.features || data.features.length === 0) && (
+            <span style={{ fontSize: '0.74rem', color: 'var(--color-text-light)' }}>No features added yet.</span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.35rem', width: '100%', minWidth: 0 }}>
+          <input
+            type="text"
+            className="fl-input"
+            value={featureInput}
+            onChange={(e) => setFeatureInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
+            placeholder="Add custom feature..."
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.55rem', minWidth: 0, flex: 1, boxSizing: 'border-box' }}
+          />
+          <button
+            type="button"
+            className="fl-btn fl-btn--outline fl-btn--sm"
+            onClick={() => handleAddFeature()}
+            style={{ whiteSpace: 'nowrap', padding: '0.35rem 0.65rem', fontSize: '0.8rem', flexShrink: 0 }}
+          >
+            + Add
+          </button>
+        </div>
+
+        <div style={{ marginTop: '0.4rem' }}>
+          <span style={{ fontSize: '0.68rem', color: 'var(--color-text-light)', display: 'block', marginBottom: '0.2rem' }}>Quick add:</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+            {SUGGESTED_FEATURES.filter(f => !(data.features || []).includes(f)).slice(0, 4).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => handleAddFeature(f)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '0.68rem',
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                + {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
-    <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
-      <label className="fl-label" htmlFor={`cg-price-${tier}`}>Price (PKR)</label>
-      <input
-        id={`cg-price-${tier}`}
-        type="number"
-        className="fl-input"
-        min={1}
-        value={data.price}
-        onChange={(e) => onChange({ ...data, price: e.target.value })}
-        placeholder="e.g. 150"
-      />
-    </div>
-    <div className="fl-form-group" style={{ marginBottom: '0.75rem' }}>
-      <label className="fl-label" htmlFor={`cg-delivery-${tier}`}>Delivery (days)</label>
-      <input
-        id={`cg-delivery-${tier}`}
-        type="number"
-        className="fl-input"
-        min={1}
-        value={data.deliveryTime}
-        onChange={(e) => onChange({ ...data, deliveryTime: e.target.value })}
-        placeholder="e.g. 7"
-      />
-    </div>
-    <div className="fl-form-group">
-      <label className="fl-label" htmlFor={`cg-revisions-${tier}`}>Revisions</label>
-      <input
-        id={`cg-revisions-${tier}`}
-        type="number"
-        className="fl-input"
-        min={0}
-        max={100}
-        value={data.revisions}
-        onChange={(e) => onChange({ ...data, revisions: e.target.value })}
-        placeholder="e.g. 2"
-      />
-    </div>
-  </div>
-);
+  );
+};
 
 const Step2 = ({ gig, set }) => (
   <div className="fl-step-body">
@@ -477,17 +619,58 @@ const Step5 = ({ gig, onPublish, onDraft, publishing }) => {
       </div>
 
       <div className="fl-review-section">
-        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><PkrIcon size={18} /> Pricing</h4>
+        <h4 className="fl-review-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><PkrIcon size={18} /> Pricing Packages</h4>
         <div className="fl-review-pricing">
-          {tiers.map(({ key, label, icon }) => (
-            <div key={key} className="fl-review-pricing__tier">
-              <p className="fl-review-pricing__tier-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>{icon} {label}</p>
-              <p className="fl-review-pricing__tier-val">Rs. {gig.pricing[key].price || '—'}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
-                {formatDeliveryTime(gig.pricing[key].deliveryTime) || '— days'} · {gig.pricing[key].revisions || '—'} revisions
-              </p>
-            </div>
-          ))}
+          {tiers.map(({ key, label, icon }) => {
+            const tierData = gig.pricing?.[key] || {};
+            return (
+              <div key={key} className="fl-review-pricing__tier">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                  <p className="fl-review-pricing__tier-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', margin: 0 }}>
+                    {icon} {label}
+                  </p>
+                  <p className="fl-review-pricing__tier-val" style={{ margin: 0 }}>Rs. {tierData.price || '—'}</p>
+                </div>
+
+                {tierData.title ? (
+                  <h5 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.3rem', marginTop: '0.2rem' }}>
+                    {tierData.title}
+                  </h5>
+                ) : (
+                  <h5 style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-light)', fontStyle: 'italic', marginBottom: '0.3rem' }}>
+                    (No title specified)
+                  </h5>
+                )}
+
+                {tierData.description && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-mid)', marginBottom: '0.5rem', lineHeight: '1.4' }}>
+                    {tierData.description}
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.76rem', color: 'var(--color-text-light)', marginTop: '0.2rem', marginBottom: '0.5rem' }}>
+                  <span>⏱ {formatDeliveryTime(tierData.deliveryTime) || '— days'}</span>
+                  <span>🔄 {tierData.revisions !== undefined && tierData.revisions !== '' ? `${tierData.revisions} revisions` : '—'}</span>
+                </div>
+
+                {Array.isArray(tierData.features) && tierData.features.length > 0 && (
+                  <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid rgba(183, 201, 226, 0.3)' }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-mid)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Included Features ({tierData.features.length})
+                    </p>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      {tierData.features.map((feat, fIdx) => (
+                        <li key={fIdx} style={{ fontSize: '0.78rem', color: 'var(--color-text-dark)', display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+                          <span style={{ color: '#0284c7', fontWeight: 'bold', lineHeight: 1 }}>✓</span>
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

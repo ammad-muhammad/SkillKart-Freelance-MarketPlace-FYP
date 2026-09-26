@@ -64,6 +64,14 @@ const jobSchema = new mongoose.Schema({
     links: { type: [String], default: undefined },
     submittedAt: Date
   },
+  lastRevision: {
+    note: String,
+    requestedAt: Date
+  },
+  revisions: [{
+    note: String,
+    requestedAt: { type: Date, default: Date.now }
+  }],
   statsRolledUp: { type: Boolean, default: false },
   completedAt: Date,
   deletedAt: Date // set by the admin panel's soft-delete (adminPanel/jobs.controller.js:deleteJob)

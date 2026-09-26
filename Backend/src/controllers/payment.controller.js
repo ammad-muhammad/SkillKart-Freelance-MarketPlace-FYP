@@ -397,10 +397,10 @@ const getMyPayments = asyncHandler(async (req, res) => {
   .populate('jobId', 'title status')
   .populate('clientId', 'firstName lastName email profilePicture')
   .populate('freelancerId', 'firstName lastName email profilePicture')
-  .sort({ createdAt: -1 });
+  .sort({ updatedAt: -1, createdAt: -1 });
 
   // Find all withdrawals for the user
-  const withdrawals = await Withdrawal.find({ userId: uid }).sort({ createdAt: -1 });
+  const withdrawals = await Withdrawal.find({ userId: uid }).sort({ updatedAt: -1, createdAt: -1 });
 
   sendSuccess(res, { data: { payments, withdrawals } });
 });

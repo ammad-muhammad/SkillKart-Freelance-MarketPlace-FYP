@@ -21,7 +21,8 @@
   min-height: 100vh;
   background-color: var(--pfp-bg);
   position: relative;
-  overflow-x: hidden;
+  overflow-x: clip;
+  padding-top: 96px;
   padding-bottom: 5rem;
   font-family: var(--font-body, system-ui, -apple-system, sans-serif);
   color: var(--pfp-text-main);
@@ -124,7 +125,7 @@
   border-radius: var(--pfp-radius-xl);
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(4, 46, 76, 0.15);
-  margin-top: 100px;
+  margin-top: 0;
   margin-bottom: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.4);
   position: relative;
@@ -381,11 +382,19 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 2rem;
+  align-items: start;
 }
 @media (max-width: 968px) {
   .pfp-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.pfp-col-side {
+  position: sticky;
+  top: 90px;
+  align-self: start;
+  z-index: 10;
 }
 
 /* Shared Card Styles */

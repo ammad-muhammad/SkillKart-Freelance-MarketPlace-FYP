@@ -11,18 +11,24 @@ const gigSchema = new mongoose.Schema({
   pricing: {
     basic: {
       price: { type: Number, required: true },
+      title: String,
+      description: String,
       deliveryTime: String,
       revisions: Number,
       features: [String]
     },
     standard: {
       price: Number,
+      title: String,
+      description: String,
       deliveryTime: String,
       revisions: Number,
       features: [String]
     },
     premium: {
       price: Number,
+      title: String,
+      description: String,
       deliveryTime: String,
       revisions: Number,
       features: [String]

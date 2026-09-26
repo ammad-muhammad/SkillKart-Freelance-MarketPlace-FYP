@@ -227,6 +227,7 @@ const getClientById = asyncHandler(async (req, res) => {
 // such feature exists there).
 const PUBLIC_CLIENT_FIELDS = [
   'userId', 'companyName', 'companyType', 'companyLogo', 'coverPhoto',
+  '_id', 'userId', 'companyName', 'companyType', 'role', 'companySizeRange',
   'companySize', 'industry', 'industryType', 'customIndustry', 'website',
   'description', 'location', 'services', 'techStack', 'hiringFrequency',
   'timezone', 'socialLinks', 'languages', 'rating', 'verificationStatus',
@@ -236,18 +237,27 @@ const PUBLIC_CLIENT_FIELDS = [
 const getPublicClientById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const raw = await ClientProfile.findOne({ userId: id })
+  let raw = await ClientProfile.findOne({ userId: id })
     .populate('userId', 'firstName lastName profilePicture')
     .lean();
+
+  if (!raw) {
+    raw = await ClientProfile.findById(id)
+      .populate('userId', 'firstName lastName profilePicture')
+      .lean();
+  }
 
   if (!raw) {
     throw new NotFoundError('Client not found');
   }
 
-  // Calculate dynamic total projects posted
+  const clientId = raw.userId?._id || raw.userId;
+
+  // Calculate dynamic total projects posted (excluding gig purchases)
   const Job = require('../models/Job');
   raw.totalProjectsPosted = await Job.countDocuments({
-    clientId: id,
+    clientId,
+    source: { $ne: 'gig' },
     status: { $ne: 'draft' }
   });
 
@@ -256,9 +266,20 @@ const getPublicClientById = asyncHandler(async (req, res) => {
     if (raw[field] !== undefined) profile[field] = raw[field];
   });
 
+  // Fetch reviews targeting this client (freelancer_to_client)
+  const Review = require('../models/Review');
+  const reviews = await Review.find({
+    revieweeId: clientId,
+    type: 'freelancer_to_client',
+    isHidden: { $ne: true }
+  })
+    .populate('reviewerId', 'firstName lastName profilePicture')
+    .sort({ createdAt: -1 })
+    .lean();
+
   sendSuccess(res, {
     message: 'Public client profile retrieved successfully',
-    data: { profile }
+    data: { profile, reviews }
   });
 });
 

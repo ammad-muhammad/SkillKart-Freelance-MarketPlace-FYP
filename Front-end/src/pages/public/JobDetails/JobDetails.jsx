@@ -9,7 +9,8 @@ import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import {
   Clock, Tag, Briefcase, ChevronLeft,
-  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText, X, Edit2, RotateCcw
+  Send, AlertCircle, CheckCircle2, User, Calendar, Bookmark, FileText, X, Edit2, RotateCcw,
+  MapPin, Building2, Globe, Mail, ExternalLink, Linkedin, Twitter, Share2
 } from 'lucide-react';
 import PkrIcon from '../../../Components/common/PkrIcon';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
@@ -154,6 +155,38 @@ export default function JobDetails() {
     setEditingProposalId(null);
     setResubmitMode(false);
   }, [id]);
+
+  const sidebarRef = useRef(null);
+
+  // Smart sticky behavior: both columns scroll naturally at first.
+  // When the bottom of the right sidebar card is reached, it locks in place
+  // while the left content continues scrolling down.
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+
+    const updateSticky = () => {
+      const vh = window.innerHeight;
+      const h = el.offsetHeight;
+      if (h + 100 > vh) {
+        // When sidebar card is tall, pin it so it sticks once its bottom is reached
+        el.style.top = `${vh - h - 24}px`;
+      } else {
+        // Fits comfortably in viewport
+        el.style.top = '90px';
+      }
+    };
+
+    updateSticky();
+    window.addEventListener('resize', updateSticky);
+    const ro = new ResizeObserver(updateSticky);
+    ro.observe(el);
+
+    return () => {
+      window.removeEventListener('resize', updateSticky);
+      ro.disconnect();
+    };
+  }, [job]);
 
   useEffect(() => {
     document.title = job?.title ? `${job.title} – SkillKart` : 'Project Details – SkillKart';
@@ -477,22 +510,76 @@ export default function JobDetails() {
           <div className="jd-layout">
             <main className="jd-main">
               <div className="jd-card jd-header">
-                <div className="jd-header__top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <div>
+                <div className="jd-header__top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span className="jd-category">{job.category}</span>
-                    <span className="jd-posted" style={{ marginLeft: '1rem', color: 'var(--color-text-light)', fontSize: '0.85rem' }}>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                    <span className="jd-posted" style={{ color: 'var(--color-text-light)', fontSize: '0.85rem' }}>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: 'var(--color-primary, #042E4C)',
+                      background: 'var(--color-secondary, #e2e8f0)',
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: '20px'
+                    }}>
+                      <Send size={13} />
+                      {job.proposalsCount || 0} {(job.proposalsCount === 1) ? 'Freelancer Applied' : 'Freelancers Applied'}
+                    </span>
                   </div>
-                  {(!user || isFreelancer) && (
-                    <button 
-                      className={`fl-btn ${isSaved ? 'fl-btn--primary' : 'fl-btn--outline'}`} 
-                      onClick={handleToggleSave}
-                      style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-                      title={isSaved ? 'Unsave Job' : 'Save Job'}
-                    >
-                      <Bookmark size={16} fill={isSaved ? 'currentColor' : 'none'} />
-                      {isSaved ? 'Saved' : 'Save Job'}
-                    </button>
-                  )}
+
+                  <div className="jd-header__actions">
+                    {(!user || isFreelancer) && (
+                      <button 
+                        className={`jd-btn-icon-save ${isSaved ? 'jd-btn-icon-save--active' : ''}`} 
+                        onClick={handleToggleSave}
+                        title={isSaved ? 'Remove from Saved Jobs' : 'Save Job'}
+                        aria-label={isSaved ? 'Unsave Job' : 'Save Job'}
+                      >
+                        <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
+                      </button>
+                    )}
+
+                    {isClient ? (
+                      <Link 
+                        to={`/client/projects/${job._id || id}/proposals`} 
+                        className="jd-header-apply-btn"
+                      >
+                        <Send size={15} /> View Proposals ({job.proposalsCount || 0})
+                      </Link>
+                    ) : (
+                      <>
+                        {job.status !== 'open' ? (
+                          <button className="jd-header-apply-btn" disabled>Closed</button>
+                        ) : !myProposal ? (
+                          <button className="jd-header-apply-btn" onClick={handleApplyClick} disabled={checkingEligibility}>
+                            <Send size={15} /> {checkingEligibility ? 'Checking…' : 'Apply Now'}
+                          </button>
+                        ) : myProposal.status === 'pending' ? (
+                          <button
+                            className="jd-header-apply-btn"
+                            onClick={() => openEditModal(myProposal)}
+                          >
+                            <Edit2 size={15} /> Edit Proposal
+                          </button>
+                        ) : myProposal.status === 'rejected' && myProposal.canResubmit ? (
+                          <button
+                            className="jd-header-apply-btn"
+                            onClick={() => openEditModal(myProposal)}
+                            disabled={checkingEligibility}
+                          >
+                            <RotateCcw size={15} /> {checkingEligibility ? 'Checking…' : 'Edit & Resubmit'}
+                          </button>
+                        ) : (
+                          <button className="jd-header-apply-btn jd-header-apply-btn--applied" disabled>
+                            <CheckCircle2 size={16} /> Applied
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
                 <h1 className="jd-title">{job.title}</h1>
                 <div className="jd-meta">
@@ -511,6 +598,10 @@ export default function JobDetails() {
                   <div className="jd-meta__item">
                     <Briefcase size={18} />
                     <span>{job.experienceLevel || 'Intermediate'}</span>
+                  </div>
+                  <div className="jd-meta__item" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#15803d' }}>
+                    <Send size={18} color="#16a34a" />
+                    <span><strong>{job.proposalsCount || 0}</strong> {(job.proposalsCount === 1) ? 'Proposal' : 'Proposals'} Submitted</span>
                   </div>
                 </div>
               </div>
@@ -541,9 +632,20 @@ export default function JobDetails() {
               </div>
             </main>
 
-            <aside className="jd-sidebar">
+            <aside className="jd-sidebar" ref={sidebarRef}>
               <div className="jd-sidebar__card jd-client">
-                <h3 className="jd-sidebar__title">About the Client</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <h3 className="jd-sidebar__title" style={{ margin: 0 }}>About the Client</h3>
+                  {job.clientId?._id && (
+                    <Link 
+                      to={`/clients/${job.clientId._id}`}
+                      style={{ fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      View Profile <ExternalLink size={12} />
+                    </Link>
+                  )}
+                </div>
+
                 <div className="jd-client__info">
                   <div className="jd-client__avatar">
                     {job.clientId?.profilePicture ? (
@@ -555,11 +657,13 @@ export default function JobDetails() {
                   <div>
                     <div className="jd-client__name">{job.clientId?.firstName} {job.clientId?.lastName}</div>
                     <div className="jd-client__meta">
-                      Client
+                      {job.clientDetails?.role ? `${job.clientDetails.role} · ` : ''}
+                      {job.clientDetails?.companyName || 'Client'}
                       {job.clientStats?.rating > 0 && <> · ⭐ {job.clientStats.rating.toFixed(1)}</>}
                     </div>
                   </div>
                 </div>
+
                 <div className="jd-client__stats">
                   <div className="jd-client__stat">
                     <span>{job.clientStats?.verified ? 'Verified ✓' : 'Unverified'}</span>
@@ -570,59 +674,152 @@ export default function JobDetails() {
                     <label>Jobs Posted</label>
                   </div>
                 </div>
-              </div>
 
-              <div className="jd-sidebar__card jd-apply">
-                {isClient ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <Link 
-                      to={`/client/projects/${job._id || id}/proposals`} 
-                      className="jd-apply__btn" 
-                      style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <Send size={16} /> View Proposals ({job.proposalsCount || 0})
-                    </Link>
-                    <p className="jd-apply__note" style={{ textAlign: 'center', margin: 0 }}>
-                      {job.proposalsCount || 0} proposal{job.proposalsCount === 1 ? '' : 's'} received for this project.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                      {job.status !== 'open' ? (
-                        <button className="jd-apply__btn" disabled style={{ flex: 1 }}>Closed</button>
-                      ) : !myProposal ? (
-                        <button className="jd-apply__btn" onClick={handleApplyClick} disabled={checkingEligibility} style={{ flex: 1 }}>
-                          {checkingEligibility ? 'Checking…' : 'Apply Now'}
-                        </button>
-                      ) : myProposal.status === 'pending' ? (
-                        <button
-                          className="jd-apply__btn"
-                          onClick={() => openEditModal(myProposal)}
-                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-                        >
-                          <Edit2 size={16} /> Edit Proposal
-                        </button>
-                      ) : myProposal.status === 'rejected' && myProposal.canResubmit ? (
-                        <button
-                          className="jd-apply__btn"
-                          onClick={() => openEditModal(myProposal)}
-                          disabled={checkingEligibility}
-                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-                        >
-                          <RotateCcw size={16} /> {checkingEligibility ? 'Checking…' : 'Edit & Resubmit'}
-                        </button>
-                      ) : (
-                        <button className="jd-apply__btn jd-apply__btn--applied" disabled style={{ flex: 1 }}>
-                          <CheckCircle2 size={18} style={{ display: 'inline', marginRight: '0.3rem', verticalAlign: 'text-bottom' }}/> Applied
-                        </button>
-                      )}
+                {/* Client Detailed Meta Information */}
+                <div className="jd-client__details-list">
+                  {/* Company Name & Organization Type */}
+                  {job.clientDetails?.companyName && (
+                    <div className="jd-client__detail-item">
+                      <Building2 size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Company</label>
+                        <div className="jd-client__detail-val">
+                          {job.clientDetails.companyName}
+                          {job.clientDetails.companyType && (
+                            <span className="jd-client__badge">{job.clientDetails.companyType}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className="jd-apply__note">
-                      {job.proposalsCount || 0} proposals already submitted.
-                    </p>
-                  </>
-                )}
+                  )}
+
+                  {/* Location / Base Location */}
+                  {(job.clientDetails?.location || job.clientDetails?.timezone) && (
+                    <div className="jd-client__detail-item">
+                      <MapPin size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Location</label>
+                        <div className="jd-client__detail-val">
+                          {job.clientDetails.location || job.clientDetails.timezone}
+                          {job.clientDetails.timezone && job.clientDetails.location && job.clientDetails.location !== job.clientDetails.timezone && (
+                            <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 400, marginTop: '2px' }}>
+                              {job.clientDetails.timezone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Member Since / Platform Join Date */}
+                  {job.clientDetails?.memberSince && (
+                    <div className="jd-client__detail-item">
+                      <Calendar size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Member Since</label>
+                        <div className="jd-client__detail-val">
+                          {new Date(job.clientDetails.memberSince).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hiring Experience Level */}
+                  {job.clientDetails?.hiringExperience && (
+                    <div className="jd-client__detail-item">
+                      <Briefcase size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Hiring Experience</label>
+                        <div className="jd-client__detail-val">{job.clientDetails.hiringExperience}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email */}
+                  {job.clientDetails?.email && (
+                    <div className="jd-client__detail-item">
+                      <Mail size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Email</label>
+                        <div className="jd-client__detail-val" style={{ wordBreak: 'break-all' }}>
+                          <a href={`mailto:${job.clientDetails.email}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
+                            {job.clientDetails.email}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Website (only if present) */}
+                  {job.clientDetails?.website && (
+                    <div className="jd-client__detail-item">
+                      <Globe size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Website</label>
+                        <div className="jd-client__detail-val">
+                          <a 
+                            href={job.clientDetails.website.startsWith('http') ? job.clientDetails.website : `https://${job.clientDetails.website}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--color-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            {job.clientDetails.website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
+                            <ExternalLink size={12} />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Social Links (only if present) */}
+                  {(job.clientDetails?.socialLinks?.linkedin || job.clientDetails?.socialLinks?.twitter) && (
+                    <div className="jd-client__detail-item">
+                      <Share2 size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Social Profiles</label>
+                        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                          {job.clientDetails.socialLinks.linkedin && (
+                            <a 
+                              href={job.clientDetails.socialLinks.linkedin.startsWith('http') ? job.clientDetails.socialLinks.linkedin : `https://${job.clientDetails.socialLinks.linkedin}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="jd-client__social-btn"
+                              title="LinkedIn"
+                            >
+                              <Linkedin size={13} /> LinkedIn
+                            </a>
+                          )}
+                          {job.clientDetails.socialLinks.twitter && (
+                            <a 
+                              href={job.clientDetails.socialLinks.twitter.startsWith('http') ? job.clientDetails.socialLinks.twitter : `https://${job.clientDetails.socialLinks.twitter}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="jd-client__social-btn"
+                              title="Twitter / X"
+                            >
+                              <Twitter size={13} /> Twitter
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Industry (only if present) */}
+                  {Array.isArray(job.clientDetails?.industry) && job.clientDetails.industry.length > 0 && (
+                    <div className="jd-client__detail-item">
+                      <Tag size={16} className="jd-client__detail-icon" />
+                      <div>
+                        <label>Industry</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '0.25rem' }}>
+                          {job.clientDetails.industry.map((ind, i) => (
+                            <span key={i} className="jd-client__industry-pill">{ind}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </aside>
           </div>

@@ -158,10 +158,12 @@ const onWorkDelivered = (clientId, { job }) => notify(clientId, {
 });
 
 // To the freelancer: client asked for changes.
-const onRevisionRequested = (freelancerId, { job }) => notify(freelancerId, {
+const onRevisionRequested = (freelancerId, { job, note }) => notify(freelancerId, {
   type: TYPES.REVISION_REQUESTED,
   title: 'Revision requested 🔁',
-  message: `The client requested changes on "${job?.title || 'the project'}".`,
+  message: note
+    ? `The client requested changes on "${job?.title || 'the project'}": "${note.slice(0, 100)}${note.length > 100 ? '...' : ''}"`
+    : `The client requested changes on "${job?.title || 'the project'}".`,
   link: '/freelancer/work',
   jobId: job?._id,
 });

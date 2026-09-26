@@ -152,7 +152,7 @@ const reviewDelivery = asyncHandler(async (req, res) => {
     }
 
     const revisedJob = await Job.findById(contract.jobId).select('title').lean();
-    notifications.onRevisionRequested(contract.freelancerId, { job: revisedJob });
+    notifications.onRevisionRequested(contract.freelancerId, { job: revisedJob, note: feedback });
 
     return sendSuccess(res, {
       message: 'Revision requested',

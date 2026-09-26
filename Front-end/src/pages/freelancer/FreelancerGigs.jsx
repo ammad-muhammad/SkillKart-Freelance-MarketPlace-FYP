@@ -97,6 +97,190 @@ const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
   </div>
 );
 
+const SUGGESTED_FEATURES = [
+  'Source Code',
+  'Responsive Design',
+  'Content Upload',
+  'Design Customization',
+  'Commercial Use',
+  'Speed Optimization'
+];
+
+const TIERS_CONFIG = [
+  { tier: 'basic', label: 'Basic', icon: '🥉' },
+  { tier: 'standard', label: 'Standard', icon: '🥈' },
+  { tier: 'premium', label: 'Premium', icon: '🥇' }
+];
+
+const PricingTierEdit = ({ tier, label, icon, data = {}, onChange }) => {
+  const [featureInput, setFeatureInput] = useState('');
+
+  const handleAddFeature = (featText) => {
+    const text = (featText || featureInput).trim();
+    if (!text) return;
+    const current = Array.isArray(data.features) ? data.features : [];
+    if (!current.includes(text)) {
+      onChange({ ...data, features: [...current, text] });
+    }
+    if (!featText) setFeatureInput('');
+  };
+
+  const handleRemoveFeature = (idx) => {
+    const current = Array.isArray(data.features) ? data.features : [];
+    onChange({ ...data, features: current.filter((_, i) => i !== idx) });
+  };
+
+  return (
+    <div className={`fl-tier-edit fl-tier-edit--${tier}`}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.85rem' }}>
+        <span style={{ fontSize: '1.25rem' }}>{icon}</span>
+        <h5 className="fl-tier-edit__label" style={{ margin: 0 }}>{label}</h5>
+      </div>
+
+      <div className="fl-form-group">
+        <label>Package Title</label>
+        <input
+          type="text"
+          maxLength={100}
+          value={data.title || ''}
+          onChange={(e) => onChange({ ...data, title: e.target.value })}
+          placeholder={tier === 'basic' ? 'e.g. Basic Fixes & Setup' : tier === 'standard' ? 'e.g. Standard Web App' : 'e.g. Full-Stack Solution'}
+        />
+      </div>
+
+      <div className="fl-form-group">
+        <label>Description (What's included)</label>
+        <textarea
+          rows={2}
+          maxLength={300}
+          value={data.description || ''}
+          onChange={(e) => onChange({ ...data, description: e.target.value })}
+          placeholder="Brief description of what you will deliver in this tier..."
+          style={{ resize: 'vertical', fontSize: '0.82rem' }}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.65rem', marginBottom: '0.65rem' }}>
+        <div className="fl-form-group" style={{ margin: 0 }}>
+          <label>Delivery (days)</label>
+          <input
+            type="number"
+            min={1}
+            value={data.deliveryTime ?? ''}
+            onChange={(e) => onChange({ ...data, deliveryTime: e.target.value })}
+            placeholder="e.g. 3"
+            required={tier === 'basic'}
+          />
+        </div>
+        <div className="fl-form-group" style={{ margin: 0 }}>
+          <label>Revisions</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={data.revisions ?? ''}
+            onChange={(e) => onChange({ ...data, revisions: e.target.value })}
+            placeholder="e.g. 2"
+            required={tier === 'basic'}
+          />
+        </div>
+      </div>
+
+      <div className="fl-form-group">
+        <label>Price (PKR) {tier === 'basic' ? '*' : ''}</label>
+        <input
+          type="number"
+          min={0}
+          value={data.price ?? ''}
+          onChange={(e) => onChange({ ...data, price: e.target.value })}
+          placeholder="e.g. 500"
+          required={tier === 'basic'}
+        />
+      </div>
+
+      <div className="fl-form-group" style={{ marginTop: 'auto', marginBottom: 0 }}>
+        <label>Included Features ({data.features?.length || 0})</label>
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem', minHeight: '26px' }}>
+          {(data.features || []).map((feat, idx) => (
+            <span
+              key={idx}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                background: '#e0f2fe',
+                color: '#0369a1',
+                padding: '2px 8px',
+                borderRadius: '99px',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                maxWidth: '100%',
+                wordBreak: 'break-word'
+              }}
+            >
+              ✓ {feat}
+              <button
+                type="button"
+                onClick={() => handleRemoveFeature(idx)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0284c7', fontSize: '0.85rem', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {(!data.features || data.features.length === 0) && (
+            <span style={{ fontSize: '0.74rem', color: 'var(--color-text-light)' }}>No features added yet.</span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.35rem', width: '100%', minWidth: 0 }}>
+          <input
+            type="text"
+            value={featureInput}
+            onChange={(e) => setFeatureInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
+            placeholder="Add custom feature..."
+            style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', minWidth: 0, flex: 1, boxSizing: 'border-box' }}
+          />
+          <button
+            type="button"
+            className="fl-btn fl-btn--outline fl-btn--sm"
+            onClick={() => handleAddFeature()}
+            style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.65rem', fontSize: '0.8rem', flexShrink: 0 }}
+          >
+            + Add
+          </button>
+        </div>
+
+        <div style={{ marginTop: '0.45rem', width: '100%' }}>
+          <span style={{ fontSize: '0.68rem', color: 'var(--color-text-light)', display: 'block', marginBottom: '0.2rem' }}>Quick add:</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+            {SUGGESTED_FEATURES.filter(f => !(data.features || []).includes(f)).slice(0, 4).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => handleAddFeature(f)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '0.68rem',
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                + {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FreelancerGigs = () => {
   const { gigs, deleteGig, toggleGigStatus, updateGig } = useFreelancer();
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -112,9 +296,9 @@ const FreelancerGigs = () => {
     subcategory: '',
     skills: [],
     pricing: {
-      basic: { price: 0, deliveryTime: 1, revisions: 1 },
-      standard: { price: 0, deliveryTime: 1, revisions: 1 },
-      premium: { price: 0, deliveryTime: 1, revisions: 1 }
+      basic: { title: '', description: '', price: '', deliveryTime: 1, revisions: 1, features: [] },
+      standard: { title: '', description: '', price: '', deliveryTime: 1, revisions: 1, features: [] },
+      premium: { title: '', description: '', price: '', deliveryTime: 1, revisions: 1, features: [] }
     },
     media: { banner: null, images: [], videoLink: '', portfolioLinks: [] },
     faqs: []
@@ -146,19 +330,28 @@ const FreelancerGigs = () => {
       skills: Array.isArray(gig.skills) ? gig.skills : [],
       pricing: {
         basic: {
-          price: gig.pricing?.basic?.price || 0,
-          deliveryTime: gig.pricing?.basic?.deliveryTime || 1,
-          revisions: gig.pricing?.basic?.revisions || 1
+          title: gig.pricing?.basic?.title || '',
+          description: gig.pricing?.basic?.description || '',
+          price: gig.pricing?.basic?.price ?? '',
+          deliveryTime: gig.pricing?.basic?.deliveryTime ?? 1,
+          revisions: gig.pricing?.basic?.revisions ?? 1,
+          features: Array.isArray(gig.pricing?.basic?.features) ? [...gig.pricing.basic.features] : []
         },
         standard: {
-          price: gig.pricing?.standard?.price || 0,
-          deliveryTime: gig.pricing?.standard?.deliveryTime || 1,
-          revisions: gig.pricing?.standard?.revisions || 1
+          title: gig.pricing?.standard?.title || '',
+          description: gig.pricing?.standard?.description || '',
+          price: gig.pricing?.standard?.price ?? '',
+          deliveryTime: gig.pricing?.standard?.deliveryTime ?? 1,
+          revisions: gig.pricing?.standard?.revisions ?? 1,
+          features: Array.isArray(gig.pricing?.standard?.features) ? [...gig.pricing.standard.features] : []
         },
         premium: {
-          price: gig.pricing?.premium?.price || 0,
-          deliveryTime: gig.pricing?.premium?.deliveryTime || 1,
-          revisions: gig.pricing?.premium?.revisions || 1
+          title: gig.pricing?.premium?.title || '',
+          description: gig.pricing?.premium?.description || '',
+          price: gig.pricing?.premium?.price ?? '',
+          deliveryTime: gig.pricing?.premium?.deliveryTime ?? 1,
+          revisions: gig.pricing?.premium?.revisions ?? 1,
+          features: Array.isArray(gig.pricing?.premium?.features) ? [...gig.pricing.premium.features] : []
         }
       },
       media: gig.media || { banner: null, images: [], videoLink: '', portfolioLinks: [] },
@@ -244,6 +437,39 @@ const FreelancerGigs = () => {
     e.preventDefault();
     
     // Prepare nested data
+    const updatedPricing = {
+      basic: {
+        title: formData.pricing.basic?.title || '',
+        description: formData.pricing.basic?.description || '',
+        price: Number(formData.pricing.basic?.price) || 0,
+        deliveryTime: Number(formData.pricing.basic?.deliveryTime) || 1,
+        revisions: Number(formData.pricing.basic?.revisions) || 0,
+        features: Array.isArray(formData.pricing.basic?.features) ? formData.pricing.basic.features : []
+      }
+    };
+
+    if (formData.pricing.standard?.price && Number(formData.pricing.standard.price) > 0) {
+      updatedPricing.standard = {
+        title: formData.pricing.standard?.title || '',
+        description: formData.pricing.standard?.description || '',
+        price: Number(formData.pricing.standard.price),
+        deliveryTime: Number(formData.pricing.standard?.deliveryTime) || 1,
+        revisions: Number(formData.pricing.standard?.revisions) || 0,
+        features: Array.isArray(formData.pricing.standard?.features) ? formData.pricing.standard.features : []
+      };
+    }
+
+    if (formData.pricing.premium?.price && Number(formData.pricing.premium.price) > 0) {
+      updatedPricing.premium = {
+        title: formData.pricing.premium?.title || '',
+        description: formData.pricing.premium?.description || '',
+        price: Number(formData.pricing.premium.price),
+        deliveryTime: Number(formData.pricing.premium?.deliveryTime) || 1,
+        revisions: Number(formData.pricing.premium?.revisions) || 0,
+        features: Array.isArray(formData.pricing.premium?.features) ? formData.pricing.premium.features : []
+      };
+    }
+
     const updatedData = {
       title: formData.title,
       shortDescription: formData.shortDescription,
@@ -251,7 +477,7 @@ const FreelancerGigs = () => {
       category: formData.category,
       subcategory: formData.subcategory,
       skills: formData.skills,
-      pricing: formData.pricing,
+      pricing: updatedPricing,
       media: formData.media,
       faqs: formData.faqs
     };
@@ -556,59 +782,23 @@ const FreelancerGigs = () => {
               </button>
             </div>
 
-            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Pricing Tiers</h4>
+            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Pricing Packages</h4>
             <div className="fl-pricing-edit-grid">
-              {['basic', 'standard', 'premium'].map((tier) => (
-                <div key={tier} className={`fl-tier-edit fl-tier-edit--${tier}`}>
-                  <h5 className="fl-tier-edit__label">{tier.charAt(0).toUpperCase() + tier.slice(1)}</h5>
-                  <div className="fl-form-group">
-                    <label>Price (PKR)</label>
-                    <input 
-                      type="number" 
-                      value={formData.pricing[tier].price}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        pricing: {
-                          ...formData.pricing,
-                          [tier]: { ...formData.pricing[tier], price: e.target.value }
-                        }
-                      })}
-                      required 
-                    />
-                  </div>
-                  <div className="fl-form-group">
-                    <label>Delivery (days)</label>
-                    <input 
-                      type="number" 
-                      value={formData.pricing[tier].deliveryTime}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        pricing: {
-                          ...formData.pricing,
-                          [tier]: { ...formData.pricing[tier], deliveryTime: e.target.value }
-                        }
-                      })}
-                      required 
-                    />
-                  </div>
-                  <div className="fl-form-group">
-                    <label>Revisions</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={formData.pricing[tier].revisions}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        pricing: {
-                          ...formData.pricing,
-                          [tier]: { ...formData.pricing[tier], revisions: e.target.value }
-                        }
-                      })}
-                      required
-                    />
-                  </div>
-                </div>
+              {TIERS_CONFIG.map(({ tier, label, icon }) => (
+                <PricingTierEdit
+                  key={tier}
+                  tier={tier}
+                  label={label}
+                  icon={icon}
+                  data={formData.pricing[tier] || {}}
+                  onChange={(updatedTierData) => setFormData((prev) => ({
+                    ...prev,
+                    pricing: {
+                      ...prev.pricing,
+                      [tier]: updatedTierData
+                    }
+                  }))}
+                />
               ))}
             </div>
 
@@ -766,18 +956,29 @@ const FreelancerGigs = () => {
           padding-bottom: 0.5rem; margin-bottom: 1.25rem; 
         }
         .fl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-        .fl-pricing-edit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-        @media (max-width: 800px) { .fl-pricing-edit-grid { grid-template-columns: 1fr; } }
+        .fl-pricing-edit-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1.25rem;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        @media (max-width: 900px) { .fl-pricing-edit-grid { grid-template-columns: 1fr; } }
         
         .fl-tier-edit {
           background: var(--color-white);
-          padding: 1.5rem;
+          padding: 1.25rem;
           border-radius: 16px;
           border: 1px solid rgba(183, 201, 226, 0.35);
           box-shadow: 0 4px 12px rgba(4, 46, 76, 0.03);
           position: relative;
           overflow: hidden;
           transition: all 0.3s ease;
+          min-width: 0;
+          width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
         }
         .fl-tier-edit:hover {
           box-shadow: 0 8px 24px rgba(4, 46, 76, 0.08);
@@ -805,10 +1006,9 @@ const FreelancerGigs = () => {
           display: inline-block;
           font-size: 0.75rem;
           font-weight: 800;
-          margin-bottom: 1.5rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          padding: 0.4rem 0.9rem;
+          padding: 0.3rem 0.8rem;
           border-radius: 20px;
         }
         .fl-tier-edit--basic .fl-tier-edit__label { background: rgba(183, 201, 226, 0.25); color: var(--color-text-mid); }
@@ -816,12 +1016,24 @@ const FreelancerGigs = () => {
         .fl-tier-edit--premium .fl-tier-edit__label { background: rgba(4, 46, 76, 0.1); color: var(--color-primary); }
 
         .fl-form-group { margin-bottom: 1.25rem; }
-        .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.5rem; }
+        .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.4rem; }
         .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field), .fl-form-group textarea {
-          width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(183, 201, 226, 0.35);
-          font-size: 0.9rem; font-family: var(--font-body); transition: all 0.2s; background: var(--color-secondary);
+          width: 100%; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1px solid rgba(183, 201, 226, 0.35);
+          font-size: 0.88rem; font-family: var(--font-body); transition: all 0.2s; background: var(--color-secondary);
+          box-sizing: border-box; min-width: 0;
         }
-        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: var(--color-white); }
+        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus {
+          outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: var(--color-white);
+        }
+        
+        .fl-tier-edit .fl-form-group { margin-bottom: 0.75rem; }
+        .fl-tier-edit .fl-form-group label { font-size: 0.75rem; margin-bottom: 0.25rem; }
+        .fl-tier-edit input:not(.cmbo__input):not(.fl-tag-input__field), .fl-tier-edit textarea {
+          padding: 0.45rem 0.65rem; font-size: 0.82rem; background: #f8fafc;
+        }
+        .fl-tier-edit input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-tier-edit textarea:focus {
+          background: var(--color-white);
+        }
         
         .fl-empty-message { text-align: center; padding: 4rem 2rem; }
         @media (max-width: 600px) {

@@ -61,8 +61,8 @@ export default function FreelancerWork() {
   const { user } = useAuth();
   const { showToast } = useFreelancer();
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [{ data }, gigRes] = await Promise.all([
         contractsAPI.getMyContracts({ limit: 50 }),
@@ -74,12 +74,27 @@ export default function FreelancerWork() {
       // Only a real submission counts as delivered — older gig orders carry
       // an empty `{ links: [] }` delivery stub (see Backend Job.js).
       setGigOrders(Array.isArray(gigRes?.data?.data)
-        ? gigRes.data.data.map((g) => ({ ...g, delivery: g.delivery?.submittedAt ? g.delivery : null }))
+        ? gigRes.data.data.map((g) => ({
+            ...g,
+            delivery: g.delivery?.submittedAt ? g.delivery : null,
+            lastRevision: g.lastRevision || null,
+            revisions: g.revisions || []
+          }))
         : []);
-    } catch { /* handled by the global error handler */ } finally { setLoading(false); }
+    } catch { /* handled by the global error handler */ } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible' && !deliverFor && !endRequestModal && !disputeModal && !manualLogFor && !reviewModal) {
+        load(true);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [load, deliverFor, endRequestModal, disputeModal, manualLogFor, reviewModal]);
 
   // Earnings summary from completed contracts.
   const totalEarned = contracts
@@ -505,8 +520,9 @@ export default function FreelancerWork() {
             {gigOrders.map((g) => {
               const escrow = g.payment ? ESCROW[g.payment.status] : null;
               const canDeliver = g.status === 'in-progress' && g.payment?.status === 'deposit_paid';
+              const isRevision = !g.delivery && !!g.lastRevision?.note && g.status === 'in-progress';
               return (
-                <div key={g._id} className="fl-card fl-contract">
+                <div key={g._id} className="fl-card fl-contract" style={isRevision ? { borderColor: '#f59e0b', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.25)' } : undefined}>
                   <div className="fl-contract__top">
                     <div>
                       <h3 className="fl-contract__title">{g.title || 'Unknown Gig Order'}</h3>
@@ -515,16 +531,46 @@ export default function FreelancerWork() {
                         {g.clientId && ` · ${g.clientId.firstName || ''} ${g.clientId.lastName || ''}`}
                       </p>
                     </div>
-                    <StatusBadge tone={(STAGES[g.status] || {}).tone || 'neutral'}>
-                      {g.delivery && g.status !== 'completed' ? 'Delivered — awaiting review' : (STAGES[g.status]?.label || g.status)}
+                    <StatusBadge tone={isRevision ? 'warning' : ((g.delivery && g.status !== 'completed' ? 'warning' : (STAGES[g.status] || {}).tone) || 'neutral')}>
+                      {g.delivery && g.status !== 'completed'
+                        ? 'Delivered — awaiting review'
+                        : isRevision
+                          ? 'Revision Requested'
+                          : (STAGES[g.status]?.label || g.status)}
                     </StatusBadge>
                   </div>
+
+                  {/* Prominent revision banner if client requested changes */}
+                  {isRevision && (
+                    <div style={{
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: '0.65rem',
+                      padding: '0.85rem 1rem',
+                      marginBottom: '1rem',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem', color: '#b45309', fontWeight: 600, fontSize: '0.88rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <RefreshCw size={15} style={{ color: '#d97706' }} /> Client Requested Changes:
+                        </span>
+                        {g.lastRevision.requestedAt && (
+                          <span style={{ fontSize: '0.78rem', color: '#92400e', fontWeight: 400 }}>
+                            {new Date(g.lastRevision.requestedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#78350f', whiteSpace: 'pre-wrap', lineHeight: 1.5, background: 'rgba(255, 255, 255, 0.7)', padding: '0.6rem 0.75rem', borderRadius: '0.375rem', border: '1px solid rgba(253, 230, 138, 0.8)' }}>
+                        {g.lastRevision.note}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Open by default while there's work to do — this is the brief. */}
                   <OrderRequirements
                     requirements={g.requirements}
                     scope={g.customOfferId ? g.description : undefined}
                     title={g.customOfferId ? 'Offer scope & client notes' : 'Client requirements'}
-                    defaultOpen={g.status === 'in-progress' && !g.delivery}
+                    defaultOpen={g.status === 'in-progress' && !g.delivery && !isRevision}
                     emptyText={g.customOfferId ? 'No extra notes — work to the scope in your offer.' : undefined}
                   />
                   <div className="fl-contract__money">
@@ -542,7 +588,7 @@ export default function FreelancerWork() {
                   <div className="fl-contract__actions">
                     {canDeliver && !g.delivery && (
                       <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => { setDeliverFor({ ...g, isGig: true }); setDelivery({ message: '', links: '' }); }}>
-                        <UploadCloud size={14} /> Submit Delivery
+                        {isRevision ? <><RefreshCw size={14} /> Submit Revised Work</> : <><UploadCloud size={14} /> Submit Delivery</>}
                       </button>
                     )}
                     {canDeliver && g.delivery && (
@@ -571,15 +617,42 @@ export default function FreelancerWork() {
             tabIndex={-1}
           >
             <div className="fl-deliver-modal__head">
-              <h3>Submit Work — {deliverFor.title}</h3>
-              <button onClick={closeDeliverModal} disabled={delivering} aria-label="Close"><X size={18} /></button>
+              <div style={{ minWidth: 0, paddingRight: '0.75rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+                  {(deliverFor.lastRevision?.note || deliverFor.revisionNote) ? 'Submit Revised Work' : 'Submit Work'}
+                </h3>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.84rem', color: 'var(--color-text-mid)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={deliverFor.title}>
+                  {deliverFor.title}
+                </p>
+              </div>
+              <button onClick={closeDeliverModal} disabled={delivering} aria-label="Close" style={{ flexShrink: 0 }}>
+                <X size={18} />
+              </button>
             </div>
             <div className="fl-deliver-modal__body">
+              {(deliverFor.lastRevision?.note || deliverFor.revisionNote) && (
+                <div style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '0.5rem',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '0.4rem',
+                  fontSize: '0.85rem',
+                  color: '#78350f'
+                }}>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#b45309', marginBottom: '0.25rem', fontSize: '0.82rem' }}>
+                    <RefreshCw size={13} /> Client's requested changes:
+                  </strong>
+                  <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.4, maxHeight: '90px', overflowY: 'auto' }}>
+                    {deliverFor.lastRevision?.note || deliverFor.revisionNote}
+                  </p>
+                </div>
+              )}
               <label className="fl-label">Delivery note</label>
-              <textarea className="fl-textarea" rows={4} placeholder="Describe what you delivered…"
+              <textarea className="fl-textarea" rows={3} placeholder="Describe what you delivered…"
                 value={delivery.message} onChange={(e) => setDelivery((d) => ({ ...d, message: e.target.value }))} />
-              <label className="fl-label" style={{ marginTop: '0.75rem' }}>Links (one per line or comma-separated)</label>
-              <textarea className="fl-textarea" rows={3} placeholder={"https://github.com/...\nhttps://drive.google.com/..."}
+              <label className="fl-label" style={{ marginTop: '0.4rem' }}>Links (one per line or comma-separated)</label>
+              <textarea className="fl-textarea" rows={2} placeholder={"https://github.com/...\nhttps://drive.google.com/..."}
                 value={delivery.links} onChange={(e) => setDelivery(d => ({ ...d, links: e.target.value }))}></textarea>
             </div>
             <div className="fl-deliver-modal__foot">
@@ -731,14 +804,79 @@ export default function FreelancerWork() {
         /* Above .fl-toast-stack (--z-toast: 4000) previously shared the same
            value — a toast could render behind this modal. Route through the
            shared --z-modal token like every other full-screen overlay. */
-        .fl-deliver-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: var(--z-modal, 3000); padding: 1rem; }
-        .fl-deliver-modal { background: var(--color-bg); width: 100%; max-width: 600px; border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 24px 60px rgba(4,46,76,0.3); }
-        .fl-deliver-modal__head { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--color-secondary); }
-        .fl-deliver-modal__head h3 { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
-        .fl-deliver-modal__head button { background: none; border: none; cursor: pointer; color: var(--color-text-light); transition: color 0.2s; }
-        .fl-deliver-modal__head button:hover { color: var(--color-primary); }
-        .fl-deliver-modal__body { padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-        .fl-deliver-modal__foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid var(--color-secondary); background: var(--color-secondary); }
+        .fl-deliver-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.55);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: var(--z-modal, 3000);
+          padding: 1.25rem 1rem;
+          overflow-y: auto;
+        }
+        .fl-deliver-modal {
+          background: var(--color-bg, #ffffff);
+          width: 100%;
+          max-width: 560px;
+          max-height: calc(100vh - 3rem);
+          display: flex;
+          flex-direction: column;
+          border-radius: var(--radius-xl, 16px);
+          overflow: hidden;
+          box-shadow: 0 20px 50px rgba(4, 46, 76, 0.25);
+          margin: auto;
+          animation: sk-modal-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+        .fl-deliver-modal__head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem 1.4rem;
+          border-bottom: 1px solid var(--color-secondary, #e2e8f0);
+          flex-shrink: 0;
+        }
+        .fl-deliver-modal__head h3 {
+          font-size: 1.1rem;
+          font-weight: var(--fw-bold, 700);
+          color: var(--color-primary-dark, #0f172a);
+          line-height: 1.3;
+        }
+        .fl-deliver-modal__head button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: var(--color-text-light, #64748b);
+          padding: 0.35rem;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s, color 0.2s;
+        }
+        .fl-deliver-modal__head button:hover {
+          background: rgba(0, 0, 0, 0.05);
+          color: var(--color-primary, #0284c7);
+        }
+        .fl-deliver-modal__body {
+          padding: 1.1rem 1.4rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+          overflow-y: auto;
+          flex: 1 1 auto;
+        }
+        .fl-deliver-modal__foot {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.9rem 1.4rem;
+          border-top: 1px solid var(--color-secondary, #e2e8f0);
+          background: var(--color-secondary, #f8fafc);
+          flex-shrink: 0;
+        }
       `}</style>
     </div>
   );

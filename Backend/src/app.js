@@ -12,6 +12,7 @@ const { swaggerUi, specs } = require('./config/swagger');
 // Create Express app
 const app = express();
 
+
 // Railway/Render/Heroku terminate TLS at their proxy and forward plain HTTP.
 // Without this, req.secure is always false and req.ip is the proxy's — which
 // silently breaks Secure cookies and IP-based rate limiting behind the proxy.
@@ -188,6 +189,7 @@ const testimonialRoutes = require('./routes/testimonial.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const customOfferRoutes = require('./routes/customOffer.routes');
+const reviewRoutes = require('./routes/review.routes');
 
 // Mount routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
@@ -213,6 +215,7 @@ app.use(`${API_PREFIX}/testimonials`, testimonialRoutes);
 app.use(`${API_PREFIX}/payments`, paymentRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/offers`, customOfferRoutes);
+app.use(`${API_PREFIX}/reviews`, reviewRoutes);
 
 // ========================
 // Admin Panel Routes (Isolated)
