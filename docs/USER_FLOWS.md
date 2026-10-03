@@ -8,7 +8,7 @@ This document serves as the master business blueprint for the SkillKart marketpl
 
 - **What SkillKart is:** A secure, dual-sided digital marketplace connecting skilled freelancers with clients seeking on-demand talent.
 - **Marketplace Type:** B2B / B2C Service Marketplace. It operates on a hybrid model supporting both Custom Job Postings (Upwork model) and pre-packaged Gigs (Fiverr model).
-- **Business Model:** Commission-based. The platform charges a variable percentage fee (default 10%) on all successfully completed contracts, deducted from the freelancer's final payout upon Escrow release.
+- **Business Model:** Commission-based. The platform charges a configurable percentage fee (default 0.5%, the `platform_fee_rate` setting) on escrow releases, deducted from the freelancer's payout when Escrow is released.
 - **Core Objectives:**
   - Facilitate trustworthy connections through skill verification.
   - Guarantee payment security via an Escrow funding model.
@@ -88,8 +88,8 @@ Freelancer Requests Withdrawal
 8. **Hiring Notification:** Client accepts. Proposal changes to `accepted`.
 9. **Working:** For fixed-price contracts, the freelancer receives an `Escrow Funded` notification once the current milestone (or the whole price, if not split) is 100% locked; the backend enforces this — a delivery cannot be submitted while the current milestone is unfunded, so "safe to work" is a real guarantee, not just copy. For hourly contracts, the freelancer receives a `wallet_locked` notification once the client's wallet covers one week's estimate, then logs time (timer or manual entry) which auto-bills against that lock as it's recorded — no per-entry approval step. If the lock runs dry, new time logs are held `pending` ("needs top-up") until the client adds more funds.
 10. **Messaging:** Chat channel opens via the active contract.
-11. **Delivery:** Freelancer clicks "Deliver Work". Job state shifts to `delivered`.
-12. **Revisions:** Client may reject the delivery. State shifts back to `in-progress`. Freelancer must re-deliver.
+11. **Delivery:** Freelancer clicks "Deliver Work". A `Delivery` is created (`pending_review`), the `Contract` status shifts to `delivered` and (fixed-price) the current milestone to `submitted`. The `Job` itself stays `in-progress`.
+12. **Revisions:** Client may request a revision. The `Contract` (and the milestone, for fixed-price) shifts to `in_revision`. Freelancer must re-deliver.
 13. **Approval:** Client approves. Backend deducts platform fee, and adds net amount to `FreelancerProfile.walletBalance`.
 14. **Withdrawal:** Freelancer requests payout. DB creates a `Withdrawal` request, and deducts the balance immediately.
 15. **Reviews:** Leaves a 1-5 star rating for the client.
@@ -107,7 +107,7 @@ Freelancer Requests Withdrawal
 7. **Hiring:** Accepts proposal. Job `hiredFreelancer` is set, state shifts to `in-progress`. All competing proposals are automatically marked `rejected`.
 8. **Escrow Funding:** Acceptance is blocked upfront if the wallet can't cover it — checked before any Contract/Milestone/Payment records are created. For **fixed-price jobs**, **100% of milestone 1's amount is debited from the client's wallet automatically** the instant the proposal is accepted — no separate checkout step. The client may optionally split the price into sequential **Milestones** at accept-time; only the first is funded upfront, and later milestones are funded on demand once the client is ready. For **hourly contracts**, one week's estimated cost (`hourly rate × estimated weekly hours`) is locked from the wallet at accept-time instead; the client tops up the lock later as work continues. (Gig orders are the only flow that still uses the original 50/50 Stripe-Checkout deposit/final flow.)
 9. **Messaging:** Chats with hired freelancer.
-10. **Delivery Review (fixed-price):** Job shifts to `delivered`. If the client doesn't act within a configurable window (default **7 days**), the milestone **auto-releases** to the freelancer. **Hourly contracts have no delivery-review step** — logged hours draw down from the wallet lock automatically as they're recorded, without client sign-off per entry.
+10. **Delivery Review (fixed-price):** The contract shifts to `delivered` and the milestone to `submitted`. If the client doesn't act within a configurable window (default **7 days**), the milestone **auto-releases** to the freelancer. **Hourly contracts have no delivery-review step** — logged hours draw down from the wallet lock automatically as they're recorded, without client sign-off per entry.
 11. **Approving Work (fixed-price):** Approves delivery, releasing that milestone's Escrow. If it was the last (or only) milestone, the Job state shifts to `completed`; otherwise the contract advances to the next milestone, which the client funds when ready. For **hourly contracts**, the client's only ongoing action is topping up the wallet lock when it runs low; ending the contract refunds whatever's left in the lock back to the client's wallet.
 12. **Disputing:** For **fixed-price**, the client raises a **dispute** scoped to the specific current milestone — it locks only that milestone (not the whole multi-phase project) pending admin review. For **hourly**, disputes are raised at the contract level instead (there's no milestone to scope to).
 13. **Reviews:** Rates the freelancer, influencing their aggregate profile score.
@@ -144,7 +144,7 @@ Work & Delivery Lifecycle
 - **OTP Verification:** 6-digit codes stored temporarily, delivered by email (Gmail API in production, SMTP locally).
 - **Login:** Returns stateless JWTs.
 - **Two-Factor Authentication (2FA):** Optional. If enabled, Login requires a secondary OTP sent to the verified email.
-- **Refresh Token Flow:** Access token expires (e.g., 15m). The frontend silently hits `/auth/refresh` with the stored refresh token to mint a new one. Marketplace tokens are held in browser storage and sent as `Authorization: Bearer` headers; the **admin panel** is separate, using an HTTP-only `admin_token` cookie (`SameSite=None; Secure` in production, since the SPA and API are on different domains).
+- **Refresh Token Flow:** Access token expires (default 7 days, `JWT_EXPIRE`; the refresh token defaults to 30 days, `JWT_REFRESH_EXPIRE`). The frontend silently hits `/auth/refresh` with the stored refresh token to mint a new one. Marketplace tokens are held in browser storage and sent as `Authorization: Bearer` headers; the **admin panel** is separate, using an HTTP-only `admin_token` cookie (`SameSite=None; Secure` in production, since the SPA and API are on different domains).
 - **Password Updates:** Fully supported via `changePassword` endpoints.
 - **File Uploads:** Memory buffer whitelisting strictly prevents payload manipulation before syncing to Cloudinary.
 
@@ -172,7 +172,7 @@ Custom fixed-price jobs use a newer, wallet-native escrow model — no Stripe Ch
 
 - **No Wallet Gate at Posting:** A client can post — and publish — a job with any wallet balance, including $0, for either budget type. There's no proof-of-funds check at posting time; the wallet is only checked (and locked) when a proposal is accepted.
 - **100% Lock at Hire:** Accepting a proposal debits the client's wallet for the full agreed price (or, if split, the first milestone's amount) and creates the `Contract` + `Milestone`(s) + `Payment` record(s) atomically — checked *before* any writes, so an insufficient balance leaves nothing half-created.
-- **Sequential Milestones:** A client may split the price into up to a few milestones at accept-time. Only milestone 1 auto-funds; milestone 2+ requires the client to explicitly click "Fund Milestone N" once ready (`POST /payments/milestones/:id/fund`) — capital isn't parked for work that hasn't started.
+- **Sequential Milestones:** A client may split the price into any number of milestones at accept-time (their amounts must sum to the agreed price). Only milestone 1 auto-funds; milestone 2+ requires the client to explicitly click "Fund Milestone N" once ready (`POST /payments/milestones/:id/fund`) — capital isn't parked for work that hasn't started.
 - **Submit Gate:** The freelancer can only submit a delivery once the current milestone's status is `funded` (or `in_revision`) — enforced server-side, not just in the UI.
 - **7-Day Auto-Release:** An hourly cron job (`cron.service.js`) scans milestones stuck in `submitted` past their `reviewDeadline` (default 7 days, configurable via admin `SystemSettings`) and releases them automatically, notifying both parties. A milestone under an active dispute is excluded.
 - **Milestone Disputes:** Either party can raise a dispute on the *current* milestone (must be `submitted`/`in_revision`); this locks that milestone and flips the contract to `under_review`, without touching any other milestone. Admins resolve via the same actions as hourly disputes (release / refund / split / resume / reject), scoped to that one milestone's own `Payment` record.

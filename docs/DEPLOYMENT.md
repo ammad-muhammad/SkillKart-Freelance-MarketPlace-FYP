@@ -121,7 +121,7 @@ This is only a *transient* problem — deploying the backend afterwards fixes it
 
 ### Supabase (optional — social OAuth only)
 
-Copy `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`. Email/OTP auth works without Supabase.
+Copy `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Email/OTP auth works without Supabase.
 
 ### AI (optional)
 
@@ -450,9 +450,9 @@ Full documented list in [`Backend/.env.example`](../Backend/.env.example). Produ
 | `EMAIL_SANDBOX` / `EMAIL_SANDBOX_RECIPIENT` | ❌ | staging only — redirects all mail to one inbox |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM_EMAIL` | ⬤ | SMTP — needed for OTP emails. Legacy `EMAIL_*` names still work |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` / `GOOGLE_EMAIL` | ⬤ | only if `EMAIL_PROVIDER=gmail`. Generate the token once via [Google's OAuth Playground](https://developers.google.com/oauthplayground/) and paste the same value here — it is not machine-bound, and `GOOGLE_REDIRECT_URI` is not needed in production. **Railway blocks outbound SMTP (465/587)**, so Gmail is the working transport there — but a Testing-mode consent screen expires refresh tokens after **7 days**, and the SMTP fallback cannot save you on Railway. See [Backend README → Email](../Backend/README.md#email). Not related to Supabase Google sign-in |
-| `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` | ⬤ | social OAuth only |
-| `REDIS_URL` | ❌ | optional cache; leave blank / `ENABLE_REDIS_CACHE=false` |
-| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys. Gemini and DeepSeek implement the full AI feature set; the rest cover only the core 6 methods |
+| `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | ⬤ | social OAuth only |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB` | ❌ | optional. Redis is connected at boot but not yet used by any live read path, and the server carries on without it if the connection fails. There is no `REDIS_URL` or `ENABLE_REDIS_CACHE` variable |
+| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `QWEN_API_KEY` / `GROQ_API_KEY` / `ANTHROPIC_API_KEY` | ⬤ | AI provider keys. Gemini and DeepSeek implement the full AI feature set; Qwen, Groq and Claude cover only 5 core methods (CV parsing, skill-test generation and evaluation, skill validation, industry recommendation), and the router falls through per-method to a provider that implements the rest |
 | `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL_LITE` / `DEEPSEEK_MODEL_HEAVY` / `DEEPSEEK_THINKING` | ❌ | DeepSeek endpoint + model tiers (default `deepseek-flash`, thinking disabled). Model names changed twice: `deepseek-chat`/`deepseek-reasoner` retired 2026-07-24, then `deepseek-v4-flash` superseded 2026-09-10 by `deepseek-flash` (the old name is only a temporary alias) |
 | `QWEN_BASE_URL` / `QWEN_MODEL` | ❌ | Qwen endpoint + model (defaults provided) |
 | `AI_PRIORITY_GEMINI` … `AI_PRIORITY_OLLAMA` | ❌ | fallback order (0 = first; `-1` disables) |

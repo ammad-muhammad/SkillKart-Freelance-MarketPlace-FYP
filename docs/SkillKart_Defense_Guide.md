@@ -128,7 +128,7 @@ Is ka matlab:
 > "Sir, passwords hashed store hote hain — plain text nahi. Login ke liye JWT tokens use hote hain. Admin panel ka alag login system hai — normal user login se koi connection nahi."
 
 **Member 1 add kare:**
-> "Multiple security layers hain: bcrypt password hashing, JWT access + refresh tokens (access token memory mein, localStorage mein nahi), RBAC role-based access control, Google reCAPTCHA v3 bots ke liye, rate limiting brute force se bachne ke liye, aur Helmet security headers. Skill tests mein camera proctoring bhi hai — face-api.js se face detection, agar koi aur shaks frame mein aaye ya look away kare to violation log hota hai."
+> "Multiple security layers hain: bcrypt password hashing, JWT access + refresh tokens (access token memory mein, localStorage mein nahi), RBAC role-based access control, Google reCAPTCHA v3 bots ke liye, rate limiting brute force se bachne ke liye, aur Helmet security headers. Skill tests mein camera proctoring bhi hai — Google MediaPipe Face Landmarker se face tracking, agar face na dikhe, koi aur shaks frame mein aaye, ya look away / head turn kare to violation log hota hai."
 
 ---
 
@@ -173,7 +173,7 @@ Is ka matlab:
 >
 > 1. **AI Provider Router** banaya hai — 6 providers fallback chain mein, automatic retry, graceful failure handling — ye sirf API call nahi hai.
 > 2. **Matchmaking engine** deliberately AI call NAHI hai — ye deterministic rules-based scoring algorithm hai (skills match, experience, rating — sab weighted score mein). Kyunke AI kabhi kabhi consistent nahi hota, jabke ranking ke liye reproducible aur auditable results chahiye.
-> 3. **Camera proctoring** — ye AI hai (face-api.js, face detection models) jo real-time browser mein run karta hai — backend AI se nahi, client-side model hai.
+> 3. **Camera proctoring** — ye AI hai (Google MediaPipe Face Landmarker model) jo real-time browser mein run karta hai — backend AI se nahi, client-side model hai.
 > 4. **CV parsing** — actual resume parse karke profile fields fill karta hai, generic response nahi deta."
 
 **Member 2 & 3 simple version:**
@@ -260,7 +260,7 @@ Is ka matlab:
 > - Escrow payment actually wallet balance deduct karta hai, transfer karta hai
 > - Skill test actual camera access karta hai, face detection real-time mein hoti hai
 > - Mobile app actual push notifications deta hai Firebase se — phone band ho tab bhi
-> - Demo accounts hain — test.client@skillkart.com, test.freelancer@skillkart.com se live demo de sakte hain"
+> - Demo accounts hain — test.client0@skillkart.com, test.freelancer0@skillkart.com (password Pass123!@#) se live demo de sakte hain"
 
 ---
 
@@ -344,14 +344,14 @@ Ye stats presentation mein bolo — HOD impressed hota hai:
 
 | Cheez | Number |
 |---|---|
-| Total code lines | ~70,000+ |
-| Source files | 280+ |
-| AI capabilities | 14+ |
-| Database models (Mongoose) | 39 |
-| Backend API route groups | 23 |
-| Backend controllers | 24 |
-| Backend services | 27 |
-| Admin panel pages | 16+ |
+| Total code lines | ~86,000 (JS/JSX; ~117,000 with CSS) |
+| Source files | ~390 (JS/JSX) |
+| AI capabilities | 14 LLM-backed (+ matchmaking & proctoring, which are not LLM calls) |
+| Database models (Mongoose) | 40 |
+| Backend API route modules | 25 (316 endpoints) |
+| Backend controllers | 34 |
+| Backend service files | 49 |
+| Admin panel modules | 17 |
 | AI providers in fallback chain | 6 |
 | Demo data (approx) | 200 users, 320 jobs, 220 gigs |
 
