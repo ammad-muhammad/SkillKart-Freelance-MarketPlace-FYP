@@ -121,7 +121,7 @@ The platform operates on a linear, logical flow from discovery to payout:
 7. **Applying:** Submits a cover letter and rate. Backend creates a `Proposal` with `status = 'pending'`.
 8. **Messaging:** If hired, the freelancer can chat with the client. Backend queries the `Message` collection.
 9. **Working:** Waits for the `onDepositFunded` notification.
-10. **Delivering:** Submits work. Backend updates `Job` status to `delivered` and attaches delivery payload.
+10. **Delivering:** Submits work. Backend creates a `Delivery` (`pending_review`), moves the `Contract` status to `delivered` (and, for fixed-price work, the current `Milestone` to `submitted`); the `Job` itself stays `in-progress`.
 11. **Receiving Payment:** Client approves. Backend increments `FreelancerProfile.walletBalance`.
 12. **Withdrawal Requests:** Requests payout. Backend creates a `Withdrawal` request and deducts from `walletBalance`.
 13. **Reviews:** Leaves a review for the client.
@@ -139,7 +139,7 @@ The platform operates on a linear, logical flow from discovery to payout:
 6. **Hiring:** Clicks accept on a proposal. Backend updates `Proposal` to `accepted`, sets `Job.hiredFreelancer`, and marks all other proposals as `rejected`.
 7. **Escrow Funding:** For a fixed-price hire, the backend debits the client's wallet for 100% of the price (or, if split into milestones, the first milestone's amount) the moment the proposal is accepted — no separate "pay deposit" click. Later milestones (if any) are funded on demand once the client clicks "Fund Milestone N". For an hourly hire, the backend locks one week's estimated cost from the client's wallet the moment the proposal is accepted, same as fixed-price — no Stripe involved. (Gig hires are the only ones that still generate a Stripe Session and update `Payment.status = deposit_paid` via webhook on success.) In every case, accepting a proposal requires the wallet to already cover the required amount — jobs can be posted with $0 balance, but hiring can't proceed until the wallet is funded.
 8. **Messaging:** Chats with the hired freelancer.
-9. **Reviewing Work:** Receives `delivered` status notification.
+9. **Reviewing Work:** Receives the "work delivered" notification (the contract is now `delivered`).
 10. **Approving Work:** Clicks approve. For fixed-price/milestone jobs, `delivery.controller.js` calls `approveMilestone` (`Backend/src/services/milestone.service.js`), which releases that milestone's escrow into the freelancer's wallet and — if it was the last milestone — marks the `Contract`/`Job` as `completed` (otherwise the contract advances to the next milestone). Gig orders remain on the older `payment.controller.js` `startFinal` flow instead.
 11. **Payment Release:** Funds physically move via internal ledger math.
 12. **Leaving Reviews:** Submits feedback.
@@ -160,6 +160,8 @@ stateDiagram-v2
     in_progress --> cancelled : Client Cancels
     delivered --> cancelled : Client Cancels
 ```
+
+> **Note:** `delivered` is a `Contract.status` value (set by `delivery.controller.js` when work is submitted; a revision request sets the contract to `in_revision`), not a `Job.status` value. The Job itself stays `in-progress` until it is completed or cancelled. `Job.status` is one of `draft`, `open`, `pending_payment` (unpaid gig orders), `in-progress`, `completed`, `cancelled`, `expired`, `closed`.
 
 ### Proposals
 ```mermaid
@@ -375,7 +377,7 @@ Major API Groups:
 - **Jobs API (`/api/v1/jobs`):** CRUD operations for postings. Handles state transitions (deliver, approve, cancel).
 - **Proposals API (`/api/v1/proposals`):** Submission and review of bids.
 - **Payments API (`/api/v1/payments`):** Stripe Checkout generation (Gig-order deposit/final), wallet deposits and withdrawal requests (automated Stripe Connect payout for `method: stripe`), plus the wallet-native custom-Job escrow endpoints — `POST /payments/milestones/:milestoneId/fund` (fund milestone 2+ on a fixed-price contract) and `POST /payments/contracts/:contractId/lock-hourly` (lock/top-up an hourly contract's wallet-lock escrow).
-- **Messages API (`/api/v1/messages`):** Real-time chat endpoints.
+- **Messages API (`/api/v1/messages`):** Chat endpoints (the frontend polls them — there are no WebSockets yet).
 - **Webhooks (`/webhooks`):** Unprotected endpoints utilized exclusively by Stripe/Supabase to asynchronously update backend state.
 
 ---
@@ -420,7 +422,7 @@ SkillKart employs enterprise-grade security protocols:
 ## 15. Future Roadmap
 
 **Phase 2:**
-1. Build the Admin Dashboard UI (KYC, User Moderation, Analytics).
+1. ~~Build the Admin Dashboard UI~~ — **shipped**: the isolated admin panel has 17 modules (user moderation, jobs, contracts, disputes, finance, analytics, monitoring, audit logs, ...). Identity/KYC is currently an admin-managed verification checklist; automated document-based KYC remains future work.
 2. Upgrade Messaging to Socket.io for true real-time chat.
 3. Expose `bank_transfer`/`paypal` as selectable withdrawal methods in the UI (Stripe Connect payouts are already live for the `stripe` method).
 

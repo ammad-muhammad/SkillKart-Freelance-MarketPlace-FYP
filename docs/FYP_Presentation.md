@@ -221,7 +221,7 @@ flowchart TB
 - **Role-based route guards** (`ProtectedRoute`) redirect by role.
 - UI: custom CSS + Tailwind v4, **Framer Motion / GSAP** animation, **Chart.js** dashboards, **lucide-react** icons.
 
-**Key discussion points:** ~128 components/pages organized by audience: `public/`, `client/`, `freelancer/`, `admin/`, `adminPanel/`. The Axios interceptor is a good example of centralized concerns — one place handles auth refresh, error surfacing, and duplicate-request suppression.
+**Key discussion points:** ~129 components/pages organized by audience: `public/`, `client/`, `freelancer/`, `admin/`, `adminPanel/`. The Axios interceptor is a good example of centralized concerns — one place handles auth refresh, error surfacing, and duplicate-request suppression.
 
 <table>
 <tr>
@@ -236,11 +236,11 @@ flowchart TB
 
 **Content:**
 - **Express 4** with a layered structure: **routes → middleware → controllers → services → models**.
-- **23 route modules**, **24 controllers**, **27 service modules**, **39 Mongoose models**.
+- **25 route modules** (316 endpoints), **34 controllers**, **49 service files**, **40 Mongoose models**.
 - **Middleware chain**: authentication, RBAC, request validation, rate limiting, sanitization, error handling.
 - Cross-cutting: structured logging (Winston), Swagger API docs, scheduled cron jobs (billing, cleanup).
 
-**Speaker notes:** The backend is strictly layered. Controllers stay thin — they validate and delegate. Business logic lives in services (`stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, etc.), which keeps it testable and reusable. Around 28,000 lines of backend code.
+**Speaker notes:** The backend is strictly layered. Controllers stay thin — they validate and delegate. Business logic lives in services (`stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, etc.), which keeps it testable and reusable. Around 36,000 lines of backend code. (The 34 controllers include 9 admin-panel controllers; the 49 service files are 26 core service modules plus the AI-router and email subsystems.)
 
 <table>
 <tr>
@@ -254,7 +254,7 @@ flowchart TB
 **Presenter: Student 2**
 
 **Content:**
-- **MongoDB** with **Mongoose** — 39 collections, referenced relationships (ObjectId refs), indexed for query performance.
+- **MongoDB** with **Mongoose** — 40 collections, referenced relationships (ObjectId refs), indexed for query performance.
 - Core entities and their links:
 ```mermaid
 erDiagram
@@ -303,7 +303,7 @@ erDiagram
 - **Contract** — the lifecycle engine: `status` state machine (active → delivered → completed / cancelled / disputed), timer, `milestoneMode` (fixed-price), dispute sub-document (hourly).
 - **Milestone** — (fixed-price) one funded phase: `order`, `amount`, `status` (pending_funding → funded → submitted → released), own dispute sub-document.
 - **Payment** — escrow: `type` (job_escrow / wallet_deposit / hourly_escrow / hourly_invoice), `milestoneId` link, `status` (deposit_pending → deposit_paid → released / refunded), platform fee + payout split.
-- **Gig / Job / Proposal / Review / Withdrawal / Testimonial** — marketplace records.
+- **Gig / Job / Proposal / CustomOffer / Review / Withdrawal / Testimonial** — marketplace records.
 - **Admin-side:** AdminAuditLog, Report, PlatformSettings, ApiLog, ErrorLog.
 
 **Speaker notes:** The **Contract**, **Milestone**, and **Payment** models are the heart of the system — all modeled as explicit state machines with enums, which is what makes the escrow flow safe and auditable even when a fixed-price project is split into several independently-funded phases.
@@ -557,11 +557,11 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 **Content:**
 - **Isolated** admin app (`/admin-panel/*`) with its own auth — the marketplace JWT never grants admin access.
-- Modules: **Dashboard, Users, Jobs, Contracts, Payments, Wallets, Withdrawals, Transactions, Reviews, Chats, Reports, Disputes, Monitoring, Audit Logs, Analytics, Settings.**
+- Modules: **Dashboard, Users, Jobs, Contracts, Payments, Wallets, Withdrawals, Transactions, Reviews, Chats, Notifications, Reports, Disputes, Monitoring, Audit Logs, Analytics, Settings** (17 modules).
 - Every sensitive action is written to an **audit log**.
 - Separately, content/taxonomy moderation (skill-graph curation, CMS pages) runs on its own `/admin/taxonomy` surface under ordinary marketplace RBAC — deliberately **not** folded into the isolated admin panel above.
 
-**Speaker notes:** The admin panel is a platform in itself — 16+ management pages. It was designed as a *separate* concern (isolated auth, scoped CSS) so it can never leak into or be reached from the public app.
+**Speaker notes:** The admin panel is a platform in itself — 17 management modules. It was designed as a *separate* concern (isolated auth, scoped CSS) so it can never leak into or be reached from the public app.
 
 <table>
 <tr>
@@ -595,9 +595,9 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 - ✅ A **fully working, dual-sided** freelance marketplace (Jobs + Gigs).
 - ✅ **14 LLM-backed AI capabilities** (CV analysis, proposal drafting, cost estimation, skill tests, Buddy chat, industry/category/subcategory recommendation, brief/text generation, taxonomy suggestion, search-skill expansion, and more) integrated with a resilient multi-provider fallback, plus a deterministic (non-LLM) matchmaking engine.
 - ✅ Complete **escrow payment + wallet + withdrawal** flow.
-- ✅ **16+ page admin panel** with analytics and audit logging.
+- ✅ **17-module admin panel** with analytics and audit logging.
 - ✅ **Two native Android apps** shipped via Capacitor (client/freelancer/admin-panel + a standalone admin app), with push notifications and offline handling.
-- ✅ **~70,000 lines** of code across 280+ files; 39 data models; 23 API route groups.
+- ✅ **~86,000 lines** of JS/JSX across ~390 source files (≈117,000 lines including CSS); 40 data models; 25 API route modules (316 endpoints).
 - ✅ All six project objectives **achieved and demonstrated**.
 
 **Speaker notes:** Every objective from Slide 6 is met and shown live. The scale figures illustrate that this is a complete system, not a prototype.
@@ -683,7 +683,7 @@ Register → Onboard (verify) → Post Job (any wallet balance, even $0) / Publi
 
 - **A1. Deployment** — Backend on Railway/Render, Frontend on Vercel (see `docs/DEPLOYMENT.md`).
 - **A2. AI provider priority config** — how `AI_PRIORITY_*` reorders the fallback chain.
-- **A3. Full ER diagram** — all 39 collections and relationships.
+- **A3. Full ER diagram** — all 40 collections and relationships.
 - **A4. Contract state machine** — the full status transition diagram.
 - **A5. Security matrix** — control vs. threat mapped.
 

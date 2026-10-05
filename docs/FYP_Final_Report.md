@@ -110,7 +110,7 @@ The freelance economy has become a significant part of the global digital workfo
 
 **SkillKart** is an AI-powered, dual-sided freelance marketplace built to address these problems in a single, coherent platform. It combines the two dominant freelancing models — pre-packaged **Gigs** (Fiverr-style) and custom **Jobs with Proposals** (Upwork-style) — and augments them with an integrated artificial-intelligence layer, a secure escrow-based payment system, multi-factor verification, and a comprehensive administrative panel — delivered both as a responsive web application and as two native Android apps built from the same codebase via Capacitor.
 
-The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 39 data models and 23 route groups. AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, and CV analysis — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage; freelancer matchmaking is handled separately by a deterministic, rules-based scoring engine that does not call any LLM provider. Payments are handled through a wallet-native escrow system (per-milestone escrow for fixed-price work, balance-lock escrow for hourly work, plus a Stripe-backed flow for gig orders), with Stripe also handling wallet top-ups and freelancer payouts, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
+The system is implemented on the **MERN stack** (MongoDB, Express.js, React.js, Node.js). The frontend is a React 19 single-page application built with Vite; the backend is a layered Express REST API backed by MongoDB through Mongoose, comprising 40 data models and 25 route modules (316 endpoints). AI capabilities — including a conversational assistant, cost estimation, proposal drafting, skill validation, and CV analysis — are delivered through a resilient provider router that automatically fails over across Gemini, DeepSeek, Qwen, Groq, Claude, and a local Ollama model, ensuring the platform never crashes during an AI outage; freelancer matchmaking is handled separately by a deterministic, rules-based scoring engine that does not call any LLM provider. Payments are handled through a wallet-native escrow system (per-milestone escrow for fixed-price work, balance-lock escrow for hourly work, plus a Stripe-backed flow for gig orders), with Stripe also handling wallet top-ups and freelancer payouts, and security is enforced through JWT authentication with role-based access control, OTP-based two-factor authentication, password hashing, rate limiting, input sanitization, and audit logging.
 
 The completed system delivers the full engagement lifecycle — from registration and verification, through job posting and proposals, to escrow-secured contracts, delivery, reviews, and dispute resolution — under the supervision of a dedicated 17-module admin panel. All project objectives were achieved and demonstrated on realistic, seeded data. This report documents the motivation, design, implementation, testing, and results of the SkillKart project.
 
@@ -314,7 +314,7 @@ Crucially, the AI subsystem is engineered for **resilience** (Section 13), so it
 
 ### 8.3 Secure Escrow Payments
 
-Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into up to a handful of sequential **milestones**, each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. Posting a project carries no wallet-balance gate — a client can publish with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked, and funds locked, only once a proposal is accepted, the earliest point real money needs to be committed. On release, the platform fee (a default 0.5% of the milestone amount) is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw; the platform operates in PKR (Pakistani Rupee). This protects both parties and provides a clear basis for dispute resolution.
+Fixed-price engagements lock **100% of the agreed price** in escrow the moment a proposal is accepted — debited from the client's platform wallet, never left as an unfunded promise. Large projects can be split into several sequential **milestones** (any number, as long as the amounts add up to the agreed price), each funded only when the client is ready to start that phase (not all upfront), so capital isn't locked for work that hasn't begun. If a client goes silent after a freelancer submits work, the escrow **auto-releases after a configurable window** (default 7 days) rather than leaving the freelancer unpaid indefinitely. Posting a project carries no wallet-balance gate — a client can publish with any balance, including zero, so it is visible to freelancers and can collect proposals; the wallet is checked, and funds locked, only once a proposal is accepted, the earliest point real money needs to be committed. On release, the platform fee (a default 0.5% of the milestone amount) is deducted and the remainder credited to the freelancer's wallet, from which they can withdraw; the platform operates in PKR (Pakistani Rupee). This protects both parties and provides a clear basis for dispute resolution.
 
 ### 8.4 Trust, Verification, and Oversight
 
@@ -342,7 +342,7 @@ SkillKart follows a **decoupled client–server architecture**. A React single-p
                             ┌──────▼──────┐        ┌────────▼───────┐  ┌─────▼──────┐            ┌────────▼────────┐
                             │   MongoDB   │        │     Stripe      │  │  AI Router │            │    Supabase     │
                             │ (Mongoose,  │        │  (escrow /      │  │ (Gemini →  │            │  (optional      │
-                            │  39 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
+                            │  40 models) │        │   payouts)      │  │ DeepSeek → │            │  social OAuth)  │
                             │             │        │                 │  │ Qwen →     │            │                 │
                             └─────────────┘        └─────────────────┘  │ Groq →     │            └─────────────────┘
                                                                         │ Claude →   │
@@ -392,7 +392,7 @@ flowchart TB
 
 ### 9.2 React Frontend
 
-The frontend is a **React 19** SPA built with **Vite 7** and routed by **React Router 7** (`BrowserRouter`). It is organized by audience — `public/`, `client/`, `freelancer/`, `admin/`, and an isolated `adminPanel/` — across roughly 128 components and pages.
+The frontend is a **React 19** SPA built with **Vite 7** and routed by **React Router 7** (`BrowserRouter`). It is organized by audience — `public/`, `client/`, `freelancer/`, `admin/`, and an isolated `adminPanel/` — across roughly 129 components and pages.
 
 Application state is managed with **React Context** providers (authentication, client, freelancer, and notifications) combined with local component state. All server communication passes through a single **Axios client** with a central interceptor that transparently handles JWT attachment, access-token refresh, error surfacing, and in-flight request de-duplication. **Role-based route guards** (`ProtectedRoute`) ensure each user only reaches routes appropriate to their role, redirecting unauthorized access.
 
@@ -407,11 +407,11 @@ Request → Route → Middleware (auth, RBAC, validation, rate-limit, sanitizati
         → Model (Mongoose)  → MongoDB
 ```
 
-It comprises **23 route modules**, **24 controllers**, **27 service modules**, and **39 Mongoose models**. Controllers remain thin and delegate business logic to services (for example, `stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, and `email.service`). Cross-cutting concerns — structured logging (Winston), API documentation (Swagger), and scheduled tasks (node-cron for billing and cleanup) — are handled at the application level. The server binds to `0.0.0.0` and reads its port from the environment, making it deployment-ready.
+It comprises **25 route modules** (exposing 316 endpoints), **34 controllers** (25 marketplace + 9 admin-panel), **49 service files** (26 core service modules plus the AI-router and email subsystems), and **40 Mongoose models**. Controllers remain thin and delegate business logic to services (for example, `stripe.service`, `matchmaking.service`, `skillMatching.service`, `notification.service`, and `email.service`). Cross-cutting concerns — structured logging (Winston), API documentation (Swagger), and scheduled tasks (node-cron for billing and cleanup) — are handled at the application level. The server binds to `0.0.0.0` and reads its port from the environment, making it deployment-ready.
 
 ### 9.4 MongoDB Database
 
-**MongoDB**, accessed through **Mongoose**, stores all persistent data across 39 collections. Relationships are modeled using ObjectId references, and referential integrity is maintained at the application layer. Collections are indexed for common query patterns, and large listing endpoints use server-side pagination.
+**MongoDB**, accessed through **Mongoose**, stores all persistent data across 40 collections. Relationships are modeled using ObjectId references, and referential integrity is maintained at the application layer. Collections are indexed for common query patterns, and large listing endpoints use server-side pagination.
 
 ### 9.5 Authentication Subsystem
 
@@ -433,7 +433,7 @@ AI features are delivered through a **provider router** that presents a uniform 
 
 ### 10.1 Overview
 
-SkillKart's data layer consists of **39 MongoDB collections** managed through Mongoose schemas. The design is reference-based (normalized where it aids integrity, denormalized where it aids read performance), with enums enforcing valid states and indexes supporting frequent queries. Below, the major collections are described, followed by their relationships.
+SkillKart's data layer consists of **40 MongoDB collections** managed through Mongoose schemas. The design is reference-based (normalized where it aids integrity, denormalized where it aids read performance), with enums enforcing valid states and indexes supporting frequent queries. Below, the major collections are described, followed by their relationships.
 
 ### 10.2 Major Collections / Models
 
@@ -446,9 +446,10 @@ SkillKart's data layer consists of **39 MongoDB collections** managed through Mo
 
 **Marketplace**
 
-- **Job** — a client's custom requirement: title, description, budget (`fixed`/`hourly`), experience level, skills, category, `source` (`project` | `gig`), and `status` (`draft` | `open` | `in-progress` | `completed` | `cancelled` | `expired` | `closed`). A `source: 'gig'` Job is created automatically when a client orders a Gig, reusing the same escrow → delivery → completion → stats lifecycle instead of a parallel one; only `source: 'project'` Jobs (a client's own posted requirement, matched via Proposals) go on to spawn a **Contract**.
+- **Job** — a client's custom requirement: title, description, budget (`fixed`/`hourly`), experience level, skills, category, `source` (`project` | `gig`), and `status` (`draft` | `open` | `pending_payment` | `in-progress` | `completed` | `cancelled` | `expired` | `closed`). A `source: 'gig'` Job is created automatically when a client orders a Gig (sitting in `pending_payment` until the deposit lands, then moving to `in-progress`), reusing the same escrow → delivery → completion → stats lifecycle instead of a parallel one; only `source: 'project'` Jobs (a client's own posted requirement, matched via Proposals) go on to spawn a **Contract**.
 - **Gig** — a freelancer's packaged service: title, descriptions, category, tiered `pricing` (basic/standard/premium), media, `status` (`draft`/`active`/`paused`), and aggregate stats (views, orders, rating). Ordering a Gig does not create a separate "order" entity — it creates a Job (see above) linked back to the Gig and chosen pricing tier.
 - **Proposal** — a freelancer's bid on a job: cover letter, price, estimated delivery, and `status` (`pending` | `accepted` | `rejected` | `withdrawn`).
+- **CustomOffer** — a freelancer's bespoke offer sent inside a chat (`status`: `pending` | `accepted` | `declined` | `withdrawn` | `expired`). Offers expire after 7 days, and a freelancer can have at most 5 open offers per conversation. When the client accepts, it becomes the same kind of gig-order Job described above.
 
 **Engagement Lifecycle**
 
@@ -672,7 +673,7 @@ Each freelancer and client has a **wallet** balance maintained on their profile.
 Gig orders follow the original **deposit-then-release** model, split **50/50**: the client funds a 50% deposit on request (`deposit_pending` → `deposit_paid`), held until the client approves delivery, then pays the remaining 50% and the full escrow is released (**platform fee** deducted, **freelancer payout** credited) or refunded. Custom-job contracts instead use one of two newer, wallet-native escrow models depending on contract type — **milestone escrow** for fixed-price jobs (12.10a) and **wallet-lock escrow** for hourly jobs (12.10b), both described next. Stripe processes real transactions for wallet top-ups, with a simulated mode (`STRIPE_DUMMY`) for demonstration.
 
 ### 12.10a Milestone-Based Escrow (Fixed-Price Jobs)
-When a client accepts a proposal for a fixed-price job, **100% of the first milestone's price is locked in escrow immediately** — debited from the client's wallet as part of accepting, so the money is never a promise (the acceptance itself is rejected up front if the wallet cannot cover it). For larger engagements, the client can split the price into up to a handful of sequential **milestones** at accept-time (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000"); only the first milestone is funded upfront, and each subsequent milestone is funded by the client only once the previous one is approved and released — capital is never locked for work that hasn't started yet.
+When a client accepts a proposal for a fixed-price job, **100% of the first milestone's price is locked in escrow immediately** — debited from the client's wallet as part of accepting, so the money is never a promise (the acceptance itself is rejected up front if the wallet cannot cover it). For larger engagements, the client can split the price into any number of sequential **milestones** at accept-time (the amounts must sum to the agreed price) (e.g. "UI/UX — Rs. 30,000", "Backend — Rs. 40,000"); only the first milestone is funded upfront, and each subsequent milestone is funded by the client only once the previous one is approved and released — capital is never locked for work that hasn't started yet.
 
 The freelancer can only submit work once the current milestone shows **funded**, guaranteeing "escrow funded, safe to work" is a real, checked guarantee rather than a UI promise. On the client's approval, the milestone's escrow releases (fee deducted, payout credited) and — if it was the last milestone — the whole contract and job complete; otherwise the contract advances to the next milestone, which the client then funds when ready.
 
@@ -769,7 +770,7 @@ Artificial intelligence is a first-class part of SkillKart, integrated across on
 - **AI CV Analysis** — parses an uploaded CV, extracts structured data (title, bio, skills, education, experience), scores it, classifies it, and auto-fills the freelancer's profile.
 - **Matchmaking** — ranks freelancers for a given project brief using a deterministic, rules-based scoring engine (skill overlap, rate fit, rating, verification, experience); unlike the features above, it does not call any LLM provider.
 - **AI Industry Recommendation** — suggests suitable industries for a client based on their business profile.
-- **Skill-Test Proctoring** — while a timed skill test is in progress, a webcam face-detection guard (TinyFaceDetector plus 68-point facial landmarks, running entirely client-side) flags `no_face`, `multiple_faces`, and `looking_away` states, alongside a separate tab-switch/window-blur/copy-paste anti-cheat guard; each keeps its own independent violation-strike counter and aborts the attempt after repeated violations. Like Matchmaking, this is not backed by any AI provider call — the face-detection model runs locally in the browser, not through the provider router.
+- **Skill-Test Proctoring** — while a timed skill test is in progress, a webcam guard built on Google's MediaPipe Face Landmarker (478 facial landmarks plus eye-direction scores, running entirely client-side) flags a missing face, a second face, head turns, eyes looking away, and body movement, alongside a separate anti-cheat guard that detects tab-switching, window blur, leaving full-screen, and best-effort blocks on copy/cut, dev-tools and the context menu. Every threshold for both guards is derived from one backend setting, `SKILL_TEST_PROCTOR_STRICTNESS` (0–1, where 0 turns proctoring off and the default is 0.5); the candidate sees each counted violation live, and the attempt is aborted after repeated violations. Like Matchmaking, this is not backed by any AI provider call — the face-landmark model runs locally in the browser (on the CPU in the Android app), not through the provider router.
 
 ### 13.2 Prompt Processing
 
@@ -805,8 +806,7 @@ The panel provides the following management modules:
 
 - **Dashboard** — a high-level overview of platform health and key metrics.
 - **User Management** — view, search, filter (all/freelancers/clients), verify, and block/unblock users (a single `isBlocked` toggle, not two separate "suspend" and "block" actions).
-- **Job Management** — monitor and moderate posted jobs.
-- **Gig Management** — monitor and moderate published gigs/services.
+- **Job Management** — monitor and moderate posted jobs. Gig orders are also Jobs (`source: 'gig'`), so they appear here and under Contracts; there is no separate gig-listing moderation page.
 - **Contract Management** — inspect contracts and their lifecycle state, edit contract details, pause/resume/cancel a contract, **force-complete** a contract (settles or refunds any outstanding escrow and finalizes the linked job), **reassign** it to a different freelancer, and attach admin notes to its history.
 - **Payment Management** — review escrow deposits, releases, and refunds.
 - **Wallets** — inspect, freeze/unfreeze, and manually **adjust** a user's wallet balance (an atomic credit/debit, audit-logged at critical severity) for corrections outside the normal escrow flow.
@@ -819,7 +819,7 @@ The panel provides the following management modules:
 - **Disputes** — investigate and resolve contract disputes (release / refund / split / cancel contract).
 - **Monitoring** — system health, error logs, and API logs.
 - **Audit Logs** — an immutable record of every sensitive administrative action.
-- **Session Management** — view an admin's login session history and force-logout a specific session.
+- **Session Management** *(API only)* — the backend exposes an admin's login session history and a force-logout endpoint for a specific session; there is no admin-panel page for it yet.
 - **Global Search** — a single search bar across users, jobs, contracts, payments, withdrawals, reports, and reviews.
 - **Analytics** — visual analytics across users, jobs, revenue, and disputes.
 - **Settings** — platform-wide configuration (fees, weights, feature flags).
@@ -1008,17 +1008,19 @@ All project objectives (Section 5) were achieved and demonstrated on the running
 
 | Metric | Value (approximate) |
 |--------|---------------------|
-| Total source files | ~367 (.js/.jsx only; ~443 counting all file types) |
-| Backend source files | 183 |
-| Frontend source files | 184 (.js/.jsx; ~260 counting all file types) |
-| Lines of code (backend) | ~34,450 |
-| Lines of code (frontend) | ~46,116 |
-| Data models (collections) | 39 |
-| API route groups | 23 |
-| Controllers | 24 |
-| Service modules | 27 |
+| Total source files | ~391 (.js/.jsx only; ~471 counting all file types) |
+| Backend source files | 192 (`Backend/src`, all `.js`) |
+| Frontend source files | 199 (.js/.jsx; ~279 counting all file types) |
+| Lines of code (backend) | ~35,900 |
+| Lines of code (frontend) | ~50,400 (.js/.jsx), plus ~30,900 lines of CSS across 75 stylesheets |
+| Data models (collections) | 40 |
+| API route modules | 25 (24 under `/api/v1/*` plus the isolated `/api/v1/admin-panel`) |
+| API endpoints | 316 (admin panel: 93) |
+| Controllers | 34 (25 marketplace + 9 admin-panel) |
+| Service files | 49 (26 core modules + AI router + email subsystem) |
 | AI providers integrated | 6 (Gemini, DeepSeek, Qwen, Groq, Claude, Ollama) |
-| Admin panel modules | 16+ |
+| LLM-backed AI capabilities | 14 (plus non-LLM matchmaking and proctoring) |
+| Admin panel modules | 17 |
 | Native Android app builds | 2 (client/freelancer/admin-panel + standalone admin) |
 
 ### 18.3 Outcome
@@ -1179,6 +1181,8 @@ The backend exposes a versioned REST API under `/api/v1`. The main route groups 
 | `/matchmaking` | Freelancer matching (deterministic scoring engine, not LLM-based) |
 | `/ai` | Public AI tools (buddy, cost estimate, brief, validate) |
 | `/testimonials` | Freelancer testimonials |
+| `/offers` | Custom offers sent in chat (create, accept, decline, withdraw) |
+| `/reviews` | Reviews (create, read, update, delete) |
 | `/public` | Public stats, categories, top freelancers |
 | `/cms` | Content management |
 | `/admin`, `/admin-panel`, `/superadmin` | Administrative operations |
@@ -1191,18 +1195,19 @@ Interactive documentation is served via **Swagger** at `/api/v1/docs`.
 Skill-Kart----Micro-Freelance-Platform/
 ├── Apk/                     Pre-built, signed release APKs (main app + admin app)
 ├── Backend/
+│   ├── scripts/             Demo data seeder, SuperAdmin setup, one-off migrations
 │   └── src/
 │       ├── config/          Application configuration
-│       ├── controllers/     HTTP request handlers (24)
-│       ├── middleware/      Auth, RBAC, validation, rate-limit, errors
-│       ├── models/          Mongoose schemas (39)
-│       ├── routes/          API route definitions (23)
-│       ├── services/        Business logic — payments, escrow, AI, matching, ... (27)
+│       ├── controllers/     HTTP request handlers (34, incl. 9 in adminPanel/)
+│       ├── middleware/      Auth, RBAC, validation, rate-limit, errors (10)
+│       ├── models/          Mongoose schemas (40)
+│       ├── routes/          API route definitions (25)
+│       ├── services/        Business logic — payments, escrow, AI, matching, ... (49 files)
 │       │   └── ai/          Provider router + Gemini/DeepSeek/Qwen/Groq/Claude/Ollama
 │       ├── utils/           Shared helpers (logger, constants, apiError, ...)
 │       ├── validators/      Request validation schemas
 │       ├── webhooks/        Stripe / Supabase webhooks
-│       ├── scripts/         Demo data seeder, SuperAdmin setup, one-off migrations
+│       ├── scripts/         seedSkillGraph.js (taxonomy graph seed)
 │       ├── app.js           Express app assembly
 │       └── server.js        HTTP bootstrap
 ├── Front-end/
@@ -1282,20 +1287,21 @@ Since native Android access (Objective 9) is a headline achievement of the proje
 
 ### Appendix E — Database Collections
 
-The 39 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gig`, `Proposal`, `Contract`, `Milestone`, `ContractHistory`, `Delivery`, `TimeLog`, `Payment`, `Withdrawal`, `Conversation`, `Message`, `Notification`, `Review`, `Testimonial`, `SkillNode`, `SkillRelationship`, `SkillTestAttempt`, `TaxonomyProposal`, `OTP`, `RefreshToken`, `OnboardingProgress`, `ClientOnboardingDraft`, `Report`, `AdminUser`, `AdminSession`, `AdminAuditLog`, `PlatformSettings`, `SystemSettings`, `ApiLog`, `ErrorLog`, `EmailLog`, `FileUpload`, `CMSContent`, `NewsletterSubscriber`, `ContactMessage`.
+The 40 collections are: `User`, `FreelancerProfile`, `ClientProfile`, `Job`, `Gig`, `Proposal`, `CustomOffer`, `Contract`, `Milestone`, `ContractHistory`, `Delivery`, `TimeLog`, `Payment`, `Withdrawal`, `Conversation`, `Message`, `Notification`, `Review`, `Testimonial`, `SkillNode`, `SkillRelationship`, `SkillTestAttempt`, `TaxonomyProposal`, `OTP`, `RefreshToken`, `OnboardingProgress`, `ClientOnboardingDraft`, `Report`, `AdminUser`, `AdminSession`, `AdminAuditLog`, `PlatformSettings`, `SystemSettings`, `ApiLog`, `ErrorLog`, `EmailLog`, `FileUpload`, `CMSContent`, `NewsletterSubscriber`, `ContactMessage`.
 
 ### Appendix F — Project Statistics
 
 | Metric | Value |
 |--------|-------|
-| Total source files | ~367 (.js/.jsx only; ~443 counting all file types) |
-| Total lines of code | ~80,500 |
-| Data models | 39 |
-| API route groups | 23 |
-| Controllers | 24 |
-| Service modules | 27 |
+| Total source files | ~391 (.js/.jsx only; ~471 counting all file types) |
+| Total lines of code | ~86,300 (.js/.jsx; ~117,200 including CSS) |
+| Data models | 40 |
+| API route modules | 25 |
+| API endpoints | 316 |
+| Controllers | 34 |
+| Service files | 49 |
 | AI providers | 6 |
-| Admin modules | 16+ |
+| Admin modules | 17 |
 | User roles | 6 (superadmin, admin, contenteditor, freelancer, client, publicviewer) |
 
 ---

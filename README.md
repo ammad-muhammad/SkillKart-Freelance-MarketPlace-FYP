@@ -239,7 +239,9 @@ These are captured by rendering the same React codebase in a mobile-viewport bro
 
 ```
 .
+├── Apk/                # Pre-built release APKs (main app + standalone Admin app)
 ├── Backend/            # Express REST API (see Backend/README.md)
+│   ├── scripts/        operational scripts (demo seeder, superadmin setup, migrations)
 │   └── src/
 │       ├── config/         app configuration
 │       ├── controllers/    request handlers
@@ -249,7 +251,7 @@ These are captured by rendering the same React codebase in a mobile-viewport bro
 │       ├── services/        business logic (payments, skill matching, AI, ...)
 │       ├── validators/      express-validator schemas
 │       ├── webhooks/        Stripe / external webhooks
-│       ├── scripts/         operational scripts (seed, superadmin, migrations)
+│       ├── scripts/         seedSkillGraph.js (taxonomy graph seed)
 │       ├── app.js           Express app wiring
 │       └── server.js        HTTP bootstrap
 ├── Front-end/          # React + Vite SPA (see Front-end/README.md)

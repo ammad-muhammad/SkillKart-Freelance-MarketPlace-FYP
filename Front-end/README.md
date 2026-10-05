@@ -17,7 +17,7 @@ The SkillKart single-page app: a React 19 + Vite client for the marketplace, cov
 - **react-select** & **react-select-country-list** for searchable/country dropdowns
 - **react-easy-crop** for in-browser image cropping (avatar/portfolio uploads)
 - **clsx** for conditional className composition
-- **face-api.js** for webcam-based face/head-pose proctoring during freelancer skill tests — see [`src/pages/freelancer/useFaceProctor.js`](src/pages/freelancer/useFaceProctor.js): it runs TinyFaceDetector + tiny 68-point landmarks against the live camera feed while a skill test is in progress, flagging `no_face` / `multiple_faces` / `looking_away` as violations (a separate strike counter from `useAntiCheat.js`'s tab-switch/copy-paste detection) and aborting the attempt once a test-length-scaled violation budget is exceeded
+- **@mediapipe/tasks-vision** (Google MediaPipe Face Landmarker) for webcam-based face/head-pose proctoring during freelancer skill tests — see [`src/pages/freelancer/useProctoring.js`](src/pages/freelancer/useProctoring.js) and [Skill-test face proctoring](#skill-test-face-proctoring): it analyses the live camera feed while a skill test is in progress, flagging `face_missing` / `extra_face` / `head_turn` / `eyes_away` / `body_movement` (a separate strike counter from `useAntiCheat.js`'s tab-switch/full-screen detection) and aborting the attempt once a strictness-scaled violation budget is exceeded
 
 ## Prerequisites
 
@@ -453,7 +453,7 @@ the strike totals are saved on the `SkillTestAttempt` (`proctoring`).
 `vite.config.js`'s `mediapipeAssets` plugin serves them in dev and copies them
 into the build (not `--mode admin`): the WebAssembly runtime from
 `node_modules/@mediapipe/tasks-vision/wasm` (SIMD + no-SIMD builds) and the
-model from `vendor/mediapipe/face_landmarker.task` (committed, 3.7 MB).
+model from `vendor/mediapipe/face_landmarker.task` (committed, 3.8 MB).
 
 > ⚠️ **Android WebView quirks this handles:**
 > - The native app starts MediaPipe on the **CPU** delegate. A WebView can

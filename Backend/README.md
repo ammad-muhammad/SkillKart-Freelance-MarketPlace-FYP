@@ -52,10 +52,12 @@ src/
 ├── validators/     express-validator request schemas
 ├── webhooks/       Stripe / external webhook handlers
 ├── utils/          Shared helpers
-├── scripts/        Operational scripts (see below)
+├── scripts/        seedSkillGraph.js — taxonomy skill-graph seed
 ├── app.js          Express app assembly
 └── server.js       HTTP server bootstrap
 ```
+
+The operational scripts (demo seeder, SuperAdmin setup, one-off migrations — see below) live in `Backend/scripts/`, next to `src/` rather than inside it.
 
 ## Authentication & RBAC
 
@@ -576,7 +578,7 @@ sequenceDiagram
 
 For fixed-price jobs, `raiseDispute` targets the **current milestone** — `contract.dispute` stays untouched; the milestone gets its own `dispute` sub-document instead. Hourly contracts still use `contract.dispute` directly (see above). Any code reading a fixed-price contract's dispute state must branch on `contract.type` and read the milestone's dispute for `'fixed'` — this was a real bug fixed in `getMyProjects`/`getMyContracts` and is easy to reintroduce in a new endpoint.
 
-Admin resolution (`adminPanel/disputes.controller.js`) offers the same 5 actions for both paths — release to freelancer, refund client, split by percentage, resume, or reject — but a fixed-price resolution only ever settles the **one** disputed milestone and returns the contract to `active` (or completes it, if that was the last milestone). It never itself ends the whole contract; admins use the separate, pre-existing `forceComplete`/`cancelContract` tools for that.
+Admin resolution (`adminPanel/disputes.controller.js`) offers 5 actions for both paths — release to freelancer, refund client, split by percentage, resume, or reject — and a fixed-price resolution accepts a 6th, `cancel_contract`, which is only allowed when the disputed milestone was never funded (so there is no escrow to release, refund, or split) and ends the contract outright. Otherwise a fixed-price resolution only ever settles the **one** disputed milestone and returns the contract to `active` (or completes it, if that was the last milestone); to end a funded project early, admins use the separate, pre-existing `forceComplete`/`cancelContract` tools.
 
 ### Auto-release
 
