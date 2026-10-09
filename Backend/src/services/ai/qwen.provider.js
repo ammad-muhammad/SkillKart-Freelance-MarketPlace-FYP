@@ -137,10 +137,10 @@ ${text}
     }
   }
 
-  async generateSkillTest(skills, count = 50) {
+  async generateSkillTest(skills, count = 50, level) {
     const prompt = `
 Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
-Generate exactly ${count} questions. ${difficultyInstruction()}
+Generate exactly ${count} questions. ${difficultyInstruction(level)}
 CRITICAL: These questions MUST be completely fresh and unique. (Random Context ID: ${skills.join('-')}-${Date.now()})
 IMPORTANT:
 1. DISTRIBUTION: Generate exactly ${count} questions.

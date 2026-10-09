@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const skillTestAttemptSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   skillsTested: [String],
+  // The level the freelancer picked before the test (sets the question count —
+  // easy 5 / intermediate 10 / expert 15 — and how hard the questions are).
+  // Attempts from before the picker existed have no value.
+  level: { type: String, enum: ['easy', 'intermediate', 'expert'] },
   questions: [{
     question: String,
     skill: String,

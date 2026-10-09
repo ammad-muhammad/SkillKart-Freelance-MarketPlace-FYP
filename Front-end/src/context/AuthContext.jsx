@@ -172,7 +172,11 @@ export const AuthProvider = ({ children }) => {
       // /auth/me call below is always authenticated.
       if (!tokenManager.getAccessToken()) {
         const { data } = await authAPI.refreshToken(refreshToken);
-        tokenManager.setTokens(data.data.accessToken, refreshToken);
+        // Keep the ROTATED refresh token the server just issued (same as the
+        // 401 interceptor in api/client.js). Re-saving the old one made the
+        // next fresh tab / browser restart replay an already-rotated token,
+        // which the backend treats as theft and logs the user out everywhere.
+        tokenManager.setTokens(data.data.accessToken, data.data.refreshToken || refreshToken);
       }
 
       const { data } = await authAPI.getCurrentUser();

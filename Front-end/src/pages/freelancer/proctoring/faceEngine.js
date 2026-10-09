@@ -38,14 +38,15 @@ async function createLandmarker(delegate) {
   const fileset = await FilesetResolver.forVisionTasks(WASM_PATH);
   return FaceLandmarker.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: MODEL_PATH, delegate },
-    // IMAGE, not VIDEO: frames are analysed ~0.4–1.6s apart, too far apart
-    // for VIDEO mode's frame-to-frame tracking — it kept following the face
-    // it already had and was slow to notice a second person walking in.
-    // IMAGE runs the (cheap) face detector on every frame instead.
+    // IMAGE, not VIDEO: frames are analysed ~0.7s apart, too far apart for
+    // VIDEO mode's frame-to-frame tracking — it kept "following" a face that
+    // had already left. IMAGE runs the (cheap) face detector on every frame.
     runningMode: 'IMAGE',
-    numFaces: 2, // enough to notice "someone else is in view"
-    outputFaceBlendshapes: true, // eye-direction scores
-    outputFacialTransformationMatrixes: true, // head angle
+    // The only question asked is "is anyone in the frame?", so one face is
+    // enough and the eye / head-angle outputs are switched off (less CPU).
+    numFaces: 1,
+    outputFaceBlendshapes: false,
+    outputFacialTransformationMatrixes: false,
   });
 }
 

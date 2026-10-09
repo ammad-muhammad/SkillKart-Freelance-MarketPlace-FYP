@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck, AlertTriangle, CameraOff, MonitorX } from 'lucide-react';
-import { ISSUE_TYPES, ISSUE_LABELS, ISSUE_HINTS } from './analyzeFrame';
+import { FACE_MISSING_HINT } from './analyzeFrame';
 
-// Ticks every 250ms while an issue is building toward a strike, so the
-// "strike in Xs" countdown moves smoothly between detection frames.
+// Ticks every 250ms while the face is missing, so the "cancels in Xs"
+// countdown moves smoothly between detection frames.
 const useNow = (running) => {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -28,55 +28,51 @@ const Meter = ({ label, used, max }) => {
 };
 
 /**
- * Live proctoring panel shown during the test: what the camera sees right
- * now, how many of each movement have happened, and the strike budgets
- * (camera + tab/window) that cancel the test.
+ * Live proctoring panel shown during the test: whether the camera can see a
+ * face right now (and the countdown to cancelling if it can't), plus the
+ * tab/window strike budget. `cameraActive` is false on a device with no
+ * camera — then only the tab/window budget is shown.
  */
-export default function ProctorPanel({ proctor, holdMs, browserStrikes, browserMax }) {
-  const { live, counts, strikes, maxStrikes, engineError, cameraError, enabled } = proctor;
-  const issue = live?.issue;
-  const counting = !!(issue && live.since);
+export default function ProctorPanel({ proctor, cameraActive, holdMs, browserStrikes, browserMax }) {
+  const { live, engineError, cameraError } = proctor;
+  const counting = !!(live?.missing && live.since);
   const now = useNow(counting);
 
-  if (!enabled) return null;
+  if (!cameraActive && !(browserMax > 0)) return null;
 
   const failure = engineError || cameraError;
   let tone = 'ok';
   let icon = <ShieldCheck size={16} />;
-  let text = 'All good — keep facing the screen';
+  let text = 'Face detected — keep yourself in view of the camera';
   if (failure) {
     tone = 'error';
     icon = <CameraOff size={16} />;
     text = failure;
-  } else if (issue) {
+  } else if (live?.missing) {
     tone = 'warn';
     icon = <AlertTriangle size={16} />;
-    const left = counting ? Math.max(0, Math.ceil((holdMs - (now - live.since)) / 1000)) : null;
-    text = `${ISSUE_HINTS[issue]}${left !== null ? ` — strike in ${left}s` : ''}`;
+    // `now` can lag one render behind `live.since` when the countdown starts —
+    // never show more than the full hold time.
+    const left = counting ? Math.max(0, Math.ceil((holdMs - Math.max(0, now - live.since)) / 1000)) : null;
+    text = `${FACE_MISSING_HINT}${left !== null ? ` — test cancels in ${left}s` : ''}`;
   }
 
   return (
     <div className="st-pp" role="status" aria-live="polite">
-      <div className={`st-pp__status st-pp__status--${tone}`}>
-        {icon}
-        <span>{text}</span>
-      </div>
-      <div className="st-pp__counts" aria-label="Movements detected so far">
-        {ISSUE_TYPES.map((t) => (
-          <span key={t} className={`st-pp__chip${counts[t] > 0 ? ' st-pp__chip--hit' : ''}${issue === t ? ' st-pp__chip--live' : ''}`}>
-            {ISSUE_LABELS[t]} <strong>{counts[t]}</strong>
-          </span>
-        ))}
-      </div>
-      <div className="st-pp__meters">
-        <Meter label="Camera strikes" used={strikes} max={maxStrikes} />
-        {browserMax > 0 && (
+      {cameraActive && (
+        <div className={`st-pp__status st-pp__status--${tone}`}>
+          {icon}
+          <span>{text}</span>
+        </div>
+      )}
+      {browserMax > 0 && (
+        <div className="st-pp__meters">
           <div className="st-pp__browser">
             <MonitorX size={14} />
             <Meter label="Tab / window" used={browserStrikes} max={browserMax} />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -96,9 +92,9 @@ export function PreviewStatus({ proctor }) {
     text = engineStatus === 'loading' ? 'Loading face check…' : 'Starting camera…';
   } else if (!detecting) {
     text = 'Looking for your face…';
-  } else if (live?.issue) {
+  } else if (live?.missing) {
     tone = 'warn';
-    text = ISSUE_HINTS[live.issue];
+    text = FACE_MISSING_HINT;
   } else {
     tone = 'ok';
     text = 'Face detected — you’re ready';
