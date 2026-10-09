@@ -665,24 +665,58 @@ Google returns `success: true` for a valid token minted for a *different* action
 the middleware checks `action` explicitly — otherwise a token from the public
 contact form could be replayed against login.
 
+## Skill-test levels
+
+Before a test starts the freelancer picks a level, which decides how many
+questions they get and how hard the AI writes them:
+
+| Level | Questions | MCQ / written | Difficulty given to the AI |
+|---|---|---|---|
+| `easy` | 5 | 4 / 1 | core basics |
+| `intermediate` | 10 | 8 / 2 | practical working knowledge |
+| `expert` | 15 | 12 / 3 | in-depth, advanced, edge cases |
+
+`GET /api/v1/skill-tests/generate?level=easy|intermediate|expert` (a missing
+`level` means `intermediate`; an unknown value is a `400`). The same counts apply
+to a single-skill test and to the mixed baseline test — a mixed test with few
+questions simply covers fewer of the freelancer's skills, and only the skills
+that got a question are re-scored. The level is stored on the attempt
+(`SkillTestAttempt.level`) and returned in the response; the AI router passes it
+down as `generateSkillTest(skills, count, level)`. The definitions live in
+`src/utils/skillTestDifficulty.js` (`TEST_LEVELS`) — the page mirrors the counts
+in `Front-end/src/pages/freelancer/SkillTest.jsx`, so change both together.
+`SKILL_TEST_EASY_MODE` (testing only) still overrides the difficulty to "very easy".
+**The rank follows the level that was picked, not the score.** A skill that scores
+at least 25% (`SKILL_VERIFICATION_THRESHOLD`) is verified and marked with that
+level's rank — Easy → `Beginner`, Intermediate → `Intermediate`, Expert →
+`Expert` (`TEST_LEVELS[...].rank`); below 25% it earns nothing. A failed attempt
+never takes away what a skill already earned (verification, rank and score are
+kept; a skill that was never verified just records the failed score), while a
+passed retake at any level re-marks the skill at that level — including a lower
+one. Attempts created before the picker existed carry no level and still rank by
+score (≥80% Expert, ≥50% Intermediate). The admin "pass a skill" tool
+(`PATCH /admin-panel/users/:id/skills/verify`) is separate and still derives the
+level from the score it is given.
+
 ## Skill-test proctoring
 
-How strict the skill test's proctoring is — camera checks (face missing, a
-second face, head turns, eyes looking away, body movement) **and** the
-tab-switch / full-screen guard — comes from a single value:
+The skill test's proctoring — the camera check (no face in view for 3 seconds
+cancels the test; nothing else about movement is checked, and a device with no
+camera is let through) **and** the tab-switch / full-screen guard — is switched
+on/off and tuned by a single value:
 
 | Variable | Default | Effect |
 |---|---|---|
-| `SKILL_TEST_PROCTOR_STRICTNESS` | `0.5` | Any number from `0` to `1`. `0` = proctoring off (no camera needed, never cancelled), `0.2` easy, `0.5` medium, `0.7` strict, `1` very strict. Blank or invalid → `0.5` (never "off" by accident). |
+| `SKILL_TEST_PROCTOR_STRICTNESS` | `0.5` | Any number from `0` to `1`. `0` = proctoring off (no camera needed, never cancelled). Above `0` the camera rule is fixed at 3 s; the number sets how many tab / window / full-screen strikes cancel the test (`0.2` → 5th, `0.5` and `0.7` → 3rd, `1` → 2nd). Blank or invalid → `0.5` (never "off" by accident). |
 | `SKILL_TEST_EASY_MODE` | `false` | Testing only — trivially easy questions and the correct MCQ answer highlighted. Refuses to start in production. |
 
 The app reads the strictness from `GET /api/v1/skill-tests/proctoring-config`
 when a test opens, so changing it takes a restart — no web or APK rebuild. The
-frontend turns it into every threshold (see
-[`Front-end/README.md`](../Front-end/README.md#skill-test-face-proctoring) for the
-full table). Each submitted attempt stores the strictness used, the movement
-counters the candidate saw live, and the camera/tab strike totals
-(`SkillTestAttempt.proctoring`).
+frontend turns it into the thresholds (see
+[`Front-end/README.md`](../Front-end/README.md#skill-test-face-proctoring)).
+Each submitted attempt stores the strictness used and the tab strike total
+(`SkillTestAttempt.proctoring`); the `movements` / `cameraStrikes` fields stay in
+the schema only so attempts from older app builds still validate.
 
 ## API Documentation
 

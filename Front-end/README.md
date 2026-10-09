@@ -17,7 +17,7 @@ The SkillKart single-page app: a React 19 + Vite client for the marketplace, cov
 - **react-select** & **react-select-country-list** for searchable/country dropdowns
 - **react-easy-crop** for in-browser image cropping (avatar/portfolio uploads)
 - **clsx** for conditional className composition
-- **@mediapipe/tasks-vision** (Google MediaPipe Face Landmarker) for webcam-based face/head-pose proctoring during freelancer skill tests — see [`src/pages/freelancer/useProctoring.js`](src/pages/freelancer/useProctoring.js) and [Skill-test face proctoring](#skill-test-face-proctoring): it analyses the live camera feed while a skill test is in progress, flagging `face_missing` / `extra_face` / `head_turn` / `eyes_away` / `body_movement` (a separate strike counter from `useAntiCheat.js`'s tab-switch/full-screen detection) and aborting the attempt once a strictness-scaled violation budget is exceeded
+- **@mediapipe/tasks-vision** (Google MediaPipe Face Landmarker) for webcam-based face-presence proctoring during freelancer skill tests — see [`src/pages/freelancer/useProctoring.js`](src/pages/freelancer/useProctoring.js) and [Skill-test face proctoring](#skill-test-face-proctoring): it watches the live camera feed while a skill test is in progress and aborts the attempt if no face is in view for 3 seconds (no other movement is checked, and a device with no camera at all is let through; `useAntiCheat.js`'s tab-switch/full-screen detection is a separate strike counter)
 
 ## Prerequisites
 
@@ -410,44 +410,72 @@ for the full setup (Firebase project, service account credential,
 > `android-admin/app/google-services.json` must exist before enabling the env
 > var for an `.env.admin` build.
 
+### Skill-test levels
+
+The skill-test rules screen asks which level to take — **Easy (5 questions),
+Intermediate (10) or Expert (15)** — and "Start Test" stays disabled until one is
+picked. The choice is sent as `?level=` on `GET /skill-tests/generate`, decides
+the question count and difficulty server-side, and is kept if an attempt is
+cancelled (the restart reuses it) or retaken. The level picked is also the rank
+earned: score at least 25% and the skill is verified and marked Beginner (Easy),
+Intermediate or Expert accordingly — the result screen says "Easy / Intermediate /
+Expert Level Verified!", or "Not Verified Yet" below 25%. `TEST_LEVELS` in
+`src/pages/freelancer/SkillTest.jsx` only drives the cards and the time estimate;
+the server's counts (`Backend/src/utils/skillTestDifficulty.js`) are the truth —
+see [`Backend/README.md`](../Backend/README.md#skill-test-levels).
+
 ### Skill-test face proctoring
 
 Camera proctoring during the skill test uses **Google MediaPipe Face
-Landmarker** (`@mediapipe/tasks-vision`): 478 face landmarks, eye-direction
-scores (blendshapes) and a head-pose matrix per frame. It replaced
-`face-api.js`, which can't see pupils and never ran reliably in Android's
-WebView.
+Landmarker** (`@mediapipe/tasks-vision`). It replaced `face-api.js`, which never
+ran reliably in Android's WebView.
+
+**The one camera rule is face presence.** If no face is in the camera for
+**3 seconds in a row** — the candidate left, covered the camera, the picture is
+blank, or they turned fully away — the attempt is **cancelled immediately** (no
+strikes, no warning) and restarts from question 1 with new questions. Head
+turns, eye direction, movement, distance from the camera and extra people are
+deliberately **not** checked; the detector runs with one face and the
+eye / head-angle outputs switched off. Tab switches are a separate system (below).
 
 | File | Role |
 |---|---|
-| `src/pages/freelancer/proctoring/strictness.js` | One strictness value (0–1) → every threshold |
-| `src/pages/freelancer/proctoring/analyzeFrame.js` | One frame → issues: `face_missing`, `extra_face`, `head_turn`, `eyes_away`, `body_movement` (pure, testable) |
+| `src/pages/freelancer/proctoring/strictness.js` | The strictness value (0–1) → on/off, the 3 s hold, and the tab/window strike limit |
+| `src/pages/freelancer/proctoring/analyzeFrame.js` | One frame → `faceMissing` (pure, testable) |
 | `src/pages/freelancer/proctoring/faceEngine.js` | Lazy-loads MediaPipe; CPU on the native app, GPU→CPU fallback on web |
-| `src/pages/freelancer/useProctoring.js` | Camera + detection loop, live movement counters, strikes |
-| `src/pages/freelancer/proctoring/ProctorPanel.jsx` | Live panel during the test + face-check chip on the rules screen |
+| `src/pages/freelancer/useProctoring.js` | Camera + detection loop; cancels the test after 3 s with no face |
+| `src/pages/freelancer/proctoring/ProctorPanel.jsx` | Live status + "test cancels in Ns" countdown during the test, face-check chip on the rules screen |
 | `src/pages/freelancer/useAntiCheat.js` | Tab switch / window blur / leaving full-screen |
 
 **One knob: `SKILL_TEST_PROCTOR_STRICTNESS` in `Backend/.env`** (0–1, default
 0.5; blank/invalid → 0.5). The page fetches it from
 `GET /skill-tests/proctoring-config` when the test opens, so changing it
-needs only a backend restart — no web or APK rebuild.
+needs only a backend restart — no web or APK rebuild. It now does two things:
 
 | | 0 | 0.2 easy | 0.5 medium | 0.7 strict | 1 very strict |
 |---|---|---|---|---|---|
-| Camera checks | off (no camera needed) | on | on | on | on |
-| Frame checked every | — | 1.4 s | 0.9 s | 0.7 s | 0.4 s |
-| A problem must last … to be a strike | — | 5 s | 3 s | 2 s | 1 s |
-| Head turn allowed | — | 38° | 26° | 20° | 12° |
-| Off-centre allowed | — | 42% | 30% | 22% | 15% |
-| Camera strikes (per question) | — | 1.0 | 0.5 | 0.4 | 0.2 (min 2) |
+| Camera check | off (no camera needed) | on — 3 s | on — 3 s | on — 3 s | on — 3 s |
 | Tab / window: cancelled on the | never | 5th | 3rd | 3rd | 2nd |
 
-Values in between interpolate smoothly (0.35 is a little stricter than 0.3).
-A **movement** is counted every time an issue starts and shown live to the
-candidate; only an issue that *continues* past the hold time becomes a
-**strike**. The candidate gets a final warning before the last strike, and
-running out cancels the attempt. The level used, the movement counters and
-the strike totals are saved on the `SkillTestAttempt` (`proctoring`).
+Values in between interpolate smoothly for the tab/window limit. The strictness
+used and the tab/window strike total are saved on the `SkillTestAttempt`
+(`proctoring`). A face-missing cancel discards the attempt, so nothing camera-related
+is stored for it.
+
+**Camera lifecycle is sequence-guarded** (`useProctoring.js`): a `getUserMedia` that
+resolves after the camera was stopped or restarted is discarded and its tracks
+stopped (so leaving the page mid-prompt never leaves the camera on); a stale
+stream's late `ended` event is ignored — only the *current* stream ending counts
+as camera loss; the "no video is coming through" error clears itself when frames
+resume; and if a camera error blocks "Restart Test" on the cancelled screen, a
+**Retry Camera** button re-checks the camera there.
+
+**A device with no camera at all can still take the test** — `getUserMedia`
+rejecting with `NotFoundError` marks the device as camera-less, the rules screen
+says camera proctoring is skipped (with a "Check Again" button in case one is
+plugged in), and only the tab/window guard applies. A denied permission, a busy
+or broken camera is *not* treated that way — those still block "Start Test", or
+declining the prompt would be a way around proctoring.
 
 **Assets are same-origin, never a CDN** (the APK must work offline).
 `vite.config.js`'s `mediapipeAssets` plugin serves them in dev and copies them
@@ -464,7 +492,7 @@ model from `vendor/mediapipe/face_landmarker.task` (committed, 3.8 MB).
 >   open the back camera.
 > - The WebView can **freeze the camera feed for 3–4 s** (measured on the
 >   emulator, real camera and test feed alike). Frames are tracked with
->   `requestVideoFrameCallback`: while the feed is frozen the strike clock
+>   `requestVideoFrameCallback`: while the feed is frozen the 3 s countdown
 >   pauses; a freeze longer than 10 s during the test counts as a missing
 >   face, so covering/freezing the camera can't dodge proctoring.
 > - "Start Test" stays disabled until the camera is streaming **and** a frame

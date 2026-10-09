@@ -57,9 +57,10 @@ class AIProvider {
    * Generate a skill test (array of question objects) for the given skills.
    * @param {string[]} skills
    * @param {number} count
+   * @param {string} [level] 'easy' | 'intermediate' | 'expert' — how hard to write the questions
    * @returns {Promise<Array<Object>>}
    */
-  async generateSkillTest(skills, count) {
+  async generateSkillTest(skills, count, level) {
     throw new Error('Method generateSkillTest() must be implemented by the provider.');
   }
 

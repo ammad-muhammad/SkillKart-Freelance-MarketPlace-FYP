@@ -115,10 +115,10 @@ class RouterAIProvider extends AIProvider {
     aiUnavailable();
   }
 
-  async generateSkillTest(skills, count = 50) {
+  async generateSkillTest(skills, count = 50, level) {
     for (const provider of this.providers) {
       try {
-        const result = await provider.instance.generateSkillTest(skills, count);
+        const result = await provider.instance.generateSkillTest(skills, count, level);
         if (result) return result;
       } catch (e) {
         console.warn(`[AI Router] ${provider.name} failed for generateSkillTest:`, e.message);

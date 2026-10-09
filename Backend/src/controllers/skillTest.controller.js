@@ -5,15 +5,23 @@ const { sendSuccess } = require('../utils/apiResponse');
 const { asyncHandler } = require('../utils/helpers');
 const { BadRequestError, NotFoundError } = require('../utils/apiError');
 const { syncFreelancerVerification } = require('../services/verification.service');
-const { isEasyMode, getProctorStrictness } = require('../utils/skillTestDifficulty');
+const { isEasyMode, getProctorStrictness, TEST_LEVELS, resolveTestLevel } = require('../utils/skillTestDifficulty');
 
 // Minimum per-skill score to be marked isVerified (unlocks applying to jobs/
 // gigs gated on that skill — see utils/skillGating.js). Deliberately low: it
-// only needs to filter out near-zero/random-guess attempts, not gate on
-// expertise — Beginner/Intermediate/Expert should all count as "gave the
-// test and showed real understanding". The separate 80%/50% breakpoints
-// below are just the descriptive level rank, not a gating threshold.
+// only needs to filter out near-zero/random-guess attempts. Clearing it at a
+// given test level marks the skill with that level's rank (Easy → Beginner,
+// Intermediate → Intermediate, Expert → Expert) — the rank follows the level the
+// freelancer picked, not the score (see TEST_LEVELS in utils/skillTestDifficulty.js).
 const SKILL_VERIFICATION_THRESHOLD = 25;
+
+// Attempts created before the level picker existed carry no level; they keep the
+// old behaviour of ranking by score alone.
+const rankFromScore = (percentage) => {
+  if (percentage >= 80) return 'Expert';
+  if (percentage >= 50) return 'Intermediate';
+  return 'Beginner';
+};
 
 // LLMs reliably write the correct option first when generating MCQs, so
 // without reshuffling, "A" ends up correct almost every time. correctAnswer
@@ -36,7 +44,16 @@ const generateTest = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { skill: specificSkill } = req.query; // Optional specific skill
 
-  console.log(`[SkillTest] Generating test for user ${userId}. Specific Skill: ${specificSkill || 'None (Baseline Mixed)'}`);
+  // The level the freelancer picked decides the question count and difficulty.
+  // Missing → intermediate (older app builds don't send one); an unknown value
+  // is rejected rather than silently swapped for a different test.
+  const testLevel = resolveTestLevel(req.query.level);
+  if (!testLevel) {
+    throw new BadRequestError(`Invalid level. Choose one of: ${Object.keys(TEST_LEVELS).join(', ')}.`);
+  }
+  const questionCount = TEST_LEVELS[testLevel].questionCount;
+
+  console.log(`[SkillTest] Generating ${testLevel} test (${questionCount} questions) for user ${userId}. Specific Skill: ${specificSkill || 'None (Baseline Mixed)'}`);
 
   // 1. ALWAYS delete any existing pending/evaluating test to ensure a fresh
   // start. This satisfies the requirement that we never resume old/stale
@@ -49,15 +66,13 @@ const generateTest = asyncHandler(async (req, res) => {
   if (!profile) throw new NotFoundError('Freelancer profile not found');
 
   let skillsToTest = [];
-  let questionCount = 25;
 
   if (specificSkill) {
     // Individual Skill Test mode
     const skillExists = profile.skills.some(s => s.name.toLowerCase() === specificSkill.toLowerCase());
     if (!skillExists) throw new BadRequestError(`Skill '${specificSkill}' not found in your profile`);
-    
+
     skillsToTest = [specificSkill];
-    questionCount = 20; // 20 questions for a single skill
   } else {
     // Initial Baseline Mixed Test mode
     skillsToTest = profile.skills
@@ -68,8 +83,6 @@ const generateTest = asyncHandler(async (req, res) => {
       // If all verified, but they want a mixed test? Just use all skills.
       skillsToTest = profile.skills.map(s => s.name);
     }
-    
-    questionCount = 50; // Requirement: 50 questions for initial baseline
   }
 
   if (skillsToTest.length === 0) {
@@ -87,7 +100,7 @@ const generateTest = asyncHandler(async (req, res) => {
   while (attempts < MAX_GEN_ATTEMPTS) {
     attempts++;
     try {
-      rawQuestions = await ai.generateSkillTest(skillsToTest, questionCount);
+      rawQuestions = await ai.generateSkillTest(skillsToTest, questionCount, testLevel);
 
       // Validate MCQ distribution
       const mcqCount = rawQuestions.filter(q => q.type === 'mcq').length;
@@ -124,7 +137,9 @@ const generateTest = asyncHandler(async (req, res) => {
   const attempt = await SkillTestAttempt.create({
     userId,
     skillsTested: skillsToTest,
-    questions: shuffleOptions(rawQuestions).map(q => ({
+    level: testLevel,
+    // The AI occasionally over-delivers; the picked level promises an exact count.
+    questions: shuffleOptions(rawQuestions.slice(0, questionCount)).map(q => ({
       ...q,
       userAnswer: '',
       score: 0,
@@ -140,6 +155,7 @@ const generateTest = asyncHandler(async (req, res) => {
     data: {
       questions: attempt.questions,
       skills: skillsToTest,
+      level: testLevel,
       attemptId: attempt._id,
       mcqFallback, // UI can note the test mix is below the usual MCQ ratio
       easyMode: isEasyMode() // testing-only: tells the UI it's safe to reveal correct answers
@@ -259,42 +275,36 @@ const submitTest = asyncHandler(async (req, res) => {
     skillScores[sName].count += 1;
   });
 
+  // The level the freelancer picked decides the rank a verified skill earns.
+  const pickedLevel = TEST_LEVELS[pendingTest.level] || null;
+  const rankFor = (percentage) => (pickedLevel ? pickedLevel.rank : rankFromScore(percentage));
+
   const skillResults = {};
   for (const skill in skillScores) {
     const avg = skillScores[skill].total / skillScores[skill].count;
     const percentage = avg * 100;
 
-    // "Verified" (unlocks job/gig applications gated on this skill) just
-    // means the freelancer actually attempted and cleared a sanity floor —
-    // it is NOT the same as the "Expert" rank badge below. A near-zero score
-    // (e.g. random guessing on MCQs) stays unverified; Beginner/Intermediate/
-    // Expert all verify.
-    let level = 'Beginner';
+    // "Verified" (unlocks job/gig applications gated on this skill) means the
+    // freelancer actually attempted and cleared a sanity floor. A near-zero
+    // score (e.g. random guessing on MCQs) stays unverified and earns no rank.
     const isVerified = percentage >= SKILL_VERIFICATION_THRESHOLD;
-
-    if (percentage >= 80) {
-      level = 'Expert';
-    } else if (percentage >= 50) {
-      level = 'Intermediate';
-    }
-
-    skillResults[skill] = { percentage, level, isVerified };
+    skillResults[skill] = { percentage, level: rankFor(percentage), isVerified };
   }
 
   // Calculate overall performance manually to ensure no NaN errors
-  const avgFromQuestions = evaluatedQuestions.length > 0 
-    ? evaluatedQuestions.reduce((sum, q) => sum + (q.score || 0), 0) / evaluatedQuestions.length 
+  const avgFromQuestions = evaluatedQuestions.length > 0
+    ? evaluatedQuestions.reduce((sum, q) => sum + (q.score || 0), 0) / evaluatedQuestions.length
     : 0;
 
   const totalScore = avgFromQuestions * 100;
-  const overallPassed = totalScore >= 80;
-  const overallLevel = overallPassed ? 'Expert' : (totalScore >= 50 ? 'Intermediate' : 'Beginner');
+  const overallVerified = totalScore >= SKILL_VERIFICATION_THRESHOLD;
+  const awardedRank = overallVerified ? rankFor(totalScore) : null;
 
-  // 1. Update attempt record
+  // 1. Update attempt record (`passed` = verified at the picked level)
   pendingTest.questions = evaluatedQuestions;
   pendingTest.totalScore = totalScore;
-  pendingTest.passed = overallPassed;
-  pendingTest.status = overallPassed ? 'completed' : 'failed';
+  pendingTest.passed = overallVerified;
+  pendingTest.status = overallVerified ? 'completed' : 'failed';
   pendingTest.completedAt = new Date();
   pendingTest.violations = sanitizeViolations(violations);
   pendingTest.proctoring = sanitizeProctoringSummary(proctoring);
@@ -310,15 +320,19 @@ const submitTest = asyncHandler(async (req, res) => {
       // Find the specific result for this skill
       const res = skillResults[skill.name];
       if (res) {
-        skill.level = res.level;
-        skill.verificationScore = res.percentage;
         skill.lastTestedAt = new Date();
-        
+
         if (res.isVerified) {
+          // Only a verified result earns the picked level's rank.
+          skill.level = res.level;
+          skill.verificationScore = res.percentage;
           skill.isVerified = true;
           skill.expiresAt = expirationDate;
-        } else {
-          skill.isVerified = false;
+        } else if (!skill.isVerified) {
+          // Never verified: just record this attempt's score. A skill that is
+          // already verified keeps its verification, rank and score — failing a
+          // (say, higher-level) retake must not take away what was earned.
+          skill.verificationScore = res.percentage;
         }
       }
     });
@@ -329,20 +343,21 @@ const submitTest = asyncHandler(async (req, res) => {
     await syncFreelancerVerification(userId);
   }
 
-  const overallVerified = totalScore >= SKILL_VERIFICATION_THRESHOLD;
   const scoreMsg = totalScore.toFixed(1);
-  const message = overallPassed
-    ? `Congratulations! You are now a Verified Expert with a score of ${scoreMsg}%.`
-    : overallVerified
-      ? `Test completed. You've been ranked as ${overallLevel} (${scoreMsg}%) and are now verified for this skill — you can apply to work that requires it. Score 80% to also earn the Expert badge.`
-      : `Test completed with a score of ${scoreMsg}%, which is too low to verify this skill. Retake the test and score at least ${SKILL_VERIFICATION_THRESHOLD}% to unlock applying to work that requires it.`;
+  const levelLabel = pickedLevel ? pickedLevel.label : awardedRank;
+  const message = overallVerified
+    ? `Verified at the ${levelLabel} level (${scoreMsg}%). Your tested skills are now marked ${awardedRank} and you can apply to work that requires them.`
+    : `Test completed with a score of ${scoreMsg}%, which is too low to verify this skill. Retake the test and score at least ${SKILL_VERIFICATION_THRESHOLD}% to unlock applying to work that requires it.`;
 
   sendSuccess(res, {
     message,
     data: {
       score: totalScore,
-      level: overallLevel,
-      passed: overallPassed,
+      // The rank earned — the picked level's rank when verified. Not verified →
+      // 'Beginner' only so clients that always read a string keep working.
+      level: awardedRank || 'Beginner',
+      testLevel: pendingTest.level || null, // 'easy' | 'intermediate' | 'expert' (null for pre-picker attempts)
+      passed: overallVerified,
       verified: overallVerified,
       skillScores: skillResults, // Passing this if frontend wants to use it later
       attemptId: pendingTest._id

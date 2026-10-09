@@ -1,6 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const AIProvider = require('./base.provider');
-const { difficultyInstruction } = require('../../utils/skillTestDifficulty');
+const { difficultyInstruction, mcqCountFor } = require('../../utils/skillTestDifficulty');
 
 class ClaudeProvider extends AIProvider {
   constructor() {
@@ -95,20 +95,20 @@ ${text}
     }
   }
 
-  async generateSkillTest(skills, count = 50) {
+  async generateSkillTest(skills, count = 50, level) {
     if (!process.env.ANTHROPIC_API_KEY) {
       throw new Error('ANTHROPIC_API_KEY is not set');
     }
 
     const prompt = `
 Generate a unique, randomized technical verification test for a freelancer with the following skills: ${skills.join(', ')}.
-Generate exactly ${count} questions. ${difficultyInstruction()}
+Generate exactly ${count} questions. ${difficultyInstruction(level)}
 CRITICAL: These questions MUST be completely fresh, unique, and different from previous attempts. (Random Context ID: ${skills.join('-')}-${Date.now()})
 IMPORTANT: 
 1. DISTRIBUTION: You MUST generate exactly ${count} questions. 
-2. MCQs MANDATORY: At least 20 out of 25 (or 80%) of these questions MUST be Multiple Choice Questions (type: "mcq").
+2. MCQs MANDATORY: At least ${mcqCountFor(count)} out of ${count} (or 80%) of these questions MUST be Multiple Choice Questions (type: "mcq").
 3. FORMAT: For MCQs, provide exactly 4 options and a "correctAnswer". 
-4. SHORT ANSWER: Only the remaining 5 questions should be text-based (type: "text").
+4. SHORT ANSWER: Only the remaining ${count - mcqCountFor(count)} questions should be text-based (type: "text").
 5. VARIATION: Ensure questions are technical and diverse. (Seed: ${Date.now()})
 
 Output ONLY a JSON array of objects. Do not output any other text.

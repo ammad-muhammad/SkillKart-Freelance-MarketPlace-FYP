@@ -128,7 +128,7 @@ Is ka matlab:
 > "Sir, passwords hashed store hote hain — plain text nahi. Login ke liye JWT tokens use hote hain. Admin panel ka alag login system hai — normal user login se koi connection nahi."
 
 **Member 1 add kare:**
-> "Multiple security layers hain: bcrypt password hashing, JWT access + refresh tokens (access token memory mein, localStorage mein nahi), RBAC role-based access control, Google reCAPTCHA v3 bots ke liye, rate limiting brute force se bachne ke liye, aur Helmet security headers. Skill tests mein camera proctoring bhi hai — Google MediaPipe Face Landmarker se face tracking, agar face na dikhe, koi aur shaks frame mein aaye, ya look away / head turn kare to violation log hota hai."
+> "Multiple security layers hain: bcrypt password hashing, JWT access + refresh tokens (access token memory mein, localStorage mein nahi), RBAC role-based access control, Google reCAPTCHA v3 bots ke liye, rate limiting brute force se bachne ke liye, aur Helmet security headers. Skill tests mein camera proctoring bhi hai — Google MediaPipe Face Landmarker se face detection; agar 3 seconds tak camera mein koi face na dikhe to test cancel ho jata hai (movement ya head turn check nahi hota), aur jis device mein camera hi nahi wo bhi test de sakta hai. Tab switch / full-screen exit alag se strikes mein count hote hain."
 
 ---
 

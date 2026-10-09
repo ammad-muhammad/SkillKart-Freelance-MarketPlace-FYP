@@ -9,7 +9,7 @@ import { useFreelancer } from '../../context/FreelancerContext';
 import useAntiCheat from './useAntiCheat';
 import useProctoring from './useProctoring';
 import ProctorPanel, { PreviewStatus } from './proctoring/ProctorPanel';
-import { deriveProctoringSettings, normalizeStrictness, strictnessLabel } from './proctoring/strictness';
+import { deriveProctoringSettings, normalizeStrictness } from './proctoring/strictness';
 import './SkillTest.css';
 
 // useAntiCheat always uses one of these exact reason strings per violation
@@ -21,15 +21,6 @@ const BROWSER_VIOLATION_TYPE = {
   // Polling-based backup check (see useAntiCheat's watchdog effect) — same
   // underlying signal as a blur/visibility event, just caught a different way.
   'You switched away from the test window.': 'window_blur',
-};
-
-// useProctoring issue type → the violation type the backend records.
-const CAMERA_VIOLATION_TYPE = {
-  face_missing: 'no_face',
-  extra_face: 'multiple_faces',
-  head_turn: 'head_turn',
-  eyes_away: 'eyes_away',
-  body_movement: 'body_movement',
 };
 
 const ordinal = (n) => {
@@ -48,17 +39,20 @@ const PER_QUESTION_SECONDS = 20;
 // applies unconditionally (demo and real, easy mode or not).
 const TEXT_QUESTION_SECONDS = 30;
 
-// The actual question count is only known once the AI generates the test
-// (after "Start Test" is clicked), but the rules screen must show an
-// upfront time estimate — mirrors the counts in skillTest.controller.js's
-// generateTest (20 for a single-skill test, 50 for the baseline mixed test).
-const estimateQuestionCount = (specificSkill) => (specificSkill ? 20 : 50);
+// The level the freelancer picks before starting decides how many questions
+// they get (and how hard the AI writes them). Keep `count` in sync with
+// Backend/src/utils/skillTestDifficulty.js's TEST_LEVELS — the server is the
+// source of truth, this is only so the rules screen can show it up front.
+const TEST_LEVELS = [
+  { key: 'easy', label: 'Easy', count: 5, blurb: 'Core basics — a quick check' },
+  { key: 'intermediate', label: 'Intermediate', count: 10, blurb: 'Practical working knowledge' },
+  { key: 'expert', label: 'Expert', count: 15, blurb: 'In-depth, advanced questions' },
+];
 
-// skillTest.controller.js targets ~80% MCQ / ~20% text — used only to give
-// the rules screen a realistic upfront estimate before the real mix is known.
-const estimateTotalSeconds = (specificSkill) => {
-  const count = estimateQuestionCount(specificSkill);
-  const mcqCount = Math.round(count * 0.8);
+// The server targets ~80% MCQ / ~20% text — used only to give the rules
+// screen a realistic upfront time estimate before the real mix is known.
+const estimateTotalSeconds = (count) => {
+  const mcqCount = Math.ceil(count * 0.8);
   const textCount = count - mcqCount;
   return mcqCount * PER_QUESTION_SECONDS + textCount * TEXT_QUESTION_SECONDS;
 };
@@ -87,6 +81,9 @@ const SkillTest = () => {
   const { refreshProfile } = useFreelancer();
 
   const [phase, setPhase] = useState('rules');
+  // 'easy' | 'intermediate' | 'expert' — picked on the rules screen (null until
+  // then). Kept across a cancelled attempt / retake so a restart reuses it.
+  const [level, setLevel] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -114,7 +111,7 @@ const SkillTest = () => {
 
   const rulesVideoRef = useRef(null);
   const testVideoRef = useRef(null);
-  const violationLog = useRef([]); // merged browser + camera violations, sent on submit
+  const violationLog = useRef([]); // browser violations (tab / blur / full-screen), sent on submit
 
   const logViolation = (source, type, reason) => {
     violationLog.current.push({ source, type, reason, at: Date.now() });
@@ -159,27 +156,20 @@ const SkillTest = () => {
     onAbort: (reason) => abortAttempt(reason),
   });
 
-  // Camera proctoring (face / head / eyes / body). 'preview' on the rules
-  // screen shows the live face check without counting anything; 'active'
-  // during the test counts movements and issues strikes.
+  // Camera proctoring — face presence only. 'preview' on the rules screen
+  // shows the live face check without enforcing anything; 'active' during the
+  // test cancels it when no face has been in view for 3s.
   const proctor = useProctoring({
     settings: proctorSettings,
     mode: !configLoaded ? 'off' : phase === 'testing' && !result ? 'active' : phase === 'rules' ? 'preview' : 'off',
     attemptId,
     videoRef: phase === 'testing' ? testVideoRef : rulesVideoRef,
-    questionCount: questions.length,
-    onStrike: (count, max, type, message) => {
-      // Every strike is logged for the backend record.
-      logViolation('camera', CAMERA_VIOLATION_TYPE[type] || 'other', message);
-      if (count < max - 1) setWarning(`Camera strike ${count} of ${max} — ${message}`);
-    },
-    onWarn: (message) => {
-      setWarning(`Final warning — ${message} One more camera strike will cancel the test.`);
-    },
     onAbort: (message) => abortAttempt(message),
   });
   const { cameraError, startCamera, stopCamera } = proctor;
-  const proctoringOn = proctorSettings.enabled;
+  // Camera proctoring applies unless it's switched off or the device has no
+  // camera at all — then the test simply runs without it.
+  const proctoringOn = proctorSettings.enabled && !proctor.noCamera;
   // "Start Test" waits until the face check is genuinely working — camera
   // streaming AND at least one frame analysed — so a device where detection
   // can't run finds out here, not silently halfway through the test.
@@ -187,6 +177,12 @@ const SkillTest = () => {
     proctor.engineStatus === 'ready' && proctor.cameraOn && proctor.detecting && !proctor.cameraError && !proctor.engineError
   );
   const cameraProblem = proctoringOn ? (proctor.engineError || proctor.cameraError) : null;
+  // The cancelled screen has no <video> to preview in, so "Retry Camera" there only
+  // checks that the camera opens again (clearing a leftover error) and releases it —
+  // the restart opens its own stream.
+  const retryCameraCheck = async () => {
+    if (await proctor.retry()) stopCamera();
+  };
 
   // Request the webcam as soon as the rules screen is shown, so the freelancer
   // can confirm they're in frame before committing to "Start Test". Camera
@@ -198,15 +194,15 @@ const SkillTest = () => {
   // and re-attached whenever the phase switches — startTest() stops the old
   // one first, and the browser doesn't re-prompt once permission is granted.
   useEffect(() => {
-    if (!configLoaded || !proctoringOn) return;
+    if (!configLoaded || !proctorSettings.enabled) return;
     if (phase === 'rules' || phase === 'testing') startCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, configLoaded, proctoringOn]);
+  }, [phase, configLoaded, proctorSettings.enabled]);
 
-  const fetchTest = async (skill = null, force = false) => {
+  const fetchTest = async (skill = null, force = false, testLevel = null) => {
     try {
       setLoading(true);
-      const res = await skillTestAPI.generateTest(skill, force);
+      const res = await skillTestAPI.generateTest(skill, force, testLevel);
       const testData = res.data.data;
       const qList = testData?.questions || [];
       const sList = testData?.skills || [];
@@ -229,6 +225,7 @@ const SkillTest = () => {
 
   // Begin (or restart) the test: enter fullscreen, pull FRESH questions, arm guard.
   const startTest = async () => {
+    if (!level) return; // the level decides the question set — it must be picked first
     setWarning(null);
     setAbortReason('');
     setResult(null);
@@ -250,7 +247,7 @@ const SkillTest = () => {
     }
 
     // force=true so a restart never reuses the previous question set.
-    const ok = await fetchTest(specificSkill, true);
+    const ok = await fetchTest(specificSkill, true, level);
     if (!ok) {
       toast.error('Could not generate a test right now. Please try again.');
       return;
@@ -286,11 +283,7 @@ const SkillTest = () => {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const res = await skillTestAPI.submitTest(answers, violationLog.current, {
-        movements: proctor.counts,
-        cameraStrikes: proctor.strikes,
-        browserStrikes,
-      });
+      const res = await skillTestAPI.submitTest(answers, violationLog.current, { browserStrikes });
       setResult(res.data.data);
       exitFullscreen();
       stopCamera();
@@ -351,55 +344,61 @@ const SkillTest = () => {
 
   /* ───────────────── RESULT SCREEN ───────────────── */
   if (result) {
+    // The rank follows the level that was picked (Easy → Beginner, Intermediate,
+    // Expert) — the score only decides whether the skill verifies at all.
+    const takenLevel = TEST_LEVELS.find((l) => l.key === (result.testLevel || level));
+    const takenLabel = takenLevel?.label;
+    // A mixed test can verify some skills and not others — only badge the ones that did.
+    const verifiedSkills = skills.filter((s) => result.skillScores?.[s]?.isVerified ?? true);
     return (
       <div className="st-result-container">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="st-result-card">
-          {result.passed ? (
+          {result.verified ? (
             <div className="st-result-success">
               <Award size={80} className="st-success-icon" />
-              <h1>Verified Expert!</h1>
+              <h1>{takenLabel ? `${takenLabel} Level Verified!` : 'Skills Verified!'}</h1>
               <div className="st-score-ring">
                 <span className="st-score-val">{result.score.toFixed(0)}%</span>
                 <span className="st-score-label">Technical Score</span>
               </div>
               <p className="st-result-desc">
-                Impressive! You've been ranked as a <strong>Verified Expert</strong> in these skills.
-                Your profile will now rank higher in client searches.
+                Your score verifies {verifiedSkills.length === 1 ? 'this skill' : 'these skills'}
+                {takenLabel ? <> at the <strong>{takenLabel}</strong> level</> : null}.{' '}
+                {verifiedSkills.length === 1 ? "It's" : "They're"} now marked <strong>{result.level}</strong> on your
+                profile, and you can apply to work that requires {verifiedSkills.length === 1 ? 'it' : 'them'}.
               </p>
               <div className="st-skill-badges">
-                {skills.map(s => <span key={s} className="st-badge expert">Verified {s}</span>)}
+                {verifiedSkills.map((s) => (
+                  <span key={s} className={`st-badge${result.level === 'Expert' ? ' expert' : ''}`}>Verified {s} · {result.level}</span>
+                ))}
               </div>
               <button onClick={() => navigate(returnTo || '/freelancer/dashboard')} className="st-btn-finish">
-                {returnTo ? 'Continue to Proposal' : 'Claim My Expert Profile'}
+                {returnTo ? 'Continue to Proposal' : 'Continue to Dashboard'}
               </button>
+              {result.testLevel !== 'expert' && (
+                <button onClick={() => { setResult(null); setPhase('rules'); }} className="st-btn-later">
+                  Take a Higher Level
+                </button>
+              )}
             </div>
           ) : (
             <div className="st-result-failed">
-              <CheckCircle2 size={80} style={{ color: result.verified ? 'var(--color-success)' : 'var(--color-error)' }} />
-              <h1>Skill Ranking: {result.level}</h1>
-              <div className="st-score-ring" style={{ borderColor: result.verified ? 'var(--color-success)' : 'var(--color-error)' }}>
+              <CheckCircle2 size={80} style={{ color: 'var(--color-error)' }} />
+              <h1>Not Verified Yet</h1>
+              <div className="st-score-ring" style={{ borderColor: 'var(--color-error)' }}>
                 <span className="st-score-val">{result.score.toFixed(0)}%</span>
                 <span className="st-score-label">Score</span>
               </div>
               <p className="st-result-desc">
-                You've been ranked as <strong>{result.level}</strong>.
-                {result.verified
-                  ? " This skill is now verified — you can apply to work that requires it. Reach 80% to also earn the Expert badge."
-                  : " That score is too low to verify this skill. Retake the test and score higher to unlock applying to work that requires it."}
+                That score is too low to verify {skills.length === 1 ? 'this skill' : 'these skills'}
+                {takenLabel ? <> at the <strong>{takenLabel}</strong> level</> : null}.
+                Retake the test and score at least 25% to unlock applying to work that requires {skills.length === 1 ? 'it' : 'them'}.
               </p>
-              {result.verified && (
-                <div className="st-skill-badges">
-                  {skills.map(s => <span key={s} className="st-badge">Verified {s}</span>)}
-                </div>
-              )}
               <button onClick={() => { setResult(null); setPhase('rules'); }} className="st-btn-retry">
-                Retake to Improve Ranking
+                Retake the Test
               </button>
-              <button
-                onClick={() => navigate(result.verified && returnTo ? returnTo : '/freelancer/dashboard')}
-                className="st-btn-later"
-              >
-                {result.verified && returnTo ? 'Continue to Proposal' : 'Continue to Dashboard'}
+              <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
+                Continue to Dashboard
               </button>
             </div>
           )}
@@ -422,9 +421,14 @@ const SkillTest = () => {
               with a brand-new set of questions.
             </p>
             {proctoringOn && cameraError && (
-              <p className="st-result-desc" style={{ color: 'var(--color-error)', fontWeight: 600 }}>
-                Camera required — please allow camera access or use a device with a working camera before restarting.
-              </p>
+              <>
+                <p className="st-result-desc" style={{ color: 'var(--color-error)', fontWeight: 600 }}>
+                  Camera required — please allow camera access or use a device with a working camera before restarting.
+                </p>
+                <button type="button" onClick={retryCameraCheck} className="st-btn-later">
+                  Retry Camera
+                </button>
+              </>
             )}
             <button onClick={startTest} disabled={loading || (proctoringOn && !!cameraError)} className="st-btn-retry">
               {loading ? 'Generating new test…' : 'Restart Test from Scratch'}
@@ -440,6 +444,7 @@ const SkillTest = () => {
 
   /* ───────────────── RULES / CONSENT SCREEN ───────────────── */
   if (phase === 'rules') {
+    const selectedLevel = TEST_LEVELS.find((l) => l.key === level);
     return (
       <div className="st-page">
         <div className="st-rules-wrap">
@@ -448,17 +453,40 @@ const SkillTest = () => {
               <ShieldAlert size={42} className="st-rules-icon" />
               <div>
                 <h1>{testTitle}</h1>
-                <p>Read the proctoring rules carefully before you begin.</p>
+                <p>Choose your level, then read the proctoring rules before you begin.</p>
               </div>
             </div>
 
-            <div className="st-total-time">
-              <Clock size={18} />
-              <span>
-                Total test time: <strong>~{formatDuration(estimateTotalSeconds(specificSkill))}</strong>
-                {' '}({estimateQuestionCount(specificSkill)} questions — most MCQ)
-              </span>
+            <div className="st-level-picker" role="radiogroup" aria-label="Test level">
+              <p className="st-level-title">Which level do you want to take?</p>
+              <div className="st-level-options">
+                {TEST_LEVELS.map((l) => (
+                  <button
+                    key={l.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={level === l.key}
+                    disabled={loading}
+                    onClick={() => setLevel(l.key)}
+                    className={`st-level-card${level === l.key ? ' st-level-card--selected' : ''}`}
+                  >
+                    <span className="st-level-name">{l.label}</span>
+                    <span className="st-level-count">{l.count} questions</span>
+                    <span className="st-level-blurb">{l.blurb}</span>
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {selectedLevel && (
+              <div className="st-total-time">
+                <Clock size={18} />
+                <span>
+                  Total test time: <strong>~{formatDuration(estimateTotalSeconds(selectedLevel.count))}</strong>
+                  {' '}({selectedLevel.count} questions — most MCQ)
+                </span>
+              </div>
+            )}
 
             <ul className="st-rules-list">
               <li><Maximize2 size={18} /><span>The test runs in <strong>full-screen</strong>. Other menus are hidden — only the test is shown.</span></li>
@@ -467,23 +495,26 @@ const SkillTest = () => {
               ) : (
                 <li><Eye size={18} /><span>Please stay on the test window for the whole test.</span></li>
               )}
-              {proctoringOn ? (
-                <>
-                  <li><Camera size={18} /><span>A working <strong>webcam is required</strong> and stays on for the whole test. It watches for your face leaving the frame, another person, head turns, eyes looking away, and moving out of position.</span></li>
-                  <li><Ban size={18} /><span>You'll see every movement counted live. Brief movements are fine — a movement becomes a <strong>strike only if it lasts {seconds(proctorSettings.holdMs)}</strong>. Your strike budget scales with the test length (shown live); you get a final warning before the last one, and running out cancels the test.</span></li>
-                </>
-              ) : (
+              {!proctorSettings.enabled ? (
                 <li><CameraOff size={18} /><span>Camera proctoring is <strong>turned off</strong> for this test.</span></li>
+              ) : proctor.noCamera ? (
+                <li><CameraOff size={18} /><span><strong>No camera was detected</strong> on this device, so camera proctoring is skipped — you can take the test without one.</span></li>
+              ) : (
+                <li><Camera size={18} /><span>Your <strong>webcam must stay on</strong> and a face must stay in view. If <strong>no face is detected for {seconds(proctorSettings.holdMs)}</strong> — you left, covered the camera or it shows a blank picture — the <strong>test is cancelled</strong> and you restart from question 1 with new questions. Moving around is fine.</span></li>
               )}
               <li><Clock size={18} /><span>Each question has a timer — <strong>{PER_QUESTION_SECONDS}s for multiple-choice</strong>, <strong>{TEXT_QUESTION_SECONDS}s for written-answer</strong> questions. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
               <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
-              <li><CheckCircle2 size={18} /><span>Score at least <strong>25%</strong> to verify this skill and unlock applying to work that requires it. Reach <strong>80%</strong> to also earn the Expert badge.</span></li>
+              <li><CheckCircle2 size={18} /><span>Score at least <strong>25%</strong> to verify the skill and unlock applying to work that requires it. You're marked at the <strong>level you pick</strong> — Easy (Beginner), Intermediate or Expert.</span></li>
             </ul>
 
-            {configLoaded && (
-              <p className="st-strictness-note">
-                Proctoring level: <strong>{strictnessLabel(proctorSettings.strictness)}</strong>
-              </p>
+            {proctorSettings.enabled && proctor.noCamera && (
+              <div className="st-camera-note">
+                <CameraOff size={16} />
+                <span>No camera detected on this device. If you connect one, check again.</span>
+                <button type="button" onClick={proctor.retry} className="st-btn-ghost-sm st-btn-ghost-sm--neutral">
+                  Check Again
+                </button>
+              </div>
             )}
 
             {proctoringOn && (
@@ -513,14 +544,16 @@ const SkillTest = () => {
             )}
 
             <div className="st-rules-actions">
-              <button onClick={startTest} disabled={loading || !configLoaded || !cameraReady} className="st-btn-submit">
+              <button onClick={startTest} disabled={loading || !configLoaded || !level || !cameraReady} className="st-btn-submit">
                 {loading
                   ? 'Preparing your test…'
                   : !configLoaded
                     ? 'Loading…'
-                    : !cameraReady && !cameraProblem
-                      ? 'Waiting for the face check…'
-                      : 'I Understand — Start Test'}
+                    : !level
+                      ? 'Choose a level to start'
+                      : !cameraReady && !cameraProblem
+                        ? 'Waiting for the face check…'
+                        : 'I Understand — Start Test'}
               </button>
               <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
                 Cancel
@@ -577,7 +610,7 @@ const SkillTest = () => {
         <div className="st-header-right">
           {proctoringOn && (
             <div
-              className={`st-camera-thumb${cameraProblem ? ' st-camera-thumb--error' : proctor.live?.issue ? ' st-camera-thumb--warn' : ''}`}
+              className={`st-camera-thumb${cameraProblem ? ' st-camera-thumb--error' : proctor.live?.missing ? ' st-camera-thumb--warn' : ''}`}
               title={cameraProblem || 'Webcam proctoring active'}
             >
               <video ref={testVideoRef} autoPlay playsInline muted />
@@ -591,9 +624,10 @@ const SkillTest = () => {
         </div>
       </div>
 
-      {proctoringOn && (
+      {proctorSettings.enabled && (
         <ProctorPanel
           proctor={proctor}
+          cameraActive={proctoringOn}
           holdMs={proctorSettings.holdMs}
           browserStrikes={browserStrikes}
           browserMax={proctorSettings.browserStrikes}

@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFaceEngine, detectFaces, switchToCpu, engineDelegate } from './proctoring/faceEngine';
-import { analyzeFrame, ISSUE_TYPES, ISSUE_MESSAGES } from './proctoring/analyzeFrame';
+import { analyzeFrame, FACE_MISSING_MESSAGE } from './proctoring/analyzeFrame';
 import { error as logError } from '../../utils/logger';
-
-const ZERO_COUNTS = Object.freeze(Object.fromEntries(ISSUE_TYPES.map((t) => [t, 0])));
 
 // Camera focus / exposure settling right after the test starts.
 const ARM_GRACE_MS = 2000;
-// Frames used to learn the candidate's normal distance from the camera.
-const BASELINE_FRAMES = 3;
 // Detection failures in a row before trying CPU, and before giving up.
 const CPU_FALLBACK_STREAK = 3;
 const HARD_ERROR_STREAK = 10;
@@ -16,58 +12,55 @@ const HARD_ERROR_STREAK = 10;
 const NO_FRAMES_MS = 8000;
 // Android's WebView can stop delivering camera frames for a few seconds
 // (measured: 3–4s freezes, real camera and test feed alike). A frozen feed
-// is no evidence either way, so the strike clock pauses — but a freeze this
+// is no evidence either way, so the countdown pauses — but a freeze this
 // long during the test counts as a missing face, so covering/freezing the
 // camera can't be used to dodge proctoring.
 const FROZEN_AS_MISSING_MS = 10000;
 
-const median = (xs) => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.floor(s.length / 2)];
-};
+const MISSING = Object.freeze({ faces: 0, faceMissing: true });
+
+// getUserMedia errors meaning the device has no camera at all (as opposed to
+// permission denied / camera busy / broken, which stay blocking).
+const NO_CAMERA_ERRORS = ['NotFoundError', 'DevicesNotFoundError'];
 
 /**
- * useProctoring — live camera proctoring for the skill test (MediaPipe Face
- * Landmarker: face presence, extra faces, head angle, eye direction, body
- * position). Every threshold comes from `settings`
- * (proctoring/strictness.js — one 0–1 strictness value).
+ * useProctoring — live camera proctoring for the skill test. The one rule is
+ * face presence: if no face is in view for settings.holdMs in a row, the test
+ * is cancelled (onAbort). Head angle, eye direction, movement, distance and
+ * extra people are not checked.
  *
  * mode:
  *   'off'     — nothing runs (also when settings.enabled is false)
  *   'preview' — rules screen: detection runs and `live` updates so the
- *               candidate can position themselves; nothing is counted
- *   'active'  — the test: movements are counted, strikes issued
+ *               candidate can position themselves; nothing is enforced
+ *   'active'  — the test: a face missing for settings.holdMs cancels it
  *
- * A "movement" is counted each time an issue STARTS (shown live to the
- * candidate). A "strike" is issued only when an issue CONTINUES for
- * settings.holdMs, with settings.cooldownMs between strikes so one long
- * episode can't burn several. onStrike fires on every strike, onWarn on
- * the last one before the limit, onAbort when the limit is reached.
+ * A device with no camera at all (`noCamera`) is let through unproctored.
  */
 export default function useProctoring({
   settings,
   mode,
   attemptId = 0,
   videoRef,
-  questionCount = 0,
-  onStrike,
-  onWarn,
   onAbort,
 }) {
-  const enabled = !!settings?.enabled && mode !== 'off';
-  const maxStrikes = settings?.enabled ? settings.cameraStrikesFor(questionCount) : 0;
+  const [noCamera, setNoCamera] = useState(false);
+  const enabled = !!settings?.enabled && mode !== 'off' && !noCamera;
 
   const [engineStatus, setEngineStatus] = useState('idle'); // idle | loading | ready | error
   const [engineError, setEngineError] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [detecting, setDetecting] = useState(false); // first frame analysed on this stream
-  const [live, setLive] = useState({ issues: [], issue: null, since: null, faces: 0 });
-  const [counts, setCounts] = useState(ZERO_COUNTS);
-  const [strikes, setStrikes] = useState(0);
+  const [live, setLive] = useState({ missing: false, since: null, faces: 0 });
   const [engineReloadKey, setEngineReloadKey] = useState(0);
 
   const streamRef = useRef(null);
+  // Bumped by every start/stop. A start that is still waiting on the browser
+  // (permission prompt, slow device) checks it afterwards and backs off if the
+  // camera was stopped or restarted in the meantime — see startCamera.
+  const startSeq = useRef(0);
+  const noVideoError = useRef(false); // cameraError currently = "no video coming through" (self-heals)
   const streamLost = useRef(false);
   const timerRef = useRef(null);
   const busyRef = useRef(false);
@@ -81,25 +74,17 @@ export default function useProctoring({
   const lastTickAt = useRef(0);
 
   // Per-attempt state (reset when a new attempt starts).
-  const countsRef = useRef({ ...ZERO_COUNTS });
-  const strikesRef = useRef(0);
-  const sinceRef = useRef({});
-  const prevIssues = useRef(new Set());
-  const prevCenter = useRef(null);
-  const baselineSamples = useRef([]);
-  const baselineWidth = useRef(0);
-  const cooldownUntil = useRef(0);
+  const missingSince = useRef(null); // when the current no-face stretch began
   const armedAt = useRef(0);
+  const abortedRef = useRef(false);
 
   // Live mirrors so the loop (scheduled once) always sees current values.
   const modeRef = useRef(mode);
   const settingsRef = useRef(settings);
-  const maxRef = useRef(maxStrikes);
-  const cbRef = useRef({ onStrike, onWarn, onAbort });
+  const cbRef = useRef({ onAbort });
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
-  useEffect(() => { maxRef.current = maxStrikes; }, [maxStrikes]);
-  useEffect(() => { cbRef.current = { onStrike, onWarn, onAbort }; }, [onStrike, onWarn, onAbort]);
+  useEffect(() => { cbRef.current = { onAbort }; }, [onAbort]);
 
   /* ── engine ───────────────────────────────────────────────────── */
   useEffect(() => {
@@ -121,6 +106,7 @@ export default function useProctoring({
 
   /* ── camera ───────────────────────────────────────────────────── */
   const stopCamera = useCallback(() => {
+    startSeq.current += 1; // also cancels a start that is still waiting on the browser
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -132,7 +118,10 @@ export default function useProctoring({
 
   const startCamera = useCallback(async () => {
     if (!settingsRef.current?.enabled) return false;
-    if (streamRef.current) stopCamera();
+    stopCamera(); // releases the current camera and supersedes any start still in flight
+    const mySeq = startSeq.current;
+    const superseded = () => mySeq !== startSeq.current;
+    noVideoError.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         // facingMode 'user' matters on phones — without it some Android
@@ -140,10 +129,19 @@ export default function useProctoring({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
+      if (superseded()) {
+        // The camera was stopped (page left, test cancelled) or restarted while
+        // the browser was still opening this one — never keep it running.
+        stream.getTracks().forEach((t) => t.stop());
+        return false;
+      }
       streamRef.current = stream;
       streamLost.current = false;
       stream.getVideoTracks().forEach((track) => {
         track.addEventListener('ended', () => {
+          // Only the CURRENT camera ending means we lost it. A stale/stopped
+          // stream's late 'ended' must not flag a healthy camera as lost.
+          if (streamRef.current !== stream) return;
           streamLost.current = true;
           setCameraOn(false);
           setCameraError('The camera stopped working.');
@@ -152,15 +150,24 @@ export default function useProctoring({
       if (videoRef?.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
+        if (superseded()) return false; // stopCamera already released this stream
       }
       noFrameSince.current = 0;
+      setNoCamera(false);
       setCameraError(null);
       setCameraOn(true);
       setDetecting(false);
       return true;
     } catch (err) {
-      logError('[useProctoring] camera unavailable', err);
+      if (superseded()) return false; // an outdated attempt failing is not news
       setCameraOn(false);
+      if (NO_CAMERA_ERRORS.includes(err?.name)) {
+        // No camera hardware at all → nothing to proctor; the test proceeds.
+        setNoCamera(true);
+        setCameraError(null);
+        return false;
+      }
+      logError('[useProctoring] camera unavailable', err);
       setCameraError(err?.name === 'NotAllowedError'
         ? 'Camera permission was denied.'
         : 'Camera is unavailable.');
@@ -179,60 +186,23 @@ export default function useProctoring({
   /* ── per-attempt reset ───────────────────────────────────────── */
   useEffect(() => {
     if (mode !== 'active') return;
-    countsRef.current = { ...ZERO_COUNTS };
-    strikesRef.current = 0;
-    sinceRef.current = {};
-    prevIssues.current = new Set();
-    prevCenter.current = null;
-    baselineSamples.current = [];
-    baselineWidth.current = 0;
-    cooldownUntil.current = 0;
+    missingSince.current = null;
+    abortedRef.current = false;
     armedAt.current = Date.now();
-    setCounts(ZERO_COUNTS);
-    setStrikes(0);
   }, [attemptId, mode]);
 
-  /* ── counting + strikes (active mode only) ───────────────────── */
-  const record = useCallback((analysis) => {
-    const s = settingsRef.current;
+  /* ── enforcement (active mode only) ──────────────────────────── */
+  const record = useCallback((faceMissing) => {
     const now = Date.now();
-    if (now - armedAt.current < ARM_GRACE_MS) return;
-
-    const current = new Set(analysis.issues);
-    let changed = false;
-    for (const type of current) {
-      if (!prevIssues.current.has(type)) {
-        countsRef.current[type] += 1;
-        sinceRef.current[type] = now;
-        changed = true;
-      }
+    if (!faceMissing || now - armedAt.current < ARM_GRACE_MS) {
+      missingSince.current = null;
+      return;
     }
-    // A sudden jump is a movement too, even if it settles back in place.
-    if (analysis.jump && !current.has('body_movement') && !current.has('face_missing')) {
-      countsRef.current.body_movement += 1;
-      changed = true;
+    if (missingSince.current === null) missingSince.current = now;
+    if (!abortedRef.current && now - missingSince.current >= settingsRef.current.holdMs) {
+      abortedRef.current = true;
+      cbRef.current.onAbort?.(FACE_MISSING_MESSAGE);
     }
-    for (const type of prevIssues.current) {
-      if (!current.has(type)) delete sinceRef.current[type];
-    }
-    prevIssues.current = current;
-    if (changed) setCounts({ ...countsRef.current });
-
-    if (now < cooldownUntil.current) return;
-    const due = ISSUE_TYPES.find((t) => current.has(t) && now - (sinceRef.current[t] ?? now) >= s.holdMs);
-    if (!due) return;
-
-    strikesRef.current += 1;
-    cooldownUntil.current = now + s.cooldownMs;
-    sinceRef.current[due] = now; // a still-ongoing episode needs a full new hold
-    setStrikes(strikesRef.current);
-
-    const count = strikesRef.current;
-    const max = maxRef.current;
-    const message = ISSUE_MESSAGES[due];
-    cbRef.current.onStrike?.(count, max, due, message);
-    if (count >= max) cbRef.current.onAbort?.(message, due);
-    else if (count === max - 1) cbRef.current.onWarn?.(message, due);
   }, []);
 
   /* ── detection loop ──────────────────────────────────────────── */
@@ -242,7 +212,7 @@ export default function useProctoring({
 
     const schedule = () => {
       if (stopped) return;
-      timerRef.current = setTimeout(tick, settingsRef.current?.intervalMs || 1000);
+      timerRef.current = setTimeout(tick, settingsRef.current?.intervalMs || 700);
     };
 
     // Count frames actually presented by the <video> (re-attached when the
@@ -264,23 +234,29 @@ export default function useProctoring({
       if (stopped || busyRef.current) { schedule(); return; }
       busyRef.current = true;
       try {
-        const s = settingsRef.current;
         const video = videoRef?.current;
         let analysis;
 
         if (streamLost.current) {
           // Camera gone mid-test — that's a missing face, not a free pass.
-          analysis = { issues: ['face_missing'], faces: 0, box: null, jump: false };
+          analysis = MISSING;
         } else if (!streamRef.current || !video || video.readyState < 2 || !video.videoWidth) {
           if (streamRef.current) {
             if (!noFrameSince.current) noFrameSince.current = Date.now();
             else if (Date.now() - noFrameSince.current > NO_FRAMES_MS) {
+              noVideoError.current = true;
               setCameraError('The camera is on but no video is coming through.');
             }
           }
           return;
         } else {
           noFrameSince.current = 0;
+          if (noVideoError.current) {
+            // Video is flowing again — a stall (busy device, slow start) is not a
+            // permanent failure, so don't leave the error up and Restart disabled.
+            noVideoError.current = false;
+            setCameraError(null);
+          }
           watchFrames(video);
           const now = Date.now();
           const gap = lastTickAt.current ? now - lastTickAt.current : 0;
@@ -290,13 +266,12 @@ export default function useProctoring({
             // No new frame since the last analysis — the feed is frozen.
             if (!frozenSince.current) frozenSince.current = now;
             if (now - frozenSince.current < FROZEN_AS_MISSING_MS) {
-              // Pause every running hold timer instead of letting a stale
-              // frame build toward a strike.
-              for (const key of Object.keys(sinceRef.current)) sinceRef.current[key] += gap;
-              setLive((prev) => (prev.issue ? { ...prev, since: sinceRef.current[prev.issue] ?? prev.since } : prev));
+              // Pause the countdown instead of letting a stale frame run it.
+              if (missingSince.current !== null) missingSince.current += gap;
+              setLive((prev) => (prev.missing ? { ...prev, since: missingSince.current } : prev));
               return;
             }
-            analysis = { issues: ['face_missing'], faces: 0, box: null, jump: false };
+            analysis = MISSING;
           }
         }
 
@@ -319,29 +294,15 @@ export default function useProctoring({
             return;
           }
           errorStreak.current = 0;
-          analysis = analyzeFrame(result, s, {
-            baselineWidth: baselineWidth.current,
-            prevCenter: prevCenter.current,
-          });
+          analysis = analyzeFrame(result);
           setDetecting(true);
-
-          if (analysis.box) prevCenter.current = { x: analysis.box.cx, y: analysis.box.cy };
-          // Learn the normal distance from the first clean frames of the test.
-          if (modeRef.current === 'active' && !baselineWidth.current && analysis.issues.length === 0 && analysis.box) {
-            baselineSamples.current.push(analysis.box.width);
-            if (baselineSamples.current.length >= BASELINE_FRAMES) {
-              baselineWidth.current = median(baselineSamples.current);
-            }
-          }
         }
 
-        if (modeRef.current === 'active') record(analysis);
+        if (modeRef.current === 'active') record(analysis.faceMissing);
 
-        const issue = ISSUE_TYPES.find((t) => analysis.issues.includes(t)) || null;
         setLive({
-          issues: analysis.issues,
-          issue,
-          since: issue ? (sinceRef.current[issue] ?? null) : null,
+          missing: analysis.faceMissing,
+          since: analysis.faceMissing ? missingSince.current : null,
           faces: analysis.faces,
           delegate: engineDelegate(),
         });
@@ -372,11 +333,9 @@ export default function useProctoring({
     engineError,
     cameraOn,
     cameraError,
+    noCamera,
     detecting,
     live,
-    counts,
-    strikes,
-    maxStrikes,
     startCamera,
     stopCamera,
     retry,

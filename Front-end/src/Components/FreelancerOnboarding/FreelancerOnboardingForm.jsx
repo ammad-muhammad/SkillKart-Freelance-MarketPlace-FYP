@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronRight, ChevronLeft, CheckCircle2, Rocket
+  ChevronRight, ChevronLeft, CheckCircle2, Rocket, Clock
 } from "lucide-react";
 import { safeToast as toast } from "../../utils/safeToast";
 import { useAuth } from "../../hooks/useAuth";
@@ -464,20 +464,37 @@ const FreelancerOnboardingForm = () => {
                   <span>Projects</span>
                 </div>
               </motion.div>
-              <button
-                className="fob-btn-next"
-                onClick={() => navigate("/freelancer/skill-test")}
-              >
-                <Rocket size={18} />
-                Start Skill Verification
-              </button>
-              <button
-                className="fob-btn-link"
-                style={{ background: "none", border: "none", marginTop: "12px", cursor: "pointer", textDecoration: "underline", color: "var(--color-text-light, #64748b)" }}
-                onClick={() => navigate("/freelancer/dashboard")}
-              >
-                Skip for now, go to dashboard
-              </button>
+              {/* The skill test is the freelancer's call: take it now, or go
+                  straight to the dashboard (their skills just start at 0%
+                  until they verify them — nothing is forced). */}
+              <div className="fob-choice">
+                <h2 className="fob-choice-title">Verify your skills</h2>
+                <p className="fob-choice-sub">
+                  Take the skill test now or do it later from your dashboard. Until you do,
+                  every skill shows <strong>0%</strong> — verified skills are needed to apply to
+                  jobs and publish gigs that require them.
+                </p>
+                <div className="fob-choice-actions">
+                  <button
+                    type="button"
+                    className="fob-choice-card fob-choice-card--primary"
+                    onClick={() => navigate("/freelancer/skill-test")}
+                  >
+                    <Rocket size={22} />
+                    <span className="fob-choice-card-title">Take the skill test now</span>
+                    <span className="fob-choice-card-desc">You'll choose the level first — Easy, Intermediate or Expert.</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="fob-choice-card"
+                    onClick={() => navigate("/freelancer/dashboard")}
+                  >
+                    <Clock size={22} />
+                    <span className="fob-choice-card-title">I'll do it later</span>
+                    <span className="fob-choice-card-desc">Go to your dashboard. Your skills start at 0% until you verify them.</span>
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>

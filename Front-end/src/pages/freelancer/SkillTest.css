@@ -561,6 +561,46 @@
   font-size: 0.9rem;
   font-weight: 600;
 }
+/* Level picker on the rules screen: Easy / Intermediate / Expert. */
+.st-level-picker { margin-bottom: 22px; }
+.st-level-title {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.st-level-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.st-level-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: left;
+  font: inherit;
+  color: var(--color-text-mid);
+  background: var(--color-white);
+  border: 2px solid rgba(183, 201, 226, 0.6);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.st-level-card:hover:not(:disabled) { border-color: var(--color-primary); }
+.st-level-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.st-level-card:disabled { opacity: 0.6; cursor: not-allowed; }
+.st-level-card--selected {
+  border-color: var(--color-primary);
+  background: var(--color-info-tint);
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+.st-level-name { font-size: 1rem; font-weight: 800; color: var(--color-primary); }
+.st-level-count { font-size: 0.85rem; font-weight: 700; }
+.st-level-blurb { font-size: 0.78rem; font-weight: 500; line-height: 1.35; }
+
 .st-rules-list {
   list-style: none;
   padding: 0;
@@ -666,6 +706,32 @@
   background: var(--color-error-tint);
 }
 
+/* Informational (not an error): no camera on this device, test runs without it. */
+.st-camera-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-secondary);
+  color: var(--color-text-mid);
+  border: 1px solid rgba(183, 201, 226, 0.6);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 0 auto 24px;
+  max-width: 480px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+}
+.st-camera-note svg { flex-shrink: 0; }
+.st-btn-ghost-sm--neutral {
+  color: var(--color-primary);
+  border-color: rgba(183, 201, 226, 0.9);
+}
+.st-btn-ghost-sm--neutral:hover {
+  background: var(--color-white);
+  border-color: var(--color-primary);
+}
+
 .st-rules-actions {
   display: flex;
   align-items: center;
@@ -702,14 +768,15 @@
   .st-footer .st-nav-info { order: -1; width: 100%; text-align: center; }
 
   .st-rules-card { padding: 24px 18px; }
+  .st-level-options { grid-template-columns: 1fr; }
   .st-rules-head h1 { font-size: 1.25rem; }
   .st-rules-actions { flex-direction: column; align-items: stretch; }
   .st-rules-actions .st-btn-submit { width: 100%; justify-content: center; }
 }
 
 /* ═══════════════ LIVE PROCTORING PANEL ═══════════════
-   What the camera sees right now, every movement counted so far, and the
-   strike budgets that cancel the test (proctoring/ProctorPanel.jsx). */
+   Whether the camera sees a face right now (and the countdown to cancelling
+   if not) plus the tab/window strike budget (proctoring/ProctorPanel.jsx). */
 .st-pp {
   width: 100%;
   max-width: 900px;
@@ -736,31 +803,6 @@
 .st-pp__status--ok { background: var(--color-success-tint); color: var(--color-success); }
 .st-pp__status--warn { background: var(--color-warning-tint); color: var(--color-warning); }
 .st-pp__status--error { background: var(--color-error-tint); color: var(--color-error); }
-
-.st-pp__counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.st-pp__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--color-text-mid);
-  background: var(--color-secondary);
-  border: 1px solid rgba(183, 201, 226, 0.45);
-  border-radius: 999px;
-  padding: 3px 10px;
-}
-.st-pp__chip strong { color: var(--color-primary); font-variant-numeric: tabular-nums; }
-.st-pp__chip--hit { border-color: rgba(217, 119, 6, 0.35); }
-.st-pp__chip--live {
-  background: var(--color-warning-tint);
-  color: var(--color-warning);
-  border-color: rgba(217, 119, 6, 0.5);
-}
 
 .st-pp__meters {
   display: flex;
@@ -804,16 +846,8 @@
 .st-pv--ok { background: rgba(5, 150, 105, 0.9); }
 .st-pv--warn { background: rgba(217, 119, 6, 0.92); }
 .st-pv--error { background: rgba(220, 38, 38, 0.9); }
-.st-strictness-note {
-  margin: -12px 0 18px;
-  text-align: center;
-  font-size: 0.82rem;
-  color: var(--color-text-mid);
-}
-.st-strictness-note strong { color: var(--color-primary); }
 
 @media (max-width: 600px) {
   .st-pp { margin: -8px auto 20px; padding: 8px 10px; }
-  .st-pp__chip { font-size: 0.7rem; padding: 2px 8px; }
   .st-pp__meter-bar { width: 60px; }
 }

@@ -1454,9 +1454,86 @@
   letter-spacing: 0.05em;
 }
 
+/* Skill-test choice on the success screen: take it now / do it later. */
+.fob-choice {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.fob-choice-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fob-text);
+  margin: 0 0 8px;
+}
+
+.fob-choice-sub {
+  font-size: 14px;
+  color: var(--fob-text-muted);
+  line-height: 1.6;
+  margin: 0 auto 20px;
+}
+
+.fob-choice-sub strong { color: var(--fob-text); }
+
+.fob-choice-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fob-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px;
+  text-align: center;
+  font: inherit;
+  color: var(--fob-text);
+  background: var(--fob-item-bg);
+  border: 1.5px solid var(--fob-item-border);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fob-choice-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--fob-accent);
+  box-shadow: 0 12px 30px rgba(4, 46, 76, 0.12);
+}
+
+.fob-choice-card:focus-visible {
+  outline: 2px solid var(--fob-accent);
+  outline-offset: 2px;
+}
+
+.fob-choice-card--primary {
+  background: var(--fob-accent-dark);
+  border-color: var(--fob-accent-dark);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(4, 46, 76, 0.15);
+}
+
+.fob-choice-card--primary:hover {
+  background: #0a4a73;
+  border-color: #0a4a73;
+}
+
+.fob-choice-card-title { font-size: 15px; font-weight: 800; }
+
+.fob-choice-card-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.8;
+}
+
 /* ─── Responsive ─────────────────────────────── */
 @media (max-width: 768px) {
   .fob-root { padding: 28px 16px 50px; }
+  .fob-choice-actions { grid-template-columns: 1fr; }
   .fob-card { padding: 32px 20px; border-radius: 28px; gap: 20px; }
   .fob-title { font-size: 22px; }
   .fob-form-row { flex-direction: column; gap: 0; }
