@@ -1,0 +1,276 @@
+/* ============================================
+   SKILLKART — 404 Not Found
+   Fully responsive: mobile · tablet · desktop
+   ============================================ */
+
+.nf {
+    position: relative;
+    background: var(--gradient-hero);
+    overflow: hidden;
+    padding-top: calc(var(--navbar-h) + var(--space-12));
+    padding-bottom: var(--space-16);
+    /* Fill the viewport minus the navbar so the footer sits at the bottom on
+       short pages, without overflowing it off-screen (100vh + navbar + footer
+       would leave a dead gap below the fold). */
+    min-height: calc(100vh - var(--navbar-h));
+    display: flex;
+    align-items: center;
+}
+
+/* ════════════════════════════════════
+   BACKGROUND
+════════════════════════════════════ */
+.nf__bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.nf__orb {
+    position: absolute;
+    border-radius: var(--radius-full);
+    filter: blur(90px);
+    opacity: 0.5;
+}
+
+.nf__orb--1 {
+    width: 420px;
+    height: 420px;
+    background: rgba(183, 201, 226, 0.30);
+    top: -120px;
+    right: -100px;
+}
+
+.nf__orb--2 {
+    width: 360px;
+    height: 360px;
+    background: rgba(26, 111, 168, 0.35);
+    bottom: -140px;
+    left: -110px;
+}
+
+.nf__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(183, 201, 226, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(183, 201, 226, 0.07) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+}
+
+/* ════════════════════════════════════
+   CONTENT
+════════════════════════════════════ */
+.nf__inner {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.nf__code {
+    font-family: var(--font-heading);
+    font-size: clamp(6rem, 20vw, 11rem);
+    font-weight: var(--fw-black);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    background: linear-gradient(180deg, var(--color-accent) 0%, rgba(183, 201, 226, 0.25) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: var(--space-2);
+    user-select: none;
+}
+
+.nf__title {
+    font-family: var(--font-heading);
+    font-size: var(--fs-3xl);
+    font-weight: var(--fw-bold);
+    color: var(--color-white);
+    line-height: var(--lh-tight);
+    margin-bottom: var(--space-4);
+    max-width: 18ch;
+}
+
+.nf__sub {
+    font-size: var(--fs-md);
+    color: var(--color-accent);
+    line-height: var(--lh-relaxed);
+    max-width: 60ch;
+    margin-bottom: var(--space-8);
+}
+
+.nf__path {
+    display: inline-block;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: var(--fs-sm);
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(183, 201, 226, 0.25);
+    color: var(--color-white);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    /* Long/pasted URLs must not blow out the layout. */
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+/* ════════════════════════════════════
+   ACTIONS
+════════════════════════════════════ */
+.nf__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    justify-content: center;
+    margin-bottom: var(--space-16);
+}
+
+/* On the dark hero the outlined secondary button needs light strokes. */
+.nf__actions .btn-secondary {
+    color: var(--color-white);
+    border-color: rgba(183, 201, 226, 0.55);
+}
+
+.nf__actions .btn-secondary:hover {
+    background: var(--color-white);
+    color: var(--color-primary);
+    border-color: var(--color-white);
+}
+
+/* ════════════════════════════════════
+   SUGGESTIONS
+════════════════════════════════════ */
+.nf__suggest {
+    width: 100%;
+}
+
+.nf__suggest-label {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(183, 201, 226, 0.75);
+    margin-bottom: var(--space-5);
+}
+
+.nf__cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.nf__card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    text-align: left;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(183, 201, 226, 0.18);
+    backdrop-filter: blur(8px);
+    transition: var(--transition-spring);
+}
+
+.nf__card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(183, 201, 226, 0.45);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.nf__card-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: rgba(183, 201, 226, 0.16);
+    color: var(--color-accent);
+}
+
+.nf__card:hover .nf__card-icon {
+    background: var(--color-accent);
+    color: var(--color-primary);
+}
+
+.nf__card-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.nf__card-text strong {
+    font-size: var(--fs-base);
+    font-weight: var(--fw-bold);
+    color: var(--color-white);
+    line-height: var(--lh-snug);
+}
+
+.nf__card-text small {
+    font-size: var(--fs-xs);
+    color: rgba(183, 201, 226, 0.8);
+}
+
+/* ════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════ */
+@media (max-width: 1023px) {
+    .nf__cards {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 560px;
+    }
+}
+
+@media (max-width: 767px) {
+    .nf {
+        padding-top: calc(var(--navbar-h) + var(--space-10));
+        padding-bottom: var(--space-16);
+        min-height: auto;
+    }
+
+    .nf__title {
+        font-size: 1.6rem;
+    }
+
+    .nf__sub {
+        font-size: var(--fs-base);
+        margin-bottom: var(--space-6);
+    }
+
+    .nf__actions {
+        margin-bottom: var(--space-10);
+        width: 100%;
+    }
+
+    .nf__actions .btn-primary,
+    .nf__actions .btn-secondary {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .nf__cards {
+        grid-template-columns: 1fr;
+        max-width: 340px;
+    }
+}
+
+/* Respect users who prefer reduced motion — GSAP entrances are decorative. */
+@media (prefers-reduced-motion: reduce) {
+    .nf__card {
+        transition: none;
+    }
+
+    .nf__card:hover {
+        transform: none;
+    }
+}

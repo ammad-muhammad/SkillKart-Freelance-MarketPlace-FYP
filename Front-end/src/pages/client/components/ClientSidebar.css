@@ -1,0 +1,265 @@
+/* ================================================
+   Client Sidebar
+   ================================================ */
+
+/* Use a distinct teal-navy gradient to differentiate from freelancer sidebar */
+.cl-sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 265px;
+  height: 100vh;
+  background: linear-gradient(180deg, var(--color-primary) 0%, #063d5c 60%, var(--color-primary-light) 100%);
+  display: flex;
+  flex-direction: column;
+  /* Above .cl-mobile-header (1300) so the in-panel close button is reachable
+     on mobile — otherwise the fixed top bar physically covers it. */
+  z-index: 1400;
+  /* The whole sidebar used to scroll as one block, so on a short screen with
+     many nav links the brand header and Logout footer would scroll out of
+     view along with them. Only .cl-sidebar__nav (below) scrolls now — brand/
+     avatar/badge stay pinned at top, Logout stays pinned at bottom. */
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 24px rgba(4, 46, 76, 0.25);
+}
+
+/* ── Custom Scrollbar (on the scrolling nav list itself) ── */
+.cl-sidebar__nav::-webkit-scrollbar { width: 5px; }
+.cl-sidebar__nav::-webkit-scrollbar-track { background: transparent; }
+.cl-sidebar__nav::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+.cl-sidebar__nav::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.35); }
+
+/* ── Brand ── */
+.cl-sidebar__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid rgba(183, 201, 226, 0.15);
+  flex-shrink: 0;
+}
+.cl-sidebar__logo {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-white);
+  letter-spacing: 0.03em;
+}
+.cl-sidebar__close {
+  display: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 1.1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.cl-sidebar__close:hover { background: rgba(255,255,255,0.12); color: var(--color-white); }
+
+/* ── Avatar ── */
+.cl-sidebar__avatar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.25rem 0.75rem;
+  flex-shrink: 0;
+}
+.cl-sidebar__avatar {
+  position: relative;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-primary-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 700; color: var(--color-white);
+  flex-shrink: 0; overflow: hidden;
+  border: 2px solid rgba(183,201,226,0.5);
+}
+.cl-sidebar__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cl-sidebar__online-dot {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 10px; height: 10px;
+  background: var(--color-success);
+  border-radius: 50%; border: 2px solid var(--color-primary);
+}
+.cl-sidebar__user-info { min-width: 0; }
+.cl-sidebar__name {
+  font-size: 0.875rem; font-weight: 700; color: var(--color-white);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cl-sidebar__role {
+  font-size: 0.72rem; color: var(--color-accent);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Badge ── */
+.cl-sidebar__badge-wrap {
+  padding: 0 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(183,201,226,0.15);
+  flex-shrink: 0;
+}
+.cl-sidebar__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(183,201,226,0.12);
+  border: 1px solid rgba(183,201,226,0.25);
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Navigation ── */
+.cl-sidebar__nav {
+  flex: 1;
+  /* Without min-height:0, a flex child's default min-height:auto keeps it
+     sized to its content, which would just push .cl-sidebar__footer off the
+     bottom of the viewport instead of actually scrolling in its own box. */
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.85rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+.cl-sidebar__link {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.68rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.875rem; font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+}
+.cl-sidebar__link:hover {
+  background: rgba(183,201,226,0.12);
+  color: var(--color-white);
+  transform: translateX(3px);
+}
+.cl-sidebar__link--active {
+  background: rgba(183,201,226,0.2);
+  color: var(--color-white); font-weight: 700;
+  border-left: 3px solid var(--color-accent);
+}
+.cl-sidebar__icon {
+  font-size: 1rem; flex-shrink: 0;
+  width: 22px; text-align: center;
+}
+
+/* ── Footer ── */
+.cl-sidebar__footer {
+  padding: 1rem 0.75rem 1.5rem;
+  border-top: 1px solid rgba(183,201,226,0.15);
+  flex-shrink: 0;
+}
+.cl-sidebar__logout {
+  display: flex; align-items: center; gap: 0.75rem;
+  width: 100%; padding: 0.68rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.875rem; font-weight: 500;
+  color: rgba(255,255,255,0.6);
+  transition: all 0.2s ease;
+}
+.cl-sidebar__logout:hover { background: rgba(220,38,38,0.18); color: #fca5a5; } /* light red deliberately kept for legibility on the dark sidebar */
+
+/* ── Mobile Header Bar ── */
+.cl-mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--color-primary);
+  z-index: 1300;
+  align-items: center;
+  padding: 0 1rem;
+  box-shadow: 0 2px 12px rgba(4, 46, 76, 0.3);
+}
+
+.cl-mobile-logo {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-white);
+  margin-left: 0.75rem;
+}
+
+/* ── Hamburger ── */
+.cl-hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0.5rem;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cl-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--color-white);
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+/* Cross Animation */
+.cl-hamburger--open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.cl-hamburger--open span:nth-child(2) {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+.cl-hamburger--open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ── Overlay ── */
+.cl-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(2,30,51,0.6);
+  z-index: 1100;
+  backdrop-filter: blur(2px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .cl-sidebar { transform: translateX(-100%); }
+  .cl-sidebar--open { transform: translateX(0); }
+  .cl-mobile-header { display: flex; }
+  .cl-hamburger { display: flex; }
+  .cl-overlay { display: block; }
+  .cl-sidebar__close { display: flex; }
+}
+
+/* ── Sidebar notification badge ── */
+.cl-sidebar__link {
+  position: relative;
+}
+.cl-sidebar__notif-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--color-error);
+  color: var(--color-white);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: cl-notif-pulse 2s ease-in-out infinite;
+}
+@keyframes cl-notif-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
+}

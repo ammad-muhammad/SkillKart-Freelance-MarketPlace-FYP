@@ -1,0 +1,11 @@
+flowchart TB
+    SRC["Front-end/src<br/>one React codebase"]
+    SRC -->|"vite build (default)"| WEB["dist/ deployed to Vercel<br/>VITE_APP_TARGET unset"]
+    SRC -->|"vite build --mode mobile<br/>.env.mobile"| MOB["dist/ synced into<br/>Front-end/android<br/>VITE_APP_TARGET = mobile"]
+    SRC -->|"vite build --mode admin<br/>.env.admin"| ADM["dist-admin/ synced into<br/>Front-end/android-admin<br/>VITE_APP_TARGET = admin"]
+    WEB --> W1["AppRoutes: full public site,<br/>dashboards and admin panel"]
+    MOB --> M1["AppRoutes: marketing pages not registered;<br/>auth, browse and dashboards only"]
+    ADM --> A1["AdminAppRoutes: admin panel only"]
+    W1 -.-> CHK["isMobileApp() and isAdminApp()<br/>decide which route tree renders"]
+    M1 -.-> CHK
+    A1 -.-> CHK

@@ -1,0 +1,37 @@
+erDiagram
+    JOB
+    PROPOSAL
+    CONTRACT {
+        string type
+        string status
+        number currentMilestoneOrder
+    }
+    MILESTONE {
+        number order
+        number amount
+        string status
+    }
+    PAYMENT {
+        string type
+        number platformFee
+        string status
+    }
+    DELIVERY {
+        number version
+        string status
+    }
+    TIME_LOG {
+        number duration
+        string status
+    }
+    CONTRACT_HISTORY {
+        string action
+    }
+    PROPOSAL ||--o| CONTRACT : "accepted creates"
+    JOB ||--o| CONTRACT : "spawns"
+    CONTRACT ||--o{ MILESTONE : "fixed-price phases"
+    MILESTONE ||--o| PAYMENT : "escrow row"
+    CONTRACT ||--o{ PAYMENT : "hourly lock and invoices"
+    MILESTONE ||--o{ DELIVERY : "submitted against"
+    CONTRACT ||--o{ TIME_LOG : "hourly work"
+    CONTRACT ||--o{ CONTRACT_HISTORY : "logs"

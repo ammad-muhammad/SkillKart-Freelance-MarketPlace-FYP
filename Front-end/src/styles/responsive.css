@@ -1,0 +1,128 @@
+/* ============================================================================
+   SKILLKART — Global Responsive Safety Layer
+   ----------------------------------------------------------------------------
+   App-wide guarantees that hold on EVERY screen regardless of per-page CSS.
+   Loaded once in main.jsx AFTER variables.css. These are defensive base rules,
+   deliberately low-specificity so any page-level CSS can still override them.
+
+   Scope note: rules here are intentionally global but conservative — they fix
+   the universal responsiveness failure modes (sideways scroll, media overflow,
+   un-scrollable wide content, un-tappable targets) without restyling anything.
+   ============================================================================ */
+
+/* 1. Predictable box model everywhere -------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 2. Kill horizontal page scroll — the #1 mobile bug -----------------------
+   Nothing should ever push the document wider than the viewport. If a child
+   overflows, it scrolls inside its own container (rule 4), not the whole page.
+
+   NOTE: overflow-x lives on <body> only — NOT on #root — because an overflow
+   value on the scroll ancestor of a `position: sticky` element silently breaks
+   sticky, and several pages (filter rails, onboarding steppers, admin panel)
+   rely on sticky. Body-level clipping leaves the sticky containing block intact.
+
+   `overflow-x: clip` is what actually avoids the sticky-breaking side effect,
+   but it's a newer value (Chromium ~90, 2021) than plain `hidden` — an Android
+   WebView that predates it (real device found: Oppo F11 Pro, an older/OEM
+   WebView build) treats the whole declaration as invalid and drops it, which
+   falls all the way back to the initial `visible` — i.e. exactly the
+   real, visible horizontal overflow this rule exists to prevent, not a
+   degraded-but-safe fallback. `hidden` first, `clip` second: browsers that
+   understand `clip` use it (cascade order, sticky preserved as before);
+   browsers that don't fall back to `hidden` (sticky degrades to non-sticky,
+   but the page no longer bleeds off the screen — a strict improvement over
+   silently getting neither). */
+html,
+body {
+  max-width: 100%;
+}
+body {
+  margin: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
+  /* Better wrapping for long unbroken strings (URLs, IDs, emails) on narrow
+     screens so they don't force horizontal overflow. */
+  overflow-wrap: break-word;
+}
+#root {
+  max-width: 100%;
+}
+
+/* 3. Media never overflows its container ----------------------------------- */
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+img,
+video {
+  height: auto;
+}
+
+/* 4. Wide content scrolls inside itself, not the page ----------------------
+   Tables and <pre> are the usual culprits. Wrapping them in a scroll container
+   is ideal, but this catches the ones that aren't wrapped. */
+:where(pre) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+/* A bare table on a narrow screen: let it scroll horizontally rather than
+   blow out the layout. (Page tables that already sit in a .*-table-wrap keep
+   their own behavior — this only bites when nothing else handles it.) */
+table {
+  max-width: 100%;
+}
+
+/* 5. Long words / links don't cause overflow ------------------------------- */
+p, li, h1, h2, h3, h4, h5, h6, span, a, td, th, label, button {
+  overflow-wrap: break-word;
+}
+
+/* 6. Form controls are fluid by default ------------------------------------
+   Inputs with a fixed size attribute or intrinsic width shouldn't exceed the
+   viewport on mobile. */
+input,
+select,
+textarea {
+  max-width: 100%;
+  /* No browser applies the page's font to form controls by default, and
+     <textarea> specifically defaults to a monospace font in every major
+     engine (unlike <input>, which more often visually blends in) — a bare,
+     unclassed <textarea> (several exist across the app, e.g. the gig editor)
+     silently renders in monospace next to normal-font inputs on the same
+     form. This is the one global place that class of bug can be fixed for
+     every current and future textarea/input/select at once. */
+  font-family: inherit;
+}
+
+/* 7. Respect reduced-motion globally --------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 8. Never print floating chrome ---------------------------------------------
+   The Buddy AI launcher/panel and the notification bell are rendered globally
+   in App.jsx as fixed-position widgets — outside any page's own root, so a
+   page-local print stylesheet can't reach them. Without this they show up as
+   a stray floating circle in every "Save as PDF" / Ctrl+P output site-wide. */
+@media print {
+  .buddy-fab,
+  .buddy-panel,
+  .notif-bell {
+    display: none !important;
+  }
+}

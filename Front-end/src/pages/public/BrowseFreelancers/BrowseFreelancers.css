@@ -1,0 +1,828 @@
+/* ============================================================
+   BrowseFreelancers Page — SkillKart
+   ============================================================ */
+
+/* ── Page Shell ── */
+.bf-page {
+    min-height: 100vh;
+    background: #f6f8fb;
+}
+
+/* ── Hero Banner ── */
+.bf-hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #042E4C 0%, #0a4a73 60%, #1a6fa8 100%);
+    padding: calc(var(--navbar-h) + 4rem) 0 0;
+    text-align: center;
+    color: #fff;
+}
+
+.bf-hero__orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+}
+
+.bf-hero__orb--1 {
+    width: 400px;
+    height: 400px;
+    background: rgba(26, 111, 168, 0.3);
+    top: -100px;
+    left: -80px;
+}
+
+.bf-hero__orb--2 {
+    width: 350px;
+    height: 350px;
+    background: rgba(85, 60, 154, 0.25);
+    bottom: 20%;
+    right: -60px;
+}
+
+.bf-hero__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+}
+
+.bf-hero__inner {
+    position: relative;
+    z-index: 2;
+    padding-bottom: 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bf-hero__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #a8d4f5;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(8px);
+}
+
+.bf-hero h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 1.2rem;
+}
+
+.bf-hero h1 span {
+    background: linear-gradient(90deg, #64b5e8 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.bf-hero p {
+    max-width: 580px;
+    margin: 0 auto 2.5rem;
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+}
+
+/* Search bar */
+.bf-search {
+    display: flex;
+    background: #fff;
+    border-radius: var(--radius-full);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 600px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.bf-search__input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 0.9rem 1.4rem;
+    font-size: 0.95rem;
+    color: var(--color-primary);
+    font-family: var(--font-body);
+    background: transparent;
+}
+
+.bf-search__btn {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    padding: 0.9rem 1.6rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: var(--font-body);
+    white-space: nowrap;
+}
+
+.bf-search__btn:hover {
+    background: #0a4a73;
+}
+
+/* Stats pills */
+.bf-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.bf-hero__wave {
+    position: relative;
+    z-index: 2;
+    line-height: 0;
+}
+
+.bf-hero__wave svg {
+    width: 100%;
+    display: block;
+}
+
+.bf-hero-stat {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-full);
+    padding: 0.3rem 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ── Main Layout ── */
+.bf-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+    padding: 2rem 0 4rem;
+    align-items: start;
+}
+
+/* ── Sidebar Filters ── */
+.bf-sidebar {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 2px 16px rgba(4, 46, 76, 0.07);
+    padding: 1.5rem;
+    position: sticky;
+    top: calc(var(--navbar-h) + 1rem);
+}
+
+.bf-sidebar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+}
+
+.bf-sidebar__title {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.bf-sidebar__clear {
+    font-size: 0.78rem;
+    color: #1a6fa8;
+    font-weight: 600;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    transition: opacity 0.2s;
+}
+
+.bf-sidebar__clear:hover {
+    opacity: 0.7;
+}
+
+.bf-filter-group {
+    margin-bottom: 1.4rem;
+    border-bottom: 1px solid #eef1f5;
+    padding-bottom: 1.4rem;
+}
+
+.bf-filter-group:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.bf-filter-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+/* Range slider */
+.bf-range {
+    width: 100%;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.bf-range-vals {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--color-text-mid);
+    margin-top: 0.4rem;
+}
+
+/* Rating stars filter */
+.bf-rating-opts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.bf-rating-opt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--color-text-mid);
+    transition: color 0.15s;
+}
+
+.bf-rating-opt input {
+    accent-color: var(--color-primary);
+}
+
+.bf-rating-opt:hover {
+    color: var(--color-primary);
+}
+
+.bf-stars {
+    color: #f59e0b;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+}
+
+/* Skill checkboxes */
+.bf-skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 180px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.bf-skill-opt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    color: var(--color-text-mid);
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.bf-skill-opt input {
+    accent-color: var(--color-primary);
+}
+
+.bf-skill-opt:hover {
+    color: var(--color-primary);
+}
+
+/* Select */
+.bf-select {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1.5px solid #dde3ec;
+    border-radius: var(--radius-md);
+    font-size: 0.88rem;
+    color: var(--color-primary);
+    background: #fff;
+    font-family: var(--font-body);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.bf-select:focus {
+    border-color: var(--color-primary);
+}
+
+/* ── Content Area ── */
+
+/* A grid item's default min-width is `auto`, which resolves to its content's
+   min-content size — without this, the 2-column card grid's intrinsic
+   minimum (e.g. nowrap name/rating/rate text) forces this column wider than
+   the `1fr` track actually allotted, pushing the whole layout past the
+   viewport at widths below ~1440px. body/html use overflow-x: clip (see
+   responsive.css), so that overflow was invisible instead of scrolling —
+   cards and the toolbar just got silently cropped at the right edge. */
+.bf-content {
+    min-width: 0;
+}
+
+/* Toolbar */
+.bf-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.bf-toolbar__count {
+    font-size: 0.9rem;
+    color: var(--color-text-mid);
+}
+
+.bf-toolbar__count strong {
+    color: var(--color-primary);
+}
+
+.bf-toolbar__right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.bf-sort-select {
+    padding: 0.5rem 0.9rem;
+    border: 1.5px solid #dde3ec;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    background: #fff;
+    font-family: var(--font-body);
+    outline: none;
+    cursor: pointer;
+}
+
+.bf-view-btns {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.bf-view-btn {
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid #dde3ec;
+    background: #fff;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-mid);
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.bf-view-btn--active,
+.bf-view-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: rgba(4, 46, 76, 0.04);
+}
+
+/* ── Grid & List layouts ── */
+.bf-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+}
+
+.bf-list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+/* ── Freelancer Card ── */
+.bf-card {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 2px 12px rgba(4, 46, 76, 0.06);
+    border: 1.5px solid #eef1f5;
+    overflow: hidden;
+    transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.bf-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 36px rgba(4, 46, 76, 0.12);
+    border-color: var(--color-accent);
+}
+
+.bf-card__header {
+    padding: 1.2rem 1.2rem 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+}
+
+.bf-card__avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1rem;
+    color: #fff;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.bf-card__online {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid #fff;
+}
+
+.bf-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.bf-card__name {
+    font-weight: 700;
+    color: var(--color-primary);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bf-card__role {
+    font-size: 0.82rem;
+    color: var(--color-text-mid);
+    margin-top: 2px;
+}
+
+.bf-card__verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(40, 200, 100, 0.1);
+    color: #15803d;
+    border: 1px solid rgba(40, 200, 100, 0.25);
+    border-radius: var(--radius-full);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    margin-top: 4px;
+    white-space: nowrap;
+    width: max-content;
+}
+
+.bf-card__rating {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    white-space: nowrap;
+}
+
+.bf-card__rating .star {
+    color: #f59e0b;
+    font-size: 0.85rem;
+}
+
+.bf-card__rating .count {
+    color: var(--color-text-light);
+    font-weight: 400;
+    font-size: 0.75rem;
+}
+
+.bf-card__body {
+    padding: 0 1.2rem 0.8rem;
+    flex: 1;
+}
+
+.bf-card__bio {
+    font-size: 0.82rem;
+    color: var(--color-text-mid);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+
+.bf-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.bf-card__tag {
+    background: rgba(4, 46, 76, 0.06);
+    color: var(--color-primary);
+    border-radius: var(--radius-full);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+}
+
+.bf-card__footer {
+    padding: 0.85rem 1.2rem;
+    border-top: 1px solid #f0f3f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bf-card__rate {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-primary);
+}
+
+.bf-card__rate span {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-text-mid);
+    font-family: var(--font-body);
+}
+
+.bf-card__btn {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    font-family: var(--font-body);
+}
+
+.bf-card__btn:hover {
+    background: #0a4a73;
+    transform: scale(1.04);
+}
+
+/* ── List-view card variant ── */
+.bf-card--list {
+    flex-direction: row;
+    align-items: center;
+}
+
+.bf-card--list .bf-card__header {
+    width: 330px;
+    flex-shrink: 0;
+    border-right: 1px solid #f0f3f7;
+    padding: 1.5rem;
+}
+
+.bf-card--list .bf-card__body {
+    flex: 1;
+    padding: 1.5rem;
+    border-right: 1px solid #f0f3f7;
+}
+
+.bf-card--list .bf-card__bio {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.bf-card--list .bf-card__footer {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.8rem;
+    border-top: none;
+    padding: 1.5rem;
+    min-width: 180px;
+}
+
+/* ── Skeleton Loading ── */
+.bf-skeleton {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 2px 12px rgba(4, 46, 76, 0.06);
+    border: 1.5px solid #eef1f5;
+    padding: 1.2rem;
+    overflow: hidden;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -600px 0;
+    }
+
+    100% {
+        background-position: 600px 0;
+    }
+}
+
+.bf-skel {
+    background: linear-gradient(90deg, #eef1f5 25%, #f6f8fb 50%, #eef1f5 75%);
+    background-size: 600px 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: var(--radius-md);
+}
+
+.bf-skel--circle {
+    border-radius: 50%;
+}
+
+/* ── Empty State ── */
+.bf-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #fff;
+    border-radius: var(--radius-xl);
+    border: 1.5px dashed #dde3ec;
+}
+
+.bf-empty__icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.bf-empty__title {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+}
+
+.bf-empty__sub {
+    font-size: 0.9rem;
+    color: var(--color-text-mid);
+}
+
+/* ── Error state ── */
+.bf-error {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #fff;
+    border-radius: var(--radius-xl);
+    border: 1.5px solid #fed7d7;
+}
+
+.bf-error__icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.bf-error__title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    color: #c53030;
+    margin-bottom: 0.4rem;
+}
+
+.bf-error__sub {
+    font-size: 0.88rem;
+    color: var(--color-text-mid);
+    margin-bottom: 1rem;
+}
+
+.bf-error__btn {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 0.6rem 1.4rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-body);
+}
+
+/* ── Pagination ── */
+.bf-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2rem;
+}
+
+.bf-page-btn {
+    width: 38px;
+    height: 38px;
+    border: 1.5px solid #dde3ec;
+    background: #fff;
+    border-radius: var(--radius-md);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+}
+
+.bf-page-btn--active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.bf-page-btn:not(.bf-page-btn--active):hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1023px) {
+    .bf-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .bf-sidebar {
+        display: none;
+    }
+
+    /* No bottom padding on the hero for tablet/mobile. */
+    .bf-hero {
+        padding-bottom: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .bf-hero {
+        padding: calc(var(--navbar-h) + 2rem) 0 0;
+    }
+
+    .bf-hero h1 {
+        font-size: 1.6rem;
+    }
+
+    .bf-search {
+        flex-direction: column;
+        border-radius: var(--radius-xl);
+    }
+
+    .bf-search__button {
+        border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    }
+
+    .bf-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bf-card--list {
+        flex-direction: column;
+    }
+
+    .bf-card--list .bf-card__header,
+    .bf-card--list .bf-card__body {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #f0f3f7;
+    }
+
+    .bf-card--list .bf-card__footer {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+    }
+}

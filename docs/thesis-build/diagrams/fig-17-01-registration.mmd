@@ -1,0 +1,25 @@
+flowchart LR
+    subgraph P1["1 · Sign up"]
+        direction TB
+        V(["Visitor"]) --> M{"How?"}
+        M -->|"email"| R1["Choose Client or Freelancer,<br/>then name, email, password"]
+        R1 --> R2["Account created,<br/>password hashed (bcrypt 12)"]
+        M -->|"social provider"| S1["Provider consent<br/>(system browser on Android)"]
+        S1 --> S2["Token verified by the server;<br/>new user has no role yet"]
+    end
+    subgraph P2["2 · Verify and choose"]
+        direction TB
+        R3["6-digit code emailed"] --> R4{"Correct within<br/>10 minutes?"}
+        R4 -->|"no"| R3
+        R4 -->|"yes"| T["Signed in"]
+        S3["Role screen:<br/>Client or Freelancer"] --> T
+    end
+    subgraph P3["3 · Onboard"]
+        direction TB
+        O{"Role"} -->|"freelancer"| O1["8 steps: CV, basics, skills,<br/>languages, portfolio, education,<br/>certificates, review"]
+        O -->|"client"| O2["5 steps"]
+        O1 --> O3["Skill test now, or later"]
+        O3 --> D(["Dashboard"])
+        O2 --> D
+    end
+    P1 --> P2 --> P3

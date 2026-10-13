@@ -1,0 +1,15 @@
+flowchart TB
+    A(["Freelancer submits a proposal<br/>(one per job, skill gate passed)"]) --> P["pending"]
+    P -->|"freelancer withdraws"| W(["withdrawn"])
+    P -->|"client rejects"| R["rejected"]
+    R -->|"resubmission allowed:<br/>freelancer revises, skill gate re-checked"| P
+    P -->|"client accepts"| V1
+    subgraph ACC["Accepting a proposal: validate first, write after"]
+        direction TB
+        V1["1 · Job open? Price unchanged?"] --> V2["2 · Fixed price: milestones sum to the price<br/>Hourly: one week estimate<br/>Wallet covers the first amount?"]
+        V2 -->|"no"| V3(["Refused, nothing written<br/>(top-up offered)"])
+        V2 -->|"yes"| W1["3 · Claim the job, mark proposal accepted,<br/>create contract and milestones,<br/>reject all other pending proposals"]
+        W1 --> W2["4 · Debit the wallet and lock the funds"]
+        W2 -->|"fails"| W3(["All writes reversed,<br/>job reopened"])
+        W2 -->|"succeeds"| W4(["Contract active, freelancer notified"])
+    end

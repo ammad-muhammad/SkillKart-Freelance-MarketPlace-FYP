@@ -1,0 +1,18 @@
+sequenceDiagram
+    actor U as User
+    participant APP as Android app (WebView)
+    participant BR as System browser (Custom Tab)
+    participant SB as Supabase and Google
+    participant API as Backend
+    U->>APP: Tap "Continue with Google"
+    APP->>SB: signInWithOAuth (redirect to skillkart://auth-callback)
+    APP->>BR: Open the consent URL
+    BR->>SB: User approves
+    SB-->>BR: Redirect to skillkart://auth-callback#access_token
+    BR-->>APP: Android hands the URL back (intent filter)
+    APP->>BR: Close the Custom Tab
+    APP->>APP: Navigate to /auth/consent with the URL fragment
+    APP->>API: POST /auth/supabase-auth with the access token
+    API->>SB: Verify the token server-side
+    SB-->>API: Verified identity
+    API-->>APP: SkillKart access and refresh tokens

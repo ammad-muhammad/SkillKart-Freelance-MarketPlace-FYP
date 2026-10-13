@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backs the FileProvider declared in AndroidManifest.xml
+     (${applicationId}.fileprovider), required by @capacitor/camera to hand a
+     captured photo's file:// URI back to the WebView as a content:// URI.
+     The two entries below match exactly where the plugin writes files:
+     getExternalFilesDir(Pictures) for captured photos (CameraUtils.java) and
+     getCacheDir() for edited-photo temp files (IonCameraUtils.kt,
+     LegacyCameraFlow.java). -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="camera_photos" path="Pictures" />
+    <cache-path name="camera_cache" path="." />
+</paths>

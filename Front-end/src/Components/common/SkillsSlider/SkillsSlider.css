@@ -1,0 +1,195 @@
+/* ============================================
+   Skills Slider Section Styles
+   ============================================ */
+
+.skills-slider {
+  padding: var(--space-24) 0;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.skills-slider__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-12);
+  max-width: 640px;
+}
+
+.highlight-text {
+  color: var(--color-primary);
+  position: relative;
+}
+
+.highlight-text::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  opacity: 0.7;
+}
+
+/* ── Viewport with fade edges ── */
+.skills-slider__viewport {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-4) 0;
+}
+
+.skills-slider__fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.skills-slider__fade--left {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-bg) 0%, transparent 100%);
+}
+
+.skills-slider__fade--right {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-bg) 0%, transparent 100%);
+}
+
+/* ── Track ── */
+.skills-slider__track {
+  display: flex;
+  gap: var(--space-4);
+  width: max-content;
+  will-change: transform;
+}
+
+/* ── Card ── */
+.skills-slider__card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-white);
+  border: 1.5px solid var(--color-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  transition: var(--transition-spring);
+  flex-shrink: 0;
+  width: 240px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.skills-slider__card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: inherit;
+}
+
+.skills-slider__card:hover {
+  border-color: var(--color-accent-dark);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.skills-slider__card:hover::before {
+  opacity: 1;
+}
+
+.skills-slider__card:hover .skills-slider__card-info h3,
+.skills-slider__card:hover .skills-slider__card-info p,
+.skills-slider__card:hover .skills-slider__card-arrow {
+  color: var(--color-white);
+  position: relative;
+  z-index: 1;
+}
+
+.skills-slider__card:hover .skills-slider__card-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.skills-slider__card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  transition: var(--transition-base);
+}
+
+.skills-slider__card:hover .skills-slider__card-icon {
+  background: rgba(255,255,255,0.15) !important;
+}
+
+.skills-slider__card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.skills-slider__card-info h3 {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: var(--transition-base);
+  position: relative;
+  z-index: 1;
+}
+
+.skills-slider__card-info p {
+  font-size: var(--fs-xs);
+  color: var(--color-text-light);
+  margin-top: 2px;
+  transition: var(--transition-base);
+  position: relative;
+  z-index: 1;
+}
+
+.skills-slider__card-arrow {
+  color: var(--color-accent-dark);
+  flex-shrink: 0;
+  transition: var(--transition-base);
+  position: relative;
+  z-index: 1;
+}
+
+.skills-slider__card:hover .skills-slider__card-arrow {
+  transform: translate(3px, -3px);
+}
+
+/* ── Footer CTA ── */
+.skills-slider__footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-12);
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .skills-slider {
+    padding: var(--space-16) 0;
+  }
+
+  .skills-slider__card {
+    width: 200px;
+  }
+
+  .skills-slider__fade {
+    width: 60px;
+  }
+}

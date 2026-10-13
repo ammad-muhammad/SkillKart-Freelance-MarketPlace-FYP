@@ -1,0 +1,24 @@
+flowchart LR
+    subgraph S1["1 · Start"]
+        direction TB
+        A(["Open the Skill<br/>Verification Center"]) --> B["Pick a skill and a level<br/>Easy 5 · Intermediate 10<br/>Expert 15 questions"]
+        B --> C{"Camera?"}
+        C -->|"denied or busy"| C1(["Start blocked,<br/>Retry Camera"])
+        C -->|"no device"| C2["Camera check skipped,<br/>browser guard applies"]
+        C -->|"available"| C3["Face check passes"]
+    end
+    subgraph S2["2 · Proctored test"]
+        direction TB
+        D["Locked full-screen test<br/>20 s per MCQ, 30 s per<br/>written answer"] --> G1{"No face for 3 s?"}
+        G1 -->|"yes"| X(["Attempt cancelled<br/>and discarded"])
+        G1 -->|"no"| G2{"Tab-switch strikes<br/>at the limit?"}
+        G2 -->|"yes"| X
+        G2 -->|"no"| E["All questions answered"]
+    end
+    subgraph S3["3 · Result"]
+        direction TB
+        F["AI grades each answer 0 to 1<br/>skill % = mean of its scores"] --> H{"At least 25%?"}
+        H -->|"yes"| V(["Verified at the chosen level<br/>valid for 6 months"])
+        H -->|"no"| N(["Not verified yet,<br/>existing verification kept"])
+    end
+    S1 --> S2 --> S3

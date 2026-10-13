@@ -1,0 +1,133 @@
+.notif-bell {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  /* Below the mobile sidebar drawer (1400) and its backdrop (1100) — it must
+     never float on top of the slide-out menu (it was overlapping the logout
+     button). Still above ordinary page content, which has no z-index. */
+  z-index: 1000;
+}
+
+.notif-bell__btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: var(--color-primary, #042e4c);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.notif-bell__btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15); }
+
+.notif-bell__badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  min-width: 18px; height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+}
+
+.notif-bell__panel {
+  position: absolute;
+  top: 54px; right: 0;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border: 1px solid #e9eef5;
+  border-radius: 14px;
+  box-shadow: 0 20px 55px rgba(4, 46, 76, 0.22);
+  overflow: hidden;
+  animation: nb-pop 0.18s ease both;
+}
+@keyframes nb-pop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+.notif-bell__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.notif-bell__head strong { font-size: 0.95rem; color: #0f172a; }
+.notif-bell__markall {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--color-primary, #042e4c); font-weight: 700; font-size: 0.78rem;
+}
+
+.notif-bell__list { max-height: 380px; overflow-y: auto; }
+.notif-bell__empty { padding: 2rem 1rem; text-align: center; color: #94a3b8; font-size: 0.9rem; }
+
+.notif-bell__item {
+  display: flex; align-items: flex-start; gap: 0.65rem;
+  width: 100%; text-align: left;
+  padding: 0.75rem 1rem;
+  background: none; border: none; cursor: pointer;
+  border-bottom: 1px solid #f6f8fb;
+  position: relative;
+  transition: background 0.12s;
+}
+.notif-bell__item:hover { background: #f8fafc; }
+.notif-bell__item--unread { background: #f3f8ff; }
+.notif-bell__item--unread:hover { background: #ebf3fe; }
+
+.notif-bell__icon { font-size: 1.15rem; line-height: 1.4; flex-shrink: 0; }
+.notif-bell__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.notif-bell__title { font-size: 0.85rem; font-weight: 700; color: #1e293b; }
+.notif-bell__msg { font-size: 0.8rem; color: #64748b; line-height: 1.45; }
+.notif-bell__time { font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
+.notif-bell__dot { width: 8px; height: 8px; border-radius: 50%; background: #2563eb; flex-shrink: 0; margin-top: 6px; }
+
+.notif-bell__viewall {
+  width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0.8rem; background: #fafbfc; border: none; border-top: 1px solid #f1f5f9;
+  color: var(--color-primary, #042e4c); font-weight: 700; font-size: 0.85rem; cursor: pointer;
+}
+.notif-bell__viewall:hover { background: #f1f5f9; }
+
+@media (max-width: 1024px) {
+  /* A `position: fixed` bell anchored ANYWHERE over the scrollable page body
+     is fundamentally unsafe on mobile — whatever scroll position the user
+     lands on, it sits on top of whatever content happens to be underneath
+     it. This was tried bottom-left, then bottom-right (see git history) and
+     both eventually turned up real content it covered — cosmetic at first
+     (tail end of text on My Work/Wallet), then a genuine blocker (it sat
+     directly on top of the Two-Factor Authentication toggle on Security,
+     making it untappable). The only region that's NEVER page content is the
+     fixed mobile header bar itself (.fl-mobile-header/.cl-mobile-header,
+     60px tall) — so dock the bell there, vertically centered, to the right
+     of the hamburger/logo cluster which is left-aligned with room to spare. */
+  .notif-bell {
+    top: 8px;
+    right: 14px;
+    bottom: auto;
+    left: auto;
+    /* Above the mobile header (1300) so it's actually visible drawn on top
+       of its solid background, but still below the slide-out sidebar drawer
+       (1400) so an OPEN sidebar still correctly covers it, same as before. */
+    z-index: 1350;
+  }
+
+  .notif-bell__panel {
+    top: 54px;
+    bottom: auto;
+    left: auto;
+    right: 0;
+    max-height: calc(100vh - 90px);
+  }
+
+  .notif-bell__list {
+    max-height: calc(100vh - 190px);
+  }
+}

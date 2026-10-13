@@ -1,0 +1,37 @@
+erDiagram
+    USER {
+        string email UK
+        string role
+        boolean isBlocked
+        number tokenVersion
+    }
+    FREELANCER_PROFILE {
+        string title
+        array skills
+        number walletBalance
+    }
+    CLIENT_PROFILE {
+        string companyType
+        number walletBalance
+        number totalSpent
+    }
+    REFRESH_TOKEN {
+        string jti UK
+        string familyId
+        date revokedAt
+    }
+    OTP {
+        string purpose
+        string otpHash
+        number attempts
+    }
+    FILE_UPLOAD {
+        string fileType
+        string url
+        string cloudinaryId
+    }
+    USER ||--o| FREELANCER_PROFILE : "has (freelancer)"
+    USER ||--o| CLIENT_PROFILE : "has (client)"
+    USER ||--o{ REFRESH_TOKEN : "holds"
+    USER ||--o{ OTP : "verifies with"
+    USER ||--o{ FILE_UPLOAD : "uploads"

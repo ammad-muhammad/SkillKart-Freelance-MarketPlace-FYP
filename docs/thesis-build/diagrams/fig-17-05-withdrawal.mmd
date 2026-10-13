@@ -1,0 +1,19 @@
+sequenceDiagram
+    actor F as Freelancer
+    participant API as Backend
+    participant DB as MongoDB
+    participant S as Stripe
+    F->>API: Withdraw amount (Stripe method)
+    API->>DB: Amount at least the minimum? Wallet covers it?
+    API->>DB: Stripe account onboarding complete?
+    API->>DB: Atomic debit reserves the funds first
+    API->>S: Create the payout
+    alt Payout accepted
+        S-->>API: Payout reference
+        API->>DB: Withdrawal recorded (processing or completed)
+        API-->>F: Withdrawal started
+    else Stripe fails
+        S-->>API: Error
+        API->>DB: Refund the reservation to the wallet
+        API-->>F: Friendly error, no money lost
+    end

@@ -1,0 +1,31 @@
+erDiagram
+    USER
+    SKILL_NODE {
+        string name UK
+        string type
+        string status
+    }
+    SKILL_RELATIONSHIP {
+        string type
+        number weight
+    }
+    TAXONOMY_PROPOSAL {
+        string name
+        string sourceType
+        string status
+    }
+    SKILL_TEST_ATTEMPT {
+        string level
+        number totalScore
+        boolean passed
+    }
+    REPORT {
+        string category
+        string priority
+        string status
+    }
+    SKILL_NODE ||--o{ SKILL_RELATIONSHIP : "is the source of"
+    SKILL_NODE ||--o{ SKILL_RELATIONSHIP : "is the target of"
+    TAXONOMY_PROPOSAL }o--o| SKILL_NODE : "approved into"
+    USER ||--o{ SKILL_TEST_ATTEMPT : "takes"
+    USER ||--o{ REPORT : "files"

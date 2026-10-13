@@ -1,0 +1,19 @@
+flowchart LR
+    subgraph P1["1 · Raise"]
+        direction TB
+        A(["Client or freelancer<br/>raises a dispute"]) --> B["Fixed price: milestone<br/>becomes disputed;<br/>hourly: stored on contract"]
+        B --> C["Contract: under_review<br/>Auto-release can no<br/>longer touch it"]
+    end
+    subgraph P2["2 · Decide"]
+        direction TB
+        D["Administrator reviews<br/>milestones, deliveries,<br/>time logs and the chat"] --> E["Decision with written notes:<br/>release, refund, split,<br/>cancel or dismiss<br/>(Table 12.5)"]
+    end
+    subgraph P3["3 · Apply and close"]
+        direction TB
+        F["Applied atomically:<br/>double submit refused"] --> G{"Last milestone?"}
+        G -->|"no"| G1["Contract continues"]
+        G -->|"yes"| G2["Contract and job<br/>completed"]
+        G1 --> H(["Both parties notified,<br/>audit entry (critical)"])
+        G2 --> H
+    end
+    P1 --> P2 --> P3

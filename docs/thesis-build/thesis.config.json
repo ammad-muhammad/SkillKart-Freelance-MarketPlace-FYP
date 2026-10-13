@@ -1,0 +1,15 @@
+{
+  "_comment": "Identity details for the title, certificate and declaration pages. Anything left empty stays as a yellow-highlighted placeholder in the Word file. `font` is the body/heading typeface (code stays Consolas) - any font installed with Word works, e.g. \"Times New Roman\", \"Cambria\", \"Garamond\".",
+  "font": "Arial",
+  "university": "Federal Urdu University of Arts, Sciences and Technology",
+  "department": "Department of Computer Science",
+  "supervisor": "Sir Siddiq",
+  "headOfDepartment": "Sir Siddiq",
+  "session": "2022 – 2026",
+  "submissionDate": "",
+  "students": [
+    { "name": "Muhammad Hassan Siddiq", "regNo": "19252020" },
+    { "name": "Syed Sheeryar Uddin", "regNo": "19252082" },
+    { "name": "Alisha Binte Ovais", "regNo": "19252052" }
+  ]
+}

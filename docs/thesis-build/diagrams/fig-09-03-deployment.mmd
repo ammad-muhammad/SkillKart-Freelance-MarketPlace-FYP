@@ -1,0 +1,35 @@
+flowchart LR
+    subgraph U["Users"]
+        direction TB
+        BR["Web browser"]
+        AND["Android app"]
+        ADM["Admin Android app"]
+    end
+    subgraph VC["Vercel"]
+        direction TB
+        SPA["Static React build<br/>(Vite)"]
+        RW["vercel.json rewrites:<br/>1 /sitemap.xml to the API<br/>2 everything else to index.html"]
+    end
+    subgraph RW2["Railway"]
+        direction TB
+        API["Express API<br/>(npm start, PORT from host)"]
+        TLS["TLS terminated at the proxy<br/>(trust proxy = 1)"]
+    end
+    DB[("MongoDB Atlas")]
+    subgraph EXT["Optional services"]
+        direction TB
+        S1["Stripe"]
+        S2["Gmail API"]
+        S3["Cloudinary"]
+        S4["Firebase FCM"]
+        S5["Supabase"]
+        S6["AI providers"]
+        S7["reCAPTCHA"]
+    end
+    BR -->|"loads the app"| SPA
+    BR -->|"HTTPS /api/v1"| API
+    AND -->|"HTTPS /api/v1"| API
+    ADM -->|"HTTPS /api/v1/admin-panel"| API
+    RW -.->|"sitemap request"| API
+    API --> DB
+    API --> EXT

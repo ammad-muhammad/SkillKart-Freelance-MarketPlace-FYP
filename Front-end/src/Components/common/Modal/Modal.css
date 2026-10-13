@@ -1,0 +1,104 @@
+.sk-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 30, 51, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal, 3000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: sk-modal-overlay-in 0.2s ease both;
+}
+
+.sk-modal {
+  background: var(--color-white);
+  border-radius: var(--radius-xl, 16px);
+  padding: 2rem 2rem 0 2rem;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl, 0 24px 60px rgba(4, 46, 76, 0.25));
+  animation: sk-modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Width variants (opt-in via the Modal `size` prop) */
+.sk-modal--sm { max-width: 480px; }
+.sk-modal--md { max-width: 640px; }
+.sk-modal--lg { max-width: 820px; }
+.sk-modal--xl { max-width: 1000px; }
+
+.sk-modal--danger .sk-modal__title { color: var(--color-error); }
+
+.sk-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 1.25rem 0;
+  margin: 0;
+  flex-shrink: 0; /* keep title/close pinned while the body scrolls */
+}
+
+.sk-modal__title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.sk-modal__close {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sk-modal__close:hover {
+  background: var(--color-secondary);
+  color: var(--color-text-dark);
+}
+
+.sk-modal__body {
+  font-size: 0.9rem;
+  color: var(--color-text-mid);
+  /* Scroll the content when it exceeds the capped modal height. */
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+  margin-right: -0.75rem;
+  padding-right: 0.75rem;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────
+   Tighter modal chrome + zero body padding so content gets full width. */
+@media (max-width: 640px) {
+  .sk-modal-overlay { padding: 0.5rem; }
+  .sk-modal { padding: 1.25rem 1.25rem 0 1.25rem; }
+  .sk-modal__body {
+    /* Zeroing all 4 sides here (as this used to) also wiped out the safe-area
+       bottom padding above, leaving modal footer buttons (Save/Cancel/Delete
+       Account, ...) flush against the bottom edge on every modal across both
+       client and freelancer — this is the ONE shared component all of them
+       render through, so keep left/right at 0 (full-width content, as
+       intended) but keep a real bottom inset. */
+    padding: 0 0 calc(1.25rem + env(safe-area-inset-bottom)) 0;
+    margin-right: 0;
+  }
+}
+
+@keyframes sk-modal-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sk-modal-in {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}

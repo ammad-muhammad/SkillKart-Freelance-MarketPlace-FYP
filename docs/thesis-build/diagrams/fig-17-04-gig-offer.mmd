@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph E1["Route 1: gig order"]
+        direction TB
+        G1["Client picks a tier on the gig page"] --> G2["Writes requirements<br/>(at least 30 characters)"]
+    end
+    subgraph E2["Route 2: custom offer"]
+        direction TB
+        O1["Freelancer sends an offer in chat<br/>(price, days, revisions, 7-day expiry)"] --> O2["Client accepts in the chat card"]
+    end
+    G2 --> P
+    O2 --> P["Unpaid order created:<br/>Job with status pending_payment"]
+    P --> D{"Pay 50% deposit"}
+    D -->|"wallet or Stripe"| A["Order activated:<br/>in-progress, freelancer notified"]
+    D -.->|"cancelled, or 7 days unpaid"| X(["cancelled"])
+    A --> DL["Freelancer delivers"]
+    DL --> Q{"Client"}
+    Q -->|"requests a revision"| DL
+    Q -->|"pays the final 50%"| F["Fee deducted,<br/>freelancer paid"]
+    F --> C(["completed"])

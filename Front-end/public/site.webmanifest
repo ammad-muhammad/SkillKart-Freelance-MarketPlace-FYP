@@ -1,0 +1,67 @@
+{
+  "name": "SkillKart — Micro-Freelance Platform",
+  "short_name": "SkillKart",
+  "description": "Micro-freelancing for university students. Find work, hire talent, and build your portfolio.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#042E4C",
+  "background_color": "#042E4C",
+  "categories": ["business", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Projects",
+      "short_name": "Projects",
+      "url": "/browse-projects",
+      "description": "Find freelance work to bid on"
+    },
+    {
+      "name": "Find Freelancers",
+      "short_name": "Freelancers",
+      "url": "/browse-freelancers",
+      "description": "Hire talent for your project"
+    },
+    {
+      "name": "Post a Project",
+      "short_name": "Post",
+      "url": "/post-project",
+      "description": "Publish a new job"
+    }
+  ]
+}

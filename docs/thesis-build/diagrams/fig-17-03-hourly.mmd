@@ -1,0 +1,16 @@
+flowchart TB
+    H(["Client accepts an hourly proposal"]) --> L["Lock one week estimate<br/>(rate x estimated weekly hours)"]
+    L --> W["Freelancer logs time:<br/>timer or manual entry"]
+    W --> R{"Unbilled work below<br/>the locked balance?"}
+    R -->|"no"| B["Logging blocked:<br/>client must top up"]
+    B --> TU["Client tops up the lock"]
+    TU --> RT["Pending logs retried, oldest first"]
+    RT --> W
+    R -->|"yes"| D["Each log is billed at once:<br/>drawn from the lock, fee deducted,<br/>freelancer wallet credited"]
+    D --> W
+    W --> E["Either party asks to end the contract"]
+    E --> A{"Other party approves<br/>and unbilled time is covered?"}
+    A -->|"no"| W
+    A -->|"yes"| S["Settle remaining logs"]
+    S --> RF["Refund the unused lock<br/>to the client wallet"]
+    RF --> C(["Contract and job completed"])

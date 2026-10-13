@@ -1,0 +1,33 @@
+flowchart TB
+    L(["Sign in"]) --> RG{"Role guard"}
+    RG -->|"client"| CL
+    RG -->|"freelancer"| FL
+    RG -->|"wrong role"| UN(["Unauthorized page"])
+    subgraph CL["Client area  /client/*"]
+        direction TB
+        C1["Dashboard"]
+        C2["My Projects<br/>fund, review, dispute, review"]
+        C3["Post a Project"]
+        C4["Review Proposals"]
+        C5["Wallet"]
+        C6["Saved Freelancers"]
+    end
+    subgraph FL["Freelancer area  /freelancer/*"]
+        direction TB
+        F1["Dashboard<br/>verification center"]
+        F2["Gigs and Create Gig"]
+        F3["Proposals"]
+        F4["My Work<br/>deliver, timer, disputes"]
+        F5["Wallet"]
+        F6["Portfolio and Saved Jobs"]
+        F7["Skill Test"]
+    end
+    subgraph SH["Shared in both areas"]
+        direction TB
+        S1["Messages"]
+        S2["Notifications"]
+        S3["Buddy AI"]
+        S4["Profile, Settings, Security"]
+    end
+    CL --- SH
+    FL --- SH

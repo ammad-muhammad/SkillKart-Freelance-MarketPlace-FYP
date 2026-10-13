@@ -1,0 +1,152 @@
+[
+  {
+    "file": "01-login.png",
+    "role": "public",
+    "title": "Login",
+    "caption": "Mobile login screen with email/password form and social login options."
+  },
+  {
+    "file": "02-registration.png",
+    "role": "public",
+    "title": "Registration",
+    "caption": "Mobile sign-up screen for choosing a client or freelancer account and joining SkillKart."
+  },
+  {
+    "file": "03-forgot-password.png",
+    "role": "public",
+    "title": "Forgot Password",
+    "caption": "Password reset request screen."
+  },
+  {
+    "file": "04-client-dashboard.png",
+    "role": "client",
+    "title": "Client Dashboard",
+    "caption": "Client home screen with an overview of active projects, spend, and quick actions."
+  },
+  {
+    "file": "05-client-browse-projects.png",
+    "role": "client",
+    "title": "Browse Projects (Client)",
+    "caption": "Client-side browse view of posted jobs/projects."
+  },
+  {
+    "file": "06-client-job-detail.png",
+    "role": "client",
+    "title": "Job Detail (Client)",
+    "caption": "Job detail screen showing a posted project's brief and received proposals."
+  },
+  {
+    "file": "07-client-browse-gigs.png",
+    "role": "client",
+    "title": "Browse Gigs",
+    "caption": "Marketplace gig listing screen with freelancer-packaged offerings."
+  },
+  {
+    "file": "08-client-gig-detail.png",
+    "role": "client",
+    "title": "Gig Detail",
+    "caption": "Gig detail screen showing package pricing and the order CTA."
+  },
+  {
+    "file": "09-client-browse-freelancers.png",
+    "role": "client",
+    "title": "Browse Freelancers",
+    "caption": "Freelancer directory/browse screen."
+  },
+  {
+    "file": "10-client-my-projects.png",
+    "role": "client",
+    "title": "My Projects",
+    "caption": "Client's list of posted projects and their current status."
+  },
+  {
+    "file": "11-client-wallet.png",
+    "role": "client",
+    "title": "Client Wallet",
+    "caption": "Client wallet screen showing balance and top-up/payment history."
+  },
+  {
+    "file": "12-client-messages.png",
+    "role": "client",
+    "title": "Messages (Client)",
+    "caption": "Client's chat/messages inbox."
+  },
+  {
+    "file": "13-client-profile.png",
+    "role": "client",
+    "title": "Client Profile",
+    "caption": "Client profile/settings screen."
+  },
+  {
+    "file": "14-client-saved-freelancers.png",
+    "role": "client",
+    "title": "Saved Freelancers",
+    "caption": "Client's bookmarked/saved freelancers list."
+  },
+  {
+    "file": "15-client-notifications.png",
+    "role": "client",
+    "title": "Notifications (Client)",
+    "caption": "Client notifications screen."
+  },
+  {
+    "file": "16-client-nav-drawer.png",
+    "role": "client",
+    "title": "Navigation Drawer (Client)",
+    "caption": "Client-side navigation drawer/menu showing available sections."
+  },
+  {
+    "file": "17-freelancer-dashboard.png",
+    "role": "freelancer",
+    "title": "Freelancer Dashboard",
+    "caption": "Freelancer home screen with active contracts, earnings, and quick actions."
+  },
+  {
+    "file": "18-freelancer-browse-projects.png",
+    "role": "freelancer",
+    "title": "Browse Projects (Freelancer)",
+    "caption": "Freelancer-side browse view of open jobs to apply to."
+  },
+  {
+    "file": "19-freelancer-job-detail.png",
+    "role": "freelancer",
+    "title": "Job Detail (Freelancer)",
+    "caption": "Job detail screen as seen by a freelancer, with an apply/proposal entry point."
+  },
+  {
+    "file": "21-freelancer-my-gigs.png",
+    "role": "freelancer",
+    "title": "My Gigs",
+    "caption": "Freelancer's list of published gigs/packages."
+  },
+  {
+    "file": "22-freelancer-active-work.png",
+    "role": "freelancer",
+    "title": "Active Work",
+    "caption": "Freelancer's active contracts/milestones in progress."
+  },
+  {
+    "file": "23-freelancer-wallet.png",
+    "role": "freelancer",
+    "title": "Freelancer Wallet",
+    "caption": "Freelancer wallet/earnings screen showing balance and withdrawal options."
+  },
+  {
+    "file": "24-freelancer-messages.png",
+    "role": "freelancer",
+    "title": "Messages (Freelancer)",
+    "caption": "Freelancer's chat/messages inbox."
+  },
+  {
+    "file": "25-freelancer-profile.png",
+    "role": "freelancer",
+    "title": "Freelancer Profile",
+    "caption": "Freelancer profile/portfolio screen."
+  },
+  {
+    "file": "26-freelancer-nav-drawer.png",
+    "role": "freelancer",
+    "title": "Navigation Drawer (Freelancer)",
+    "caption": "Freelancer-side navigation drawer/menu showing available sections."
+  }
+]

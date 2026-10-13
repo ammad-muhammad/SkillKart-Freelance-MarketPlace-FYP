@@ -1,0 +1,226 @@
+{
+ "fig-09-01-architecture": {
+  "width": 2500,
+  "height": 2144,
+  "fontPx": 15,
+  "landscape": true,
+  "textPt": 6.8
+ },
+ "fig-09-02-request-lifecycle": {
+  "width": 2098,
+  "height": 3710,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 7.2
+ },
+ "fig-10-01a-erd-marketplace": {
+  "width": 4895,
+  "height": 3818,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 3.9
+ },
+ "fig-10-01b-erd-engagement": {
+  "width": 4698,
+  "height": 3415,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 4.4
+ },
+ "fig-10-01a-erd-identity": {
+  "width": 3233,
+  "height": 1500,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 7.2
+ },
+ "fig-10-01b-erd-marketplace": {
+  "width": 1557,
+  "height": 2593,
+  "fontPx": 14,
+  "landscape": false,
+  "textPt": 8.1
+ },
+ "fig-10-01c-erd-escrow": {
+  "width": 2321,
+  "height": 2575,
+  "fontPx": 14,
+  "landscape": false,
+  "textPt": 6.8
+ },
+ "fig-10-01d-erd-communication": {
+  "width": 3026,
+  "height": 1785,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 7.7
+ },
+ "fig-10-01e-erd-skills": {
+  "width": 1933,
+  "height": 1938,
+  "fontPx": 14,
+  "landscape": false,
+  "textPt": 8.2
+ },
+ "fig-06-01-use-cases": {
+  "width": 2600,
+  "height": 1463,
+  "fontPx": 14.5,
+  "landscape": true,
+  "textPt": 9.3
+ },
+ "fig-09-03-deployment": {
+  "width": 4186,
+  "height": 2486,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 7.2
+ },
+ "fig-12-01-authentication": {
+  "width": 3940,
+  "height": 3258,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 5.9
+ },
+ "fig-12-02-skill-test-flow": {
+  "width": 5049,
+  "height": 2513,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 6
+ },
+ "fig-12-03-apply-gate": {
+  "width": 2255,
+  "height": 2540,
+  "fontPx": 14,
+  "landscape": false,
+  "textPt": 7
+ },
+ "fig-12-04-gig-order": {
+  "width": 3277,
+  "height": 2421,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 7.9
+ },
+ "fig-12-05-proposal": {
+  "width": 3113,
+  "height": 3493,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 6.6
+ },
+ "fig-12-06a-contract-states": {
+  "width": 2184,
+  "height": 2425,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 9.3
+ },
+ "fig-12-06b-milestone-states": {
+  "width": 2100,
+  "height": 2545,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 9.7
+ },
+ "fig-12-07-milestone-escrow": {
+  "width": 3568,
+  "height": 2140,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 6.6
+ },
+ "fig-12-08-hourly-escrow": {
+  "width": 2230,
+  "height": 2488,
+  "fontPx": 14,
+  "landscape": false,
+  "textPt": 7.1
+ },
+ "fig-12-09-dispute": {
+  "width": 2903,
+  "height": 1860,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 10.3
+ },
+ "fig-12-10-navigation": {
+  "width": 3045,
+  "height": 3078,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 6.7
+ },
+ "fig-13-01-ai-router": {
+  "width": 2383,
+  "height": 3986,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 6.7
+ },
+ "fig-14-01-admin-auth": {
+  "width": 3503,
+  "height": 1790,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 6.7
+ },
+ "fig-15-01-build-targets": {
+  "width": 2230,
+  "height": 1860,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 10.3
+ },
+ "fig-15-02-oauth-mobile": {
+  "width": 3588,
+  "height": 1608,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 6.5
+ },
+ "fig-15-03-push": {
+  "width": 1914,
+  "height": 2933,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 9.2
+ },
+ "fig-17-01-registration": {
+  "width": 4046,
+  "height": 1890,
+  "fontPx": 18,
+  "landscape": true,
+  "textPt": 7.4
+ },
+ "fig-17-02-fixed-price": {
+  "width": 2230,
+  "height": 2510,
+  "fontPx": 14,
+  "landscape": false,
+  "textPt": 7.1
+ },
+ "fig-17-03-hourly": {
+  "width": 2398,
+  "height": 3918,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 6.9
+ },
+ "fig-17-04-gig-offer": {
+  "width": 1740,
+  "height": 4103,
+  "fontPx": 18,
+  "landscape": false,
+  "textPt": 6.6
+ },
+ "fig-17-05-withdrawal": {
+  "width": 2230,
+  "height": 1888,
+  "fontPx": 14,
+  "landscape": true,
+  "textPt": 7.9
+ }
+}

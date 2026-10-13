@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor F as Freelancer
+    participant UI as Job details page
+    participant API as Backend
+    participant G as Skill graph
+    F->>UI: Click Apply
+    UI->>API: GET /proposals/eligibility/:jobId
+    API->>API: Load verified, non-expired skills
+    API->>G: Does a verified skill cover a required skill or the category?
+    G-->>API: Yes or no (exact, alias, ancestor, similar)
+    API->>API: Is the verified level at least the job's required level?
+    API-->>UI: allowed or not, with required skills and level
+    alt Allowed
+        UI->>F: Open the proposal form
+        F->>API: Submit proposal
+        API->>API: Re-check the same gate on the server
+        API-->>F: Proposal created
+    else Not allowed
+        UI->>F: Explain why and offer the skill test
+        F->>UI: Take the test and pass
+        UI->>F: Return to the job and reopen the form
+    end

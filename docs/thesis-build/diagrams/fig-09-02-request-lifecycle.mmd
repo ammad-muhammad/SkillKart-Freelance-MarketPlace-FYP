@@ -1,0 +1,18 @@
+flowchart TB
+    REQ(["HTTP request"]) --> E1["Edge hardening<br/>trust proxy · Helmet (CSP) · CORS allow-list"]
+    E1 --> E2["Global rate limit · body parsers (10 MB)<br/>cookies · NoSQL sanitising · request logger"]
+    E2 --> R{"Which route?"}
+    R -->|"/webhooks/stripe"| W["Signature check<br/>(no user login)"]
+    R -->|"/api/v1/*"| M["Route limiters · reCAPTCHA<br/>authenticate · role / permission<br/>express-validator"]
+    R -->|"/api/v1/admin-panel/*"| A["Admin cookie check<br/>(ADMIN_JWT_SECRET)<br/>admin limiter · validators"]
+    M --> C["Controller<br/>(thin: validate and delegate)"]
+    A --> C
+    C --> S["Service<br/>(business logic)"]
+    W --> S
+    S --> MO["Mongoose model"]
+    MO --> DB[("MongoDB")]
+    C --> OUT(["JSON response"])
+    EH["Global error handler<br/>consistent JSON · ErrorLog"] -.-> OUT
+    M -.-> EH
+    A -.-> EH
+    S -.-> EH

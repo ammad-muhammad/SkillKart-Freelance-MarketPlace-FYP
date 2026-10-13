@@ -1,0 +1,15 @@
+{
+  "name": "skillkart-thesis-build",
+  "private": true,
+  "description": "Builds docs/SkillKart_FYP_Final_Report.docx from docs/FYP_Final_Report.md (+ diagrams and screenshots)",
+  "scripts": {
+    "diagrams": "node render-diagrams.cjs && node render-architecture.cjs && node render-usecases.cjs",
+    "build": "node build-docx.cjs",
+    "finalize": "powershell -ExecutionPolicy Bypass -File finalize-docx.ps1"
+  },
+  "dependencies": {
+    "docx": "^9.9.0",
+    "marked": "^18.1.0",
+    "mermaid": "^12.1.0"
+  }
+}

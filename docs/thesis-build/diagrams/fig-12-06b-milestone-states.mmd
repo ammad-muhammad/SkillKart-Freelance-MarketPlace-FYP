@@ -1,0 +1,14 @@
+flowchart TB
+    PF["pending_funding"] -->|"client funds"| F["funded"]
+    F -->|"freelancer submits"| S["submitted"]
+    S -->|"approved or<br/>auto-released"| RL(["released"])
+    S -->|"revision<br/>requested"| IR["in_revision"]
+    IR -->|"resubmitted"| S
+    PF -->|"dispute"| D["disputed"]
+    F -->|"dispute"| D
+    S -->|"dispute"| D
+    IR -->|"dispute"| D
+    D -->|"release or split"| RL
+    D -->|"refund"| RF(["refunded"])
+    D -->|"resume or reject"| S
+    PF -->|"admin cancels<br/>the contract"| CN(["cancelled"])

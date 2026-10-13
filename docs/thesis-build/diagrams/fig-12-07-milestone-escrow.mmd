@@ -1,0 +1,26 @@
+sequenceDiagram
+    actor C as Client
+    actor F as Freelancer
+    participant API as Backend
+    participant DB as MongoDB
+    participant CR as Hourly scheduler
+    C->>API: Accept proposal (milestone 1 = Rs. X)
+    API->>DB: Wallet covers X? (check before any write)
+    API->>DB: Create contract and milestones
+    API->>DB: Atomic debit of wallet, Payment deposit_paid
+    API-->>F: Notify: hired, escrow funded
+    F->>API: Submit delivery
+    API->>DB: Milestone must be funded or in_revision
+    API->>DB: Status submitted, reviewDeadline = now + 7 days
+    alt Client approves in time
+        C->>API: Approve delivery
+    else Review window lapses
+        CR->>API: Auto-release overdue milestones
+    end
+    API->>DB: Claim the Payment (deposit_paid to released)
+    API->>DB: Fee deducted, freelancer wallet credited
+    API->>DB: Milestone released, contract advances or completes
+    API-->>F: Notify: payment released
+    opt More milestones remain
+        C->>API: Fund milestone 2 (previous must be released)
+    end

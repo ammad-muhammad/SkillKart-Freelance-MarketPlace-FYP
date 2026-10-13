@@ -1,0 +1,37 @@
+erDiagram
+    USER
+    JOB
+    CONVERSATION {
+        array participants
+        map unreadCount
+    }
+    MESSAGE {
+        string type
+        string content
+    }
+    NOTIFICATION {
+        string type
+        boolean read
+    }
+    REVIEW {
+        number rating
+        string type
+        boolean isHidden
+    }
+    TESTIMONIAL {
+        string text
+        number rating
+    }
+    WITHDRAWAL {
+        number amount
+        string method
+        string status
+    }
+    USER }o--o{ CONVERSATION : "takes part in"
+    CONVERSATION ||--o{ MESSAGE : "contains"
+    USER ||--o{ MESSAGE : "sends"
+    USER ||--o{ NOTIFICATION : "receives"
+    JOB ||--o{ REVIEW : "mutual rating"
+    USER ||--o{ REVIEW : "writes or receives"
+    USER ||--o| TESTIMONIAL : "writes"
+    USER ||--o{ WITHDRAWAL : "requests"

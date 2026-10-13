@@ -1,0 +1,21 @@
+flowchart LR
+    subgraph S1["1 · Order and deposit"]
+        direction TB
+        A(["Client picks a tier and writes<br/>requirements (30+ characters)"]) --> B["Job created, status<br/>pending_payment<br/>(hidden from the freelancer)"]
+        B --> C{"Wallet covers the<br/>50% deposit?"}
+        C -->|"yes"| D["Atomic wallet debit"]
+        C -->|"no"| E["Stripe Checkout, confirmed by<br/>the return page or webhook"]
+        B -.->|"client cancels or<br/>7 days unpaid"| X(["cancelled"])
+    end
+    subgraph S2["2 · Activation"]
+        direction TB
+        G["activateGigOrder<br/>(one atomic claim)"] --> G1["in-progress<br/>gig order count + 1<br/>freelancer notified"]
+    end
+    subgraph S3["3 · Delivery and payment"]
+        direction TB
+        H["Freelancer delivers<br/>(message and links)"] --> I{"Client decision"}
+        I -->|"request revision"| H
+        I -->|"pay the second 50%"| J["Fee deducted,<br/>freelancer paid"]
+        J --> K(["completed"])
+    end
+    S1 --> S2 --> S3

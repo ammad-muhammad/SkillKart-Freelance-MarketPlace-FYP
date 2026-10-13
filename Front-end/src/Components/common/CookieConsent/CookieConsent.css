@@ -1,0 +1,105 @@
+.cookie-consent {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3900;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 1.5rem;
+  padding-right: 6.5rem; /* clear the BuddyWidget FAB parked at bottom:24px/right:24px, z-index 4000 */
+  background: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: 0 -4px 24px rgba(4, 46, 76, 0.25);
+  font-family: var(--font-body);
+  animation: cookie-consent-in 0.35s ease-out;
+}
+
+@keyframes cookie-consent-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.cookie-consent__icon {
+  flex-shrink: 0;
+  color: var(--color-accent);
+  display: flex;
+}
+
+.cookie-consent__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.cookie-consent__text a {
+  color: var(--color-white);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cookie-consent__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cookie-consent__btn {
+  border-radius: var(--radius-full);
+  padding: 0.55rem 1.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  border: 1.5px solid transparent;
+}
+
+.cookie-consent__btn--deny {
+  background: transparent;
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.cookie-consent__btn--deny:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.cookie-consent__btn--allow {
+  background: var(--color-white);
+  color: var(--color-primary);
+}
+
+.cookie-consent__btn--allow:hover {
+  background: var(--color-accent);
+}
+
+@media (max-width: 640px) {
+  .cookie-consent {
+    flex-wrap: wrap;
+    padding: 1rem 1.25rem;
+    gap: 0.85rem;
+  }
+
+  .cookie-consent__icon {
+    display: none;
+  }
+
+  .cookie-consent__text {
+    flex-basis: 100%;
+  }
+
+  /* Left-aligned (not flex-end) so the buttons don't sit under the
+     BuddyWidget FAB parked in the same bottom-right corner on mobile. */
+  .cookie-consent__actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}

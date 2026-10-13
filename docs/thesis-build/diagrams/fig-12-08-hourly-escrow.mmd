@@ -1,0 +1,25 @@
+sequenceDiagram
+    actor C as Client
+    actor F as Freelancer
+    participant API as Backend
+    participant DB as MongoDB
+    C->>API: Accept hourly proposal
+    API->>DB: Lock one week estimate (rate x weekly hours)
+    F->>API: Start timer
+    API->>DB: Unbilled work must be below the lock
+    F->>API: Stop timer (sessions under 60 s are discarded)
+    API->>DB: Create TimeLog, draw down from the lock
+    alt Lock covers the amount
+        API->>DB: Credit freelancer wallet net of fee, log billed
+        API-->>F: Billed
+    else Lock is short
+        API->>DB: Log stays pending
+        API-->>F: Needs top-up
+        C->>API: Top up the lock
+        API->>DB: Retry pending logs, oldest first
+    end
+    F->>API: Request to end the contract
+    C->>API: Approve the end request
+    API->>DB: Settle remaining pending logs
+    API->>DB: Refund what is left in the lock to the client wallet
+    API-->>C: Contract completed

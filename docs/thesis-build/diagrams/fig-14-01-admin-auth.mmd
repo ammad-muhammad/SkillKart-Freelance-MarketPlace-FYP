@@ -1,0 +1,20 @@
+sequenceDiagram
+    actor A as Administrator
+    participant UI as Admin UI
+    participant API as Backend
+    participant M as Email
+    participant DB as AdminSession
+    A->>UI: Email and password
+    UI->>API: POST login (5 per 15 min)
+    API->>API: Check ADMIN_EMAIL and bcrypt hash
+    API->>M: Email a 6-digit code (hashed, 10 min)
+    API-->>UI: Code sent
+    A->>UI: Enter the code
+    UI->>API: POST verify-otp (3 per 10 min)
+    API->>DB: Create session (token hash, IP)
+    API-->>UI: admin_token cookie, httpOnly, 30 min
+    loop Every admin request
+        UI->>API: Cookie sent
+        API->>API: Verify ADMIN_JWT_SECRET signature
+        API->>DB: Session found, active, not idle
+    end

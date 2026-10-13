@@ -1,0 +1,267 @@
+/* ============================================================
+   CustomSelect – Premium SaaS UI Core
+   ============================================================ */
+:root {
+    --csel-bg: var(--color-white);
+    --csel-border: #d1d9e6; /* standard form-field border, kept as literal per project convention */
+    --csel-border-hover: var(--color-accent);
+    --csel-accent: var(--color-primary, #042e4c);
+    --csel-accent-soft: rgba(4, 46, 76, 0.08);
+    --csel-shadow: 0 4px 15px rgba(4, 46, 76, 0.08);
+    --csel-radius: 12px;
+}
+
+.csel {
+    position: relative;
+    width: 100%;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    user-select: none;
+}
+
+/* Compact variant for toolbars/dashboards */
+.csel--compact {
+    width: auto;
+    min-width: 140px;
+}
+
+.csel--compact .csel__trigger {
+    padding: 0.5rem 0.75rem;
+    height: 38px;
+    background: var(--color-secondary);
+    border-radius: 10px;
+}
+
+/* ──────────────────────────────────────────────────
+   TRIGGER
+   ────────────────────────────────────────────────── */
+.csel__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--csel-bg);
+    border: 1.5px solid var(--csel-border);
+    border-radius: var(--csel-radius);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    outline: none;
+    gap: 0.75rem;
+    height: 48px;
+}
+
+.csel__trigger:hover:not(:disabled) {
+    border-color: var(--csel-border-hover);
+    background: var(--color-secondary);
+}
+
+.csel__trigger:disabled {
+    background: var(--color-secondary);
+    border-color: rgba(183, 201, 226, 0.35);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.csel__trigger:disabled .csel__value {
+    color: var(--color-text-light);
+}
+
+.csel__trigger:disabled .csel__chevron {
+    color: var(--color-text-light);
+}
+
+.csel--open .csel__trigger {
+    border-color: var(--csel-accent);
+    box-shadow: 0 0 0 4px var(--csel-accent-soft);
+}
+
+.csel__value {
+    flex: 1;
+    font-size: 0.93rem;
+    font-weight: 500;
+    color: var(--color-text-dark, #1e293b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.csel__value--placeholder {
+    color: var(--color-text-light, #94a3b8);
+}
+
+.csel__chevron {
+    width: 18px;
+    height: 18px;
+    color: var(--color-text-light, #94a3b8);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+.csel--open .csel__chevron {
+    transform: rotate(180deg);
+    color: var(--csel-accent);
+}
+
+/* ──────────────────────────────────────────────────
+   MENU
+   ────────────────────────────────────────────────── */
+.csel__menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(183, 201, 226, 0.4);
+    border-radius: var(--csel-radius);
+    box-shadow: 0 15px 45px rgba(4, 46, 76, 0.12);
+    padding: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+    animation: cselPop 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Scrollbar styling */
+.csel__menu::-webkit-scrollbar {
+    width: 6px;
+}
+.csel__menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+.csel__menu::-webkit-scrollbar-thumb {
+    background: rgba(183, 201, 226, 0.35);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.csel__menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(183, 201, 226, 0.5);
+    background-clip: content-box;
+}
+
+@keyframes cselPop {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Individual options ── */
+.csel__option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    font-size: 0.94rem;
+    font-weight: 500;
+    color: var(--color-text-mid);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 10px;
+    margin-bottom: 2px;
+}
+
+.csel__option:last-child {
+    margin-bottom: 0;
+}
+
+.csel__option:hover {
+    background: var(--csel-accent-soft);
+    color: var(--csel-accent);
+    padding-left: 1.25rem;
+}
+
+.csel__option--selected {
+    background: rgba(4, 46, 76, 0.05);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.csel__option--selected .csel__check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.csel__check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--color-primary);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-left: auto;
+}
+
+/* ── Variant: compact (for toolbar sort) ── */
+.csel--compact .csel__trigger {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    border-radius: 10px;
+}
+
+.csel--compact .csel__menu {
+    min-width: 160px;
+}
+
+/* ── Variant: dark (TaxonomyAdmin's existing indigo-on-dark palette) ── */
+.csel--dark .csel__trigger {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.csel--dark .csel__trigger:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.csel--dark.csel--open .csel__trigger {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.csel--dark .csel__value {
+    color: #f3f4f6;
+}
+
+.csel--dark .csel__value--placeholder {
+    color: #9ca3af;
+}
+
+.csel--dark .csel__chevron {
+    color: #9ca3af;
+}
+
+.csel--dark.csel--open .csel__chevron {
+    color: #6366f1;
+}
+
+.csel--dark .csel__menu {
+    background: rgba(31, 41, 55, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.csel--dark .csel__option {
+    color: #d1d5db;
+}
+
+.csel--dark .csel__option:hover {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+}
+
+.csel--dark .csel__option--selected {
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+}
+
+.csel--dark .csel__check {
+    color: #6366f1;
+}

@@ -1,0 +1,15 @@
+flowchart TB
+    A["active"] -->|"work submitted"| D["delivered"]
+    D -->|"revision requested"| R["in_revision"]
+    R -->|"resubmitted"| D
+    D -->|"approved, more<br/>milestones"| A
+    D -->|"last milestone<br/>approved"| C(["completed"])
+    A -->|"hourly end<br/>approved"| C
+    A -->|"dispute"| U["under_review"]
+    D -->|"dispute"| U
+    R -->|"dispute"| U
+    U -->|"resolved,<br/>continue"| A
+    U -->|"resolved,<br/>last milestone"| C
+    U -->|"admin cancels"| X(["cancelled"])
+    A -->|"admin pauses"| P["paused"]
+    P -->|"admin resumes"| A

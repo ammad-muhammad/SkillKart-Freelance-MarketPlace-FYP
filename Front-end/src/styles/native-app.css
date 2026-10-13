@@ -1,0 +1,103 @@
+/* Capacitor (Android/iOS) build only — see utils/platform.js's isMobileApp().
+   main.jsx adds html.is-native-app when running inside the native wrapper.
+
+   backdrop-filter/blur is used across ~40 files (Modal, CustomSelect,
+   ComboSelect, Loader, SuspendedOverlay, sidebars, navbar, ...) and is a
+   well-known severe jank source on Android's WebView — every open/close of a
+   modal or dropdown recomposites a blurred layer, which is the primary cause
+   of reported stutter on-device. The web (Vercel) build never gets this
+   class, so desktop/mobile-browser visuals are unaffected. */
+html.is-native-app *,
+html.is-native-app *::before,
+html.is-native-app *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* variables.css styles a persistent thin scrollbar for desktop web — inside
+   the native app that renders as an out-of-place solid bar down the side of
+   the screen (real mobile apps never show one; touch scrolling needs no
+   visible indicator). Hide it everywhere; scrolling itself is unaffected. */
+html.is-native-app,
+html.is-native-app * {
+  scrollbar-width: none !important;
+}
+html.is-native-app *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* browse-projects/job-details/gig-detail are the only public pages that ship
+   on mobile (see AppRoutes.jsx), and each reserves ~6rem of top padding to
+   clear the fixed web Navbar — which Navbar.jsx itself no-ops under
+   isMobileApp(), so on-device that padding is just a large empty gap above
+   the content with nothing to clear. */
+html.is-native-app .bp-hero,
+html.is-native-app .jd-page,
+html.is-native-app .gd-page {
+  padding-top: 1.5rem !important;
+}
+
+/* .bp-hero's -4rem margin-bottom is a desktop "floating card overlaps the
+   hero" flourish — the sidebar filter card (.bp-sidebar) rides up into the
+   hero's own 8rem bottom padding on purpose there. On mobile the sidebar
+   becomes a plain stacked, full-width, non-sticky block (see the 1024px
+   media query below), so that same pull-up just reads as an oversized,
+   seemingly accidental gap of leftover hero background between the search
+   box and the filter card. Simplify to plain stacking. */
+html.is-native-app .bp-hero {
+  padding-bottom: 2rem !important;
+  margin-bottom: 0 !important;
+}
+
+/* Login/Register/ForgotPassword: Auth.css's own <=968px media query was
+   written for a narrow desktop/tablet BROWSER window, where scrolling to see
+   the rest of a page is normal — but that same query also fires inside the
+   app's narrow WebView, turning what should be a fixed, full-screen native
+   auth screen into an unintentionally scrollable one (`min-height: 100vh` +
+   `overflow: auto`, plus 80px of padding meant to clear a browser's own
+   chrome, which the app doesn't have). `100dvh` (the second, later `height`
+   declaration) reflects the WebView's actual visible viewport and wins over
+   the `100vh` fallback wherever the on-device WebView supports it; where it
+   doesn't, the `100vh` line above still applies. `--app-vh` (set from
+   `window.innerHeight` in main.jsx, not a CSS viewport unit at all) is the
+   real fix and wins over both — vh/dvh turned out to still report a taller
+   box than what's actually visible on real devices, which is exactly what
+   made centered content look pinned to the top with dead space below it
+   despite align-items: center being correct. The description paragraph
+   is the least essential content on any of these three screens (restated
+   marketing copy, not information the form needs) — dropped here, on top of
+   the reduced heading size and tightened spacing, so the actually important
+   content (heading, form, submit, social buttons) reliably fits the fixed
+   screen without needing the scroll this block removes. The two-badge trust
+   row stays (just closer to the heading above it) — it's real content, not
+   filler, and helps the shorter layout not read as sparse on a tall screen. */
+html.is-native-app .auth-page {
+  height: 100vh !important;
+  height: 100dvh !important;
+  height: var(--app-vh, 100dvh) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 16px !important;
+  /* Vertically centered (align-items: center is already the base .auth-page
+     rule — no override needed here), matching every other screen's request. */
+}
+html.is-native-app .auth-content {
+  gap: 0.75rem !important;
+}
+html.is-native-app .auth-branding {
+  gap: 0.5rem !important;
+}
+html.is-native-app .auth-title {
+  font-size: 1.6rem !important;
+}
+html.is-native-app .auth-description {
+  display: none !important;
+}
+html.is-native-app .auth-feature-badges {
+  margin-top: 1rem !important;
+}
+html.is-native-app .auth-card {
+  padding: 1.1rem 1.25rem !important;
+}

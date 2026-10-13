@@ -1,0 +1,12 @@
+flowchart TB
+    EV(["Event, for example<br/>proposal accepted"]) --> N["notify()<br/>the only entry point"]
+    N --> DBN[("Notification record<br/>shown in the app")]
+    N --> PS["push.service.sendToUser"]
+    N -.->|"never throws"| OK(["The triggering action<br/>is unaffected"])
+    PS --> CFG{"Firebase credential<br/>configured?"}
+    CFG -->|"no"| NOP(["Silent no-op<br/>(fail open)"])
+    CFG -->|"yes"| FCM["Firebase Cloud Messaging"]
+    FCM --> DEV["Android device"]
+    FCM -.->|"token no longer valid"| PR["Token removed"]
+    DEV --> TAP["User taps the notification"]
+    TAP --> OPEN(["App opens the screen<br/>named in the link"])

@@ -1,0 +1,31 @@
+erDiagram
+    USER {
+        string role
+    }
+    JOB {
+        string status
+        string source
+        string gigTier
+    }
+    GIG {
+        string title
+        string status
+        object pricing
+    }
+    PROPOSAL {
+        number fixedPrice
+        string status
+        boolean canResubmit
+    }
+    CUSTOM_OFFER {
+        number price
+        string status
+        date expiresAt
+    }
+    USER ||--o{ JOB : "posts or orders"
+    USER ||--o{ GIG : "publishes"
+    USER ||--o{ PROPOSAL : "submits"
+    USER ||--o{ CUSTOM_OFFER : "sends or receives"
+    JOB ||--o{ PROPOSAL : "receives"
+    GIG ||--o{ JOB : "ordered as (source = gig)"
+    CUSTOM_OFFER ||--o| JOB : "accepted becomes"

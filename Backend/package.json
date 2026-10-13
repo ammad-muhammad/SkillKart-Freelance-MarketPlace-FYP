@@ -1,0 +1,104 @@
+{
+  "name": "SkillKart--Backend",
+  "version": "1.0.0",
+  "description": "Complete freelance platform backend with multi-auth, RBAC, CMS, job posting, and proposals",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "setup:superadmin": "node scripts/setupSuperAdmin.js",
+    "seed:demo": "node scripts/seedDemoData.js",
+    "seed:demo:small": "node scripts/seedDemoData.js --small",
+    "migrate:hourly-escrow": "node scripts/migrateHourlyEscrow.js",
+    "migrate:skill-verification": "node scripts/backfillSkillVerification.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src",
+    "format": "prettier --write \"src/**/*.js\""
+  },
+  "keywords": [
+    "freelance",
+    "platform",
+    "marketplace",
+    "jobs",
+    "proposals",
+    "cms",
+    "rbac",
+    "oauth",
+    "jwt",
+    "express",
+    "mongodb",
+    "supabase"
+  ],
+  "author": "SkillKart-Fuuast-team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.3.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
+    "@google/genai": "^1.51.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cloudinary": "^1.41.0",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "firebase-admin": "^14.4.0",
+    "googleapis": "^173.0.0",
+    "groq-sdk": "^1.2.0",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.3.2",
+    "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.12.0",
+    "mongoose": "^8.0.3",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^4.5.0",
+    "nodemailer": "^6.9.7",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.19.1",
+    "sanitize-html": "^2.17.7",
+    "skillkart-root": "file:..",
+    "stripe": "^22.2.1",
+    "supertest": "^7.2.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "ua-parser-js": "^2.0.9",
+    "uuid": "^9.0.1",
+    "validator": "^13.11.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.1.1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "src/logs/*",
+      "node_modules"
+    ],
+    "exec": "node src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/freelance-platform-backend"
+  }
+}

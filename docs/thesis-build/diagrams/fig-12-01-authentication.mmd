@@ -1,0 +1,25 @@
+flowchart LR
+    subgraph P1["1 · Credentials"]
+        direction TB
+        S(["Email and password"]) --> C1{"Valid, active,<br/>not locked?"}
+        C1 -->|"no"| R1(["Generic 401.<br/>5 failures lock<br/>the account 2 h"])
+        C1 -->|"yes"| OK1(["Accepted"])
+    end
+    subgraph P2["2 · Second factor"]
+        direction TB
+        T{"Two-factor on?"} -->|"no"| SK(["Skipped"])
+        T -->|"yes"| OT["Emailed 6-digit OTP<br/>10 min, hashed, 5 tries"]
+        OT --> OV{"Correct?"}
+        OV -->|"no"| R2(["Rejected"])
+        OV -->|"yes"| PS(["Passed"])
+    end
+    subgraph P3["3 · Session"]
+        direction TB
+        TK["Access token 7 days +<br/>rotating refresh token 30 days"] --> US(["Authenticated requests<br/>(user reloaded each time)"])
+        US --> EX{"401, or 55 minutes?"}
+        EX -->|"yes"| RF["Refresh: old token revoked,<br/>new pair issued"]
+        RF --> RP{"Rotated token replayed<br/>after 10 s?"}
+        RP -->|"yes"| TH(["Revoke family, tokenVersion + 1,<br/>logged out everywhere"])
+        RP -->|"no"| US
+    end
+    P1 --> P2 --> P3

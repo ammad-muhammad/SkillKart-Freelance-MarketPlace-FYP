@@ -1,0 +1,14 @@
+flowchart TB
+    REQ(["AI request from a controller"]) --> RT["AI router<br/>providers sorted by AI_PRIORITY_*"]
+    RT --> P{"Next provider"}
+    P --> I{"Implements the method<br/>and has an API key?"}
+    I -->|"no"| P
+    I -->|"yes"| CALL["Call the provider<br/>(timeout where configured)"]
+    CALL --> OK{"Returned a result<br/>of the expected shape?"}
+    OK -->|"no or error"| W["Warn and fall through"]
+    W --> P
+    OK -->|"yes"| DONE(["Return the first good result"])
+    P -->|"chain exhausted"| E["ServiceUnavailableError<br/>(an operational error)"]
+    E --> H["Global error handler:<br/>503 with a clear message"]
+    H --> UI["Frontend: one toast and an<br/>in-place message, forms stay usable"]
+    E -.->|"also thrown in a floating promise"| G["unhandledRejection guard:<br/>logged, server stays up"]

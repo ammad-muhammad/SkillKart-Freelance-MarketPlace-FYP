@@ -1,0 +1,26 @@
+sequenceDiagram
+    actor C as Client
+    actor F as Freelancer
+    participant API as Backend
+    participant DB as MongoDB
+    C->>API: Post job (no wallet check)
+    F->>API: Submit proposal
+    C->>API: Accept proposal
+    API->>DB: Wallet covers milestone 1?
+    API->>DB: Create contract, fund milestone 1
+    API-->>F: Hired, escrow funded
+    F->>API: Submit delivery
+    API->>DB: Milestone submitted, 7-day window
+    alt Client approves
+        C->>API: Approve
+    else Seven days pass
+        API->>API: Scheduler auto-releases
+    end
+    API->>DB: Release, fee deducted, wallet credited
+    alt More milestones
+        C->>API: Fund the next milestone
+    else Last milestone
+        API->>DB: Contract and job completed
+    end
+    C->>API: Review
+    F->>API: Review

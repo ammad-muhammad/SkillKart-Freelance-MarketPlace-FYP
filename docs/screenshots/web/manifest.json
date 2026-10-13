@@ -1,0 +1,194 @@
+[
+  {
+    "file": "01-public-home.png",
+    "audience": "public",
+    "title": "Public Home Page",
+    "caption": "The SkillKart marketing landing page for logged-out visitors."
+  },
+  {
+    "file": "02-public-browse-gigs.png",
+    "audience": "public",
+    "title": "Browse Gigs",
+    "caption": "Public listing of pre-packaged freelancer gigs, filterable by category."
+  },
+  {
+    "file": "03-public-gig-detail.png",
+    "audience": "public",
+    "title": "Gig Detail Page",
+    "caption": "A single gig listing showing pricing tiers, description, and the freelancer offering it."
+  },
+  {
+    "file": "04-public-browse-projects.png",
+    "audience": "public",
+    "title": "Browse Jobs / Projects",
+    "caption": "Public listing of open custom jobs that clients have posted."
+  },
+  {
+    "file": "05-public-job-detail.png",
+    "audience": "public",
+    "title": "Job Detail Page (Public)",
+    "caption": "Public view of a job posting, showing budget, description, and client info."
+  },
+  {
+    "file": "06-public-freelancer-profile.png",
+    "audience": "public",
+    "title": "Public Freelancer Profile",
+    "caption": "A freelancer's public profile page with bio, skills, and portfolio."
+  },
+  {
+    "file": "07-public-category-page.png",
+    "audience": "public",
+    "title": "Category Page",
+    "caption": "A skill/category landing page (Web Development) with related stats and talent."
+  },
+  {
+    "file": "08-public-login.png",
+    "audience": "public",
+    "title": "Login Page",
+    "caption": "The shared login form for clients and freelancers."
+  },
+  {
+    "file": "09-public-register.png",
+    "audience": "public",
+    "title": "Registration Page",
+    "caption": "The sign-up form for new clients or freelancers."
+  },
+  {
+    "file": "10-public-about.png",
+    "audience": "public",
+    "title": "About Page",
+    "caption": "The About / how-SkillKart-works marketing page."
+  },
+  {
+    "file": "11-public-ai-buddy.png",
+    "audience": "public",
+    "title": "AI Buddy Assistant",
+    "caption": "The public AI Buddy chat assistant page for general marketplace questions."
+  },
+  {
+    "file": "12-public-cost-estimator.png",
+    "audience": "public",
+    "title": "AI Cost Estimator",
+    "caption": "The public AI-powered project cost estimator tool."
+  },
+  {
+    "file": "13-client-dashboard.png",
+    "audience": "client",
+    "title": "Client Dashboard",
+    "caption": "The client's home dashboard overview after logging in."
+  },
+  {
+    "file": "14-client-post-job-form.png",
+    "audience": "client",
+    "title": "Post a Job Form",
+    "caption": "The multi-step \"post a project\" form, filled out (not submitted) for a realistic look."
+  },
+  {
+    "file": "15-client-projects-list.png",
+    "audience": "client",
+    "title": "My Jobs / Active Contracts",
+    "caption": "The client's jobs list, filtered to in-progress projects — shows escrow milestone status inline per contract."
+  },
+  {
+    "file": "16-client-review-proposals.png",
+    "audience": "client",
+    "title": "Review Proposals",
+    "caption": "A job posting's received proposals, ready for the client to review and accept."
+  },
+  {
+    "file": "17-client-messages.png",
+    "audience": "client",
+    "title": "Client Messages",
+    "caption": "The client's chat inbox with freelancers they're working with."
+  },
+  {
+    "file": "18-client-wallet.png",
+    "audience": "client",
+    "title": "Client Wallet",
+    "caption": "The client's wallet/billing page showing balance and escrow-related transactions."
+  },
+  {
+    "file": "19-client-profile.png",
+    "audience": "client",
+    "title": "Client Profile",
+    "caption": "The client's profile/settings page."
+  },
+  {
+    "file": "20-freelancer-dashboard.png",
+    "audience": "freelancer",
+    "title": "Freelancer Dashboard",
+    "caption": "The freelancer's home dashboard overview after logging in."
+  },
+  {
+    "file": "21-freelancer-browse-jobs.png",
+    "audience": "freelancer",
+    "title": "Browse Jobs (as Freelancer)",
+    "caption": "The open-jobs listing as seen by a logged-in freelancer."
+  },
+  {
+    "file": "22-freelancer-submit-proposal-form.png",
+    "audience": "freelancer",
+    "title": "Submit a Proposal",
+    "caption": "A job detail page with the \"Submit Proposal\" form filled out (not submitted)."
+  },
+  {
+    "file": "23-freelancer-gigs-list.png",
+    "audience": "freelancer",
+    "title": "My Gigs",
+    "caption": "The freelancer's list of published gigs."
+  },
+  {
+    "file": "24-freelancer-create-gig-form.png",
+    "audience": "freelancer",
+    "title": "Create a Gig Form",
+    "caption": "The \"create a new gig\" form, filled out (not submitted) for a realistic look."
+  },
+  {
+    "file": "25-freelancer-contracts-work.png",
+    "audience": "freelancer",
+    "title": "Active Contracts / Milestones",
+    "caption": "The freelancer's active contracts and gig orders, with delivery and milestone controls."
+  },
+  {
+    "file": "26-freelancer-messages.png",
+    "audience": "freelancer",
+    "title": "Freelancer Messages",
+    "caption": "The freelancer's chat inbox with clients."
+  },
+  {
+    "file": "27-freelancer-wallet.png",
+    "audience": "freelancer",
+    "title": "Freelancer Wallet",
+    "caption": "The freelancer's wallet/earnings page."
+  },
+  {
+    "file": "28-freelancer-profile.png",
+    "audience": "freelancer",
+    "title": "Freelancer Profile",
+    "caption": "The freelancer's own profile/portfolio settings page."
+  },
+  {
+    "file": "29-freelancer-portfolio.png",
+    "audience": "freelancer",
+    "title": "Freelancer Portfolio",
+    "caption": "The freelancer's portfolio management page."
+  },
+  {
+    "file": "30-admin-login.png",
+    "audience": "admin",
+    "title": "Admin Panel Login",
+    "caption": "The isolated admin panel login screen (credentials step)."
+  },
+  {
+    "file": "31-admin-login-otp-step.png",
+    "audience": "admin",
+    "title": "Admin Panel OTP Step",
+    "caption": "After credentials are accepted, the admin panel requires a one-time code emailed to the admin address (2FA) before granting access."
+  },
+  {
+    "file": "32-swagger-api-docs.png",
+    "audience": "public",
+    "title": "Swagger API Documentation",
+    "caption": "Live, interactive API documentation generated at /api/v1/docs, covering every route group (auth, admin, jobs, gigs, contracts, payments, and more)."
+  }
+]
