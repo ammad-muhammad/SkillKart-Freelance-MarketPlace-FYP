@@ -323,7 +323,7 @@ export default function Navbar({ alwaysSticky = false }) {
           {/* Logo */}
           <Link to="/" ref={logoRef} className="navbar__logo">
             <span className="navbar__logo-icon"><LogoSVG size={32} /></span>
-            <span className="navbar__logo-text">Skill<span>Kart</span></span>
+            <span className="navbar__logo-text">Freelancer<span>Kart</span></span>
           </Link>
 
           {/* Desktop nav */}
@@ -513,7 +513,7 @@ export default function Navbar({ alwaysSticky = false }) {
         <div className="navbar__mobile-header">
           <Link to="/" className="navbar__logo" onClick={closeMobile}>
             <span className="navbar__logo-icon"><LogoSVG size={28} /></span>
-            <span className="navbar__logo-text">Skill<span>Kart</span></span>
+            <span className="navbar__logo-text">Freelancer<span>Kart</span></span>
           </Link>
           <button className="navbar__mobile-close" onClick={closeMobile} aria-label="Close menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
