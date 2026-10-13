@@ -101,7 +101,8 @@ const config = {
     secure: (process.env.SMTP_SECURE || process.env.EMAIL_SECURE) === 'true',
     user: process.env.SMTP_USER || process.env.EMAIL_USER,
     password: process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD,
-    from: process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM
+    from: process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM,
+    supportEmail: (process.env.SUPPORT_EMAIL || 'support@skillkart.com').trim()
   },
 
   // Google reCAPTCHA v3

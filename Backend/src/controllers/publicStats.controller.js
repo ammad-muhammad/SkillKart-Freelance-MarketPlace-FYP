@@ -344,8 +344,8 @@ const submitContact = asyncHandler(async (req, res) => {
     meta: { ip: req.ip, userAgent: req.get('User-Agent') },
   });
 
-  // Send the email via SMTP to the platform's support inbox (using the configured sender email)
-  const supportEmail = config.email.from || config.email.user || 'support@skillkart.com';
+  // Send the email via SMTP to the platform's support inbox (from SUPPORT_EMAIL env var)
+  const supportEmail = (process.env.SUPPORT_EMAIL || config.email.supportEmail || config.email.from || 'support@skillkart.com').trim();
   const emailSubject = `New Contact Form Submission: ${subject || 'General Inquiry'}`;
   const emailHtml = `
     <!DOCTYPE html>
