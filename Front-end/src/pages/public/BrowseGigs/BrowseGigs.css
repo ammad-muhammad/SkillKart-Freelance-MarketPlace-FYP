@@ -4,7 +4,7 @@
    ========================================================================== */
 
 .bg-page-wrap {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background: linear-gradient(180deg, #F0FDF4 0%, #F8FAFC 380px, #FFFFFF 100%);
   padding-bottom: 96px;
 }
@@ -29,6 +29,11 @@
   align-items: center;
   text-align: center;
   gap: 14px;
+}
+
+.bg-hero__back {
+  align-self: flex-start;
+  margin-bottom: -4px;
 }
 
 .bg-hero__badge {
@@ -470,7 +475,7 @@
 
 .bg-sheet {
   width: 100%;
-  max-height: 85vh;
+  max-height: calc(var(--app-vh, var(--vh-full)) * 0.85);
   background: #FFFFFF;
   border-radius: 24px 24px 0 0;
   padding: 24px;
@@ -529,12 +534,22 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
+  /* Pinned to the bottom of the scrolling sheet so Show Results is always
+     reachable; extends over the sheet's 24px padding and the safe area. */
+  position: sticky;
+  bottom: 0;
+  margin: 0 -24px -24px;
+  padding: 16px 24px calc(16px + var(--safe-bottom, 0px));
+  background: #FFFFFF;
   border-top: 1px solid #E2E8F0;
 }
 
+.bg-sheet .bg-rating-option {
+  min-height: var(--tap-min, 40px);
+}
+
 /* Responsive Breakpoints */
-@media (max-width: 900px) {
+@media (max-width: 1023.98px) {
   .bg-popover-wrap,
   .bg-sort-select {
     display: none;
@@ -542,9 +557,28 @@
   .bg-mobile-filters-btn {
     display: inline-flex;
   }
+  /* The results count + Filters button no longer compete with the category
+     scroller for one row: they get their own row above it. */
+  .bg-filter-bar {
+    flex-wrap: wrap;
+    gap: 10px 20px;
+  }
+  .bg-filter-right-cluster {
+    order: 1;
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .bg-filter-scroll-wrapper {
+    order: 2;
+    flex: 1 1 100%;
+  }
+  .bg-results-count {
+    margin-right: auto;
+  }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .bg-container {
     padding: 0 16px;
     gap: 20px;
@@ -595,12 +629,14 @@
 
 .bg-pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
 .bg-page-numbers {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
@@ -690,7 +726,7 @@
 }
 
 /* Mobile responsiveness */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .bg-pagination-wrap {
     flex-direction: column;
     align-items: center;
@@ -723,3 +759,37 @@
   }
 }
 
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .bg-hero__quick-chip,
+  .bg-cat-pill,
+  .bg-popover-btn,
+  .bg-mobile-filters-btn,
+  .bg-sort-select,
+  .bg-clear-btn,
+  .bg-popover-btn-reset,
+  .bg-popover-btn-apply,
+  .bg-hero__search-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .bg-hero__search-clear {
+    width: 36px;
+    height: 36px;
+  }
+  .bg-sheet__close {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .bg-page-btn,
+  .bg-page-nav-btn {
+    min-width: var(--tap-min, 40px);
+    min-height: var(--tap-min, 40px);
+  }
+}
+
+/* ── Wide screens: lift the container cap so the 4-col grid has room ── */
+@media (min-width: 1700px) {
+  .bg-container {
+    max-width: 1640px;
+  }
+}

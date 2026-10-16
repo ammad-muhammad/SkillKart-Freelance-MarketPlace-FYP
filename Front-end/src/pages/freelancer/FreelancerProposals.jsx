@@ -556,7 +556,7 @@ export default function FreelancerProposals() {
                         <MessageSquare size={14} />
                         <span>{isFeedbackOpen ? 'Hide client feedback' : 'Show client feedback'}</span>
                       </button>
-                      <span style={{ fontSize: 11.5, color: '#94A3B8' }}>
+                      <span style={{ fontSize: 12, color: '#94A3B8' }}>
                         Feedback received
                       </span>
                     </div>
@@ -873,7 +873,7 @@ export default function FreelancerProposals() {
         {editForm && (
           <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {editingProposal?.jobId?.budget?.type === 'hourly' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="fl-prop-edit-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <label style={{ fontSize: 12.5, fontWeight: 700, color: '#0B2942' }}>Hourly Rate (Rs./hr)</label>
                   <input
@@ -903,7 +903,7 @@ export default function FreelancerProposals() {
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="fl-prop-edit-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <label style={{ fontSize: 12.5, fontWeight: 700, color: '#0B2942' }}>Fixed Price (PKR)</label>
                   <input

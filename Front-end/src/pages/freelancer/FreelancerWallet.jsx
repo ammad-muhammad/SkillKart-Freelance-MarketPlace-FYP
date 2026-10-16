@@ -47,6 +47,28 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
   const [showEscrow, setShowEscrow] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(null);
 
+  // Measured chart width: viewBox is in real pixels so nothing is stretched
+  // (no preserveAspectRatio="none") and SVG text/dots keep their true size.
+  const [chartW, setChartW] = useState(580);
+  const chartRoRef = useRef(null);
+  const chartBoxRef = useCallback((node) => {
+    if (chartRoRef.current) {
+      chartRoRef.current.disconnect();
+      chartRoRef.current = null;
+    }
+    if (!node) return;
+    const apply = () => {
+      const w = Math.round(node.getBoundingClientRect().width);
+      if (w > 0) setChartW(w);
+    };
+    apply();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(apply);
+      ro.observe(node);
+      chartRoRef.current = ro;
+    }
+  }, []);
+
   // Y-axis short format: full readable short form ("0, 10k, 20k, 30k", not "1.7L/84k")
   const formatShortPkr = (num) => {
     if (!num || num === 0) return '0';
@@ -191,8 +213,8 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
     );
   }
 
-  const width = 580;
-  const height = 180;
+  const width = Math.max(chartW, 240);
+  const height = 196;
   const padLeft = 44;
   const padRight = 16;
   const padTop = 16;
@@ -286,11 +308,14 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
       </div>
 
       {/* SVG Canvas */}
-      <div style={{ position: 'relative', width: '100%', height: 180 }}>
+      <div ref={chartBoxRef} style={{ position: 'relative', width: '100%', height }}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          style={{ width: '100%', height: '100%', overflow: 'visible' }}
-          preserveAspectRatio="none"
+          width={width}
+          height={height}
+          style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}
+          role="img"
+          aria-label="Earnings trend chart"
         >
           <defs>
             <linearGradient id="flWalletAreaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -302,17 +327,17 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
           {/* Horizontal Soft Gridlines & Short Y-Axis Labels */}
           <g className="fl-chart-grid" opacity="0.8">
             <line x1={padLeft} y1={padTop} x2={width - padRight} y2={padTop} stroke="#E2E8F0" strokeDasharray="3 3" />
-            <text x={padLeft - 8} y={padTop + 3.5} textAnchor="end" fontSize="10" fill="#94A3B8" fontFamily="monospace">
+            <text x={padLeft - 8} y={padTop + 3.5} textAnchor="end" fontSize="12" fill="#94A3B8" fontFamily="monospace">
               {formatShortPkr(maxVal)}
             </text>
 
             <line x1={padLeft} y1={padTop + plotH / 2} x2={width - padRight} y2={padTop + plotH / 2} stroke="#E2E8F0" strokeDasharray="3 3" />
-            <text x={padLeft - 8} y={padTop + plotH / 2 + 3.5} textAnchor="end" fontSize="10" fill="#94A3B8" fontFamily="monospace">
+            <text x={padLeft - 8} y={padTop + plotH / 2 + 3.5} textAnchor="end" fontSize="12" fill="#94A3B8" fontFamily="monospace">
               {formatShortPkr(maxVal / 2)}
             </text>
 
             <line x1={padLeft} y1={padTop + plotH} x2={width - padRight} y2={padTop + plotH} stroke="#E2E8F0" />
-            <text x={padLeft - 8} y={padTop + plotH + 3.5} textAnchor="end" fontSize="10" fill="#94A3B8" fontFamily="monospace">
+            <text x={padLeft - 8} y={padTop + plotH + 3.5} textAnchor="end" fontSize="12" fill="#94A3B8" fontFamily="monospace">
               0
             </text>
           </g>
@@ -348,20 +373,41 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
             />
           )}
 
-          {/* Interactive Dots for Earnings */}
+          {/* X-Axis Labels (SVG text, aligned with the points; thinned on narrow charts) */}
+          {points.map((p, idx) => {
+            const slot = points.length > 1 ? plotW / (points.length - 1) : plotW;
+            const step = Math.max(1, Math.ceil(38 / Math.max(slot, 1)));
+            if (idx % step !== 0) return null;
+            return (
+              <text key={`xl-${idx}`} x={p.x} y={height - 6} textAnchor="middle" fontSize="12" fill="#94A3B8" fontFamily="monospace">
+                {p.label}
+              </text>
+            );
+          })}
+
+          {/* Interactive Dots for Earnings (hover on desktop, tap on touch; 14px hit area) */}
           {points.map((p, idx) => (
-            <circle
-              key={idx}
-              cx={p.x}
-              cy={p.yEarn}
-              r={hoverIndex === idx ? 5.5 : 3.5}
-              fill="#FFFFFF"
-              stroke="#10B981"
-              strokeWidth={hoverIndex === idx ? 3 : 2}
-              style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-              onMouseEnter={() => setHoverIndex(idx)}
-              onMouseLeave={() => setHoverIndex(null)}
-            />
+            <g key={idx}>
+              <circle
+                cx={p.x}
+                cy={p.yEarn}
+                r={hoverIndex === idx ? 5.5 : 3.5}
+                fill="#FFFFFF"
+                stroke="#10B981"
+                strokeWidth={hoverIndex === idx ? 3 : 2}
+                style={{ transition: 'all 0.15s ease', pointerEvents: 'none' }}
+              />
+              <circle
+                cx={p.x}
+                cy={p.yEarn}
+                r={14}
+                fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHoverIndex(idx)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onClick={() => setHoverIndex(prev => (prev === idx ? null : idx))}
+              />
+            </g>
           ))}
         </svg>
 
@@ -370,13 +416,13 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
           <div style={{
             position: 'absolute',
             top: 0,
-            left: `${(points[hoverIndex].x / width) * 100}%`,
+            left: Math.min(Math.max(points[hoverIndex].x, 90), width - 90),
             transform: 'translateX(-50%)',
             background: '#0B2942',
             color: '#FFFFFF',
             padding: '6px 12px',
             borderRadius: 8,
-            fontSize: 11.5,
+            fontSize: 12,
             fontWeight: 600,
             pointerEvents: 'none',
             boxShadow: '0 4px 14px rgba(11, 41, 66, 0.25)',
@@ -392,20 +438,6 @@ function EarningsAreaChart({ payments = [], range = 'Monthly' }) {
             )}
           </div>
         )}
-      </div>
-
-      {/* X-Axis Labels (Months) */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        padding: `0 ${padRight}px 0 ${padLeft}px`,
-        fontSize: 11,
-        color: '#94A3B8',
-        fontFamily: 'monospace'
-      }}>
-        {chartData.map((d) => (
-          <span key={d.label}>{d.label}</span>
-        ))}
       </div>
     </div>
   );
@@ -666,7 +698,7 @@ export default function FreelancerWallet() {
                   <ShieldCheck size={15} />
                   <span>Escrow Protected & Bank Guaranteed</span>
                 </div>
-                <span style={{ fontWeight: 700, fontSize: 11.5 }}>
+                <span style={{ fontWeight: 700, fontSize: 12 }}>
                   {profile?.stripeOnboardingComplete ? '● Stripe Active' : '○ Stripe Inactive'}
                 </span>
               </div>
@@ -885,7 +917,7 @@ export default function FreelancerWallet() {
                             <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0B2942' }}>
                               {new Date(txDate).toLocaleDateString()}
                             </div>
-                            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
+                            <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>
                               {new Date(txDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </td>
@@ -905,7 +937,7 @@ export default function FreelancerWallet() {
                                 <span className="fl-wall-tx-title" title={tx.isWithdrawal ? 'Funds Withdrawal' : (tx.jobId?.title || 'Direct Order')}>
                                   {tx.isWithdrawal ? 'Funds Withdrawal' : (tx.jobId?.title || 'Direct Order')}
                                 </span>
-                                <span style={{ fontSize: 11.5, color: '#94A3B8' }}>
+                                <span style={{ fontSize: 12, color: '#94A3B8' }}>
                                   {tx.isWithdrawal ? 'Bank Transfer via Stripe' : 'Milestone Escrow'}
                                 </span>
                               </div>
@@ -972,7 +1004,7 @@ export default function FreelancerWallet() {
                             <div style={{ fontSize: 14, fontWeight: 700, color: '#0B2942' }}>
                               {tx.isWithdrawal ? 'Funds Withdrawal' : (tx.jobId?.title || 'Project')}
                             </div>
-                            <div style={{ fontSize: 11.5, color: '#94A3B8' }}>
+                            <div style={{ fontSize: 12, color: '#94A3B8' }}>
                               {new Date(txDate).toLocaleDateString()} · {tx.isWithdrawal ? 'Stripe' : clientName}
                             </div>
                           </div>

@@ -64,7 +64,8 @@ const AuthConsent = () => {
         
         const user = response?.data?.user;
         const userRole = user?.role;
-        const isOnboardingCompleted = user?.isOnBoardingCompleted;
+        // Skipped onboarding ("Skip for now") also lands on the dashboard.
+        const isOnboardingCompleted = user?.isOnBoardingCompleted || !!user?.onboardingSkippedAt;
 
         log(`🧭 Redirecting: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
 
@@ -105,7 +106,7 @@ const AuthConsent = () => {
   return (
     <div
       style={{
-        minHeight: '60vh',
+        minHeight: 'calc(var(--vh-full, 100vh) * 0.6)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

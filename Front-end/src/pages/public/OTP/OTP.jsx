@@ -151,7 +151,8 @@ const OTP = () => {
                         }
                     } else {
                         const userRole = response?.data?.user?.role;
-                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted;
+                        // Skipped onboarding ("Skip for now") also lands on the dashboard.
+                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted || !!response?.data?.user?.onboardingSkippedAt;
 
                         sessionStorage.removeItem('OTPEmail');
                         sessionStorage.removeItem('registrationType');
@@ -366,7 +367,7 @@ const OTP = () => {
                                         strokeLinecap="round"
                                         style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.9s linear' }}
                                     />
-                                    <text x="19" y="23" textAnchor="middle" fontSize="10" fontWeight="700" fill="#059669">{timer}</text>
+                                    <text x="19" y="23" textAnchor="middle" fontSize="12" fontWeight="700" fill="#059669">{timer}</text>
                                 </svg>
                                 <span className="otp-timer-label">Resend code in <strong>{timer}s</strong></span>
                             </div>

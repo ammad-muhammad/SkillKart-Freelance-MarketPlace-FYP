@@ -18,6 +18,7 @@ import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
 import Modal from '../../Components/common/Modal/Modal';
 import OrderRequirements from '../../Components/common/OrderRequirements/OrderRequirements';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import './FreelancerControls.css';
 import './FreelancerWork.css';
 
 const STAGES = {
@@ -479,7 +480,7 @@ export default function FreelancerWork() {
                         {contractTitle}
                       </h3>
                       <div className="fl-contract-subline">
-                        <span className="sk-gig-card__skill-chip" style={{ fontSize: 10.5 }}>
+                        <span className="sk-gig-card__skill-chip" style={{ fontSize: 12 }}>
                           {isHourly ? 'Hourly Rate' : 'Fixed Price'}
                         </span>
                         {item.jobId?.category && (
@@ -500,7 +501,6 @@ export default function FreelancerWork() {
                       <button
                         type="button"
                         className="sk-icon-btn"
-                        style={{ width: 30, height: 30 }}
                         onClick={() => toggleExpandCard(item._id)}
                         title={isExpanded ? 'Collapse card' : 'Expand card details'}
                       >
@@ -583,7 +583,7 @@ export default function FreelancerWork() {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                   <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0B2942' }}>{m.title}</span>
-                                  <span style={{ fontSize: 11, color: '#64748B' }}>Rs. {Number(m.amount).toLocaleString()}</span>
+                                  <span style={{ fontSize: 12, color: '#64748B' }}>Rs. {Number(m.amount).toLocaleString()}</span>
                                 </div>
                                 {mIdx < milestones.length - 1 && (
                                   <div className={`fl-milestone-line ${isReleased ? 'fl-milestone-line--active' : ''}`} />
@@ -613,7 +613,7 @@ export default function FreelancerWork() {
                               <LiveTimer startedAt={item.timer?.startedAt} hourlyRate={item.hourlyRate} />
                             )}
                           </div>
-                          <span style={{ fontSize: 11.5, color: '#64748B' }}>
+                          <span style={{ fontSize: 12, color: '#64748B' }}>
                             Total logged: {Math.floor((item.totalDuration || 0) / 3600000)}h {Math.floor(((item.totalDuration || 0) % 3600000) / 60000)}m
                           </span>
                         </div>
@@ -780,7 +780,7 @@ export default function FreelancerWork() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 14, borderTop: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 10, paddingTop: 14, borderTop: '1px solid #E2E8F0' }}>
               <button type="button" className="sk-pill-action-btn" onClick={closeDeliverModal} disabled={delivering}>
                 Cancel
               </button>

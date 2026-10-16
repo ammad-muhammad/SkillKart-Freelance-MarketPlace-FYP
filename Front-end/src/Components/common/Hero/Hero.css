@@ -8,7 +8,7 @@
   position: relative;
   background: #F5FBF8;
   margin-top: var(--navbar-h);
-  height: calc(100vh - var(--navbar-h));
+  height: calc(var(--vh-full, 100vh) - var(--navbar-h));
   min-height: 640px;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -199,7 +199,15 @@
 /* ==========================================================================
    Responsive Adaptations
    ========================================================================== */
-@media (max-width: 768px) {
+/* Portrait tablets: the arc slider has a fixed card size, so a 100vh-tall hero
+   (1100px+ on an iPad) just leaves a big empty band under the cards. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .hero2 {
+    height: min(calc(var(--vh-full, 100vh) - var(--navbar-h)), 820px);
+  }
+}
+
+@media (max-width: 767.98px) {
   .hero2 {
     min-height: 600px;
     height: auto;

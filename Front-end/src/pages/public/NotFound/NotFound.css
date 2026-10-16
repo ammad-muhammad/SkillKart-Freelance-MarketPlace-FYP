@@ -5,7 +5,7 @@
    ========================================================= */
 
 .nf-shell {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #EAFBF4 0%, #F5FAF8 30%, #F8FAFC 100%);
@@ -83,7 +83,7 @@
   color: #059669;
   padding: 5px 14px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   margin-bottom: 1.25rem;
@@ -189,6 +189,7 @@
 
 .nf-search-input {
   flex: 1;
+  min-width: 0;
   border: none !important;
   outline: none !important;
   background: transparent;
@@ -208,6 +209,7 @@
   color: #FFFFFF;
   border: none;
   border-radius: 999px;
+  min-height: var(--tap-min, 40px);
   padding: 8px 20px;
   font-size: 0.88rem;
   font-weight: 700;
@@ -240,6 +242,7 @@
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
   color: #FFFFFF;
   text-decoration: none;
+  min-height: var(--tap-min, 40px);
   padding: 10px 22px;
   border-radius: 999px;
   font-size: 0.92rem;
@@ -262,6 +265,7 @@
   background: #FFFFFF;
   border: 1.5px solid #E2E8F0;
   color: #0B2942;
+  min-height: var(--tap-min, 40px);
   padding: 9px 20px;
   border-radius: 999px;
   font-size: 0.92rem;
@@ -289,7 +293,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: #64748B;
@@ -299,7 +303,7 @@
 
 .nf-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 14px;
   width: 100%;
 }
@@ -312,6 +316,7 @@
   border: 1.5px solid #E2E8F0;
   border-radius: 16px;
   padding: 16px 14px;
+  min-width: 0; /* grid item: nowrap titles must ellipsize, not widen the track */
   text-decoration: none;
   text-align: left;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -367,7 +372,7 @@
 }
 
 .nf-card-desc {
-  font-size: 11.5px;
+  font-size: 0.75rem;
   color: #64748B;
   white-space: nowrap;
   overflow: hidden;
@@ -406,12 +411,12 @@
 }
 
 /* ─── Responsive Adjustments ─── */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .nf-main {
     padding: calc(var(--navbar-h, 72px) + 1.25rem) 1rem 2.5rem;
   }
   .nf-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .nf-actions {
     flex-direction: column;

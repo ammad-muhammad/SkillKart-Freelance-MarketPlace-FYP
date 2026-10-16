@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star,
@@ -21,6 +21,7 @@ import Reveal, { useInView } from './components/Reveal';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import PkrIcon from '../../Components/common/PkrIcon';
 import JobCard from '../../Components/common/JobCard/JobCard';
+import { FinishOnboardingBanner } from '../../Components/common/SkipOnboarding/SkipOnboarding';
 import './BentoDashboard.css';
 
 /* ── Fallback sample jobs for Recommended carousel if API has no results ── */
@@ -73,13 +74,13 @@ const DashboardSkeleton = () => (
     {/* Hero skeleton */}
     <div style={{ height: 220, borderRadius: 28, background: 'linear-gradient(135deg, #A7F3D0, #E0F2FE)', opacity: 0.7 }} />
     {/* KPI strip skeleton */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+    <div className="fl-skel-kpis">
       {[1, 2, 3, 4].map(i => (
         <div key={i} style={{ height: 110, borderRadius: 20, background: '#FFFFFF', border: '1px solid #E2E8F0', padding: 20 }} />
       ))}
     </div>
     {/* Rows skeleton */}
-    <div style={{ display: 'grid', gridTemplateColumns: '8fr 4fr', gap: 20 }}>
+    <div className="fl-skel-rows">
       <div style={{ height: 320, borderRadius: 24, background: '#FFFFFF', border: '1px solid #E2E8F0' }} />
       <div style={{ height: 320, borderRadius: 24, background: '#FFFFFF', border: '1px solid #E2E8F0' }} />
     </div>
@@ -118,6 +119,28 @@ export default function DashboardOverview() {
 
   // In-view hook for Area Chart drawing
   const [chartAreaRef, chartInView] = useInView({ threshold: 0.2 });
+
+  // Measured chart width: the SVG viewBox uses real pixels so nothing is
+  // stretched (no preserveAspectRatio="none") and labels stay aligned.
+  const [chartW, setChartW] = useState(560);
+  const chartRoRef = useRef(null);
+  const chartBoxRef = useCallback((node) => {
+    if (chartRoRef.current) {
+      chartRoRef.current.disconnect();
+      chartRoRef.current = null;
+    }
+    if (!node) return;
+    const apply = () => {
+      const w = Math.round(node.getBoundingClientRect().width);
+      if (w > 0) setChartW(w);
+    };
+    apply();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(apply);
+      ro.observe(node);
+      chartRoRef.current = ro;
+    }
+  }, []);
 
   // Fetch contracts, marketplace recommendations, and payment history
   useEffect(() => {
@@ -338,8 +361,8 @@ export default function DashboardOverview() {
   }, [payments, earningsRange]);
 
   const maxVal = Math.max(...currentChartData.map(d => d.val), 1000);
-  const chartWidth = 560;
-  const chartHeight = 180;
+  const chartWidth = Math.max(chartW, 240);
+  const chartHeight = 196;
   const chartPadLeft = 46;
   const chartPadRight = 14;
   const chartPadTop = 16;
@@ -384,6 +407,7 @@ export default function DashboardOverview() {
 
   return (
     <div className="fl-bento-dashboard">
+      <FinishOnboardingBanner role="freelancer" />
       {/* =================================================================
           ROW A: HERO BAND (Full Width)
           ================================================================= */}
@@ -465,7 +489,7 @@ export default function DashboardOverview() {
           ROW B: KPI STRIP (4 Compact Bento Cards)
           ================================================================= */}
       <section className="fl-bento-grid" aria-label="Key Performance Indicators">
-        <Reveal delay={0} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={0} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Total Gigs"
             value={gigs.length}
@@ -478,7 +502,7 @@ export default function DashboardOverview() {
             to="/freelancer/gigs"
           />
         </Reveal>
-        <Reveal delay={70} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={70} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Active Bids"
             value={activeProposals}
@@ -491,7 +515,7 @@ export default function DashboardOverview() {
             to="/freelancer/proposals"
           />
         </Reveal>
-        <Reveal delay={140} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={140} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Accepted Bids"
             value={acceptedProposals}
@@ -504,7 +528,7 @@ export default function DashboardOverview() {
             to="/freelancer/proposals"
           />
         </Reveal>
-        <Reveal delay={210} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={210} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Profile Views"
             value={profile?.stats?.profileViews || 128}
@@ -540,7 +564,6 @@ export default function DashboardOverview() {
                     type="button"
                     className={`fl-time-btn${earningsRange === range ? ' fl-time-btn--active' : ''}`}
                     onClick={() => setEarningsRange(range)}
-                    style={{ padding: '4px 10px', fontSize: 11.5 }}
                   >
                     {range}
                   </button>
@@ -551,7 +574,7 @@ export default function DashboardOverview() {
             {/* Top metric row */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
               <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Total Earned:
                 </span>
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 24, fontWeight: 800, color: '#0B2942', marginLeft: 8 }}>
@@ -581,11 +604,12 @@ export default function DashboardOverview() {
                 <div style={{ height: '100%', minHeight: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#F8FAFC', borderRadius: 16, border: '1px dashed #E2E8F0', padding: 16 }}>
                   <BarChart2 size={26} style={{ color: '#94A3B8' }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#0B2942' }}>No earnings recorded yet</span>
-                  <span style={{ fontSize: 11.5, color: '#64748B' }}>Chart draws in real-time as your milestone funds are released.</span>
+                  <span style={{ fontSize: 12, color: '#64748B' }}>Chart draws in real-time as your milestone funds are released.</span>
                 </div>
               ) : (
                 <>
-                  <svg className="fl-chart-svg" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: 180, overflow: 'visible' }}>
+                  <div ref={chartBoxRef} style={{ width: '100%' }}>
+                  <svg className="fl-chart-svg" viewBox={`0 0 ${chartWidth} ${chartHeight}`} width={chartWidth} height={chartHeight} style={{ width: '100%', height: chartHeight, overflow: 'visible', display: 'block' }} role="img" aria-label="Earnings chart">
                     <defs>
                       <linearGradient id="earningsGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#10B981" stopOpacity="0.32" />
@@ -609,7 +633,7 @@ export default function DashboardOverview() {
                         x={chartPadLeft - 8}
                         y={chartPadTop + 3.5}
                         textAnchor="end"
-                        fontSize="9.5"
+                        fontSize="12"
                         fill="#94A3B8"
                         fontFamily="monospace"
                       >
@@ -630,7 +654,7 @@ export default function DashboardOverview() {
                         x={chartPadLeft - 8}
                         y={chartPadTop + plotHeight / 2 + 3.5}
                         textAnchor="end"
-                        fontSize="9.5"
+                        fontSize="12"
                         fill="#94A3B8"
                         fontFamily="monospace"
                       >
@@ -650,7 +674,7 @@ export default function DashboardOverview() {
                         x={chartPadLeft - 8}
                         y={chartPadTop + plotHeight + 3.5}
                         textAnchor="end"
-                        fontSize="9.5"
+                        fontSize="12"
                         fill="#94A3B8"
                         fontFamily="monospace"
                       >
@@ -680,7 +704,29 @@ export default function DashboardOverview() {
                       />
                     )}
 
-                    {/* Interactive Dots */}
+                    {/* X-Axis Labels (SVG text so they stay aligned with the points) */}
+                    {points.map((d, i) => {
+                      const minGap = 38;
+                      const slot = points.length > 1 ? plotWidth / (points.length - 1) : plotWidth;
+                      const step = Math.max(1, Math.ceil(minGap / Math.max(slot, 1)));
+                      const show = i % step === 0 || (i === points.length - 1 && (points.length - 1) % step === 0);
+                      if (!show) return null;
+                      return (
+                        <text
+                          key={`xl-${d.label}-${i}`}
+                          x={d.x}
+                          y={chartHeight - 6}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#94A3B8"
+                          fontFamily="monospace"
+                        >
+                          {d.label}
+                        </text>
+                      );
+                    })}
+
+                    {/* Interactive Dots (hover on desktop, tap on touch; 14px invisible hit area) */}
                     {points.map((d, i) => (
                       <g key={i}>
                         <circle
@@ -691,26 +737,35 @@ export default function DashboardOverview() {
                           stroke="#10B981"
                           strokeWidth={hoveredChartIdx === i ? 3 : 2.2}
                           className={`fl-chart-point${chartInView ? ' fl-chart-point--visible' : ''}`}
-                          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
+                          style={{ transition: 'all 0.15s ease', pointerEvents: 'none' }}
+                        />
+                        <circle
+                          cx={d.x}
+                          cy={d.y}
+                          r={14}
+                          fill="transparent"
+                          style={{ cursor: 'pointer' }}
                           onMouseEnter={() => setHoveredChartIdx(i)}
                           onMouseLeave={() => setHoveredChartIdx(null)}
+                          onClick={() => setHoveredChartIdx(prev => (prev === i ? null : i))}
                         />
                       </g>
                     ))}
                   </svg>
+                  </div>
 
                   {/* Hover Tooltip */}
                   {hoveredChartIdx !== null && points[hoveredChartIdx] && (
                     <div style={{
                       position: 'absolute',
                       top: 4,
-                      left: `${(points[hoveredChartIdx].x / chartWidth) * 100}%`,
+                      left: Math.min(Math.max(points[hoveredChartIdx].x, 80), chartWidth - 80),
                       transform: 'translateX(-50%)',
                       background: '#0B2942',
                       color: '#FFFFFF',
                       padding: '4px 10px',
                       borderRadius: 8,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 700,
                       pointerEvents: 'none',
                       boxShadow: '0 4px 14px rgba(11, 41, 66, 0.25)',
@@ -720,20 +775,6 @@ export default function DashboardOverview() {
                       {points[hoveredChartIdx].label}: Rs. {points[hoveredChartIdx].val.toLocaleString()}
                     </div>
                   )}
-
-                  {/* X-Axis Labels */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: `2px ${chartPadRight}px 0 ${chartPadLeft}px`,
-                    fontSize: 11,
-                    color: '#94A3B8',
-                    fontFamily: 'monospace'
-                  }}>
-                    {currentChartData.map((d) => (
-                      <span key={d.label}>{d.label}</span>
-                    ))}
-                  </div>
                 </>
               )}
             </div>
@@ -792,7 +833,7 @@ export default function DashboardOverview() {
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#0B2942' }}>{s.label}</span>
                     </div>
                     {s.required && !isDone && (
-                      <span className="fl-badge-req" style={{ fontSize: 9.5, padding: '2px 8px' }}>Required</span>
+                      <span className="fl-badge-req" style={{ fontSize: 12, padding: '2px 8px' }}>Required</span>
                     )}
                   </div>
                 );
@@ -880,10 +921,10 @@ export default function DashboardOverview() {
                   <div className="fl-contract-foot">
                     <span style={{ fontSize: 12, color: '#64748B' }}>Milestone 1 in progress</span>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <Link to="/freelancer/messages" className="fl-pill-btn fl-pill-btn--outline" style={{ height: 34, padding: '0 14px', fontSize: 11.5, width: 'auto' }}>
+                      <Link to="/freelancer/messages" className="fl-pill-btn fl-pill-btn--outline" style={{ height: 34, padding: '0 14px', fontSize: 12, width: 'auto' }}>
                         Contact Client
                       </Link>
-                      <Link to="/freelancer/work" className="fl-pill-btn fl-pill-btn--emerald" style={{ height: 34, padding: '0 16px', fontSize: 11.5, width: 'auto' }}>
+                      <Link to="/freelancer/work" className="fl-pill-btn fl-pill-btn--emerald" style={{ height: 34, padding: '0 16px', fontSize: 12, width: 'auto' }}>
                         Submit Work
                       </Link>
                     </div>
@@ -920,7 +961,7 @@ export default function DashboardOverview() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {proposals.filter(p => p.status === 'pending').slice(0, 3).map(p => (
-                  <div key={p._id} style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: 10, border: '1px solid #E2E8F0', fontSize: 11.5 }}>
+                  <div key={p._id} style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: 10, border: '1px solid #E2E8F0', fontSize: 12 }}>
                     <div style={{ fontWeight: 600, color: '#0B2942', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.jobId?.title || 'Project Proposal'}
                     </div>
@@ -928,7 +969,7 @@ export default function DashboardOverview() {
                   </div>
                 ))}
                 {activeProposals === 0 && (
-                  <span style={{ fontSize: 11.5, color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>No pending bids</span>
+                  <span style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>No pending bids</span>
                 )}
               </div>
             </div>
@@ -943,7 +984,7 @@ export default function DashboardOverview() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {proposals.filter(p => p.status === 'accepted').slice(0, 3).map(p => (
-                  <div key={p._id} style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: 10, border: '1px solid #A7F3D0', fontSize: 11.5 }}>
+                  <div key={p._id} style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: 10, border: '1px solid #A7F3D0', fontSize: 12 }}>
                     <div style={{ fontWeight: 600, color: '#065F46', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.jobId?.title || 'Hired Project'}
                     </div>
@@ -951,7 +992,7 @@ export default function DashboardOverview() {
                   </div>
                 ))}
                 {acceptedProposals === 0 && (
-                  <span style={{ fontSize: 11.5, color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>None yet</span>
+                  <span style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>None yet</span>
                 )}
               </div>
             </div>
@@ -966,7 +1007,7 @@ export default function DashboardOverview() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {proposals.filter(p => p.status === 'rejected' || p.status === 'withdrawn').slice(0, 3).map(p => (
-                  <div key={p._id} style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: 10, border: '1px solid #E2E8F0', fontSize: 11.5, opacity: 0.8 }}>
+                  <div key={p._id} style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: 10, border: '1px solid #E2E8F0', fontSize: 12, opacity: 0.8 }}>
                     <div style={{ fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.jobId?.title || 'Closed'}
                     </div>
@@ -974,7 +1015,7 @@ export default function DashboardOverview() {
                   </div>
                 ))}
                 {rejectedProposals === 0 && (
-                  <span style={{ fontSize: 11.5, color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>None closed</span>
+                  <span style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>None closed</span>
                 )}
               </div>
             </div>
@@ -1001,8 +1042,8 @@ export default function DashboardOverview() {
           }
         >
           <div className="fl-marquee-wrapper">
-            <div className="fl-marquee-track">
-              {recommendedJobs.concat(recommendedJobs).map((job, idx) => {
+            <div className="fl-marquee-track" ref={scrollTrackRef}>
+              {recommendedJobs.map((job, idx) => {
                 const isSaved = savedProjects.some(sp => (sp._id || sp.id) === (job._id || job.id));
                 return (
                   <JobCard
@@ -1135,7 +1176,7 @@ export default function DashboardOverview() {
                         <Link
                           to={`/freelancer/skill-test?skill=${encodeURIComponent(skill.name)}`}
                           className="fl-pill-btn fl-pill-btn--outline"
-                          style={{ height: 32, padding: '0 12px', fontSize: 11.5, width: 'auto', display: 'inline-flex' }}
+                          style={{ height: 32, padding: '0 12px', fontSize: 12, width: 'auto', display: 'inline-flex' }}
                         >
                           {skill.isVerified ? (
                             <><RotateCcw size={11} /> Retake Test</>
@@ -1347,7 +1388,7 @@ export default function DashboardOverview() {
                       boxSizing: 'border-box'
                     }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#94A3B8', marginTop: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
                     <span>Min 20 characters</span>
                     <span>{storyText.length} / 600 characters</span>
                   </div>

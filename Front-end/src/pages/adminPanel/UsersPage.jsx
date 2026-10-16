@@ -154,6 +154,7 @@ const UsersPage = () => {
           style={{ maxWidth: 260 }}
           placeholder="Search email, name…"
           defaultValue={search}
+          enterKeyHint="search"
           onKeyDown={handleSearch}
           onChange={e => setSearch(e.target.value)}
         />
@@ -222,6 +223,7 @@ const UsersPage = () => {
                         className="ap-btn ap-btn-secondary ap-btn-sm"
                         onClick={() => navigate(`/admin-panel/users/${user._id}`)}
                         title="View details"
+                        aria-label="View user details"
                       >
                         👁
                       </button>
@@ -229,6 +231,7 @@ const UsersPage = () => {
                         className="ap-btn ap-btn-primary ap-btn-sm"
                         onClick={() => setEditTarget(user)}
                         title="Edit user"
+                        aria-label="Edit user"
                       >
                         ✏️
                       </button>
@@ -236,6 +239,7 @@ const UsersPage = () => {
                         className={`ap-btn ap-btn-sm ${user.isBlocked ? 'ap-btn-success' : 'ap-btn-danger'}`}
                         onClick={() => setSuspendTarget(user)}
                         title={user.isBlocked ? 'Unsuspend' : 'Suspend'}
+                        aria-label={user.isBlocked ? 'Unsuspend user' : 'Suspend user'}
                       >
                         {user.isBlocked ? '✅' : '⛔'}
                       </button>
@@ -244,6 +248,7 @@ const UsersPage = () => {
                           className="ap-btn ap-btn-danger ap-btn-sm"
                           onClick={() => setDeleteTarget(user)}
                           title="Delete"
+                        aria-label="Delete user"
                         >
                           🗑
                         </button>

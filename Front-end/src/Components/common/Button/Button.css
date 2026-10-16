@@ -114,3 +114,16 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
+/* Touch devices: hover lifts would stick after a tap, and sm/md buttons sit
+   under the 40px tap minimum. Desktop (mouse) is unchanged. */
+@media (hover: none) {
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn--sm { min-height: 36px; }
+  .btn--md { min-height: var(--tap-min, 40px); }
+}

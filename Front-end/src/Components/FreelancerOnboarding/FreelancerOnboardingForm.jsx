@@ -9,6 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { freelancersAPI } from "../../api/freelancers";
 import ImageCropModal from "../common/ImageCropModal/ImageCropModal";
 import Loader from "../common/Loader/Loader";
+import { SkipOnboardingButton } from "../common/SkipOnboarding/SkipOnboarding";
 
 import ProgressBar from "./ProgressBar";
 import StepBasicInfo from "./StepBasicInfo";
@@ -584,6 +585,7 @@ const FreelancerOnboardingForm = () => {
 
       <div className="fob-container">
         <div className="fob-card">
+          <SkipOnboardingButton role="freelancer" />
           {/* Progress Bar */}
           <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
 

@@ -4,7 +4,7 @@
    ========================================================================== */
 
 .app-shell {
-  min-height: 100vh;
+  min-height: var(--app-vh, var(--vh-full, 100vh));
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #E8FAF2 0%, #EEF7FF 60%, #FFFFFF 100%);
@@ -20,9 +20,9 @@
 }
 
 .app-shell__container {
-  max-width: 1360px;
+  max-width: var(--app-shell-max, var(--content-max, 1360px));
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 32px max(24px, var(--safe-right, 0px)) calc(64px + var(--safe-bottom, 0px)) max(24px, var(--safe-left, 0px));
   width: 100%;
   box-sizing: border-box;
 }
@@ -49,35 +49,76 @@
   display: none !important;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .app-shell__container {
-    padding: 24px 20px 48px;
+    padding: 24px max(20px, var(--safe-right, 0px)) calc(48px + var(--safe-bottom, 0px)) max(20px, var(--safe-left, 0px));
   }
 }
 
 @media (max-width: 640px) {
   .app-shell__container {
-    padding: 16px 14px 40px;
+    padding: 16px max(14px, var(--safe-right, 0px)) calc(40px + var(--safe-bottom, 0px)) max(14px, var(--safe-left, 0px));
   }
 }
 
-/* ── Fullscreen Messages Page Override (Edge-to-Edge, No Card/Padding) ── */
-.app-shell:has(.flm-page) {
-  height: 100vh;
-  max-height: 100vh;
+/* background-attachment:fixed is janky / ignored on touch browsers and forces a
+   full-page repaint on scroll in Android WebView. */
+@media (hover: none) {
+  .app-shell {
+    background-attachment: scroll;
+  }
+}
+
+/* ── Fullscreen Messages Page Override (Edge-to-Edge, No Card/Padding) ──
+   `--app-vh` (window.innerHeight, set in main.jsx on native) beats vh/dvh,
+   which over-report on Android WebView. `.app-shell--flush` is set from the
+   layout components by route so the shell does NOT depend on :has() (older
+   WebViews lack it); the :has() rules below are kept as a second trigger. */
+.app-shell--flush {
+  height: var(--app-vh, var(--vh-full, 100vh));
+  max-height: var(--app-vh, var(--vh-full, 100vh));
   overflow: hidden !important;
   background: #FFFFFF !important;
 }
 
-.app-shell:has(.flm-page) .app-shell__main {
-  height: calc(100vh - 72px) !important;
-  max-height: calc(100vh - 72px) !important;
+.app-shell--flush .app-shell__main {
+  height: calc(var(--app-vh, var(--vh-full, 100vh)) - var(--app-nav-h, 72px)) !important;
+  max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - var(--app-nav-h, 72px)) !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-.app-shell:has(.flm-page) .app-shell__container {
+.app-shell--flush .app-shell__container {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.app-shell:has(.flm-page),
+.app-shell:has(.cl-messages-layout) {
+  height: var(--app-vh, var(--vh-full, 100vh));
+  max-height: var(--app-vh, var(--vh-full, 100vh));
+  overflow: hidden !important;
+  background: #FFFFFF !important;
+}
+
+.app-shell:has(.flm-page) .app-shell__main,
+.app-shell:has(.cl-messages-layout) .app-shell__main {
+  height: calc(var(--app-vh, var(--vh-full, 100vh)) - var(--app-nav-h, 72px)) !important;
+  max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - var(--app-nav-h, 72px)) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.app-shell:has(.flm-page) .app-shell__container,
+.app-shell:has(.cl-messages-layout) .app-shell__container {
   max-width: 100% !important;
   width: 100% !important;
   height: 100% !important;

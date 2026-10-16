@@ -53,6 +53,19 @@ body {
   max-width: 100%;
 }
 
+/* WebViews without `overflow-x: clip` fall back to `hidden` on BOTH <html> and
+   <body>. A hidden-overflow <body> becomes its own scroll container, so every
+   `position: sticky` descendant (the logged-in navbar, sticky filter rails)
+   stops sticking. <html>'s own `overflow-x:hidden` already propagates to the
+   viewport and prevents the sideways scroll, so on those engines the body must
+   stay `visible` to keep sticky working. Browsers that understand `clip` never
+   enter this block. */
+@supports not (overflow-x: clip) {
+  body {
+    overflow-x: visible;
+  }
+}
+
 /* 3. Media never overflows its container ----------------------------------- */
 img,
 svg,
@@ -78,6 +91,17 @@ video {
    their own behavior — this only bites when nothing else handles it.) */
 table {
   max-width: 100%;
+}
+/* The comment above promised a horizontal scroll, but `max-width` alone never
+   makes a table scroll — and because <body> clips overflow-x, a wide table's
+   right-hand columns were simply unreachable on phones. Bare tables (no class,
+   so not already inside a styled wrapper) now scroll inside themselves. */
+@media (max-width: 767.98px) {
+  table:not([class]) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* 5. Long words / links don't cause overflow ------------------------------- */
@@ -115,14 +139,83 @@ textarea {
 }
 
 /* 8. Never print floating chrome ---------------------------------------------
-   The Buddy AI launcher/panel and the notification bell are rendered globally
-   in App.jsx as fixed-position widgets — outside any page's own root, so a
+   The Buddy AI launcher/panel is rendered globally in App.jsx as a
+   fixed-position widget — outside any page's own root, so a
    page-local print stylesheet can't reach them. Without this they show up as
    a stray floating circle in every "Save as PDF" / Ctrl+P output site-wide. */
 @media print {
   .buddy-fab,
-  .buddy-panel,
-  .notif-bell {
+  .buddy-panel-v3 {
     display: none !important;
+  }
+}
+
+
+/* 9. Touch-device floors ------------------------------------------------------
+   Desktop-density controls (24-36px buttons, 12-13px inputs) are fine for a
+   mouse but miss the 40-44px touch minimum, and any text input under 16px makes
+   iOS Safari / the iOS WebView zoom the page on focus (and not zoom back).
+   Scoped to coarse pointers so desktop visuals are untouched. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* 10. Hover-only UI must be visible on touch ----------------------------------
+   Components that reveal actions on :hover add the `.hover-reveal` class (or are
+   listed here); on devices with no hover the actions are always shown. */
+@media (hover: none) {
+  .hover-reveal {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* 11. Safe areas --------------------------------------------------------------
+   With viewport-fit=cover (index.html) the page can extend under notches and
+   gesture bars. Fixed bottom chrome should add `padding-bottom: var(--safe-bottom)`
+   and fixed top chrome `padding-top: var(--safe-top)`. */
+
+/* 12. Remaining small touch targets -------------------------------------------
+   Controls that are visually compact but must still be 40px to hit with a thumb.
+   Switches and breadcrumb links keep their look; the hit area is extended with
+   an invisible pseudo-element / min-height, so layouts don't shift. */
+@media (pointer: coarse) {
+  .navbar__logo,
+  .app-nav__logo {
+    min-height: var(--tap-min, 40px);
+    display: inline-flex;
+    align-items: center;
+  }
+  .fs-bc-link,
+  .fsec-bc-link,
+  .notif-bc-link,
+  .fsec-forgot-link-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min, 40px);
+  }
+  .fs-switch,
+  .fsec-switch,
+  .fsec-eye-btn,
+  .arc-card__bookmark-btn {
+    position: relative;
+  }
+  .fs-switch::after,
+  .fsec-switch::after,
+  .fsec-eye-btn::after,
+  .arc-card__bookmark-btn::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+  .footer__panel-input,
+  .notif-search-input,
+  .fl-tag-input__field {
+    min-height: var(--tap-min, 40px);
   }
 }

@@ -159,7 +159,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             onClick={() => avatarPickerRef.current?.click()}
           >
             <Camera size={22} />
-            <span style={{ fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>Change</span>
+            <span style={{ fontSize: '12px', fontWeight: '700', marginTop: '4px' }}>Change</span>
             <ImageSourcePicker
               ref={avatarPickerRef}
               accept="image/*"

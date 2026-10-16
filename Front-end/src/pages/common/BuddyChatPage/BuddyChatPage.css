@@ -3,15 +3,19 @@
    Approved Theme: Deep Navy, Emerald, Light Mint, Slate, White
    ============================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
+/* Fonts: Inter / Outfit are loaded once by styles/variables.css (a per-page @import here was a duplicate render-blocking request). */
 
 .bc-page {
   max-width: 820px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 4.5rem);
-  min-height: 480px;
+  /* Fit exactly inside the app shell: visible height minus the sticky navbar and the
+     shell container's top+bottom padding (see layouts/FreelancerLayout.css), so the
+     input bar is never pushed below the fold. --bc-pad = container padding top+bottom. */
+  --bc-pad: 96px;
+  height: calc(var(--app-vh, var(--vh-full, 100vh)) - var(--app-nav-h, 72px) - var(--bc-pad) - var(--safe-bottom, 0px));
+  min-height: 360px;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 18px;
@@ -218,18 +222,30 @@
   box-shadow: none;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .bc-page {
-    height: calc(100vh - 6.25rem);
+    --bc-pad: 72px;
     border-radius: 14px;
   }
 }
 
-@media (max-width: 768px) {
-  .bc-page {
-    height: calc(100vh - 5.5rem);
-  }
+@media (max-width: 767.98px) {
   .bc-msg {
     max-width: 88%;
   }
+  .bc-header { padding: 0.9rem 1rem; }
+  .bc-feed { padding: 1rem; }
+  .bc-chips { padding: 0 1rem 0.75rem; }
+  .bc-input { padding: 0.75rem 1rem; }
+}
+
+@media (max-width: 639.98px) {
+  .bc-page {
+    --bc-pad: 56px;
+    border-radius: 12px;
+  }
+}
+
+@media (pointer: coarse) {
+  .bc-chip { min-height: var(--tap-min, 40px); }
 }

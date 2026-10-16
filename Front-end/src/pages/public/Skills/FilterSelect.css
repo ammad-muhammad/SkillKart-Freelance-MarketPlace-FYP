@@ -25,6 +25,7 @@
   cursor: pointer;
   white-space: nowrap;
   min-width: 136px;
+  min-height: var(--tap-min, 40px);
   justify-content: space-between;
   transition: all 0.2s ease;
   user-select: none;
@@ -56,6 +57,13 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
 }
 
+/* Label: ellipsize inside the nowrap trigger */
+.fsel__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Chevron icon */
 .fsel__chevron {
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -77,12 +85,17 @@
   box-shadow:
     0 12px 32px rgba(11, 41, 66, 0.10),
     0 2px 8px rgba(11, 41, 66, 0.04);
-  z-index: 9999;
+  z-index: var(--layer-dropdown, 2100);
   padding: 6px;
   list-style: none;
   margin: 0;
   animation: fsel-drop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
-  overflow: hidden;
+  /* long option lists scroll inside the panel instead of running off-screen */
+  max-height: min(320px, 50vh);
+  max-width: calc(100vw - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 /* Arrow pointer */
@@ -116,6 +129,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: var(--tap-min, 40px);
   padding: 9px 14px;
   border-radius: 8px;
   font-size: 13px;
@@ -151,7 +165,7 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .fsel {
     width: 100%;
     min-width: 0;

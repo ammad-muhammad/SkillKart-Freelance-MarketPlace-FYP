@@ -20,6 +20,7 @@ import { validateFile } from '../../utils/uploadHelper';
 import { aiAPI } from '../../api/ai';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
+import './FreelancerControls.css';
 import './CreateGig.css';
 
 const STEPS = [

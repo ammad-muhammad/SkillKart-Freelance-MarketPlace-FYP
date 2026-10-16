@@ -5,6 +5,8 @@ import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import Loader from '../../../Components/common/Loader/Loader';
 import GigCard from '../../../Components/common/GigCard/GigCard';
+import BackButton from '../../../Components/common/BackButton/BackButton';
+import { isMobileApp } from '../../../utils/platform';
 import { gigsAPI } from '../../../api/gigs';
 import { publicAPI } from '../../../api/publicData';
 import './BrowseGigs.css';
@@ -180,6 +182,11 @@ export default function BrowseGigs() {
         <div className="bg-container">
           {/* ─── A) Compact Hero Banner with Mint Gradient ─── */}
           <section className="bg-hero">
+            {isMobileApp() && (
+              <div className="bg-hero__back">
+                <BackButton />
+              </div>
+            )}
             <span className="bg-hero__badge">
               🛍️ SkillKart Marketplace
             </span>

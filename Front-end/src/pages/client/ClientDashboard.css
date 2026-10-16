@@ -4,7 +4,7 @@
    Matches exact layout, cards, typography, and visual treatment of Freelancer Dashboard
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
+/* Fonts: Plus Jakarta Sans / Inter / Outfit are loaded once by styles/freelancer-ds.css + variables.css (a per-page @import here was a duplicate render-blocking request). */
 
 :root {
   --cl-primary:        #10B981;
@@ -208,7 +208,7 @@
   background: #FFFFFF;
   color: var(--cl-primary);
   border: 1px solid var(--cl-mint-border);
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -400,6 +400,17 @@
   border-color: var(--cl-mint-border);
 }
 
+.cl-btn--secondary {
+  background: var(--cl-mint);
+  color: var(--cl-primary-dark);
+  border-color: var(--cl-mint-border);
+}
+
+.cl-btn--secondary:hover:not(:disabled) {
+  background: var(--cl-mint-hover);
+  border-color: var(--cl-primary);
+}
+
 .cl-btn--danger {
   background: var(--cl-danger);
   color: #FFFFFF !important;
@@ -526,7 +537,7 @@ div.cl-input {
 }
 
 .cl-char-count {
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--cl-text-subtle);
   text-align: right;
   margin-top: 0.2rem;
@@ -568,7 +579,7 @@ div.cl-input {
   gap: 0.4rem;
   padding: 0.3rem 0.85rem;
   border-radius: var(--cl-radius-pill);
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -940,6 +951,7 @@ div.cl-input {
   justify-content: center;
   align-items: center;
   padding: 1.25rem;
+  padding-bottom: calc(1.25rem + var(--safe-bottom, 0px));
   animation: clFadeIn 0.18s ease;
 }
 
@@ -953,7 +965,7 @@ div.cl-input {
   border-radius: var(--cl-radius-xl);
   width: 100%;
   max-width: 540px;
-  max-height: 90vh;
+  max-height: calc(var(--app-vh, var(--vh-full, 100vh)) * 0.9);
   overflow-y: auto;
   box-shadow: var(--cl-shadow-modal);
   display: flex;
@@ -997,8 +1009,8 @@ div.cl-input {
   color: var(--cl-text-subtle);
   cursor: pointer;
   transition: all 0.2s;
-  width: 36px;
-  height: 36px;
+  width: var(--tap-min, 40px);
+  height: var(--tap-min, 40px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1024,6 +1036,7 @@ div.cl-input {
   display: flex;
   justify-content: flex-end;
   gap: 0.85rem;
+  flex-wrap: wrap;
   background: var(--cl-surface-subtle);
   border-bottom-left-radius: var(--cl-radius-xl);
   border-bottom-right-radius: var(--cl-radius-xl);
@@ -1036,13 +1049,13 @@ div.cl-input {
   margin: 1.75rem 0;
 }
 
-/* ── Responsive Behavior ── */
-@media (max-width: 768px) {
+/* ── Responsive Behavior ── (breakpoint scale 480 / 768 / 1024 / 1280 / 1700) */
+@media (max-width: 767.98px) {
   .cl-form-grid {
     grid-template-columns: 1fr !important;
   }
   .cl-stat-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .cl-card {
     padding: 1.35rem;
@@ -1050,12 +1063,19 @@ div.cl-input {
   .cl-page-title {
     font-size: 1.5rem;
   }
-  .cl-btn {
+  /* Full-width buttons only where they are a primary stacked action — NOT every
+     .cl-btn (that used to stretch header, toolbar and inline buttons too). */
+  .cl-actions .cl-btn,
+  .cl-page-header .cl-btn,
+  .cl-modal__footer .cl-btn {
     width: 100%;
     justify-content: center;
   }
+  .cl-btn,
   .cl-btn--sm {
-    width: auto;
+    /* long labels ("Milestone 2 Escrow Funded") wrap instead of overflowing */
+    white-space: normal;
+    text-align: center;
   }
   .cl-actions {
     flex-direction: column;
@@ -1064,9 +1084,18 @@ div.cl-input {
     flex-wrap: wrap;
     gap: 1rem;
   }
+  .cl-modal-overlay { padding: 0.75rem; padding-bottom: calc(0.75rem + var(--safe-bottom, 0px)); }
+  .cl-modal {
+    max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - 1.5rem);
+  }
+  .cl-modal__header { padding: 1rem 1.15rem; }
+  .cl-modal__body,
+  .cl-modal__content { padding: 1.15rem; }
+  .cl-modal__footer { padding: 1rem 1.15rem; }
+  .cl-toggle { padding: 1rem; gap: 0.85rem; }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
   .cl-stat-grid {
     grid-template-columns: 1fr;
   }
@@ -1075,5 +1104,22 @@ div.cl-input {
   }
   .cl-stat-card {
     padding: 1.15rem;
+  }
+  .cl-proj-card { padding: 1.15rem; }
+  .cl-recent-proj { padding: 1rem; gap: 0.75rem; }
+}
+
+/* Touch: >=40px targets (desktop untouched) */
+@media (pointer: coarse) {
+  .cl-btn,
+  .cl-filter-pill {
+    min-height: var(--tap-min, 40px);
+  }
+  .cl-btn--sm { padding-top: 0.55rem; padding-bottom: 0.55rem; }
+  /* hover lift/transform on cards sticks after a tap on touch screens */
+  .cl-card:hover,
+  .cl-stat-card:hover,
+  .cl-recent-proj:hover {
+    transform: none;
   }
 }

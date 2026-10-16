@@ -105,6 +105,7 @@ export const JobsPage = () => {
       headerRight={<ExportButtons onExport={format => openExternal(adminJobs.exportUrl({ format }))} />}>
       <AdminFilterBar>
         <input className="ap-input" style={{ maxWidth: 240 }} placeholder="Search title…"
+          enterKeyHint="search"
           onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
         <CustomSelect
           compact
@@ -125,7 +126,7 @@ export const JobsPage = () => {
             <td style={{ fontSize: '0.85rem' }}>{fmt.budget(job.budget)}</td>
             <td style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>{fmt.date(job.createdAt)}</td>
             <td>
-              <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/jobs/${job._id}`)}>👁</button>
+              <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/jobs/${job._id}`)} aria-label="View details">👁</button>
             </td>
           </tr>
         )}
@@ -146,6 +147,7 @@ export const ContractsPage = () => {
       headerRight={<ExportButtons onExport={format => openExternal(adminContracts.exportUrl({ format }))} />}>
       <AdminFilterBar>
         <input className="ap-input" style={{ maxWidth: 260 }} placeholder="Search job title or user…"
+          enterKeyHint="search"
           onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="📋" emptyTitle="No contracts found"
@@ -159,7 +161,7 @@ export const ContractsPage = () => {
             <td style={{ fontSize: '0.82rem' }}>{c.freelancerId?.email || '—'}</td>
             <td style={{ fontSize: '0.85rem' }}>{fmt.currency(c.fixedPrice || c.hourlyRate)}</td>
             <td style={{ fontSize: '0.82rem', color: 'var(--ap-text-muted)' }}>{fmt.date(c.startedAt)}</td>
-            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/contracts/${c._id}`)}>👁</button></td>
+            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/contracts/${c._id}`)} aria-label="View details">👁</button></td>
           </tr>
         )}
       />
@@ -244,7 +246,7 @@ export const PaymentsPage = () => {
             <td style={{ color: 'var(--ap-green)', fontSize: '0.82rem' }}>{fmt.currency(p.platformFee, p.currency)}</td>
             <td><StatusBadge status={p.status} /></td>
             <td style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{fmt.date(p.createdAt)}</td>
-            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/payments/${p._id}`)}>👁</button></td>
+            <td><button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={() => navigate(`/admin-panel/payments/${p._id}`)} aria-label="View details">👁</button></td>
           </tr>
         )}
       />
@@ -270,6 +272,7 @@ export const WalletsPage = () => {
     <PageShell title="Wallets" desc="All user wallet balances" icon="👛">
       <AdminFilterBar>
         <input className="ap-input" style={{ maxWidth: 240 }} placeholder="Search email or name…"
+          enterKeyHint="search"
           onKeyDown={e => e.key === 'Enter' && load({ search: e.target.value, page: 1 })} />
       </AdminFilterBar>
       <ListTable loading={loading} data={data} error={error} onRetry={load} emptyIcon="👛" emptyTitle="No wallets found"
@@ -830,8 +833,8 @@ export const AnalyticsPage = () => {
         </div>
 
         {/* Visual Bar & Trend Chart */}
-        <div style={{ padding: '16px 0 8px' }}>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', height: 220, padding: '0 8px', position: 'relative' }}>
+        <div style={{ padding: '16px 0 8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', height: 220, padding: '0 8px', position: 'relative', minWidth: Math.max(0, (data?.revenueByMonth?.length || 0) * 56) }}>
             {/* Background Grid Lines */}
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', opacity: 0.15 }}>
               <div style={{ borderTop: '1px dashed var(--ap-text-muted)', width: '100%' }} />
@@ -850,6 +853,7 @@ export const AnalyticsPage = () => {
                   key={r._id}
                   onMouseEnter={() => setActiveBar(index)}
                   onMouseLeave={() => setActiveBar(null)}
+                  onClick={() => setActiveBar(prev => (prev === index ? null : index))}
                   style={{
                     flex: 1,
                     display: 'flex',
@@ -868,6 +872,8 @@ export const AnalyticsPage = () => {
                     <div style={{
                       position: 'absolute',
                       bottom: `${Math.max(heightPct, 15) + 10}%`,
+                      /* keep the tooltip inside the chart for the first/last bars */
+                      ...(index === 0 ? { left: 0 } : index === (data.revenueByMonth.length - 1) ? { right: 0 } : {}),
                       background: 'var(--ap-bg-card)',
                       border: '1px solid var(--ap-border-active)',
                       padding: '8px 12px',
@@ -1125,9 +1131,9 @@ export const SettingsPage = () => {
             <span className="ap-card-title">{CATEGORY_ICONS[cat] || '•'} {cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
           </div>
           {catSettings.map(s => (
-            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--ap-border)' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--ap-blue-light)', marginBottom: 2 }}>{s.key}</div>
+            <div key={s.key} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--ap-border)' }}>
+              <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--ap-blue-light)', marginBottom: 2, overflowWrap: 'anywhere' }}>{s.key}</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)' }}>{s.description}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1143,7 +1149,7 @@ export const SettingsPage = () => {
                   <>
                     <input
                       className="ap-input"
-                      style={{ width: 120, textAlign: 'right' }}
+                      style={{ width: 120, maxWidth: '100%', textAlign: 'right' }}
                       type={s.valueType === 'number' ? 'number' : 'text'}
                       defaultValue={s.value}
                       onChange={e => setEditing(prev => ({ ...prev, [s.key]: s.valueType === 'number' ? Number(e.target.value) : e.target.value }))}

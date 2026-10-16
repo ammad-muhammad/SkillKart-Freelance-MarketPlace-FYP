@@ -97,9 +97,10 @@ export default function FreelancerArcSlider({ freelancers = [] }) {
 
   // Update card positions directly via transform to avoid layout thrashing
   const updatePositions = () => {
-    const { cardsCount, R, cx, cy, STEP } = geometry;
+    const { cardsCount, cardW, R, cx, cy, STEP } = geometry;
     const currentOffset = offsetRef.current;
     const radFactor = Math.PI / 180;
+    const zoneW = cx * 2;
 
     for (let i = 0; i < cardsCount; i++) {
       const el = cardRefs.current[i];
@@ -111,8 +112,12 @@ export default function FreelancerArcSlider({ freelancers = [] }) {
       const a = normA > 180 ? normA - 360 : normA;
       const absA = Math.abs(a);
 
-      // Only cards with |a| < 70 are displayed
-      if (absA >= 70) {
+      // Only cards with |a| < 70 are displayed, and of those only the ones that
+      // are actually on screen (+ one card of margin) — off-screen blurred
+      // glass cards are pure GPU cost on phones.
+      const rad = a * radFactor;
+      const x = cx + R * Math.sin(rad);
+      if (absA >= 70 || x < -cardW || x > zoneW + cardW) {
         if (el.style.display !== 'none') {
           el.style.display = 'none';
         }
@@ -120,8 +125,6 @@ export default function FreelancerArcSlider({ freelancers = [] }) {
         if (el.style.display !== 'block') {
           el.style.display = 'block';
         }
-        const rad = a * radFactor;
-        const x = cx + R * Math.sin(rad);
         const y = cy - R * Math.cos(rad);
         el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) translate(-50%, -50%) rotate(${a.toFixed(2)}deg)`;
       }
@@ -204,8 +207,8 @@ export default function FreelancerArcSlider({ freelancers = [] }) {
             ref={(el) => { cardRefs.current[index] = el; }}
             className="arc-card-wrapper"
             style={{ width: `${geometry.cardW}px` }}
-            onMouseEnter={() => { isPausedRef.current = true; }}
-            onMouseLeave={() => { isPausedRef.current = false; }}
+            onPointerEnter={(e) => { if (e.pointerType === 'mouse') isPausedRef.current = true; }}
+            onPointerLeave={(e) => { if (e.pointerType === 'mouse') isPausedRef.current = false; }}
           >
             {/* Inner glass shell handles hover lift/glow/scale without fighting RAF transform */}
             <article className="arc-card-glass">

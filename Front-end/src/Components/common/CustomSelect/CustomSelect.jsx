@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import useDropdownPlacement, { placementStyle } from '../useDropdownPlacement';
 import './CustomSelect.css';
 
 /**
@@ -28,6 +29,8 @@ export default function CustomSelect({
 }) {
     const [open, setOpen] = useState(false);
     const rootRef = useRef(null);
+    const menuRef = useRef(null);
+    const placement = useDropdownPlacement(open, rootRef, menuRef, options.length);
 
     /* normalise options → [{value, label}] */
     const items = options.map(o =>
@@ -85,7 +88,7 @@ export default function CustomSelect({
 
             {/* Dropdown */}
             {open && (
-                <div className="csel__menu" role="listbox">
+                <div className="csel__menu" role="listbox" ref={menuRef} style={placementStyle(placement)}>
                     {items.map(item => (
                         <div
                             key={item.value}

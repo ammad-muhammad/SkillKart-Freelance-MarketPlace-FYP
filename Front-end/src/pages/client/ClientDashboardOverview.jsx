@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FolderOpen, Zap, Users2, Building2, MapPin, Calendar, Globe, User, Edit2, Plus, Search,
@@ -13,6 +13,7 @@ import Reveal, { useInView } from '../freelancer/components/Reveal';
 import PkrIcon from '../../Components/common/PkrIcon';
 import Loader from '../../Components/common/Loader/Loader';
 import { isMobileApp } from '../../utils/platform';
+import { FinishOnboardingBanner } from '../../Components/common/SkipOnboarding/SkipOnboarding';
 import '../freelancer/BentoDashboard.css';
 import './ClientDashboard.css';
 
@@ -52,7 +53,22 @@ export default function ClientDashboardOverview() {
   // Analytics Chart State
   const [spendRange, setSpendRange] = useState('Monthly');
   const [hoveredChartIdx, setHoveredChartIdx] = useState(null);
-  const [chartAreaRef, chartInView] = useInView({ threshold: 0.2 });
+  const [chartAreaRef] = useInView({ threshold: 0.2 });
+
+  // Measure the chart's real width so the SVG is drawn 1:1 (fonts stay 12px on
+  // phones instead of being scaled down with a fixed 560px viewBox).
+  const chartBoxRef = useRef(null);
+  const [chartBoxWidth, setChartBoxWidth] = useState(560);
+  useEffect(() => {
+    const el = chartBoxRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w > 0) setChartBoxWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loading]);
 
   // Real stats calculation
   const openProjects = projects.filter(p => p.status === 'open').length;
@@ -84,10 +100,10 @@ export default function ClientDashboardOverview() {
   // Spending Chart Calculations
   const chartData = SPEND_CHART_RANGES[spendRange] || SPEND_CHART_RANGES.Monthly;
   const maxSpendVal = Math.max(...chartData.map(d => d.val), 10000);
-  const chartWidth = 560;
+  const chartWidth = Math.max(260, Math.min(chartBoxWidth, 760));
   const chartHeight = 160;
-  const padLeft = 40;
-  const padRight = 20;
+  const padLeft = chartWidth < 420 ? 30 : 40;
+  const padRight = chartWidth < 420 ? 14 : 20;
   const padTop = 15;
   const padBottom = 25;
   const plotW = chartWidth - padLeft - padRight;
@@ -106,6 +122,10 @@ export default function ClientDashboardOverview() {
     ? `${pathD} L ${chartPoints[chartPoints.length - 1].x} ${padTop + plotH} L ${chartPoints[0].x} ${padTop + plotH} Z`
     : '';
 
+  // Skip alternate x labels when they would collide on narrow charts.
+  const labelSlot = chartData.length > 1 ? plotW / (chartData.length - 1) : plotW;
+  const labelStep = Math.max(1, Math.ceil(52 / labelSlot));
+
   const totalSpentInRange = chartData.reduce((sum, d) => sum + d.val, 0);
 
   if (loading) {
@@ -116,6 +136,7 @@ export default function ClientDashboardOverview() {
 
   return (
     <div className="fl-bento-dashboard">
+      <FinishOnboardingBanner role="client" />
       {/* =================================================================
           ROW A: HERO BAND (Exact Freelancer Banner Architecture)
           ================================================================= */}
@@ -191,7 +212,7 @@ export default function ClientDashboardOverview() {
               <Link
                 to="/client/profile"
                 className="fl-pill-btn fl-pill-btn--primary"
-                style={{ padding: '6px 14px', fontSize: 12 }}
+                style={{ padding: '6px 14px', fontSize: 12, minHeight: 'var(--tap-min, 40px)' }}
               >
                 Profile & Settings →
               </Link>
@@ -204,7 +225,7 @@ export default function ClientDashboardOverview() {
           ROW B: KPI STRIP (4 Bento KPI Cards with Sparklines & CountUp)
           ================================================================= */}
       <section className="fl-bento-grid" aria-label="Key Performance Indicators">
-        <Reveal delay={0} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={0} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Total Projects"
             value={projects.length}
@@ -217,7 +238,7 @@ export default function ClientDashboardOverview() {
             to="/client/projects"
           />
         </Reveal>
-        <Reveal delay={70} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={70} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Open Job Posts"
             value={openProjects}
@@ -230,7 +251,7 @@ export default function ClientDashboardOverview() {
             to="/client/projects"
           />
         </Reveal>
-        <Reveal delay={140} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={140} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Proposals Received"
             value={totalProposals}
@@ -243,7 +264,7 @@ export default function ClientDashboardOverview() {
             to="/client/projects"
           />
         </Reveal>
-        <Reveal delay={210} style={{ gridColumn: 'span 3' }}>
+        <Reveal delay={210} className="fl-bento-kpi-cell">
           <BentoKPI
             label="Hired Freelancers"
             value={hiredCount}
@@ -270,14 +291,15 @@ export default function ClientDashboardOverview() {
             title="Hiring & Spending Analytics"
             icon={TrendingUp}
             action={
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {['Weekly', 'Monthly', 'Yearly'].map(range => (
                   <button
                     key={range}
                     onClick={() => setSpendRange(range)}
                     className="fl-pill-btn fl-pill-btn--secondary"
                     style={{
-                      padding: '4px 12px',
+                      padding: '8px 14px',
+                      minHeight: 'var(--tap-min, 40px)',
                       fontSize: 12,
                       background: spendRange === range ? '#10B981' : '#FFFFFF',
                       color: spendRange === range ? '#FFFFFF' : '#0B2942',
@@ -293,8 +315,8 @@ export default function ClientDashboardOverview() {
           >
             <div ref={chartAreaRef} style={{ width: '100%', position: 'relative' }}>
               {/* Header metrics bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px 16px', marginBottom: 16 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, color: '#64748B', fontWeight: 600 }}>
                     Total Budget Allocated ({spendRange})
                   </div>
@@ -302,20 +324,20 @@ export default function ClientDashboardOverview() {
                     Rs. {totalSpentInRange.toLocaleString()}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Active Contracts</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 12, color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Active Contracts</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: '#10B981' }}>{inProgressProjects} Ongoing</div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Completed</div>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 12, color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Completed</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: '#0B2942' }}>{completedProjects} Delivered</div>
                   </div>
                 </div>
               </div>
 
               {/* Area Chart SVG */}
-              <div style={{ width: '100%', height: chartHeight, overflow: 'hidden' }}>
+              <div ref={chartBoxRef} style={{ width: '100%', height: chartHeight, overflow: 'hidden' }}>
                 <svg
                   viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                   style={{ width: '100%', height: '100%', overflow: 'visible' }}
@@ -367,6 +389,15 @@ export default function ClientDashboardOverview() {
                   {/* Data points */}
                   {chartPoints.map((p, idx) => (
                     <g key={idx}>
+                      {/* Invisible 44px hit area so points can be tapped on touch screens */}
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={22}
+                        fill="transparent"
+                        onClick={() => setHoveredChartIdx(prev => (prev === idx ? null : idx))}
+                        style={{ cursor: 'pointer' }}
+                      />
                       <circle
                         cx={p.x}
                         cy={p.y}
@@ -376,19 +407,21 @@ export default function ClientDashboardOverview() {
                         strokeWidth="2.5"
                         onMouseEnter={() => setHoveredChartIdx(idx)}
                         onMouseLeave={() => setHoveredChartIdx(null)}
-                        style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
+                        style={{ cursor: 'pointer', transition: 'all 0.15s ease', pointerEvents: 'none' }}
                       />
-                      {/* X-axis labels */}
-                      <text
-                        x={p.x}
-                        y={chartHeight - 6}
-                        textAnchor="middle"
-                        fontSize="11"
-                        fontWeight="600"
-                        fill="#94A3B8"
-                      >
-                        {p.label}
-                      </text>
+                      {/* X-axis labels (thinned out on narrow charts) */}
+                      {(chartPoints.length - 1 - idx) % labelStep === 0 && (
+                        <text
+                          x={p.x}
+                          y={chartHeight - 6}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fontWeight="600"
+                          fill="#64748B"
+                        >
+                          {p.label}
+                        </text>
+                      )}
                     </g>
                   ))}
                 </svg>
@@ -443,10 +476,10 @@ export default function ClientDashboardOverview() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.05em' }}>
                   Available Balance
                 </span>
-                <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#10B981', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800 }}>
+                <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#10B981', padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
                   Active
                 </span>
               </div>
@@ -457,7 +490,7 @@ export default function ClientDashboardOverview() {
                 <Link
                   to="/client/wallet"
                   className="fl-pill-btn fl-pill-btn--primary"
-                  style={{ padding: '6px 14px', fontSize: 12, flex: 1, textAlign: 'center' }}
+                  style={{ padding: '6px 14px', fontSize: 12, flex: 1, textAlign: 'center', justifyContent: 'center', minHeight: 'var(--tap-min, 40px)' }}
                 >
                   Deposit Funds
                 </Link>
@@ -477,7 +510,7 @@ export default function ClientDashboardOverview() {
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0B2942' }}>Post a New Project</div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>Publish a project or gig order</div>
+                    <div style={{ fontSize: 12, color: '#64748B' }}>Publish a project or gig order</div>
                   </div>
                 </div>
                 <ChevronRight size={16} color="#94A3B8" />
@@ -494,7 +527,7 @@ export default function ClientDashboardOverview() {
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0B2942' }}>Saved Freelancers</div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>View bookmarked talent</div>
+                    <div style={{ fontSize: 12, color: '#64748B' }}>View bookmarked talent</div>
                   </div>
                 </div>
                 <ChevronRight size={16} color="#94A3B8" />
@@ -512,7 +545,7 @@ export default function ClientDashboardOverview() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 13, color: '#0B2942' }}>AI Matchmaking</div>
-                      <div style={{ fontSize: 11, color: '#64748B' }}>Find instant best-fit candidates</div>
+                      <div style={{ fontSize: 12, color: '#64748B' }}>Find instant best-fit candidates</div>
                     </div>
                   </div>
                   <ChevronRight size={16} color="#94A3B8" />
@@ -572,7 +605,7 @@ export default function ClientDashboardOverview() {
                         <div className="cl-recent-proj__info">
                           <p className="cl-recent-proj__title" style={{ fontSize: '0.92rem' }}>{p.title}</p>
                           <div className="cl-recent-proj__meta" style={{ fontSize: '0.78rem' }}>
-                            <span className="cl-tag" style={{ padding: '2px 7px', fontSize: 11 }}>
+                            <span className="cl-tag" style={{ padding: '2px 7px', fontSize: 12 }}>
                               {p.category || 'General'}
                             </span>
                             <span className="cl-recent-proj__dot">•</span>
@@ -618,7 +651,7 @@ export default function ClientDashboardOverview() {
             title="Hiring Health & Verification"
             icon={ShieldCheck}
             action={
-              <span className="cl-badge cl-badge--open" style={{ fontSize: 11 }}>
+              <span className="cl-badge cl-badge--open" style={{ fontSize: 12 }}>
                 {workspaceScore}% Complete
               </span>
             }
@@ -658,21 +691,21 @@ export default function ClientDashboardOverview() {
                       {milestone.label}
                     </span>
                   </div>
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: milestone.done ? '#10B981' : '#94A3B8' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: milestone.done ? '#10B981' : '#94A3B8' }}>
                     {milestone.done ? 'Verified' : 'Pending'}
                   </span>
                 </div>
               ))}
 
-              <div style={{ marginTop: 6, padding: '12px 14px', background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
+              <div style={{ marginTop: 6, padding: '12px 14px', background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ minWidth: 0, flex: '1 1 180px' }}>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0B2942' }}>Need Talent Fast?</div>
-                  <div style={{ fontSize: 11, color: '#64748B' }}>Use AI match to pick from top 1% vetted freelancers.</div>
+                  <div style={{ fontSize: 12, color: '#64748B' }}>Use AI match to pick from top 1% vetted freelancers.</div>
                 </div>
                 <Link
                   to="/ai-matchmaking"
                   className="fl-pill-btn fl-pill-btn--primary"
-                  style={{ padding: '6px 12px', fontSize: 11 }}
+                  style={{ padding: '6px 12px', fontSize: 12, minHeight: 'var(--tap-min, 40px)' }}
                 >
                   Match Now
                 </Link>

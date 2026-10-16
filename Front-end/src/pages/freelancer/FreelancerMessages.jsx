@@ -117,6 +117,13 @@ const FreelancerMessages = () => {
     }
   }, [msgInput]);
 
+  // Fallback for WebViews without :has() — mirrors the layout's
+  // `.app-shell:has(.flm-page)` full-height rules (see FreelancerMessages.css).
+  useEffect(() => {
+    document.body.classList.add('flm-active');
+    return () => document.body.classList.remove('flm-active');
+  }, []);
+
   // Esc key for lightbox
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -490,7 +497,7 @@ const FreelancerMessages = () => {
                       title="Send a custom offer"
                     >
                       <Package size={14} />
-                      <span>Send Offer</span>
+                      <span className="flm-send-offer-label">Send Offer</span>
                     </button>
                   )}
 
@@ -672,20 +679,20 @@ const FreelancerMessages = () => {
               </div>
 
               {/* Scroll to bottom button */}
-              {showScrollBottom && (
-                <button
-                  type="button"
-                  className="flm-scroll-bottom-btn"
-                  onClick={scrollToBottom}
-                  aria-label="Scroll to newest messages"
-                  title="Scroll to bottom"
-                >
-                  <ChevronDown size={18} />
-                </button>
-              )}
-
               {/* Message Composer Bar */}
               <form className="flm-composer-bar" onSubmit={handleSendMessage}>
+                {/* Anchored to the composer so it never collides when the textarea grows */}
+                {showScrollBottom && (
+                  <button
+                    type="button"
+                    className="flm-scroll-bottom-btn"
+                    onClick={scrollToBottom}
+                    aria-label="Scroll to newest messages"
+                    title="Scroll to bottom"
+                  >
+                    <ChevronDown size={18} />
+                  </button>
+                )}
                 <ImageSourcePicker
                   ref={fileRef}
                   accept="image/*,.pdf,.doc,.docx"

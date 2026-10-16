@@ -6,7 +6,7 @@
 
 /* ─── Global Page Root & Layout ─── */
 .pfp-page-shell {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background-color: #F8FAFC;
   color: #0F172A;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -92,7 +92,9 @@
 .pfp-breadcrumbs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 4px 8px;
   font-size: 0.84rem;
   color: #64748B;
   font-weight: 500;
@@ -128,7 +130,7 @@
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
   color: #065F46;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 4px 12px;
@@ -212,7 +214,7 @@
   background: #F0FDF4;
   border: 1px solid #BBF7D0;
   color: #166534;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 3px 9px;
   border-radius: 999px;
@@ -257,7 +259,7 @@
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
   color: #065F46;
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
@@ -274,7 +276,7 @@
   background: #EDE9FE;
   border: 1px solid #DDD6FE;
   color: #6D28D9;
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
@@ -428,7 +430,7 @@
   margin: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .pfp-hero-main-row {
     flex-direction: column;
     align-items: center;
@@ -493,7 +495,7 @@
   background: #E2E8F0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 1023.98px) {
   .pfp-kpi-divider {
     display: none;
   }
@@ -502,12 +504,12 @@
 /* ─── 4) TWO-COLUMN ASYMMETRIC GRID ─── */
 .pfp-two-col-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .pfp-two-col-layout {
     grid-template-columns: 1fr;
   }
@@ -517,6 +519,7 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
+  min-width: 0;
 }
 
 /* Common Section Card */
@@ -682,7 +685,7 @@
 }
 
 .pfp-gig-category {
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #10B981;
   text-transform: uppercase;
@@ -724,6 +727,8 @@
 
 .pfp-gig-footer-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
   margin-top: 4px;
@@ -731,6 +736,7 @@
 
 .pfp-gig-specs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -739,7 +745,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
@@ -766,7 +772,7 @@
   background: #059669;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767.98px) {
   .pfp-gig-row-card {
     flex-direction: column;
   }
@@ -783,7 +789,7 @@
   gap: 14px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 479.98px) {
   .pfp-skills-grid {
     grid-template-columns: 1fr;
   }
@@ -815,7 +821,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #065F46;
   background: #ECFDF5;
@@ -839,7 +845,7 @@
 }
 
 .pfp-skill-percent {
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
 }
 
@@ -850,7 +856,7 @@
   gap: 16px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 479.98px) {
   .pfp-portfolio-grid {
     grid-template-columns: 1fr;
   }
@@ -990,7 +996,7 @@
 }
 
 .pfp-edu-date {
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #94A3B8;
 }
 
@@ -1006,6 +1012,18 @@
   gap: 20px;
   position: sticky;
   top: calc(var(--navbar-h, 72px) + 20px);
+  /* taller than a short laptop viewport? scroll inside instead of hiding the lower boxes */
+  max-height: calc(var(--vh-full, 100vh) - var(--navbar-h, 72px) - 40px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 1023.98px) {
+  .pfp-sidebar-column {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 .pfp-sticky-hire-card {
@@ -1055,7 +1073,7 @@
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
   color: #065F46;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 999px;
@@ -1241,8 +1259,34 @@
 }
 
 .pfp-trust-text p {
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
   margin: 1px 0 0;
   line-height: 1.4;
+}
+
+.pfp-back-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: -6px;
+}
+
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .pfp-icon-action {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .pfp-btn-primary,
+  .pfp-btn-secondary,
+  .pfp-inquiry-submit,
+  .pfp-gig-order-btn,
+  .pfp-social-item {
+    min-height: var(--tap-min, 40px);
+  }
+  .pfp-portfolio-link {
+    min-height: var(--tap-min, 40px);
+    padding-top: 0;
+    align-items: center;
+  }
 }

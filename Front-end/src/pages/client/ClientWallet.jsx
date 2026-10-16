@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
 import { paymentsAPI } from '../../api/payments';
@@ -13,6 +14,7 @@ import useFocusTrap from '../../hooks/useFocusTrap';
 import Reveal, { useInView } from '../freelancer/components/Reveal';
 import { useCountUp } from '../freelancer/components/BentoKPI';
 import '../freelancer/FreelancerWallet.css';
+import './ClientResponsive.css';
 
 const STATUS_LABELS = {
   deposit_pending: 'Awaiting deposit',
@@ -43,6 +45,21 @@ const getStatusBadgeConfig = (tx) => {
 function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
   const [showEscrow, setShowEscrow] = useState(true);
   const [hoverIndex, setHoverIndex] = useState(null);
+
+  // Draw the SVG at its real pixel width (1:1) so text stays 12px on phones
+  // instead of shrinking with a fixed 560px viewBox.
+  const boxRef = useRef(null);
+  const [boxW, setBoxW] = useState(560);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w > 0) setBoxW(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const formatShortPkr = (num) => {
     if (!num || num === 0) return '0';
@@ -88,14 +105,18 @@ function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
     10000
   );
 
-  const width = 560;
-  const height = 180;
-  const padLeft = 45;
-  const padRight = 20;
+  const width = Math.max(260, Math.min(boxW, 900));
+  const height = 190;
+  const padLeft = width < 420 ? 38 : 45;
+  const padRight = width < 420 ? 14 : 20;
   const padTop = 20;
-  const padBottom = 30;
+  const padBottom = 34;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
+
+  // Thin out x labels when they would collide on narrow charts.
+  const labelSlot = chartData.length > 1 ? plotW / (chartData.length - 1) : plotW;
+  const labelStep = Math.max(1, Math.ceil(56 / labelSlot));
 
   const points = chartData.map((d, i) => {
     const x = chartData.length === 1 ? padLeft + plotW / 2 : padLeft + (i / (chartData.length - 1)) * plotW;
@@ -139,8 +160,8 @@ function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
         </div>
       </div>
 
-      <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <div ref={boxRef} style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+        <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={{ maxWidth: '100%', display: 'block' }}>
           <defs>
             <linearGradient id="clientSpendGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#10B981" stopOpacity="0.32" />
@@ -155,7 +176,7 @@ function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
             return (
               <g key={idx}>
                 <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                <text x={padLeft - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#94A3B8" fontWeight="600" fontFamily="monospace">
+                <text x={padLeft - 8} y={y + 3} textAnchor="end" fontSize="12" fill="#64748B" fontWeight="600" fontFamily="monospace">
                   {val}
                 </text>
               </g>
@@ -172,20 +193,36 @@ function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
             <path d={escrowPath} fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
           )}
 
-          {/* Interactive Dots */}
+          {/* Interactive Dots (hover on desktop, tap on touch) */}
           {points.map((p, idx) => (
-            <circle
-              key={idx}
-              cx={p.x}
-              cy={p.ySpend}
-              r={hoverIndex === idx ? 5.5 : 3.5}
-              fill="#FFFFFF"
-              stroke="#10B981"
-              strokeWidth={hoverIndex === idx ? 3 : 2}
-              style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-              onMouseEnter={() => setHoverIndex(idx)}
-              onMouseLeave={() => setHoverIndex(null)}
-            />
+            <g key={idx}>
+              {/* x-axis label lives inside the SVG so it always lines up with its point */}
+              {(points.length - 1 - idx) % labelStep === 0 && (
+                <text x={p.x} y={height - 10} textAnchor="middle" fontSize="12" fontWeight="600" fill="#64748B" fontFamily="monospace">
+                  {p.label}
+                </text>
+              )}
+              <circle
+                cx={p.x}
+                cy={p.ySpend}
+                r={hoverIndex === idx ? 5.5 : 3.5}
+                fill="#FFFFFF"
+                stroke="#10B981"
+                strokeWidth={hoverIndex === idx ? 3 : 2}
+                style={{ transition: 'all 0.15s ease', pointerEvents: 'none' }}
+              />
+              {/* Invisible 44px hit area */}
+              <circle
+                cx={p.x}
+                cy={p.ySpend}
+                r={22}
+                fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHoverIndex(idx)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onClick={() => setHoverIndex(prev => (prev === idx ? null : idx))}
+              />
+            </g>
           ))}
         </svg>
 
@@ -193,13 +230,13 @@ function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
           <div style={{
             position: 'absolute',
             top: 0,
-            left: `${(points[hoverIndex].x / width) * 100}%`,
+            left: Math.min(Math.max(points[hoverIndex].x, 70), width - 70),
             transform: 'translateX(-50%)',
             background: '#0B2942',
             color: '#FFFFFF',
             padding: '6px 12px',
             borderRadius: 8,
-            fontSize: 11.5,
+            fontSize: 12,
             fontWeight: 600,
             pointerEvents: 'none',
             boxShadow: '0 4px 14px rgba(11, 41, 66, 0.25)',
@@ -215,18 +252,6 @@ function SpendingAreaChart({ payments = [], range = 'Monthly' }) {
         )}
       </div>
 
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        padding: `0 ${padRight}px 0 ${padLeft}px`,
-        fontSize: 11,
-        color: '#94A3B8',
-        fontFamily: 'monospace'
-      }}>
-        {chartData.map((d) => (
-          <span key={d.label}>{d.label}</span>
-        ))}
-      </div>
     </div>
   );
 }
@@ -455,7 +480,7 @@ export default function ClientWallet() {
                   <ShieldCheck size={15} />
                   <span>Escrow Protected & Bank Guaranteed</span>
                 </div>
-                <span style={{ fontWeight: 700, fontSize: 11.5 }}>
+                <span style={{ fontWeight: 700, fontSize: 12 }}>
                   ● Instant Checkout
                 </span>
               </div>
@@ -694,7 +719,7 @@ export default function ClientWallet() {
                                 <span className="fl-wall-tx-title" title={title}>
                                   {title}
                                 </span>
-                                <span style={{ fontSize: 11.5, color: '#94A3B8', marginTop: 2 }}>
+                                <span style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>
                                   {isDeposit ? 'Direct wallet top-up via Stripe' : (tx.contractId ? 'Contract Milestone' : 'Custom Project Offer')}
                                 </span>
                               </div>
@@ -720,7 +745,7 @@ export default function ClientWallet() {
                             <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0B2942' }}>
                               {txDate}
                             </div>
-                            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
+                            <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>
                               {txTime}
                             </div>
                           </td>
@@ -773,7 +798,7 @@ export default function ClientWallet() {
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <span className="fl-wall-tx-title" style={{ maxWidth: 200 }}>{title}</span>
-                            <span style={{ fontSize: 11, color: '#94A3B8' }}>#{String(tx._id || '').slice(-6).toUpperCase()}</span>
+                            <span style={{ fontSize: 12, color: '#94A3B8' }}>#{String(tx._id || '').slice(-6).toUpperCase()}</span>
                           </div>
                         </div>
                         <span className={isDeposit ? 'fl-wall-amount-credit' : 'fl-wall-amount-debit'}>
@@ -782,7 +807,7 @@ export default function ClientWallet() {
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid #F1F5F9' }}>
-                        <span style={{ fontSize: 11.5, color: '#94A3B8' }}>{txDate} at {txTime}</span>
+                        <span style={{ fontSize: 12, color: '#94A3B8' }}>{txDate} at {txTime}</span>
                         <span className={`fl-wall-status-chip fl-wall-status-chip--${badge.cls}`}>
                           <span className="fl-wall-status-chip__dot" />
                           {badge.label}
@@ -814,8 +839,8 @@ export default function ClientWallet() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        minWidth: 34,
-                        height: 34,
+                        minWidth: 40,
+                        height: 40,
                         padding: '0 8px',
                         borderRadius: 9999,
                         background: 'transparent',
@@ -840,8 +865,8 @@ export default function ClientWallet() {
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          minWidth: 34,
-                          height: 34,
+                          minWidth: 40,
+                          height: 40,
                           padding: '0 8px',
                           borderRadius: 9999,
                           background: page === p ? '#0B2942' : 'transparent',
@@ -862,8 +887,8 @@ export default function ClientWallet() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        minWidth: 34,
-                        height: 34,
+                        minWidth: 40,
+                        height: 40,
                         padding: '0 8px',
                         borderRadius: 9999,
                         background: 'transparent',
@@ -890,9 +915,9 @@ export default function ClientWallet() {
       </Reveal>
 
       {/* ── D) DEPOSIT MODAL ── */}
-      {depositModal && (
+      {depositModal && createPortal(
         <div className="fl-modal-overlay">
-          <div className="fl-modal-card" ref={depositModalRef}>
+          <div className="fl-modal-card" ref={depositModalRef} role="dialog" aria-modal="true" aria-label="Deposit funds">
             <div className="fl-modal-hd">
               <div>
                 <h3 className="fl-modal-title">Deposit Funds to Wallet</h3>
@@ -910,7 +935,7 @@ export default function ClientWallet() {
 
             <div className="fl-modal-body">
               <label className="fsec-field-label">Quick Presets</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))', gap: 8, marginBottom: 16 }}>
                 {[5000, 10000, 25000, 50000].map(val => (
                   <button
                     key={val}
@@ -979,7 +1004,8 @@ export default function ClientWallet() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

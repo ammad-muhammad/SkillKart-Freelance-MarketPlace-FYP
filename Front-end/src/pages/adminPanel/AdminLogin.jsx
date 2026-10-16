@@ -63,13 +63,13 @@ const AdminLogin = () => {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: 'var(--app-vh, var(--vh-full, 100vh))',
       background: 'radial-gradient(ellipse at top left, #0B2942 0%, #061A2B 60%, #030D16 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: "'Inter', sans-serif",
-      padding: '24px'
+      padding: 'max(16px, var(--safe-top, 0px)) 16px max(16px, var(--safe-bottom, 0px))'
     }}>
       {/* Background grid decoration */}
       <div style={{
@@ -95,7 +95,7 @@ const AdminLogin = () => {
         <div style={{
           background: 'rgba(11, 41, 66, 0.85)',
           border: '1px solid rgba(226, 232, 240, 0.12)',
-          borderRadius: 20, padding: '32px',
+          borderRadius: 20, padding: 'clamp(20px, 6vw, 32px)',
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
           backdropFilter: 'blur(16px)'
         }}>
@@ -104,7 +104,7 @@ const AdminLogin = () => {
             {['Credentials', 'OTP'].map((s, i) => (
               <div key={s} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{
-                  width: 24, height: 24, borderRadius: '50%', fontSize: '0.72rem', fontWeight: 700,
+                  width: 24, height: 24, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   background: i === 0 && step === 'credentials' ? '#10B981' : i === 1 && step === 'otp' ? '#10B981' : step === 'otp' && i === 0 ? '#10B981' : 'rgba(255,255,255,0.08)',
                   color: (i === 0 && step === 'credentials') || (i === 1 && step === 'otp') || (step === 'otp' && i === 0) ? '#fff' : '#94A3B8',
@@ -212,7 +212,7 @@ const AdminLogin = () => {
                   Enter OTP
                 </label>
                 <input
-                  type="text" required autoFocus maxLength={6} pattern="\d{6}"
+                  type="text" required autoFocus maxLength={6} pattern="\d{6}" inputMode="numeric" autoComplete="one-time-code"
                   value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
                   placeholder="000000"
                   style={{

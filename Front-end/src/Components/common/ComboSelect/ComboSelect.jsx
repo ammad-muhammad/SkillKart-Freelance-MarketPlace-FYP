@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Check, Search } from 'lucide-react';
+import useDropdownPlacement, { placementStyle } from '../useDropdownPlacement';
 import './ComboSelect.css';
 
 /**
@@ -38,6 +39,7 @@ export default function ComboSelect({
   const [active, setActive] = useState(0); // highlighted option index
   const rootRef = useRef(null);
   const inputRef = useRef(null);
+  const menuRef = useRef(null);
 
   /* normalise options → [{value, label}] */
   const items = useMemo(
@@ -56,6 +58,8 @@ export default function ComboSelect({
     if (!q) return items;
     return items.filter((o) => o.label.toLowerCase().includes(q));
   }, [items, query, searchable]);
+
+  const placement = useDropdownPlacement(open, rootRef, menuRef, filtered.length);
 
   /* close on outside click */
   useEffect(() => {
@@ -136,7 +140,7 @@ export default function ComboSelect({
       </div>
 
       {open && (
-        <div className="cmbo__menu" id={id ? `${id}-listbox` : undefined} role="listbox">
+        <div className="cmbo__menu" id={id ? `${id}-listbox` : undefined} role="listbox" ref={menuRef} style={placementStyle(placement)}>
           {filtered.length === 0 ? (
             <div className="cmbo__empty">
               {allowFreeText && query.trim()

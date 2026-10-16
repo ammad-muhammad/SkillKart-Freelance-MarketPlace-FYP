@@ -1267,10 +1267,10 @@ const PostProject = () => {
                 gap: 12
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#10B981', textTransform: 'uppercase' }}>
                     {form.category} {form.subcategory ? `• ${form.subcategory}` : ''}
                   </span>
-                  <span style={{ fontSize: 11, color: '#94A3B8' }}>Just now</span>
+                  <span style={{ fontSize: 12, color: '#94A3B8' }}>Just now</span>
                 </div>
 
                 <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0B2942' }}>
@@ -1281,10 +1281,10 @@ const PostProject = () => {
                   <span style={{ fontSize: 12, fontWeight: 800, color: '#065F46', background: '#EAFBF4', padding: '3px 8px', borderRadius: 6, border: '1px solid #A7F3D0' }}>
                     Rs. {Number(form.budget.min || 0).toLocaleString()} – Rs. {Number(form.budget.max || 0).toLocaleString()}
                   </span>
-                  <span style={{ fontSize: 11.5, color: '#475569', background: '#F1F5F9', padding: '3px 8px', borderRadius: 6 }}>
+                  <span style={{ fontSize: 12, color: '#475569', background: '#F1F5F9', padding: '3px 8px', borderRadius: 6 }}>
                     {form.duration}
                   </span>
-                  <span style={{ fontSize: 11.5, color: '#475569', background: '#F1F5F9', padding: '3px 8px', borderRadius: 6 }}>
+                  <span style={{ fontSize: 12, color: '#475569', background: '#F1F5F9', padding: '3px 8px', borderRadius: 6 }}>
                     {form.experienceLevel}
                   </span>
                 </div>
@@ -1296,7 +1296,7 @@ const PostProject = () => {
                 {form.skills.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
                     {form.skills.map((s) => (
-                      <span key={s} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0' }}>
+                      <span key={s} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 6, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0' }}>
                         {s}
                       </span>
                     ))}

@@ -24,6 +24,7 @@ import AiGenerateText from "../../../Components/common/AiSuggest/AiGenerateText"
 import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import ImageSourcePicker from "../../../Components/common/ImageSourcePicker/ImageSourcePicker";
 import Loader from "../../../Components/common/Loader/Loader";
+import { SkipOnboardingButton } from "../../../Components/common/SkipOnboarding/SkipOnboarding";
 import "./ClientOnboarding.css";
 
 
@@ -787,13 +788,12 @@ const ClientOnboarding = () => {
             </div>
 
             <div className="onboarding__form-group" ref={registerFieldRef('languages')}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '0.75rem' }}>
                     <label className="onboarding__label" style={{ marginBottom: 0 }}>Languages Spoken / Preferred*</label>
                     <button
                         type="button"
-                        className="cl-btn cl-btn--ghost cl-btn--sm"
+                        className="cl-btn cl-btn--ghost cl-btn--sm onboarding__add-lang"
                         onClick={() => setFormData(p => ({ ...p, languages: [...p.languages, { language: '', proficiency: 'fluent' }] }))}
-                        style={{ padding: '4px 8px', fontSize: '13px' }}
                     >
                         <Plus size={14} /> Add Language
                     </button>
@@ -801,7 +801,7 @@ const ClientOnboarding = () => {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {formData.languages.map((lang, idx) => (
-                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'end', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e5edf5' }}>
+                        <div key={idx} className="onboarding__lang-row">
                             <div className="onboarding__form-group" style={{ marginBottom: 0 }}>
                                 <label className="onboarding__label" htmlFor={`ob-lang-${idx}`} style={{ fontSize: '12px', marginBottom: '4px' }}>Language</label>
                                 <Select
@@ -838,8 +838,9 @@ const ClientOnboarding = () => {
                             </div>
                             <button
                                 type="button"
-                                className="cl-btn cl-btn--ghost cl-btn--sm"
-                                style={{ color: '#ef4444', height: '42px', border: '1px solid #fee2e2', background: '#fef2f2' }}
+                                className="cl-btn cl-btn--ghost cl-btn--sm onboarding__lang-del"
+                                aria-label="Remove language"
+                                style={{ color: '#ef4444', border: '1px solid #fee2e2', background: '#fef2f2' }}
                                 onClick={() => {
                                     const newList = formData.languages.filter((_, i) => i !== idx);
                                     setFormData(p => ({ ...p, languages: newList }));
@@ -953,8 +954,8 @@ const ClientOnboarding = () => {
     const renderStep5 = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="onboarding__form-group" style={{ background: '#f8fafc', padding: '24px', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ minWidth: 0 }}>
                         <h4 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Sparkles size={18} color="var(--onboard-accent-primary)" />
                             Activate Buddy AI™ Guidance
@@ -965,6 +966,16 @@ const ClientOnboarding = () => {
                     </div>
                     <div
                         className={`onboarding__toggle ${formData.aiAssistance ? 'active' : ''}`}
+                        role="switch"
+                        aria-checked={!!formData.aiAssistance}
+                        aria-label="Activate Buddy AI guidance"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                                setFormData(p => ({ ...p, aiAssistance: !p.aiAssistance }));
+                            }
+                        }}
                         onClick={() => setFormData(p => ({ ...p, aiAssistance: !p.aiAssistance }))}
                         style={{
                             width: '50px',
@@ -995,6 +1006,17 @@ const ClientOnboarding = () => {
                     style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}
                 >
                     <div
+                        className="onboarding__checkbox"
+                        role="checkbox"
+                        aria-checked={!!formData.termsAccepted}
+                        aria-label="Accept the Service Agreement"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                                setFormData(p => ({ ...p, termsAccepted: !p.termsAccepted }));
+                            }
+                        }}
                         style={{
                             minWidth: '24px',
                             height: '24px',
@@ -1074,7 +1096,8 @@ const ClientOnboarding = () => {
                         style={{
                             position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)',
                             backdropFilter: 'blur(4px)', zIndex: 99999,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 'max(16px, var(--safe-top, 0px)) 16px max(16px, var(--safe-bottom, 0px))'
                         }}
                     >
                         <motion.div
@@ -1082,9 +1105,10 @@ const ClientOnboarding = () => {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 20 }}
                             style={{
-                                background: '#fff', borderRadius: '24px', padding: '40px',
+                                background: '#fff', borderRadius: '24px', padding: 'clamp(20px, 5vw, 40px)',
                                 maxWidth: '440px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                maxHeight: 'calc(var(--app-vh, var(--vh-full)) - 32px)', overflowY: 'auto'
                             }}
                         >
                             <div style={{
@@ -1138,6 +1162,7 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__container">
                 <div className="onboarding__card">
+                    {step <= 5 && <SkipOnboardingButton role="client" />}
                     {step <= 5 && (
                         <>
                             <div className="onboarding__stepper-wrapper">

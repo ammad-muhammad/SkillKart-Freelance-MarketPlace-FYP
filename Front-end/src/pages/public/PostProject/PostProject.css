@@ -4,7 +4,7 @@
 
 /* ── Page wrapper ── */
 .pp-page {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background: #F5FBF8;
   position: relative;
 }
@@ -354,7 +354,7 @@
 
 .pp-hint {
   font-family: 'Inter', sans-serif;
-  font-size: 0.73rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #94A3B8;
   margin-top: 3px;
 }
@@ -416,7 +416,7 @@
 
 .pp-char-count {
   font-family: 'Inter', sans-serif;
-  font-size: 0.71rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #94A3B8;
   text-align: right;
   white-space: nowrap;
@@ -424,7 +424,7 @@
 
 .pp-err-msg {
   font-family: 'Inter', sans-serif;
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #ef4444;
   font-weight: 600;
 }
@@ -533,6 +533,14 @@
   line-height: 1;
   padding: 0;
   transition: color 0.15s;
+  position: relative;
+}
+
+.pp-tag__remove::after,
+.pp-file-remove::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
 }
 
 .pp-tag__remove:hover {
@@ -553,9 +561,10 @@
   border-radius: 999px;
   color: #64748B;
   font-family: 'Inter', sans-serif;
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 3px 10px;
+  min-height: 32px;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -628,6 +637,8 @@
   transition: color 0.15s;
   padding: 0;
   line-height: 1;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .pp-file-remove:hover {
@@ -814,9 +825,17 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
-  position: sticky;
-  top: calc(var(--navbar-h, 64px) + 1rem);
   animation: pp-sidebar-in 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+}
+
+/* Sticky only when the whole sidebar fits the viewport; on short laptop windows
+   it just scrolls with the page (a sticky box taller than the screen would hide
+   its lower cards until the page end). */
+@media (min-width: 1024px) and (min-height: 880px) {
+  .pp-sidebar {
+    position: sticky;
+    top: calc(var(--navbar-h, 64px) + 1rem);
+  }
 }
 
 @keyframes pp-sidebar-in {
@@ -947,7 +966,7 @@
 
 .pp-ai-preview__tag {
   font-family: 'Inter', sans-serif;
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1036,25 +1055,52 @@
 }
 
 /* ────────────── RESPONSIVE ────────────── */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   .pp-layout {
     grid-template-columns: 1fr;
   }
 
   .pp-sidebar {
     position: static;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    max-height: none;
+    overflow: visible;
+    /* cards become direct grid items of .pp-layout so the quality score can
+       sit ABOVE the form while tips / Buddy stay below it */
+    display: contents;
+  }
+
+  .pp-layout {
     gap: 1rem;
   }
 
-  /* Buddy card spans full width on tablet */
-  .pp-sidebar-card--buddy {
-    grid-column: 1 / -1;
+  .pp-sidebar > .pp-sidebar-card:first-child {
+    order: -1;
+  }
+
+  .pp-sidebar > .pp-sidebar-card {
+    animation: none;
+  }
+
+  .pp-quality-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-align: left;
+    padding: 0;
+  }
+
+  .pp-quality-ring-wrap {
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .pp-quality-label {
+    max-width: none;
+    margin: 0;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .pp-hero {
     padding: calc(var(--navbar-h, 64px) + 1.5rem) 0 1.5rem;
   }
@@ -1077,15 +1123,23 @@
     display: block;
   }
 
+  /* heavy decoration + blur layers cost scroll smoothness on mid-range phones */
+  .pp-blob {
+    display: none;
+  }
+  .pp-form-card,
+  .pp-sidebar-card,
+  .pp-stepper,
+  .pp-hero__tag {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   .pp-stepper__line {
     width: 22px;
   }
 
   .pp-row {
-    grid-template-columns: 1fr;
-  }
-
-  .pp-sidebar {
     grid-template-columns: 1fr;
   }
 
@@ -1121,5 +1175,26 @@
   .pp-stepper__dot {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Very narrow phones: the active step label would push the stepper past the
+   container, the card header already names the step. */
+@media (max-width: 399.98px) {
+  .pp-stepper__item--active .pp-stepper__label {
+    display: none;
+  }
+}
+
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .pp-budget-pill,
+  .pp-sug-pill,
+  .pp-add-btn,
+  .pp-btn-secondary,
+  .pp-btn-primary,
+  .pp-success__btn-main,
+  .pp-success__btn-sec {
+    min-height: var(--tap-min, 40px);
   }
 }

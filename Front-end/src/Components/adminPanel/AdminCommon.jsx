@@ -253,7 +253,7 @@ export const AdminTimeline = ({ items = [] }) => (
         <div style={{ flex: 1, paddingBottom: 4 }}>
           <div style={{ fontSize: '0.85rem', color: 'var(--ap-text-primary)', fontWeight: 500 }}>{item.title}</div>
           {item.description && <div style={{ fontSize: '0.78rem', color: 'var(--ap-text-muted)', marginTop: 2 }}>{item.description}</div>}
-          {item.time && <div style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)', marginTop: 4 }}>{item.time}</div>}
+          {item.time && <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)', marginTop: 4 }}>{item.time}</div>}
         </div>
       </div>
     ))}

@@ -14,6 +14,8 @@ import Footer from '../../../Components/common/Footer/Footer';
 import Loader from '../../../Components/common/Loader/Loader';
 import ReviewSection from '../../../Components/common/ReviewSection/ReviewSection';
 import Reveal from '../../freelancer/components/Reveal';
+import BackButton from '../../../Components/common/BackButton/BackButton';
+import { isMobileApp } from '../../../utils/platform';
 import { freelancersAPI } from '../../../api/freelancers';
 import { messagesAPI } from '../../../api/messages';
 import { gigsAPI } from '../../../api/gigs';
@@ -259,6 +261,11 @@ export default function PublicFreelancerProfile() {
       <Navbar />
 
       <div className="pfp-main-container">
+        {isMobileApp() && (
+          <div className="pfp-back-row">
+            <BackButton />
+          </div>
+        )}
         {/* ─── 1) BREADCRUMBS & LIVE STATUS ─── */}
         <div className="pfp-top-nav-bar">
           <div className="pfp-breadcrumbs">

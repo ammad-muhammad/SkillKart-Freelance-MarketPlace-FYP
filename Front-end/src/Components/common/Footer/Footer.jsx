@@ -83,7 +83,7 @@ export default function Footer() {
     const measure = () => {
       if (footerRef.current) {
         const rect = footerRef.current.getBoundingClientRect();
-        if (rect.width > 768) {
+        if (rect.width >= 768) {
           setFooterClip(generateFooterSilhouettePath(rect.width, rect.height, 64));
         } else {
           setFooterClip('');
@@ -91,7 +91,7 @@ export default function Footer() {
       }
       if (panelRef.current) {
         const rect = panelRef.current.getBoundingClientRect();
-        if (rect.width > 768) {
+        if (rect.width >= 768) {
           setPanelClip(
             generateNotchedPath(rect.width, rect.height, {
               radius: 28,

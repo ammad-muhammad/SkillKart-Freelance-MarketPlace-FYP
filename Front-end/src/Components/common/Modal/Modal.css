@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: max(1rem, var(--safe-top, 0px)) max(1rem, var(--safe-right, 0px)) max(1rem, var(--safe-bottom, 0px)) max(1rem, var(--safe-left, 0px));
   animation: sk-modal-overlay-in 0.2s ease both;
 }
 
@@ -18,7 +18,7 @@
   padding: 2rem 2rem 0 2rem;
   width: 100%;
   max-width: 480px;
-  max-height: calc(100vh - 2rem);
+  max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - 2rem);
   display: flex;
   flex-direction: column;
   box-shadow: var(--ds-shadow-lg, 0 4px 8px rgba(11, 41, 66, 0.06), 0 16px 40px rgba(11, 41, 66, 0.10));
@@ -89,7 +89,7 @@
 /* ── Mobile ──────────────────────────────────────────────────────
    Tighter modal chrome + zero body padding so content gets full width. */
 @media (max-width: 640px) {
-  .sk-modal-overlay { padding: 0.5rem; }
+  .sk-modal-overlay { padding: max(0.5rem, var(--safe-top, 0px)) max(0.5rem, var(--safe-right, 0px)) max(0.5rem, var(--safe-bottom, 0px)) max(0.5rem, var(--safe-left, 0px)); }
   .sk-modal { padding: 1.25rem 1.25rem 0 1.25rem; }
   .sk-modal__body {
     /* Zeroing all 4 sides here (as this used to) also wiped out the safe-area

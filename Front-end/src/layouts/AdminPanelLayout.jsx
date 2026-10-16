@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import GlobalSearch from '../Components/adminPanel/GlobalSearch';
@@ -52,6 +53,20 @@ const AdminPanelLayout = () => {
   const { admin, logout } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  // Off-canvas drawer state (<1024px). On desktop the sidebar is always visible
+  // and this flag has no visual effect.
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Close the drawer whenever the route changes (tap a nav link -> navigate).
+  useEffect(() => { setNavOpen(false); }, [location.pathname]);
+
+  // Esc closes the drawer.
+  useEffect(() => {
+    if (!navOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setNavOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [navOpen]);
 
   // Derive current page title from pathname
   const getPageTitle = () => {
@@ -72,8 +87,19 @@ const AdminPanelLayout = () => {
 
   return (
     <div className="admin-layout">
+      {/* Scrim behind the off-canvas drawer (only rendered <1024px via CSS) */}
+      <div
+        className={`ap-scrim${navOpen ? ' open' : ''}`}
+        onClick={() => setNavOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* ── Sidebar ─────────────────────────────────────────────── */}
-      <aside className="ap-sidebar">
+      <aside
+        id="ap-sidebar"
+        className={`ap-sidebar${navOpen ? ' open' : ''}`}
+        aria-label="Admin navigation"
+      >
         {/* Brand */}
         <div className="ap-sidebar-brand">
           <div className="ap-brand-icon">🛡️</div>
@@ -81,6 +107,14 @@ const AdminPanelLayout = () => {
             <h2>SkillKart</h2>
             <span>Admin Panel</span>
           </div>
+          <button
+            type="button"
+            className="ap-sidebar-close"
+            onClick={() => setNavOpen(false)}
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Nav sections */}
@@ -121,17 +155,27 @@ const AdminPanelLayout = () => {
         {/* Header */}
         <header className="ap-header">
           <div className="ap-header-left">
+            <button
+              type="button"
+              className="ap-menu-btn"
+              onClick={() => setNavOpen(o => !o)}
+              aria-label={navOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={navOpen}
+              aria-controls="ap-sidebar"
+            >
+              ☰
+            </button>
             <span className="ap-page-title">{getPageTitle()}</span>
             <GlobalSearch />
           </div>
           <div className="ap-header-right">
             {/* Health status dot */}
-            <div className="ap-header-btn" data-tip="System Health" style={{ cursor: 'default' }}>
-              <span style={{ color: 'var(--ap-green)', fontSize: '0.7rem' }}>●</span>
+            <div className="ap-header-btn" data-tip="System Health" role="img" aria-label="System health" style={{ cursor: 'default' }}>
+              <span style={{ color: 'var(--ap-green)', fontSize: '0.75rem' }}>●</span>
             </div>
 
             {/* Settings link */}
-            <NavLink to="/admin-panel/settings" className="ap-header-btn" data-tip="Settings">
+            <NavLink to="/admin-panel/settings" className="ap-header-btn" data-tip="Settings" aria-label="Settings">
               ⚙️
             </NavLink>
 
@@ -140,6 +184,7 @@ const AdminPanelLayout = () => {
               className="ap-header-btn"
               onClick={handleLogout}
               data-tip="Logout"
+              aria-label="Log out"
               style={{ cursor: 'pointer' }}
             >
               🚪

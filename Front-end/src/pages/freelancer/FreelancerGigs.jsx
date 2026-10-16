@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
 import { Field, Input, Textarea, Select } from '../../Components/common/Field/Field';
+import './FreelancerControls.css';
 import './CreateGig.css';
 import './FreelancerGigs.css';
 
@@ -993,7 +994,7 @@ export default function FreelancerGigs() {
               </div>
 
               <div className="fl-gig-list-row__info">
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
                   {gig.category}{gig.subcategory ? ` • ${gig.subcategory}` : ''}
                 </span>
                 <h3 className="fl-gig-list-row__title" title={gig.title}>
@@ -1165,7 +1166,7 @@ export default function FreelancerGigs() {
                 ) : (
                   <>
                     <Check size={15} />
-                    <span>Save Changes</span>
+                    <span>Save<span className="fl-btn-label-desktop"> Changes</span></span>
                   </>
                 )}
               </button>

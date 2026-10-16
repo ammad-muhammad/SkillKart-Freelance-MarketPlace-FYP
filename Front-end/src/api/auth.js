@@ -35,6 +35,10 @@ export const authAPI = {
   updateRole: (role) =>
     client.put('/auth/role/change', role),
 
+  // "Skip for now" on the client/freelancer onboarding wizard.
+  skipOnboarding: () =>
+    client.post('/auth/onboarding/skip'),
+
   registerPushToken: (token) =>
     client.post('/auth/push-token', { token }, { suppressErrorToast: true }),
 

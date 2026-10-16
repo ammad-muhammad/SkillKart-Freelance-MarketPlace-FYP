@@ -76,7 +76,7 @@ export default function ProgressRing({
           </span>
           {sublabel && (
             <span style={{
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.04em',

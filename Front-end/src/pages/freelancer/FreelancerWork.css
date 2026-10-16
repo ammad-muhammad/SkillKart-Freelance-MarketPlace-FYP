@@ -52,8 +52,8 @@
 
 .fl-work-title {
   font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-  font-size: 32px;
-  line-height: 40px;
+  font-size: clamp(24px, 6.5vw, 32px);
+  line-height: 1.25;
   font-weight: 800;
   color: #0B2942;
   margin: 0;
@@ -226,7 +226,7 @@
 /* Row 2: Financials Strip (3-4 plain columns with dividers) */
 .fl-contract-fin-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: #F8FAFC;
   border-radius: 14px;
   padding: 12px 16px;
@@ -252,7 +252,7 @@
 }
 
 .fl-contract-fin-label {
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -295,7 +295,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
 }
 
@@ -355,24 +355,82 @@
   flex-wrap: wrap;
 }
 
+/* Submit-work dialog (classes were referenced in JSX but never defined, so the
+   dialog rendered inline at the bottom of the page with no backdrop) */
+.fl-edit-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-modal, 3000);
+  background: rgba(11, 41, 66, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(16px + var(--safe-top, 0px)) 16px calc(16px + var(--safe-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fl-form-card {
+  width: 100%;
+  max-width: 540px;
+  margin: auto;
+  box-sizing: border-box;
+  max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - 32px);
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(11, 41, 66, 0.25);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 /* Responsive queries */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   .fl-work-summary-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .fl-work-hero-card {
+    grid-column: 1 / -1;
   }
   .fl-contract-fin-strip {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+  /* Divider only between the two columns of each row (was drawn on every cell) */
+  .fl-contract-fin-col:not(:last-child)::after { display: none; }
+  .fl-contract-fin-col:nth-child(odd):not(:last-child)::after { display: block; }
 }
 
 @media (max-width: 600px) {
   .fl-work-summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .fl-contract-fin-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+  .fl-contract-fin-col::after,
+  .fl-contract-fin-col:not(:last-child)::after,
+  .fl-contract-fin-col:nth-child(odd):not(:last-child)::after { display: none; }
   .fl-contract-row-card {
     padding: 18px 16px;
+  }
+  .fl-contract-head-row { align-items: flex-start; }
+  .fl-contract-actions-left > * { flex: 1 1 auto; justify-content: center; }
+  .fl-form-card { padding: 18px 16px; border-radius: 20px; }
+}
+
+@media (hover: none) {
+  .fl-contract-row-card:hover { transform: none; }
+}
+
+@media (pointer: coarse) {
+  .fl-work-page .fl-gigs-header__cta,
+  .fl-work-page .sk-pill-action-btn,
+  .fl-fullscreen-editor .fl-gigs-header__cta {
+    min-height: var(--tap-min, 40px);
   }
 }

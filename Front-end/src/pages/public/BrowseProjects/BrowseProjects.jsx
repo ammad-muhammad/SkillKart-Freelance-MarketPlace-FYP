@@ -910,6 +910,9 @@ export default function BrowseProjects() {
                   <div className="bp-popover__inputs-row">
                     <input
                       type="number"
+                      inputMode="numeric"
+                      className="bp-sheet-input"
+                      aria-label="Minimum budget (Rs.)"
                       placeholder="Min (Rs.)"
                       value={draftFilters.minBudget}
                       onChange={(e) => setDraftFilters(p => ({ ...p, minBudget: e.target.value }))}
@@ -917,6 +920,9 @@ export default function BrowseProjects() {
                     <span>–</span>
                     <input
                       type="number"
+                      inputMode="numeric"
+                      className="bp-sheet-input"
+                      aria-label="Maximum budget (Rs.)"
                       placeholder="Max (Rs.)"
                       value={draftFilters.maxBudget}
                       onChange={(e) => setDraftFilters(p => ({ ...p, maxBudget: e.target.value }))}
@@ -976,6 +982,87 @@ export default function BrowseProjects() {
                       <span>Any Duration</span>
                     </label>
                   </div>
+                </div>
+
+                {/* Posted Date */}
+                <div className="bp-sheet-section">
+                  <h4>Posted Date</h4>
+                  <div className="bp-sheet-options">
+                    {POSTED_OPTIONS.map(opt => (
+                      <label key={opt.value} className="bp-popover__radio-item">
+                        <input
+                          type="radio"
+                          name="mPosted"
+                          checked={draftFilters.postedDate === opt.value}
+                          onChange={() => setDraftFilters(p => ({ ...p, postedDate: opt.value }))}
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    ))}
+                    <label className="bp-popover__radio-item">
+                      <input
+                        type="radio"
+                        name="mPosted"
+                        checked={draftFilters.postedDate === ''}
+                        onChange={() => setDraftFilters(p => ({ ...p, postedDate: '' }))}
+                      />
+                      <span>Any Time</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                <div className="bp-sheet-section">
+                  <h4>Skills</h4>
+                  <div className="bp-popover__skill-input-wrap">
+                    <input
+                      type="text"
+                      className="bp-sheet-input"
+                      aria-label="Add a skill"
+                      placeholder="Type a skill & press Add"
+                      value={skillInput}
+                      onChange={(e) => setSkillInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = skillInput.trim();
+                          if (val && !draftFilters.skills.includes(val)) {
+                            setDraftFilters(p => ({ ...p, skills: [...p.skills, val] }));
+                            setSkillInput('');
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="bp-popover__add-skill-btn"
+                      onClick={() => {
+                        const val = skillInput.trim();
+                        if (val && !draftFilters.skills.includes(val)) {
+                          setDraftFilters(p => ({ ...p, skills: [...p.skills, val] }));
+                          setSkillInput('');
+                        }
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {draftFilters.skills?.length > 0 && (
+                    <div className="bp-popover__skills-chips">
+                      {draftFilters.skills.map(s => (
+                        <span key={s} className="bp-popover__skill-tag">
+                          {s}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${s}`}
+                            onClick={() => setDraftFilters(p => ({ ...p, skills: p.skills.filter(x => x !== s) }))}
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

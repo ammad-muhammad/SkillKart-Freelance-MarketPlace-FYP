@@ -9,9 +9,9 @@ const TYPE_ICON = {
 };
 
 const STATUS_COLOR = {
-  active:   '#4ade80', suspended: '#f87171', pending: '#fbbf24',
-  released: '#4ade80', refunded:  '#94a3b8', resolved: '#4ade80',
-  hidden:   '#fb923c', visible:   '#4ade80'
+  active:   '#10B981', suspended: '#dc2626', pending: '#d97706',
+  released: '#10B981', refunded:  '#64748b', resolved: '#10B981',
+  hidden:   '#ea580c', visible:   '#10B981'
 };
 
 let debounceTimer = null;
@@ -95,6 +95,8 @@ const GlobalSearch = () => {
         onChange={onChange}
         onFocus={() => results && setOpen(true)}
         autoComplete="off"
+        aria-label="Search the admin panel"
+        enterKeyHint="search"
       />
 
       {open && (

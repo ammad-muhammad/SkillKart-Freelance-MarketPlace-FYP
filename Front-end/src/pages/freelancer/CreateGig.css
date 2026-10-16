@@ -186,7 +186,7 @@
 }
 
 .fl-step-node__sub {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   color: #94A3B8;
 }
 
@@ -416,7 +416,7 @@
 }
 
 /* ─── Section Cards ─── */
-.fl-section-card {
+.fl-wizard-page .fl-section-card {
   background: #FFFFFF;
   border-radius: 22px;
   border: 1px solid #DDEFE6;
@@ -427,7 +427,7 @@
   gap: 20px;
 }
 
-.fl-section-card__header {
+.fl-wizard-page .fl-section-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -437,14 +437,14 @@
   border-bottom: 1px solid #F1F5F9;
 }
 
-.fl-section-card__title {
+.fl-wizard-page .fl-section-card__title {
   margin: 0;
   font-size: 16px;
   font-weight: 800;
   color: #0B2942;
 }
 
-.fl-section-card__hint {
+.fl-wizard-page .fl-section-card__hint {
   font-size: 12.5px;
   color: #64748B;
 }
@@ -452,7 +452,7 @@
 /* ─── STEP 2: PRICING TIERS ─── */
 .fl-tiers-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   align-items: stretch;
 }
@@ -514,7 +514,7 @@
   background: #EAFBF4;
   color: #065F46;
   border: 1px solid #A7F3D0;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
 }
 
@@ -524,7 +524,7 @@
   background: #F0FDF4;
   border: 1px solid #A7F3D0;
   color: #065F46;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -567,7 +567,7 @@
   border-radius: 9999px;
   background: #EAFBF4;
   color: #065F46;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
 }
 
@@ -616,7 +616,7 @@
   border: 1px solid #CBD5E1;
   border-radius: 6px;
   padding: 2px 7px;
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 12px);
   color: #475569;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -635,7 +635,7 @@
   border: 1px solid #DDEFE6;
   padding: 16px 24px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   box-shadow: 0 2px 10px rgba(16, 185, 129, 0.04);
 }
@@ -661,7 +661,7 @@
 }
 
 .fl-price-compare-col small {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   color: #94A3B8;
 }
 
@@ -756,7 +756,7 @@
 }
 
 /* ─── STEP 4: MEDIA ─── */
-.fl-cover-badge {
+.fl-wizard-page .fl-cover-badge {
   padding: 3px 10px;
   border-radius: 9999px;
   background: #EAFBF4;
@@ -766,7 +766,7 @@
   border: 1px solid #A7F3D0;
 }
 
-.fl-media-dropzone {
+.fl-wizard-page .fl-media-dropzone {
   min-height: 220px;
   background: #F8FAFC;
   border: 2px dashed #CBD5E1;
@@ -780,12 +780,12 @@
   position: relative;
 }
 
-.fl-media-dropzone:hover {
+.fl-wizard-page .fl-media-dropzone:hover {
   border-color: #10B981;
   background: #F0FDF4;
 }
 
-.fl-dropzone-prompt {
+.fl-wizard-page .fl-dropzone-prompt {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -794,7 +794,7 @@
   text-align: center;
 }
 
-.fl-dropzone-icon {
+.fl-wizard-page .fl-dropzone-icon {
   width: 52px;
   height: 52px;
   border-radius: 16px;
@@ -806,18 +806,18 @@
   margin-bottom: 4px;
 }
 
-.fl-dropzone-title {
+.fl-wizard-page .fl-dropzone-title {
   font-size: 15px;
   font-weight: 800;
   color: #0B2942;
 }
 
-.fl-dropzone-sub {
+.fl-wizard-page .fl-dropzone-sub {
   font-size: 12.5px;
   color: #64748B;
 }
 
-.fl-banner-preview-box {
+.fl-wizard-page .fl-banner-preview-box {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -825,13 +825,13 @@
   overflow: hidden;
 }
 
-.fl-banner-preview-img {
+.fl-wizard-page .fl-banner-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.fl-banner-preview-actions {
+.fl-wizard-page .fl-banner-preview-actions {
   position: absolute;
   top: 14px;
   right: 14px;
@@ -839,7 +839,7 @@
   gap: 8px;
 }
 
-.fl-banner-change-btn {
+.fl-wizard-page .fl-banner-change-btn {
   padding: 6px 14px;
   border-radius: 9999px;
   background: rgba(11, 41, 66, 0.75);
@@ -851,7 +851,7 @@
   cursor: pointer;
 }
 
-.fl-banner-delete-btn {
+.fl-wizard-page .fl-banner-delete-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -866,11 +866,11 @@
 
 .fl-media-grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-.fl-gallery-slot {
+.fl-wizard-page .fl-gallery-slot {
   aspect-ratio: 1;
   border-radius: 16px;
   overflow: hidden;
@@ -879,13 +879,13 @@
   border: 1px solid #E2E8F0;
 }
 
-.fl-gallery-slot img {
+.fl-wizard-page .fl-gallery-slot img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.fl-gallery-slot__overlay {
+.fl-wizard-page .fl-gallery-slot__overlay {
   position: absolute;
   inset: 0;
   background: rgba(11, 41, 66, 0.55);
@@ -899,7 +899,7 @@
   padding: 8px;
 }
 
-.fl-gallery-slot:hover .fl-gallery-slot__overlay {
+.fl-wizard-page .fl-gallery-slot:hover .fl-gallery-slot__overlay {
   opacity: 1;
 }
 
@@ -908,7 +908,7 @@
   border-radius: 9999px;
   background: #10B981;
   color: #FFFFFF;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   border: none;
   cursor: pointer;
@@ -927,7 +927,7 @@
   cursor: pointer;
 }
 
-.fl-gallery-add-slot {
+.fl-wizard-page .fl-gallery-add-slot {
   aspect-ratio: 1;
   border-radius: 16px;
   border: 2px dashed #CBD5E1;
@@ -944,7 +944,7 @@
   transition: all 0.15s ease;
 }
 
-.fl-gallery-add-slot:hover {
+.fl-wizard-page .fl-gallery-add-slot:hover {
   border-color: #10B981;
   color: #065F46;
   background: #F0FDF4;
@@ -998,7 +998,7 @@
 
 .fl-review-cards-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1049,7 +1049,7 @@
 .fl-review-skill-chip {
   background: #E2E8F0;
   color: #334155;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 9999px;
@@ -1057,7 +1057,7 @@
 
 .fl-review-pricing-cols {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   text-align: center;
 }
@@ -1073,7 +1073,7 @@
 }
 
 .fl-review-pricing-cols small {
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -1085,7 +1085,7 @@
 }
 
 .fl-review-pricing-cols span {
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 12px);
   color: #94A3B8;
 }
 
@@ -1243,8 +1243,8 @@
 /* ─── Floating "Live preview" Pill Button (Moved to bottom-LEFT) ─── */
 .fl-live-preview-pill {
   position: fixed;
-  bottom: 28px;
-  left: 28px;
+  bottom: calc(28px + var(--safe-bottom, 0px));
+  left: calc(28px + var(--safe-left, 0px));
   z-index: 100;
   height: 44px;
   padding: 0 20px;
@@ -1269,7 +1269,7 @@
 }
 
 /* ─── Right-Side Slide-Over Drawer with Live GigCard ─── */
-.fl-preview-drawer-backdrop {
+.fl-wizard-page .fl-preview-drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(11, 41, 66, 0.4);
@@ -1279,7 +1279,7 @@
   justify-content: flex-end;
 }
 
-.fl-preview-drawer {
+.fl-wizard-page .fl-preview-drawer {
   width: 100%;
   max-width: 440px;
   height: 100%;
@@ -1296,7 +1296,7 @@
   to { transform: translateX(0); }
 }
 
-.fl-preview-drawer__header {
+.fl-wizard-page .fl-preview-drawer__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1304,14 +1304,14 @@
   border-bottom: 1px solid #E2E8F0;
 }
 
-.fl-preview-drawer__title {
+.fl-wizard-page .fl-preview-drawer__title {
   margin: 0;
   font-size: 17px;
   font-weight: 800;
   color: #0B2942;
 }
 
-.fl-preview-drawer__close {
+.fl-wizard-page .fl-preview-drawer__close {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -1325,12 +1325,12 @@
   transition: all 0.15s ease;
 }
 
-.fl-preview-drawer__close:hover {
+.fl-wizard-page .fl-preview-drawer__close:hover {
   background: #E2E8F0;
   color: #0B2942;
 }
 
-.fl-preview-drawer__body {
+.fl-wizard-page .fl-preview-drawer__body {
   padding: 24px;
   overflow-y: auto;
   display: flex;
@@ -1338,7 +1338,7 @@
   gap: 16px;
 }
 
-.fl-preview-drawer__note {
+.fl-wizard-page .fl-preview-drawer__note {
   margin: 0;
   font-size: 13px;
   color: #64748B;
@@ -1346,6 +1346,14 @@
 }
 
 /* ─── Responsive Breakpoints ─── */
+/* Three tiers side by side leave only ~235px of inner width below ~1100px;
+   let them wrap into 2 (then 1) columns instead of cramming the inputs. */
+@media (max-width: 1099.98px) {
+  .fl-tiers-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .fl-stepper-horizontal {
     display: none;
@@ -1358,10 +1366,10 @@
     border-radius: 18px;
   }
   .fl-tiers-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .fl-price-compare-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     text-align: left;
   }
   .fl-price-compare-col {
@@ -1369,10 +1377,10 @@
     justify-content: space-between;
   }
   .fl-review-cards-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .fl-media-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .fl-ai-strip {
     flex-direction: column;
@@ -1402,10 +1410,56 @@
   .fl-card-footer__hint {
     display: none;
   }
+  /* The floating pill covered the footer/Buddy area on phones; the header
+     already has a "Preview" trigger (.fl-top-preview-trigger). */
   .fl-live-preview-pill {
-    bottom: 20px;
-    left: 16px;
-    padding: 0 14px;
-    font-size: 12.5px;
+    display: none;
+  }
+  .fl-wizard-page .fl-section-card {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+  .fl-stepper-horizontal-card {
+    padding: 14px 16px;
+  }
+  .fl-ai-strip {
+    padding: 14px;
+  }
+}
+
+/* ── Touch screens: reveal hover-only gallery actions, 40px targets ── */
+@media (hover: none) {
+  .fl-wizard-page .fl-gallery-slot__overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(11, 41, 66, 0.72), rgba(11, 41, 66, 0) 60%);
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 8px;
+  }
+}
+
+@media (pointer: coarse) {
+  .fl-gallery-slot__del-btn,
+  .fl-wizard-page .fl-banner-delete-btn,
+  .fl-wizard-page .fl-preview-drawer__close,
+  .fl-faq-card__remove,
+  .fl-tier-add-btn {
+    min-width: var(--tap-min, 40px);
+    min-height: var(--tap-min, 40px);
+  }
+  .fl-gallery-slot__set-cover-btn,
+  .fl-tier-ai-fill-btn,
+  .fl-tier-quick-chip,
+  .fl-checklist-row__edit-btn,
+  .fl-review-card__edit,
+  .fl-undo-toast__btn,
+  .fl-banner-change-btn {
+    min-height: 36px;
+  }
+  .fl-tier-chip__remove {
+    min-width: 28px;
+    min-height: 28px;
   }
 }

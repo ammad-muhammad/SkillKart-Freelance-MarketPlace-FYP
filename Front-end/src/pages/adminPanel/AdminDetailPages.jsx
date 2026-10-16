@@ -204,7 +204,7 @@ export const UserDetailPage = () => {
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--ap-text-primary)' }}>{s.val ?? 0}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)' }}>{s.label}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -545,7 +545,7 @@ export const ProfilePanel = ({ user, onEdit, onAvatar }) => {
               {profile.skills?.length ? profile.skills.map((s, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--ap-border)' }}>
                   <span style={{ fontSize: '0.85rem' }}>{s.name} <span style={{ color: 'var(--ap-text-muted)', fontSize: '0.75rem' }}>· {s.level}</span></span>
-                  <span>{s.isVerified ? <StatusBadge status="verified" /> : <span className="ap-badge ap-badge-gray">unverified</span>}{s.verificationScore ? <span style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)', marginLeft: 6 }}>{s.verificationScore}%</span> : null}</span>
+                  <span>{s.isVerified ? <StatusBadge status="verified" /> : <span className="ap-badge ap-badge-gray">unverified</span>}{s.verificationScore ? <span style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)', marginLeft: 6 }}>{s.verificationScore}%</span> : null}</span>
                 </div>
               )) : <AdminEmptyState icon="🧩" title="No skills" />}
             </Card>
@@ -667,7 +667,7 @@ export const VerificationPanel = ({ user, onChange }) => {
                 </button>
               </div>
             ))}
-            <div style={{ fontSize: '0.74rem', color: 'var(--ap-text-muted)', marginTop: 8 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)', marginTop: 8 }}>
               Auto-computed: email {vd.emailVerified ? '✓' : '✗'} · onboarding {vd.onboardingCompleted ? '✓' : '✗'} · profile {vd.profileCompleted ? '✓' : '✗'} · all skills passed {vd.allSkillTestsPassed ? '✓' : '✗'}
             </div>
           </Card>
@@ -812,7 +812,7 @@ export const EditProfileModal = ({ open, user, onClose, onSaved }) => {
               </div>
             ))}
             <button className="ap-btn ap-btn-secondary ap-btn-sm" onClick={addSkill}>+ Add skill</button>
-            <div style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)', marginTop: 4 }}>New skills start unverified — grant a pass in the Verification tab.</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)', marginTop: 4 }}>New skills start unverified — grant a pass in the Verification tab.</div>
           </div>
 
           <div className="ap-form-group">
@@ -1647,7 +1647,7 @@ export const ReassignContractModal = ({ open, contractId, onClose, onSaved }) =>
                       <AdminUserAvatar email={u.email} firstName={u.firstName} lastName={u.lastName} src={u.profilePicture} size={28} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.84rem', color: 'var(--ap-text-primary)' }}>{userLabel(u)}</div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--ap-text-muted)' }}>{u.email}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{u.email}</div>
                       </div>
                     </button>
                   ))}
@@ -2101,7 +2101,7 @@ export const MessageRow = ({ m }) => {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
           <strong style={{ fontSize: '0.82rem', color: 'var(--ap-text-primary)' }}>{userLabel(sender)}</strong>
-          <span style={{ fontSize: '0.72rem', color: 'var(--ap-text-muted)' }}>{fmt.datetime(m.createdAt)}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{fmt.datetime(m.createdAt)}</span>
         </div>
         <div style={{ fontSize: '0.86rem', color: 'var(--ap-text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5, marginTop: 2 }}>{m.content || m.text || ''}</div>
         {m.attachments?.length > 0 && (

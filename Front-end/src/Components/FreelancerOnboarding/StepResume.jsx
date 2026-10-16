@@ -1,12 +1,12 @@
 import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Upload, X, CheckCircle2, AlertCircle, FileType,
   Zap, Check, Sparkles, ChevronRight, ArrowRight, LayoutDashboard
 } from "lucide-react";
 import Loader from "../common/Loader/Loader";
+import { useSkipOnboarding } from "../common/SkipOnboarding/SkipOnboarding";
 import { safeToast as toast } from "../../utils/safeToast";
 import { freelancersAPI } from "../../api/freelancers";
 
@@ -19,7 +19,9 @@ const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const MAX_SIZE_MB = 5;
 
 const StepResume = ({ formData, setFormData, errors }) => {
-  const navigate = useNavigate();
+  // Same server-side skip as the wizard's "Skip for now" — a plain navigate here
+  // used to send the user back into onboarding on their next login.
+  const { skip: skipOnboarding, busy: skipping } = useSkipOnboarding("freelancer");
   const fileRef = useRef(null);
   const [showAiModal, setShowAiModal] = useState(false);
 
@@ -397,7 +399,8 @@ const StepResume = ({ formData, setFormData, errors }) => {
           <button
             type="button"
             className="fob-skip-dashboard-btn"
-            onClick={() => navigate("/freelancer/dashboard")}
+            onClick={skipOnboarding}
+            disabled={skipping}
           >
             Skip to Dashboard <ArrowRight size={13} />
           </button>

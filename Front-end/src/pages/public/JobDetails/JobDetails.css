@@ -5,11 +5,13 @@
 
 .jd-page {
   background: linear-gradient(180deg, #EAFBF4 0%, #F5FAF8 32%, var(--sk-bg-secondary, #F3F7F5) 100%);
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   padding-top: calc(var(--navbar-h, 70px) + 32px);
   padding-bottom: 6rem;
   position: relative;
   overflow-x: hidden;
+  /* clip (not hidden) so the sticky Apply card inside keeps working */
+  overflow-x: clip;
   color: #0B2942;
 }
 
@@ -37,6 +39,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
   padding: 0.45rem 1rem;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
@@ -262,6 +265,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
 }
 
 .jd-client-strip__avatar {
@@ -290,11 +294,13 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
 }
 
 .jd-client-strip__name-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -302,6 +308,7 @@
   font-size: 1.05rem;
   font-weight: 800;
   color: #0B2942;
+  overflow-wrap: anywhere;
 }
 
 .jd-client-strip__sub {
@@ -321,6 +328,7 @@
 .jd-client-strip__link {
   display: inline-flex;
   align-items: center;
+  min-height: 36px;
   gap: 5px;
   font-size: 0.85rem;
   font-weight: 700;
@@ -363,7 +371,7 @@
 }
 
 .jd-facts-label {
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #94A3B8;
   letter-spacing: 0.05em;
@@ -378,9 +386,8 @@
   color: #0B2942;
   line-height: 1.25;
   margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Wrap instead of truncating the budget/duration ("Rs. 50,000 - 80,000"). */
+  overflow-wrap: anywhere;
 }
 
 .jd-facts-sub {
@@ -419,7 +426,7 @@
   font-weight: 700;
   font-size: 0.925rem;
   cursor: pointer;
-  padding: 0;
+  padding: 10px 0;
   transition: color 0.15s;
 }
 
@@ -534,14 +541,14 @@
 
 .jd-milestone-node {
   position: absolute;
-  left: -29px;
+  left: -32px;
   top: 0;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #10B981;
   color: #FFFFFF;
-  font-size: 10px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -643,7 +650,7 @@
 
 .jd-similar-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 1.5rem;
 }
 
@@ -654,13 +661,20 @@
 .jd-sticky-panel {
   position: sticky;
   top: calc(var(--navbar-h, 70px) + 24px);
-  max-height: calc(100vh - 110px);
+  max-height: calc(var(--vh-full, 100vh) - 110px);
   overflow-y: auto;
-  scrollbar-width: none;
+  /* Thin visible scrollbar so a clipped Apply button on short laptops is discoverable */
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
 }
 
 .jd-sticky-panel::-webkit-scrollbar {
-  display: none;
+  width: 4px;
+}
+
+.jd-sticky-panel::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
 }
 
 .jd-apply-card {
@@ -704,7 +718,7 @@
   background: #EAFBF4;
   border: 1px solid #A7F3D0;
   border-radius: 999px;
-  font-size: 0.775rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #065F46;
   white-space: nowrap;
@@ -929,7 +943,7 @@
   background: rgba(11, 41, 66, 0.55);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  z-index: 1000;
+  z-index: var(--layer-drawer, 1000);
   display: flex;
   justify-content: flex-end;
   animation: jdFadeIn 0.2s ease;
@@ -986,8 +1000,9 @@
 .jd-drawer__close {
   background: #F1F5F9;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: var(--tap-min, 40px);
+  height: var(--tap-min, 40px);
+  flex-shrink: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1089,11 +1104,12 @@
 .jd-ai-draft-chip {
   display: inline-flex;
   align-items: center;
+  min-height: 32px;
   gap: 5px;
   background: #EAFBF4;
   border: 1px solid #A7F3D0;
   color: #065F46;
-  font-size: 0.775rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
@@ -1139,7 +1155,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  padding: 18px 28px;
+  padding: 18px 28px calc(18px + var(--safe-bottom, 0px));
   border-top: 1px solid #E2E8F0;
   background: #F8FAFC;
 }
@@ -1199,7 +1215,7 @@
   border-top: 1px solid #E2E8F0;
   border-right: 1px solid #E2E8F0;
   border-top-right-radius: 20px;
-  padding: 12px 18px;
+  padding: 12px 18px calc(12px + var(--safe-bottom, 0px));
   box-shadow: 0 -4px 20px rgba(11, 41, 66, 0.08);
   z-index: 90;
 }
@@ -1217,7 +1233,7 @@
 }
 
 .jd-mobile-bar__budget .label {
-  font-size: 0.7rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -1232,7 +1248,7 @@
 }
 
 .jd-mobile-apply-btn {
-  height: 42px;
+  height: var(--tap-min, 44px);
   padding: 0 20px;
   border-radius: 999px;
   background: linear-gradient(135deg, #10B981 0%, #A3E635 100%);
@@ -1251,7 +1267,24 @@
    RESPONSIVENESS (375 / 768 / 1024 / 1280)
    ============================================================ */
 
-@media (max-width: 1024px) {
+/* Four fact columns need the full 8/12 column; below 1280 they would
+   truncate, so go 2x2 as soon as the sidebar column takes its share. */
+@media (max-width: 1279.98px) {
+  .jd-facts-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 18px;
+  }
+  .jd-facts-col {
+    padding: 0;
+    border-left: none;
+  }
+}
+
+/* Single-column layout, and the sticky bottom Apply bar takes over from the
+   (now static) side card — same breakpoint so tablets are never left without
+   a visible apply action. */
+@media (max-width: 1023.98px) {
   .jd-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
@@ -1266,31 +1299,22 @@
     position: static;
     max-height: none;
   }
-  .jd-facts-strip {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    padding: 18px;
-  }
-  .jd-facts-col {
-    padding: 0;
-    border-left: none;
-  }
-}
-
-@media (max-width: 860px) {
   .jd-mobile-bar {
     display: block;
   }
   .jd-page {
-    padding-bottom: 8rem;
+    padding-bottom: calc(8rem + var(--safe-bottom, 0px));
   }
+}
+
+@media (max-width: 767.98px) {
   /* Proposal Drawer becomes Bottom Sheet on Mobile */
   .jd-drawer-overlay {
     align-items: flex-end;
   }
   .jd-drawer {
     max-width: 100%;
-    max-height: 88vh;
+    max-height: calc(var(--app-vh, var(--vh-full)) * 0.88);
     border-radius: 24px 24px 0 0;
     animation: jdSheetSlideUp 250ms cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -1298,13 +1322,13 @@
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
   }
-}
-
-@media (max-width: 640px) {
   .jd-heading {
     font-size: 28px;
     line-height: 34px;
   }
+}
+
+@media (max-width: 479.98px) {
   .jd-facts-strip {
     grid-template-columns: 1fr;
     gap: 14px;
@@ -1315,6 +1339,15 @@
   }
   .jd-client-stats-grid {
     grid-template-columns: 1fr;
+  }
+  .jd-drawer__header,
+  .jd-drawer__body {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .jd-drawer__footer {
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
@@ -1343,4 +1376,20 @@
 .jd-empty p {
   color: #64748B;
   margin: 0;
+}
+
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .jd-back-pill,
+  .jd-client-strip__link,
+  .jd-ai-draft-chip,
+  .jd-drawer-cancel-btn,
+  .jd-similar-view-all,
+  .jd-save-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .jd-similar-view-all {
+    display: inline-flex;
+    align-items: center;
+  }
 }

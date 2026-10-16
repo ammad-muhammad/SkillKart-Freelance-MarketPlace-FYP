@@ -307,15 +307,15 @@ export default function GigDetail() {
             <div className="gd-skeleton-seller-row">
               <Skeleton width="44px" height="44px" variant="circle" />
               <div style={{ flex: 1 }}>
-                <Skeleton width="180px" height="18px" style={{ marginBottom: 6 }} />
-                <Skeleton width="280px" height="14px" />
+                <Skeleton width="180px" height="18px" style={{ marginBottom: 6, maxWidth: '100%' }} />
+                <Skeleton width="280px" height="14px" style={{ maxWidth: '100%' }} />
               </div>
             </div>
 
             {/* Full-width Gallery Skeleton */}
             <div className="gd-skeleton-gallery">
-              <Skeleton width="100%" height="440px" style={{ borderRadius: 24, marginBottom: 16 }} />
-              <div style={{ display: 'flex', gap: 12 }}>
+              <Skeleton width="100%" height="clamp(200px, 56vw, 440px)" style={{ borderRadius: 24, marginBottom: 16 }} />
+              <div style={{ display: 'flex', gap: 12, overflow: 'hidden' }}>
                 {[1, 2, 3, 4].map(n => (
                   <Skeleton key={n} width="120px" height="72px" style={{ borderRadius: 12 }} />
                 ))}
@@ -325,11 +325,11 @@ export default function GigDetail() {
             {/* Two Column Grid Skeleton */}
             <div className="gd-main-grid" style={{ marginTop: 40 }}>
               <div className="gd-left-col">
-                <Skeleton width="240px" height="28px" style={{ marginBottom: 16 }} />
+                <Skeleton width="240px" height="28px" style={{ marginBottom: 16, maxWidth: '100%' }} />
                 <Skeleton width="100%" height="16px" style={{ marginBottom: 8 }} />
                 <Skeleton width="95%" height="16px" style={{ marginBottom: 8 }} />
                 <Skeleton width="90%" height="16px" style={{ marginBottom: 24 }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="gd-features-tiles-grid">
                   <Skeleton width="100%" height="90px" style={{ borderRadius: 16 }} />
                   <Skeleton width="100%" height="90px" style={{ borderRadius: 16 }} />
                 </div>
@@ -1460,7 +1460,12 @@ export default function GigDetail() {
 
       {/* ── LIGHTBOX OVERLAY MODAL (Accessible, Focus Trapped, Esc to Close) ── */}
       {lightboxOpen && currentSlide && (
-        <div className="gd-lightbox-backdrop" onClick={() => setLightboxOpen(false)}>
+        <div
+          className="gd-lightbox-backdrop"
+          onClick={() => setLightboxOpen(false)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="gd-lightbox-modal" onClick={e => e.stopPropagation()}>
             <img src={currentSlide} alt="Expanded showcase" className="gd-lightbox-img" />
 

@@ -418,6 +418,7 @@ export default function CookiePolicy() {
                                             {CHOICES.map(choice => (
                                                 <div key={choice.title} className="legal-info-card">
                                                     <div className="legal-info-card__icon">{choice.icon}</div>
+                                                    <div style={{ minWidth: 0 }}>
                                                     <div className="legal-info-card__title">{choice.title}</div>
                                                     <p className="legal-info-card__text">{choice.desc}</p>
                                                     {choice.links.length > 0 && (
@@ -431,7 +432,10 @@ export default function CookiePolicy() {
                                                                     style={{
                                                                         background: 'rgba(4,46,76,0.08)',
                                                                         color: 'var(--color-primary)',
-                                                                        padding: '4px 12px',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        minHeight: 'var(--tap-min, 40px)',
+                                                                        padding: '4px 14px',
                                                                         borderRadius: 'var(--radius-full)',
                                                                         fontSize: 'var(--fs-xs)',
                                                                         fontWeight: 600,
@@ -443,17 +447,20 @@ export default function CookiePolicy() {
                                                             ))}
                                                         </div>
                                                     )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
                                         <div className="legal-info-card legal-info-card--warn" style={{ marginTop: 'var(--space-5)' }}>
                                             <div className="legal-info-card__icon">⚠️</div>
-                                            <div className="legal-info-card__title">Impact of Disabling Cookies</div>
-                                            <p className="legal-info-card__text">
-                                                Disabling strictly necessary cookies will prevent you from logging in and using most
-                                                platform features. Disabling functional cookies will reset your preferences on each visit.
-                                                The platform remains accessible, but some features may be degraded.
-                                            </p>
+                                            <div style={{ minWidth: 0 }}>
+                                                <div className="legal-info-card__title">Impact of Disabling Cookies</div>
+                                                <p className="legal-info-card__text">
+                                                    Disabling strictly necessary cookies will prevent you from logging in and using most
+                                                    platform features. Disabling functional cookies will reset your preferences on each visit.
+                                                    The platform remains accessible, but some features may be degraded.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </section>

@@ -20,6 +20,7 @@ import { timezones } from '../../utils/timezones';
 import { clientsAPI } from '../../api/clients';
 import Reveal from '../freelancer/components/Reveal';
 import '../freelancer/FreelancerProfile.css';
+import './ClientResponsive.css';
 
 const MAX_BIO = 600;
 
@@ -363,7 +364,7 @@ export default function ClientProfile() {
   };
 
   return (
-    <div className="flp-page">
+    <div className="flp-page cl-profile-page">
       {/* ─── Breadcrumb & Top Page Header ─── */}
       <header className="flp-header">
         <div className="flp-header__left">
@@ -600,7 +601,7 @@ export default function ClientProfile() {
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
                   <div className="fsec-field">
                     <label className="fsec-field-label" htmlFor="cp-full-name">Full Name*</label>
                     <input
@@ -789,7 +790,7 @@ export default function ClientProfile() {
                   </div>
 
                   {form.companyType !== 'Individual' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 16 }}>
                       <div className="fsec-field">
                         <label className="fsec-field-label" htmlFor="cp-role">Your Role / Title</label>
                         <Select
@@ -888,7 +889,7 @@ export default function ClientProfile() {
                     <TagInput tags={prefSkills} onChange={setPrefSkills} placeholder="e.g. React, UI/UX, Python..." />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 16 }}>
                     <div className="fsec-field">
                       <label className="fsec-field-label" htmlFor="cp-budget">Budget Tier</label>
                       <Select
@@ -1085,7 +1086,7 @@ export default function ClientProfile() {
                     >
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <strong style={{ fontSize: 13.5, color: '#0B2942' }}>{langName}</strong>
-                        <span style={{ fontSize: 11.5, color: '#10B981', fontWeight: 700, textTransform: 'capitalize' }}>
+                        <span style={{ fontSize: 12, color: '#10B981', fontWeight: 700, textTransform: 'capitalize' }}>
                           {l.proficiency || 'Fluent'}
                         </span>
                       </div>

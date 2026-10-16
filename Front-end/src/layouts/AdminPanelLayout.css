@@ -3,7 +3,7 @@
    All styles scoped to .admin-layout — zero leakage to marketplace
    ============================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* Fonts: Inter is loaded once by styles/variables.css (a per-page @import here was a duplicate render-blocking request). */
 
 /* ─── CSS Variables ─────────────────────────────────────────── */
 .admin-layout {
@@ -56,6 +56,7 @@
 
   /* Z-index layers */
   --ap-z-sidebar:     100;
+  --ap-z-scrim:       99;
   --ap-z-header:      90;
   --ap-z-modal:       200;
   --ap-z-toast:       300;
@@ -64,7 +65,9 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--ap-bg-primary);
   color: var(--ap-text-primary);
-  min-height: 100vh;
+  /* Visible height (--app-vh = real window.innerHeight in the native app). */
+  height: var(--app-vh, var(--vh-full, 100vh));
+  min-height: var(--app-vh, var(--vh-full, 100vh));
   display: flex;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -78,15 +81,25 @@
   flex-direction: column;
   min-width: 0;
   margin-left: var(--ap-sidebar-width);
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   transition: var(--ap-transition);
 }
 
 .admin-layout .ap-page-wrapper {
   flex: 1;
-  padding: 28px 32px;
+  padding: 28px 32px calc(28px + var(--safe-bottom, 0px));
   overflow-y: auto;
-  max-height: calc(100vh - 64px);
+  min-height: 0; /* flex child: scrolls inside the shell instead of growing past the viewport */
+  -webkit-overflow-scrolling: touch;
+}
+/* Wide screens: cap the content instead of stretching tables/cards edge to edge. */
+@media (min-width: 1700px) {
+  .admin-layout .ap-page-wrapper > * {
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* ─── Sidebar ────────────────────────────────────────────────── */
@@ -95,7 +108,8 @@
   top: 0;
   left: 0;
   width: var(--ap-sidebar-width);
-  height: 100vh;
+  height: var(--app-vh, var(--vh-full, 100vh));
+  padding-top: var(--safe-top, 0px);
   background: var(--ap-sidebar-bg);
   border-right: 1px solid var(--ap-border);
   display: flex;
@@ -135,7 +149,7 @@
   line-height: 1.2;
 }
 .admin-layout .ap-brand-text span {
-  font-size: 0.7rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #10B981;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -151,7 +165,7 @@
   margin-bottom: 8px;
 }
 .admin-layout .ap-nav-section-label {
-  font-size: 0.65rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   color: var(--ap-text-muted);
   text-transform: uppercase;
@@ -206,7 +220,7 @@
   margin-left: auto;
   background: var(--ap-red);
   color: #fff;
-  font-size: 0.65rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 999px;
@@ -215,7 +229,7 @@
 }
 
 .admin-layout .ap-sidebar-footer {
-  padding: 12px;
+  padding: 12px 12px calc(12px + var(--safe-bottom, 0px));
   border-top: 1px solid var(--ap-border);
 }
 .admin-layout .ap-admin-badge {
@@ -253,7 +267,7 @@
   text-overflow: ellipsis;
 }
 .admin-layout .ap-admin-info small {
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--ap-text-muted);
 }
 
@@ -261,7 +275,7 @@
 .admin-layout .ap-header {
   position: sticky;
   top: 0;
-  height: 64px;
+  height: calc(64px + var(--safe-top, 0px));
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -269,7 +283,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px 0 28px;
+  padding: var(--safe-top, 0px) 24px 0 28px;
   z-index: var(--ap-z-header);
   flex-shrink: 0;
 }
@@ -279,6 +293,7 @@
   align-items: center;
   gap: 16px;
   flex: 1;
+  min-width: 0; /* lets the search shrink instead of pushing the header buttons off-screen */
 }
 .admin-layout .ap-header-right {
   display: flex;
@@ -287,6 +302,10 @@
 }
 
 .admin-layout .ap-page-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--ap-text-primary);
@@ -298,6 +317,7 @@
   position: relative;
   flex: 1;
   max-width: 420px;
+  min-width: 0;
 }
 .admin-layout .ap-search-input {
   width: 100%;
@@ -336,12 +356,12 @@
   border-radius: var(--ap-radius-lg);
   box-shadow: var(--ap-shadow-lg);
   z-index: var(--ap-z-dropdown);
-  max-height: 480px;
+  max-height: min(480px, calc(var(--app-vh, var(--vh-full, 100vh)) - 96px));
   overflow-y: auto;
   padding: 8px;
 }
 .admin-layout .ap-search-category {
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   color: var(--ap-text-muted);
   text-transform: uppercase;
@@ -369,6 +389,27 @@
   font-size: 0.75rem;
   color: var(--ap-text-muted);
 }
+
+/* Hamburger / drawer controls: hidden on desktop, shown <1024px (see Responsive) */
+.admin-layout .ap-menu-btn,
+.admin-layout .ap-sidebar-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min, 40px);
+  height: var(--tap-min, 40px);
+  flex-shrink: 0;
+  background: var(--ap-bg-elevated);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  color: var(--ap-text-secondary);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.admin-layout .ap-sidebar-close { margin-left: auto; }
+.admin-layout .ap-scrim { display: none; }
 
 /* Header buttons */
 .admin-layout .ap-header-btn {
@@ -412,7 +453,7 @@
   transition: var(--ap-transition);
 }
 .admin-layout .ap-card:hover {
-  border-color: rgba(255,255,255,0.1);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 .admin-layout .ap-card-header {
   display: flex;
@@ -453,7 +494,7 @@
 .admin-layout .ap-stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--ap-shadow-md);
-  border-color: rgba(255,255,255,0.1);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 .admin-layout .ap-stat-top {
   display: flex;
@@ -479,11 +520,12 @@
   text-transform: uppercase;
 }
 .admin-layout .ap-stat-value {
-  font-size: 1.8rem;
+  font-size: clamp(1.4rem, 1.2rem + 0.7vw, 1.8rem);
   font-weight: 700;
   color: var(--ap-text-primary);
   letter-spacing: -0.04em;
   line-height: 1;
+  overflow-wrap: anywhere; /* "PKR 1,250,000" wraps instead of being clipped by .ap-stat-card{overflow:hidden} */
 }
 .admin-layout .ap-stat-delta {
   font-size: 0.75rem;
@@ -497,10 +539,16 @@
 .admin-layout .ap-stat-delta.neutral  { color: var(--ap-text-muted); }
 
 /* ─── Grid Utilities ─────────────────────────────────────────── */
-.admin-layout .ap-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.admin-layout .ap-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.admin-layout .ap-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.admin-layout .ap-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+/* minmax(0,1fr): tracks may shrink below their content's min-content, so a wide
+   table/email inside a card can no longer blow the whole grid past the screen. */
+.admin-layout .ap-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.admin-layout .ap-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.admin-layout .ap-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.admin-layout .ap-grid-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; }
+.admin-layout .ap-grid-2 > *,
+.admin-layout .ap-grid-3 > *,
+.admin-layout .ap-grid-4 > *,
+.admin-layout .ap-grid-5 > * { min-width: 0; }
 
 /* ─── Data Table ─────────────────────────────────────────────── */
 .admin-layout .ap-table-wrap {
@@ -516,7 +564,7 @@
 .admin-layout .ap-table thead th {
   background: var(--ap-bg-elevated);
   color: var(--ap-text-muted);
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -550,21 +598,21 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 3px 9px;
   border-radius: 999px;
   text-transform: capitalize;
   white-space: nowrap;
 }
-.admin-layout .ap-badge-blue   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
-.admin-layout .ap-badge-green  { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
-.admin-layout .ap-badge-yellow { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
-.admin-layout .ap-badge-red    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
-.admin-layout .ap-badge-purple { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
-.admin-layout .ap-badge-gray   { background: rgba(148,163,184,0.1); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
-.admin-layout .ap-badge-orange { background: rgba(249,115,22,0.12); color: #fb923c; border: 1px solid rgba(249,115,22,0.25); }
-.admin-layout .ap-badge-teal   { background: rgba(20,184,166,0.12); color: #2dd4bf; border: 1px solid rgba(20,184,166,0.25); }
+.admin-layout .ap-badge-blue   { background: rgba(59,130,246,0.12); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.30); }
+.admin-layout .ap-badge-green  { background: rgba(16,185,129,0.12); color: #047857; border: 1px solid rgba(16,185,129,0.32); }
+.admin-layout .ap-badge-yellow { background: rgba(245,158,11,0.14); color: #92400e; border: 1px solid rgba(245,158,11,0.35); }
+.admin-layout .ap-badge-red    { background: rgba(239,68,68,0.10);  color: #b91c1c; border: 1px solid rgba(239,68,68,0.30); }
+.admin-layout .ap-badge-purple { background: rgba(139,92,246,0.10); color: #6d28d9; border: 1px solid rgba(139,92,246,0.30); }
+.admin-layout .ap-badge-gray   { background: rgba(100,116,139,0.10); color: #475569; border: 1px solid rgba(100,116,139,0.28); }
+.admin-layout .ap-badge-orange { background: rgba(249,115,22,0.12); color: #c2410c; border: 1px solid rgba(249,115,22,0.32); }
+.admin-layout .ap-badge-teal   { background: rgba(20,184,166,0.12); color: #0f766e; border: 1px solid rgba(20,184,166,0.32); }
 
 /* ─── Buttons ────────────────────────────────────────────────── */
 .admin-layout .ap-btn {
@@ -591,11 +639,11 @@
 .admin-layout .ap-btn-primary {
   background: linear-gradient(135deg, var(--ap-blue), var(--ap-blue-dark));
   color: #fff;
-  box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+  box-shadow: 0 2px 8px rgba(16,185,129,0.3);
 }
 .admin-layout .ap-btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(59,130,246,0.45);
+  box-shadow: 0 4px 16px rgba(16,185,129,0.4);
 }
 .admin-layout .ap-btn-secondary {
   background: var(--ap-bg-elevated);
@@ -604,11 +652,11 @@
 }
 .admin-layout .ap-btn-secondary:hover:not(:disabled) {
   background: var(--ap-bg-hover);
-  border-color: rgba(255,255,255,0.12);
+  border-color: var(--ap-border-active);
 }
 .admin-layout .ap-btn-danger {
-  background: rgba(239,68,68,0.12);
-  color: #f87171;
+  background: rgba(239,68,68,0.10);
+  color: #b91c1c;
   border: 1px solid rgba(239,68,68,0.25);
 }
 .admin-layout .ap-btn-danger:hover:not(:disabled) {
@@ -616,9 +664,9 @@
   border-color: rgba(239,68,68,0.5);
 }
 .admin-layout .ap-btn-success {
-  background: rgba(34,197,94,0.12);
-  color: #4ade80;
-  border: 1px solid rgba(34,197,94,0.25);
+  background: rgba(16,185,129,0.12);
+  color: #047857;
+  border: 1px solid rgba(16,185,129,0.32);
 }
 .admin-layout .ap-btn-success:hover:not(:disabled) {
   background: rgba(34,197,94,0.2);
@@ -677,6 +725,7 @@
   justify-content: center;
   z-index: var(--ap-z-modal);
   padding: 24px;
+  padding-bottom: calc(24px + var(--safe-bottom, 0px));
   animation: apFadeIn 0.15s ease;
 }
 .admin-layout .ap-modal {
@@ -688,7 +737,7 @@
   max-width: 540px;
   box-shadow: var(--ap-shadow-lg);
   animation: apSlideUp 0.2s cubic-bezier(0.34,1.56,0.64,1);
-  max-height: 90vh;
+  max-height: calc(var(--app-vh, var(--vh-full, 100vh)) * 0.9);
   overflow-y: auto;
 }
 .admin-layout .ap-modal-lg { max-width: 720px; }
@@ -729,6 +778,7 @@
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid var(--ap-border);
+  flex-wrap: wrap;
 }
 
 /* ─── Tabs ───────────────────────────────────────────────────── */
@@ -740,7 +790,11 @@
   border-radius: var(--ap-radius-lg);
   border: 1px solid var(--ap-border);
   width: fit-content;
+  max-width: 100%;
+  overflow-x: auto; /* many/long tabs scroll inside the pill instead of widening the page */
+  scrollbar-width: none;
 }
+.admin-layout .ap-tabs::-webkit-scrollbar { display: none; }
 .admin-layout .ap-tab {
   padding: 7px 16px;
   border-radius: var(--ap-radius-md);
@@ -753,6 +807,7 @@
   background: none;
   font-family: inherit;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .admin-layout .ap-tab:hover { color: var(--ap-text-primary); }
 .admin-layout .ap-tab.active {
@@ -820,6 +875,7 @@
 .admin-layout .ap-pagination-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
 }
 .admin-layout .ap-page-btn {
@@ -896,10 +952,10 @@
   margin-bottom: 16px;
 }
 .admin-layout .ap-alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
-.admin-layout .ap-alert-info    { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); color: #93c5fd; }
-.admin-layout .ap-alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #fcd34d; }
-.admin-layout .ap-alert-error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.25);  color: #fca5a5; }
-.admin-layout .ap-alert-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.25);  color: #86efac; }
+.admin-layout .ap-alert-info    { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.28); color: #1e40af; }
+.admin-layout .ap-alert-warning { background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.35); color: #92400e; }
+.admin-layout .ap-alert-error   { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.28);  color: #b91c1c; }
+.admin-layout .ap-alert-success { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.30); color: #166534; }
 
 /* ─── Divider ────────────────────────────────────────────────── */
 .admin-layout .ap-divider {
@@ -912,16 +968,17 @@
 .admin-layout .ap-page-wrapper::-webkit-scrollbar { width: 5px; }
 .admin-layout .ap-page-wrapper::-webkit-scrollbar-track { background: transparent; }
 .admin-layout .ap-page-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
+  background: rgba(11,41,66,0.18);
   border-radius: 999px;
 }
 .admin-layout .ap-page-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(11,41,66,0.3);
 }
 
 /* ─── Tooltip ────────────────────────────────────────────────── */
 .admin-layout [data-tip] { position: relative; }
-.admin-layout [data-tip]:hover::after {
+.admin-layout [data-tip]:hover::after,
+.admin-layout [data-tip]:focus-visible::after {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);
@@ -929,7 +986,7 @@
   transform: translateX(-50%);
   background: var(--ap-bg-elevated);
   color: var(--ap-text-primary);
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   padding: 5px 9px;
   border-radius: var(--ap-radius-sm);
   white-space: nowrap;
@@ -940,7 +997,8 @@
 }
 
 /* Header tooltips open downwards so they are never cut off by top of window */
-.admin-layout .ap-header [data-tip]:hover::after {
+.admin-layout .ap-header [data-tip]:hover::after,
+.admin-layout .ap-header [data-tip]:focus-visible::after {
   bottom: auto;
   top: calc(100% + 8px);
 }
@@ -952,39 +1010,132 @@
 @keyframes apShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 1200px) {
-  .admin-layout .ap-grid-5 { grid-template-columns: repeat(3, 1fr); }
-  .admin-layout .ap-grid-4 { grid-template-columns: repeat(2, 1fr); }
+/* Breakpoint scale: 480 / 768 / 1024 / 1280 / 1700 */
+
+/* Stat/detail grids. The sidebar is a drawer below 1024px, so content width ==
+   viewport width there. */
+@media (max-width: 1699.98px) {
+  .admin-layout .ap-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-@media (max-width: 900px) {
-  .admin-layout .ap-grid-3,
-  .admin-layout .ap-grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .admin-layout .ap-grid-5 { grid-template-columns: repeat(2, 1fr); }
-  .admin-layout .ap-page-wrapper { padding: 20px 16px; }
+@media (max-width: 1279.98px) {
+  .admin-layout .ap-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .admin-layout .ap-grid-2,
-  .admin-layout .ap-grid-3,
+  .admin-layout .ap-grid-3 { grid-template-columns: 1fr; }
+  .admin-layout .ap-grid-4,
+  .admin-layout .ap-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 479.98px) {
   .admin-layout .ap-grid-4,
   .admin-layout .ap-grid-5 { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 400px) {
-  .admin-layout .ap-sidebar-width { --ap-sidebar-width: 0; }
+/* Tablet + phone: sidebar becomes an off-canvas drawer; content takes the full width. */
+@media (max-width: 1023.98px) {
   .admin-layout .ap-main-content { margin-left: 0; }
-  .admin-layout .ap-page-wrapper { padding: 16px 12px; }
-  .admin-layout .ap-header { padding: 0 16px; }
-  .admin-layout .ap-page-title { font-size: 0.9rem; }
-  .admin-layout .ap-card { padding: 16px 20px; }
+  .admin-layout .ap-menu-btn,
+  .admin-layout .ap-sidebar-close { display: inline-flex; }
+
+  .admin-layout .ap-sidebar {
+    width: min(var(--ap-sidebar-width), 85vw);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.25s;
+  }
+  .admin-layout .ap-sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+    box-shadow: var(--ap-shadow-lg);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+  }
+  .admin-layout .ap-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 41, 66, 0.5);
+    z-index: var(--ap-z-scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .admin-layout .ap-scrim.open { opacity: 1; pointer-events: auto; }
+
+  .admin-layout .ap-header { padding-left: 16px; padding-right: 16px; }
+  .admin-layout .ap-header-left { gap: 10px; }
+  .admin-layout .ap-page-wrapper { padding: 24px 20px calc(24px + var(--safe-bottom, 0px)); }
+}
+
+@media (max-width: 767.98px) {
+  .admin-layout .ap-page-wrapper { padding: 20px 16px calc(20px + var(--safe-bottom, 0px)); }
+  .admin-layout .ap-page-title { display: none; } /* search needs the room; every page has its own <h1> */
+  .admin-layout .ap-global-search { max-width: none; }
+  /* The header's backdrop-filter would trap a position:fixed child, so drop it
+     here and let the results panel span the screen just under the header. */
+  .admin-layout .ap-header { -webkit-backdrop-filter: none; backdrop-filter: none; background: #fff; }
+  .admin-layout .ap-search-results {
+    position: fixed;
+    top: calc(64px + var(--safe-top, 0px) + 4px);
+    left: 8px;
+    right: 8px;
+    max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - 64px - var(--safe-top, 0px) - 16px);
+  }
+  /* Wide tables scroll inside their wrapper; edge shadows hint that there is more to swipe. */
+  .admin-layout .ap-table-wrap {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    background:
+      linear-gradient(to right, #fff 30%, rgba(255, 255, 255, 0)),
+      linear-gradient(to left, #fff 30%, rgba(255, 255, 255, 0)) 100% 0,
+      radial-gradient(farthest-side at 0 50%, rgba(11, 41, 66, 0.18), rgba(11, 41, 66, 0)),
+      radial-gradient(farthest-side at 100% 50%, rgba(11, 41, 66, 0.18), rgba(11, 41, 66, 0)) 100% 0;
+    background-repeat: no-repeat;
+    background-color: #fff;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+  .admin-layout .ap-modal-overlay { padding: 12px; padding-bottom: calc(12px + var(--safe-bottom, 0px)); }
+  .admin-layout .ap-modal {
+    padding: 20px;
+    max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - 24px);
+  }
+}
+
+@media (max-width: 479.98px) {
+  .admin-layout .ap-page-wrapper { padding: 16px 12px calc(16px + var(--safe-bottom, 0px)); }
+  .admin-layout .ap-header { padding-left: 12px; padding-right: 12px; }
+  .admin-layout .ap-header-right { gap: 6px; }
+  .admin-layout .ap-card { padding: 16px 18px; }
   .admin-layout .ap-card-title { font-size: 0.85rem; }
   .admin-layout .ap-stat-card { padding: 16px; gap: 10px; }
   .admin-layout .ap-stat-icon-wrap { width: 36px; height: 36px; font-size: 1.1rem; }
-  .admin-layout .ap-stat-value { font-size: 1.5rem; }
-  .admin-layout .ap-modal { padding: 20px; }
+  .admin-layout .ap-modal { padding: 16px; }
   .admin-layout .ap-modal-title { font-size: 1rem; }
+  .admin-layout .ap-modal-footer .ap-btn { flex: 1 1 auto; justify-content: center; }
   .admin-layout .ap-page-header-left h1 { font-size: 1.1rem; }
   .admin-layout .ap-table { font-size: 0.8rem; }
-  .admin-layout .ap-table thead th { padding: 10px 12px; font-size: 0.65rem; }
+  .admin-layout .ap-table thead th { padding: 10px 12px; }
   .admin-layout .ap-table tbody td { padding: 10px 12px; }
   .admin-layout .ap-btn { padding: 7px 14px; font-size: 0.8rem; gap: 5px; }
+}
+
+/* Touch: at least 40px for everything tappable (desktop untouched). */
+@media (pointer: coarse) {
+  .admin-layout .ap-btn,
+  .admin-layout .ap-btn-sm,
+  .admin-layout .ap-tab,
+  .admin-layout .ap-header-btn,
+  .admin-layout .ap-page-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .admin-layout .ap-page-btn,
+  .admin-layout .ap-header-btn,
+  .admin-layout .ap-btn-icon { min-width: var(--tap-min, 40px); }
+  .admin-layout .ap-nav-item { min-height: 44px; }
+  .admin-layout .ap-btn { justify-content: center; }
+}
+
+/* Hover tooltips never show on touch (they would stick after a tap). */
+@media (hover: none) {
+  .admin-layout [data-tip]:hover::after { display: none; }
 }

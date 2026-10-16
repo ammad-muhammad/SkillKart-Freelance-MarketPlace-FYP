@@ -6,7 +6,7 @@
 
 /* ─── Global Page Wrapper ─── */
 .bf-page-wrapper {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background: linear-gradient(180deg, #EAFBF4 0%, #F5FAF8 30%, #F8FAFC 100%);
   color: #0B2942;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -54,7 +54,7 @@
   background: #EAFBF4;
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #059669;
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 4px 12px;
@@ -344,6 +344,7 @@
   border-radius: 14px;
   box-shadow: 0 12px 30px rgba(11, 41, 66, 0.12);
   width: 290px;
+  max-width: calc(100vw - 24px);
   z-index: 50;
   padding: 14px;
   box-sizing: border-box;
@@ -630,6 +631,10 @@
   cursor: pointer;
   color: #94A3B8;
   transition: color 0.15s ease;
+  /* Enlarge the hit area of the tiny remove icon without changing its size. */
+  padding: 8px;
+  margin: -8px -8px -8px -4px;
+  box-sizing: content-box;
 }
 
 .bf-active-tag svg:hover {
@@ -657,13 +662,13 @@
   gap: 20px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .bf-cards-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .bf-cards-grid {
     grid-template-columns: 1fr;
   }
@@ -813,7 +818,7 @@
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
   color: #065F46;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 999px;
@@ -873,7 +878,7 @@
   background: #F1F5F9;
   border: 1px solid #E2E8F0;
   color: #334155;
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 6px;
@@ -924,7 +929,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
 }
 
@@ -985,7 +990,7 @@
 }
 
 .bf-availability-pill {
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   background: #F0FDF4;
   border: 1px solid #BBF7D0;
@@ -1016,7 +1021,7 @@
   gap: 8px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .bf-card--list {
     flex-direction: column;
     align-items: flex-start;
@@ -1200,6 +1205,7 @@
 /* ─── 6) MODERN PAGINATION ─── */
 .bf-pagination-wrap {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -1231,8 +1237,17 @@
 
 .bf-pagination-numbers {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 6px;
+}
+
+.bf-page-dots {
+  min-width: 24px;
+  text-align: center;
+  color: #94A3B8;
+  user-select: none;
 }
 
 .bf-page-number {
@@ -1263,4 +1278,206 @@
   color: #FFFFFF;
   font-weight: 800;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+/* ─── MOBILE / TABLET FILTERS: popovers become one button + bottom sheet ─── */
+.bf-hero-back {
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.bf-mobile-filter-trigger {
+  display: none;
+}
+
+.bf-filter-count-badge {
+  background: #10B981;
+  color: #FFFFFF;
+  font-size: var(--fs-floor, 0.75rem);
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bf-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 41, 66, 0.5);
+  z-index: var(--layer-drawer, 2500);
+  display: flex;
+  align-items: flex-end;
+}
+
+.bf-sheet {
+  background: #FFFFFF;
+  width: 100%;
+  max-height: calc(var(--app-vh, var(--vh-full)) * 0.85);
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: bfSheetUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes bfSheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.bf-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.bf-sheet__header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0B2942;
+}
+
+.bf-sheet__close {
+  background: #F1F5F9;
+  border: none;
+  border-radius: 50%;
+  width: var(--tap-min, 40px);
+  height: var(--tap-min, 40px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  cursor: pointer;
+}
+
+.bf-sheet__body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 0;
+}
+
+.bf-sheet-section h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0B2942;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
+}
+
+.bf-sheet .bf-rating-opt-row,
+.bf-sheet .bf-location-item {
+  min-height: var(--tap-min, 40px);
+}
+
+.bf-location-list--sheet {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.bf-sheet__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px calc(16px + var(--safe-bottom, 0px));
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFC;
+}
+
+.bf-sheet__reset {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: var(--tap-min, 40px);
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.bf-sheet__apply {
+  background: #10B981;
+  color: #FFFFFF;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-height: var(--tap-min, 40px);
+  padding: 0 22px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+@media (max-width: 1023.98px) {
+  .bf-filter-pill-label,
+  .bf-toolbar-left > .bf-popover-container {
+    display: none;
+  }
+  .bf-mobile-filter-trigger {
+    display: inline-flex;
+  }
+  .bf-toolbar-right {
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .bf-sheet-overlay {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .bf-main-section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .bf-filter-toolbar {
+    padding: 12px;
+  }
+  .bf-hero-section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .bf-domain-pill,
+  .bf-toolbar-btn,
+  .bf-clear-all-link,
+  .bf-pagination-btn,
+  .bf-view-profile-btn,
+  .bf-search-submit-btn,
+  .bf-empty-reset-btn,
+  .bf-error-retry-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .bf-page-number {
+    min-width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .bf-view-btn {
+    min-width: var(--tap-min, 40px);
+    min-height: 36px;
+  }
+  .bf-save-btn,
+  .bf-search-clear-btn {
+    min-width: var(--tap-min, 40px);
+    min-height: var(--tap-min, 40px);
+  }
+  .bf-popover-reset {
+    min-height: var(--tap-min, 40px);
+    padding: 0 8px;
+  }
 }

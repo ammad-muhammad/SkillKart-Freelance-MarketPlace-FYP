@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import BackButton from '../../../Components/common/BackButton/BackButton';
+import { isMobileApp } from '../../../utils/platform';
 import { freelancersAPI } from '../../../api/freelancers';
 import { publicAPI } from '../../../api/publicData';
 import { aiAPI } from '../../../api/ai';
@@ -67,6 +69,38 @@ const RATE_PRESETS = [
   { label: 'Under Rs. 5,000/hr', max: 5000 },
   { label: 'Under Rs. 10,000/hr', max: 10000 },
 ];
+
+/* Windowed page list: [1, '...', 4, 5, 6, '...', 12] so the pagination row never overflows. */
+const buildPaginationRange = (page, totalPages) => {
+  const siblingCount = 1;
+  const totalPageNumbers = siblingCount * 2 + 5;
+
+  if (totalPages <= totalPageNumbers) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const leftSiblingIndex = Math.max(page - siblingCount, 1);
+  const rightSiblingIndex = Math.min(page + siblingCount, totalPages);
+  const shouldShowLeftDots = leftSiblingIndex > 2;
+  const shouldShowRightDots = rightSiblingIndex < totalPages - 2;
+
+  if (!shouldShowLeftDots && shouldShowRightDots) {
+    const leftItemCount = 3 + 2 * siblingCount;
+    return [...Array.from({ length: leftItemCount }, (_, i) => i + 1), '...', totalPages];
+  }
+  if (shouldShowLeftDots && !shouldShowRightDots) {
+    const rightItemCount = 3 + 2 * siblingCount;
+    return [1, '...', ...Array.from({ length: rightItemCount }, (_, i) => totalPages - rightItemCount + i + 1)];
+  }
+  if (shouldShowLeftDots && shouldShowRightDots) {
+    const middleRange = Array.from(
+      { length: rightSiblingIndex - leftSiblingIndex + 1 },
+      (_, i) => leftSiblingIndex + i,
+    );
+    return [1, '...', ...middleRange, '...', totalPages];
+  }
+  return Array.from({ length: totalPages }, (_, i) => i + 1);
+};
 
 /* ── Skeleton Card ── */
 function SkeletonCard({ list }) {
@@ -301,8 +335,10 @@ export default function BrowseFreelancers() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 9;
 
-  /* Popovers */
+  /* Popovers (desktop) + bottom sheet (<=1023.98px) */
   const [activePopover, setActivePopover] = useState(null); // 'rate' | 'rating' | 'location' | 'skills'
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [draft, setDraft] = useState({ maxRate: 100, minRating: 0, location: '', skills: [] });
   const filterBarRef = useRef(null);
 
   /* Data state */
@@ -319,7 +355,10 @@ export default function BrowseFreelancers() {
   // Close popovers on click outside or Escape
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setActivePopover(null);
+      if (e.key === 'Escape') {
+        setActivePopover(null);
+        setSheetOpen(false);
+      }
     };
     const handleClickOutside = (e) => {
       if (filterBarRef.current && !filterBarRef.current.contains(e.target)) {
@@ -458,6 +497,28 @@ export default function BrowseFreelancers() {
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
+  const activeFilterCount =
+    (maxRate < 100 ? 1 : 0) + (minRating > 0 ? 1 : 0) + (location ? 1 : 0) + (selectedSkills.length > 0 ? 1 : 0);
+
+  const openFilterSheet = () => {
+    setDraft({ maxRate, minRating, location, skills: selectedSkills });
+    setActivePopover(null);
+    setSheetOpen(true);
+  };
+
+  const applyFilterSheet = () => {
+    setMaxRate(draft.maxRate);
+    setMinRating(draft.minRating);
+    setLocation(draft.location);
+    setSelectedSkills(draft.skills);
+    setPage(1);
+    setSheetOpen(false);
+  };
+
+  const resetFilterSheet = () => {
+    setDraft({ maxRate: 100, minRating: 0, location: '', skills: [] });
+  };
+
   return (
     <div className="bf-page-wrapper">
       <Navbar />
@@ -467,6 +528,11 @@ export default function BrowseFreelancers() {
         <div className="bf-hero-ambient" />
 
         <div className="bf-hero-content-container">
+          {isMobileApp() && (
+            <div className="bf-hero-back">
+              <BackButton />
+            </div>
+          )}
           <div className="bf-hero-eyebrow">
             <Sparkles size={13} className="bf-eyebrow-icon" />
             <span>VERIFIED SKILLKART TALENT POOL</span>
@@ -553,6 +619,17 @@ export default function BrowseFreelancers() {
                 <Filter size={15} className="bf-filter-icon" />
                 <span>Filters:</span>
               </div>
+
+              {/* Phones & tablets: one button opens the bottom sheet instead of 4 popovers */}
+              <button
+                type="button"
+                className={`bf-toolbar-btn bf-mobile-filter-trigger ${activeFilterCount > 0 ? 'bf-toolbar-btn--active' : ''}`}
+                onClick={openFilterSheet}
+              >
+                <SlidersHorizontal size={14} />
+                <span>Filters</span>
+                {activeFilterCount > 0 && <span className="bf-filter-count-badge">{activeFilterCount}</span>}
+              </button>
 
               {/* Rate Filter Popover */}
               <div className="bf-popover-container">
@@ -791,6 +868,117 @@ export default function BrowseFreelancers() {
             </div>
           </div>
 
+          {/* ─── MOBILE FILTER BOTTOM SHEET (<=1023.98px) ─── */}
+          {sheetOpen && (
+            <div className="bf-sheet-overlay" onClick={() => setSheetOpen(false)}>
+              <div
+                className="bf-sheet"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Filter freelancers"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bf-sheet__header">
+                  <h3>Filters</h3>
+                  <button
+                    type="button"
+                    className="bf-sheet__close"
+                    onClick={() => setSheetOpen(false)}
+                    aria-label="Close filters"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="bf-sheet__body">
+                  <div className="bf-sheet-section">
+                    <h4>Max Hourly Rate</h4>
+                    <div className="bf-range-display">
+                      <span>Rs. 5/hr</span>
+                      <span className="bf-range-val-current">
+                        {draft.maxRate >= 100 ? 'Any rate' : `Rs. ${draft.maxRate}/hr`}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      className="bf-range-slider"
+                      aria-label="Maximum hourly rate"
+                      min={5}
+                      max={100}
+                      step={1}
+                      value={Math.min(draft.maxRate, 100)}
+                      onChange={(e) => setDraft((d) => ({ ...d, maxRate: +e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="bf-sheet-section">
+                    <h4>Minimum Rating</h4>
+                    <div className="bf-rating-options-list">
+                      {[
+                        { val: 0, label: 'Any Rating' },
+                        { val: 4.5, label: '4.5 & up ★' },
+                        { val: 4.0, label: '4.0 & up ★' },
+                        { val: 3.0, label: '3.0 & up ★' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.val}
+                          type="button"
+                          className={`bf-rating-opt-row ${draft.minRating === opt.val ? 'bf-rating-opt-row--active' : ''}`}
+                          onClick={() => setDraft((d) => ({ ...d, minRating: opt.val }))}
+                        >
+                          <span>{opt.label}</span>
+                          {draft.minRating === opt.val && <Check size={14} className="bf-check-icon" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bf-sheet-section">
+                    <h4>Location</h4>
+                    <div className="bf-location-list bf-location-list--sheet">
+                      <button
+                        type="button"
+                        className={`bf-location-item ${!draft.location ? 'bf-location-item--active' : ''}`}
+                        onClick={() => setDraft((d) => ({ ...d, location: '' }))}
+                      >
+                        All Locations
+                      </button>
+                      {dynamicLocations.map((loc) => (
+                        <button
+                          key={loc}
+                          type="button"
+                          className={`bf-location-item ${draft.location === loc ? 'bf-location-item--active' : ''}`}
+                          onClick={() => setDraft((d) => ({ ...d, location: loc }))}
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bf-sheet-section">
+                    <h4>Skills</h4>
+                    <TagInput
+                      tags={draft.skills}
+                      onChange={(tags) => setDraft((d) => ({ ...d, skills: tags }))}
+                      validateFn={aiAPI.validateSkill}
+                      placeholder="Type skill & press Enter..."
+                    />
+                  </div>
+                </div>
+
+                <div className="bf-sheet__footer">
+                  <button type="button" className="bf-sheet__reset" onClick={resetFilterSheet}>
+                    Reset
+                  </button>
+                  <button type="button" className="bf-sheet__apply" onClick={applyFilterSheet}>
+                    Show Results
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ─── 3) ACTIVE FILTER TAGS STRIP ─── */}
           {hasActiveFilters && (
             <div className="bf-active-tags-strip">
@@ -919,15 +1107,20 @@ export default function BrowseFreelancers() {
               </button>
 
               <div className="bf-pagination-numbers">
-                {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pNum) => (
-                  <button
-                    key={pNum}
-                    type="button"
-                    className={`bf-page-number ${page === pNum ? 'bf-page-number--active' : ''}`}
-                    onClick={() => { setPage(pNum); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
-                  >
-                    {pNum}
-                  </button>
+                {buildPaginationRange(page, totalPages).map((pNum, idx) => (
+                  pNum === '...' ? (
+                    <span key={`dots-${idx}`} className="bf-page-dots" aria-hidden="true">…</span>
+                  ) : (
+                    <button
+                      key={pNum}
+                      type="button"
+                      className={`bf-page-number ${page === pNum ? 'bf-page-number--active' : ''}`}
+                      aria-current={page === pNum ? 'page' : undefined}
+                      onClick={() => { setPage(pNum); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
+                    >
+                      {pNum}
+                    </button>
+                  )
                 ))}
               </div>
 

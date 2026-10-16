@@ -109,7 +109,7 @@
 /* ─── Stats Strip ─── */
 .fl-prop-stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
 }
@@ -161,7 +161,7 @@
 
 .fl-prop-stat-card__mono {
   font-family: 'SF Mono', 'Fira Code', 'Roboto Mono', monospace;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -191,7 +191,7 @@
 /* ─── Sticky Glass Toolbar ─── */
 .fl-prop-toolbar {
   position: sticky;
-  top: 76px;
+  top: calc(var(--app-nav-h, 72px) + 4px);
   z-index: 20;
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(14px);
@@ -249,7 +249,7 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   background: #F1F5F9;
   color: #475569;
@@ -408,7 +408,7 @@
 .fl-prop-card__main {
   padding: 20px 24px 20px 26px;
   display: grid;
-  grid-template-columns: 2.2fr 1.8fr 1.6fr auto;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.8fr) minmax(0, 1.6fr) auto;
   align-items: center;
   gap: 20px;
 }
@@ -450,7 +450,7 @@
   align-items: center;
   padding: 2px 10px;
   border-radius: 9999px;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 600;
   background: #F1F5F9;
   color: #475569;
@@ -465,7 +465,7 @@
 /* Block 2: 3 Mini Meta columns */
 .fl-prop-card__metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: 12px;
   padding: 0 16px;
@@ -481,11 +481,15 @@
 
 .fl-prop-metric__label {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 10px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #94A3B8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.fl-prop-metric {
+  min-width: 0;
 }
 
 .fl-prop-metric__val {
@@ -493,10 +497,13 @@
   font-weight: 700;
   color: #0B2942;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Block 3: Status & Timeline */
 .fl-prop-card__status-col {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -605,7 +612,7 @@
 }
 
 .fl-prop-pipeline__lbl {
-  font-size: 10px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 600;
   color: #94A3B8;
 }
@@ -759,7 +766,7 @@
 .fl-prop-table th {
   padding: 14px 20px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -949,7 +956,7 @@
 
 .fl-prop-drawer__section-title {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -959,7 +966,7 @@
 
 .fl-prop-drawer__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
@@ -1032,13 +1039,34 @@
 /* ─── Responsive Adjustments ─── */
 @media (max-width: 1200px) {
   .fl-prop-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1024px) {
+/* Card rows: the 4-column layout only fits comfortably from 1280px; below that
+   metrics/actions drop to a second row instead of clipping the buttons. */
+@media (max-width: 1279.98px) {
   .fl-prop-card__main {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .fl-prop-card__metrics {
+    border-left: none;
+    border-right: none;
+    padding: 0;
+  }
+  .fl-prop-card__actions {
+    grid-column: span 2;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    border-top: 1px solid #F1F5F9;
+    padding-top: 12px;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .fl-prop-card__main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
   }
   .fl-prop-card__metrics {
@@ -1054,25 +1082,49 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
+  /* Five stat cards used to stack as 2+2+1 / 5 full-width rows; a swipeable
+     strip keeps them to one row of height. */
   .fl-prop-stats {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
   }
+  .fl-prop-stats::-webkit-scrollbar { display: none; }
+  .fl-prop-stat-card {
+    flex: 0 0 min(190px, 62vw);
+    scroll-snap-align: start;
+    padding: 14px 16px;
+  }
+  /* A permanently pinned 2-3 row toolbar ate a quarter of the screen. */
   .fl-prop-toolbar {
-    top: 64px;
+    position: static;
+    padding: 10px;
+    border-radius: 20px;
   }
+  .fl-prop-toolbar__tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .fl-prop-toolbar__tabs::-webkit-scrollbar { display: none; }
   .fl-prop-toolbar__controls {
     width: 100%;
     justify-content: space-between;
   }
   .fl-prop-search {
     flex: 1;
+    min-width: 0;
   }
   .fl-prop-card__main {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .fl-prop-card__metrics {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .fl-prop-card__actions {
     grid-column: 1;
@@ -1080,15 +1132,50 @@
 }
 
 @media (max-width: 480px) {
-  .fl-prop-stats {
-    grid-template-columns: 1fr;
-  }
   .fl-prop-header__title {
     font-size: 26px;
     line-height: 32px;
   }
   .fl-prop-card__metrics {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
+  }
+}
+
+/* Edit-proposal form row (was an inline 1fr 1fr grid that never stacked) */
+.fl-prop-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 14px;
+}
+
+/* Drawer + safe areas */
+.fl-prop-drawer__header { padding-top: calc(20px + var(--safe-top, 0px)); }
+.fl-prop-drawer__footer { padding-bottom: calc(18px + var(--safe-bottom, 0px)); }
+
+@media (hover: none) {
+  .fl-prop-card:hover,
+  .fl-prop-stat-card:hover { transform: none; }
+}
+
+@media (pointer: coarse) {
+  .fl-prop-view-btn,
+  .fl-prop-drawer__close {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .fl-prop-pager {
+    min-width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .fl-prop-btn,
+  .fl-prop-tab,
+  .fl-prop-sort-select,
+  .fl-prop-search__input {
+    min-height: var(--tap-min, 40px);
+  }
+  .fl-prop-search__clear {
+    min-width: var(--tap-min, 40px);
+    min-height: var(--tap-min, 40px);
   }
 }

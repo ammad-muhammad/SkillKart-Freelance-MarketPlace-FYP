@@ -900,21 +900,22 @@ export default function ClientMessages() {
 
       {/* ─── Lightbox Modal for Images ─── */}
       {lightboxImg && (
-        <div className="flm-lightbox-overlay" onClick={() => setLightboxImg(null)}>
-          <button
-            type="button"
-            className="flm-lightbox-close"
-            onClick={() => setLightboxImg(null)}
-            aria-label="Close image preview"
-          >
-            <X size={22} />
-          </button>
-          <img
-            src={lightboxImg}
-            alt="Fullscreen preview"
-            className="flm-lightbox-img"
-            onClick={e => e.stopPropagation()}
-          />
+        <div className="flm-lightbox-backdrop" onClick={() => setLightboxImg(null)} role="dialog" aria-modal="true" aria-label="Image preview">
+          <div className="flm-lightbox-content" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              className="flm-lightbox-close"
+              onClick={() => setLightboxImg(null)}
+              aria-label="Close image preview"
+            >
+              <X size={22} />
+            </button>
+            <img
+              src={lightboxImg}
+              alt="Fullscreen preview"
+              className="flm-lightbox-img"
+            />
+          </div>
         </div>
       )}
     </div>

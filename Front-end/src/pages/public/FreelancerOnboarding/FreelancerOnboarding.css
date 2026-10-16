@@ -33,7 +33,7 @@
 /* ─── Root / Page Container ────────────────────────────────── */
 .fob-root {
   position: relative;
-  min-height: calc(100vh - 72px);
+  min-height: calc(var(--vh-full, 100vh) - var(--navbar-h, 72px));
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -42,6 +42,7 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--fob-text);
   overflow-x: hidden;
+  overflow-x: clip; /* clip keeps position:sticky descendants working */
   box-sizing: border-box;
 }
 
@@ -234,7 +235,7 @@
 }
 
 .fob-step-label {
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   color: #94A3B8;
   text-align: center;
@@ -419,7 +420,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--fob-error);
   font-weight: 600;
   margin-top: 4px;
@@ -521,7 +522,7 @@
 }
 
 .fob-avail-desc {
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--fob-text-muted);
   font-weight: 500;
 }
@@ -620,7 +621,9 @@
   list-style: none;
   margin: 0;
   box-shadow: 0 14px 30px -8px rgba(11, 41, 66, 0.12), 0 3px 10px rgba(11, 41, 66, 0.04);
-  overflow: hidden;
+  max-height: min(280px, calc(var(--app-vh, var(--vh-full)) * 0.4));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .fob-dropdown-option {
@@ -669,7 +672,7 @@
 }
 
 .fob-dropdown-option-desc {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 500;
   color: var(--fob-text-muted);
 }
@@ -686,7 +689,7 @@
   background: var(--fob-mint);
   color: #059669;
   border: 1px solid var(--fob-mint-border);
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   border-radius: 99px;
   padding: 4px 12px;
@@ -765,7 +768,7 @@
   border: none;
   border-radius: 6px;
   padding: 5px 10px;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -861,7 +864,7 @@
 }
 
 .fob-upload-formats {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: #94A3B8;
 }
 
@@ -918,7 +921,7 @@
 }
 
 .fob-resume-formats {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 500;
   color: var(--fob-text-muted);
   margin: 2px 0 0;
@@ -962,7 +965,7 @@
 }
 
 .fob-resume-filesize {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--fob-text-muted);
   margin: 0;
   display: flex;
@@ -992,7 +995,7 @@
   border: 1px solid var(--fob-mint-border);
   border-radius: 6px;
   padding: 6px 10px;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   transition: all 0.2s ease;
 }
@@ -1048,7 +1051,7 @@
 }
 
 .fob-skip-dashboard-sub {
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--fob-text-muted);
   line-height: 1.35;
 }
@@ -1102,7 +1105,7 @@
 
 .fob-tip-card p {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
   line-height: 1.35;
 }
@@ -1179,7 +1182,7 @@
   border: 1px solid var(--fob-mint-border);
   border-radius: 6px;
   padding: 3px 9px;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1213,7 +1216,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #94A3B8;
   text-transform: uppercase;
@@ -1264,7 +1267,7 @@
 }
 
 .fob-review-sub {
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--fob-text-muted);
   margin: 1px 0 0;
 }
@@ -1273,7 +1276,7 @@
   background: var(--fob-mint);
   color: #059669;
   border: 1px solid var(--fob-mint-border);
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   border-radius: 4px;
   padding: 2px 7px;
@@ -1354,7 +1357,7 @@
 
 /* ─── Success Screen (Viewport Fitted, No Vertical Scroll) ─── */
 .fob-root--success {
-  min-height: calc(100vh - 72px);
+  min-height: calc(var(--vh-full, 100vh) - var(--navbar-h, 72px));
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -1438,7 +1441,7 @@
 }
 
 .fob-success-stat span:last-child {
-  font-size: 10px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: var(--fob-text-muted, #64748B);
   text-transform: uppercase;
@@ -1458,7 +1461,7 @@
 }
 
 .fob-choice-sub {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: var(--fob-text-muted, #64748B);
   line-height: 1.4;
   margin: 0 auto 12px;
@@ -1510,16 +1513,35 @@
 }
 
 .fob-choice-card-desc {
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 0.75rem);
   line-height: 1.35;
   opacity: 0.88;
 }
 
 /* ─── Responsive Queries ───────────────────────────────────── */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .fob-root {
-    padding: 16px 12px 40px;
-    min-height: 100vh;
+    padding: 16px 12px calc(40px + var(--safe-bottom, 0px));
+    min-height: var(--vh-full, 100vh);
+  }
+  .fob-input,
+  .fob-select,
+  .fob-textarea {
+    min-height: 44px;
+    font-size: 16px;
+    padding: 10px 13px;
+  }
+  .fob-textarea {
+    min-height: 85px;
+  }
+  .fob-dropdown-trigger {
+    min-height: 44px;
+  }
+  .fob-btn-next,
+  .fob-btn-back,
+  .fob-add-btn,
+  .fob-skip-dashboard-btn {
+    min-height: 44px;
   }
   .fob-card {
     padding: 20px 16px;
@@ -1571,14 +1593,14 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767.98px) {
   .fob-step-label {
     display: none;
   }
   .fob-step-node {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
+    width: 32px;
+    height: 32px;
+    font-size: var(--fs-floor, 0.75rem);
   }
 }
 
@@ -1593,4 +1615,33 @@
   border: 1px solid var(--fob-mint-border, #A7F3D0);
   font-size: 0.78rem;
   font-weight: 600;
+}
+
+/* Touch devices have no :hover — keep the avatar upload affordance visible. */
+@media (hover: none) {
+  .fob-avatar-overlay {
+    opacity: 1;
+    inset: auto 0 0 0;
+    height: 34%;
+    min-height: 24px;
+    flex-direction: row;
+    background: rgba(11, 41, 66, 0.6);
+  }
+  .fob-avatar-overlay svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .fob-step-item {
+    min-height: var(--tap-min, 40px);
+    justify-content: center;
+  }
+  .fob-dropdown-option,
+  .fob-review-edit-btn,
+  .fob-choice-card {
+    min-height: var(--tap-min, 40px);
+  }
 }

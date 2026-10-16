@@ -189,7 +189,7 @@
   border: 1px solid #e2e8f0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .rs-overview-card {
     grid-template-columns: 1fr;
     gap: 1.25rem;
@@ -206,7 +206,7 @@
   border-right: 1px solid #e2e8f0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .rs-overview__score-box {
     padding-right: 0;
     border-right: none;
@@ -463,7 +463,7 @@
 .rs-badge-mine {
   background: #dbeafe;
   color: #1e40af;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
@@ -621,11 +621,11 @@
   inset: 0;
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(4px);
-  z-index: 9999;
+  z-index: var(--layer-modal, 3000);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: max(1.5rem, var(--safe-top, 0px)) max(1rem, var(--safe-right, 0px)) max(1.5rem, var(--safe-bottom, 0px)) max(1rem, var(--safe-left, 0px));
 }
 
 .rs-modal {
@@ -635,6 +635,10 @@
   max-width: 520px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  /* short viewports (landscape phones, open keyboard): scroll the body */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--vh-full, 100vh) - 2rem);
   animation: rsModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -690,6 +694,8 @@
 
 .rs-modal__body {
   padding: 1.5rem;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .rs-modal__desc {
@@ -785,3 +791,19 @@
   gap: 0.75rem;
 }
 
+
+/* Touch targets: enlarge only on coarse pointers so desktop stays compact */
+@media (pointer: coarse) {
+  .rs-btn,
+  .rs-spotlight-btn,
+  .rs-action-pill-btn { min-height: var(--tap-min, 40px); }
+  .rs-action-btn { width: var(--tap-min, 40px); height: var(--tap-min, 40px); }
+  .rs-modal__close,
+  .rs-star-btn {
+    min-width: var(--tap-min, 40px);
+    min-height: var(--tap-min, 40px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

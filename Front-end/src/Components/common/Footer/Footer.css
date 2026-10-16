@@ -473,7 +473,7 @@
 /* ══════════════════════════════════════════════════════════════════════
    RESPONSIVE DESIGN
    ══════════════════════════════════════════════════════════════════════ */
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .footer__info-row {
     grid-template-columns: 1fr;
     gap: 2.5rem;
@@ -494,7 +494,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .footer {
     margin-top: -48px;
   }
@@ -541,5 +541,35 @@
   .footer__panel-legal {
     flex-wrap: wrap;
     gap: 10px;
+  }
+}
+
+/* Narrow phones: a single link column so "Browse Freelancers" etc. don't wrap in
+   ~140px columns, and the newsletter pill keeps a usable input width. */
+@media (max-width: 400px) {
+  .footer__info-nav {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .footer__panel-submit-btn {
+    padding: 0 14px;
+  }
+}
+
+/* Touch: grow link tap targets (>=40px rows) without changing the visual rhythm */
+@media (pointer: coarse) {
+  .footer__link-list {
+    gap: 0;
+  }
+  .footer__nav-link {
+    padding: 10px 0;
+  }
+  .footer__nav-link::after {
+    bottom: 6px;
+  }
+  .footer__legal-link {
+    display: inline-block;
+    padding: 10px 2px;
   }
 }

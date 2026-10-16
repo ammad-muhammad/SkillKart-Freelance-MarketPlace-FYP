@@ -14,7 +14,7 @@
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(4, 46, 76, 0.06), rgba(4, 46, 76, 0.03));
   color: var(--color-primary);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.1s;
@@ -28,7 +28,7 @@
 .ai-gen__btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .ai-gen__error {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--color-error);
   font-weight: 600;
 }

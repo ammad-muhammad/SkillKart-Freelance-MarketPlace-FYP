@@ -28,15 +28,25 @@ html.is-native-app *::-webkit-scrollbar {
   height: 0 !important;
 }
 
-/* browse-projects/job-details/gig-detail are the only public pages that ship
-   on mobile (see AppRoutes.jsx), and each reserves ~6rem of top padding to
-   clear the fixed web Navbar — which Navbar.jsx itself no-ops under
-   isMobileApp(), so on-device that padding is just a large empty gap above
-   the content with nothing to clear. */
+/* browse-projects/job-details/gig-detail/browse-gigs/browse-freelancers/
+   freelancer-profile are the public pages that ship on mobile (see
+   AppRoutes.jsx). Each reserves `var(--navbar-h) + X` of top padding to clear
+   the fixed web Navbar — which Navbar.jsx itself no-ops under isMobileApp(), so
+   on-device that padding is just a large empty gap. The logged-in AppNavbar
+   uses its own --app-nav-h, so zeroing --navbar-h here fixes every page at once
+   (including the ones that previously had no per-page override). */
+html.is-native-app {
+  --navbar-h: 0px;
+}
 html.is-native-app .bp-hero,
 html.is-native-app .jd-page,
-html.is-native-app .gd-page {
+html.is-native-app .gd-page-wrapper,
+html.is-native-app .bg-hero,
+html.is-native-app .bf-hero-section {
   padding-top: 1.5rem !important;
+}
+html.is-native-app .bp-page {
+  padding-top: 0 !important;
 }
 
 /* .bp-hero's -4rem margin-bottom is a desktop "floating card overlaps the

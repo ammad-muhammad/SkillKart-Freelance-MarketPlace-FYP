@@ -118,7 +118,7 @@ const AdminDashboard = () => {
 
       {/* Today's quick numbers */}
       {today && (
-        <div className="ap-card" style={{ marginBottom: 20, padding: '14px 20px', background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.06))', border: '1px solid rgba(59,130,246,0.15)' }}>
+        <div className="ap-card" style={{ marginBottom: 20, padding: '14px 20px', background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(11,41,66,0.04))', border: '1px solid rgba(16,185,129,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ap-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today</span>
             {[
@@ -134,7 +134,7 @@ const AdminDashboard = () => {
                 <span>{icon}</span>
                 <div>
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ap-text-primary)', lineHeight: 1 }}>{val?.toLocaleString() || 0}</div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--ap-text-muted)' }}>{label}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--ap-text-muted)' }}>{label}</div>
                 </div>
               </div>
             ))}

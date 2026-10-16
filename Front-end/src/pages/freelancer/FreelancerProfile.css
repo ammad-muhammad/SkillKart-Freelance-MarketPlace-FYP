@@ -298,7 +298,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 64px;
+  /* No padding-top: the row is bottom-aligned (align-items:flex-end), and a
+     64px top padding left a dead gap whenever the actions wrapped to their own line. */
   flex-shrink: 0;
   flex-wrap: wrap;
 }
@@ -406,7 +407,7 @@
 /* ─── B) Sticky Section Tabs Bar ─── */
 .flp-sticky-tabs {
   position: sticky;
-  top: 72px;
+  top: var(--app-nav-h, 72px);
   z-index: 40;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
@@ -477,7 +478,7 @@
 /* ─── C) 12-Column Grid Layout ─── */
 .flp-grid-layout {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 24px;
   align-items: start;
 }
@@ -495,7 +496,7 @@
   flex-direction: column;
   gap: 24px;
   position: sticky;
-  top: 140px;
+  top: calc(var(--app-nav-h, 72px) + 68px);
 }
 
 /* ─── Section Card System ─── */
@@ -577,7 +578,7 @@
 /* ─── VIEW MODE: Read-Only Value Display Rows ─── */
 .flp-view-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px 20px;
 }
 
@@ -588,7 +589,7 @@
 }
 
 .flp-view-label {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -623,13 +624,13 @@
 /* ─── EDIT MODE: Shared Field System Grids ─── */
 .flp-edit-grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
 .flp-edit-grid-2 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -661,7 +662,7 @@
 }
 
 .flp-count-pill {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 20px;
@@ -751,7 +752,7 @@
 }
 
 .flp-lang-level {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   text-transform: capitalize;
   padding: 2px 7px;
@@ -918,7 +919,7 @@
 /* ─── Portfolio Projects Grid ─── */
 .flp-portfolio-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1070,7 +1071,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
 }
 
 .flp-check-item--done .flp-check-circle {
@@ -1080,7 +1081,7 @@
 
 .flp-stat-tiles-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1095,7 +1096,7 @@
 }
 
 .flp-stat-tile__lbl {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -1246,7 +1247,7 @@
 /* ─── Responsive Breakpoints ─── */
 @media (max-width: 1024px) {
   .flp-grid-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .flp-col-main {
     grid-column: span 1;
@@ -1266,13 +1267,13 @@
     padding: 0 20px 24px;
   }
   .flp-view-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .flp-edit-grid-3 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .flp-portfolio-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1299,34 +1300,103 @@
     width: 100%;
   }
   .flp-hero-actions {
-    padding-top: 0;
     width: 100%;
     justify-content: flex-start;
   }
   .flp-view-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .flp-edit-grid-3,
   .flp-edit-grid-2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .flp-portfolio-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .flp-stat-tiles-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+  /* One compact row (~64px) instead of a 4-high stack that covered a quarter of
+     the screen. The Buddy FAB is lifted above this bar by BuddyWidget.css. */
   .flp-sticky-action-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 14px 16px;
-    bottom: 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    bottom: calc(12px + var(--safe-bottom, 0px));
+    border-radius: 18px;
+  }
+  .flp-bar-left {
+    flex: 0 0 auto;
+  }
+  .flp-btn-delete-ghost {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+    padding: 0;
+    justify-content: center;
+  }
+  .flp-btn-delete-ghost span {
+    display: none;
   }
   .flp-bar-right {
-    flex-direction: column-reverse;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .flp-unsaved-chip {
+    padding: 8px;
+  }
+  .flp-unsaved-chip span:not(.flp-unsaved-dot) {
+    display: none;
+  }
+  .flp-btn-cancel-ghost {
+    padding: 0 12px;
   }
   .flp-btn-save-pill {
-    width: 100%;
+    padding: 0 18px;
     justify-content: center;
+  }
+  .flp-section-card {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+  .flp-side-card {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+  .flp-completion-strip {
+    padding: 12px 16px;
+  }
+  .flp-hero-body {
+    padding-bottom: 20px;
+  }
+  .flp-user-name {
+    font-size: 24px;
+  }
+}
+
+@media (hover: none) {
+  .flp-section-card:hover,
+  .flp-portfolio-card:hover { transform: none; }
+  .flp-portfolio-card:hover .flp-portfolio-img { transform: none; }
+}
+
+@media (pointer: coarse) {
+  .flp-avatar-cam-btn {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .flp-lang-remove-btn {
+    width: 28px;
+    height: 28px;
+  }
+  .flp-add-pill-btn,
+  .flp-tab-btn,
+  .flp-update-cover-btn,
+  .flp-btn-delete-ghost,
+  .flp-btn-cancel-ghost {
+    min-height: var(--tap-min, 40px);
   }
 }

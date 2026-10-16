@@ -534,7 +534,7 @@ export default function CategoryPage() {
 
           </>
         ) : (
-          <div style={{ minHeight: '80vh' }} />
+          <div style={{ minHeight: 'calc(var(--vh-full, 100vh) * 0.8)' }} />
         )}
       </div>
       <Footer />

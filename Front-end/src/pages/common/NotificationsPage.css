@@ -155,7 +155,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
 
@@ -195,7 +198,7 @@
 }
 
 .notif-tab-count {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 999px;
@@ -305,7 +308,7 @@
 }
 
 .notif-group-label-sticky {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   color: #64748B;
   letter-spacing: 0.06em;
@@ -448,8 +451,16 @@
   gap: 6px;
 }
 
-.notif-item-row:hover .notif-row-actions {
+.notif-item-row:hover .notif-row-actions,
+.notif-item-row:focus-within .notif-row-actions {
   display: flex;
+}
+
+/* No hover on touch screens (tablets / phones in desktop-width mode): always show the actions */
+@media (hover: none) {
+  .notif-row-actions {
+    display: flex;
+  }
 }
 
 .notif-action-btn {
@@ -506,16 +517,20 @@
   border-color: #10B981;
 }
 
-/* ─── Responsive Media Queries ─── */
-@media (max-width: 1024px) {
+/* ─── Responsive Media Queries ─── (breakpoint scale 480 / 768 / 1024 / 1280 / 1700) */
+@media (max-width: 1023.98px) {
   .notif-container {
     padding: 0;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .notif-container {
     padding: 0;
+  }
+
+  .notif-page-title {
+    font-size: 24px;
   }
 
   .notif-toolbar-card {
@@ -525,6 +540,11 @@
 
   .notif-search-wrap {
     width: 100%;
+    box-sizing: border-box;
+  }
+
+  .notif-header-actions {
+    flex-wrap: wrap;
   }
 
   .notif-item-row {
@@ -540,6 +560,18 @@
     width: 100%;
   }
 
+  /* Stacked rows have the full width, so let the text wrap (2 lines) instead of
+     being cut to a single ellipsis line the user can never expand. */
+  .notif-item-title,
+  .notif-item-message {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
   .notif-meta-col {
     width: 100%;
     justify-content: space-between;
@@ -547,5 +579,28 @@
 
   .notif-row-actions {
     display: flex;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .notif-empty-state-card {
+    padding: 40px 16px;
+  }
+}
+
+/* Touch: comfortable tap targets (desktop untouched) */
+@media (pointer: coarse) {
+  .notif-action-btn {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .notif-btn-outline,
+  .notif-btn-ghost-danger,
+  .notif-tab-pill,
+  .notif-load-more-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .notif-row-actions {
+    gap: 8px;
   }
 }

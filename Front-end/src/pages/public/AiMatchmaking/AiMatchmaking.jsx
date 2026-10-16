@@ -199,7 +199,7 @@ function MatchCard({ result, rank, onView }) {
             <div className="aim-card-footer">
                 <div className="aim-est-cost">
                     Est. Cost: <strong>{estimatedCost}</strong>
-                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#94A3B8' }}>
+                    <span style={{ display: 'block', fontSize: 'var(--fs-floor, 0.75rem)', color: '#94A3B8' }}>
                         {availability}
                     </span>
                 </div>
@@ -278,6 +278,7 @@ export default function AiMatchmaking() {
     }, []);
 
     const isMounted = useRef(true);
+    const resultsRef = useRef(null);
 
     const addSkill = () => {
         const s = skillInput.trim();
@@ -294,6 +295,11 @@ export default function AiMatchmaking() {
         setLoading(true);
         setHasRan(false);
         setError(null);
+        // Single-column layout (<=1023.98px): the results sit below the long brief
+        // form, so bring them into view or the submit looks like it did nothing.
+        if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 1023.98px)').matches) {
+            resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         try {
             const payload = { title: projectTitle, description, category, budget, timeline, skills };
             const { data } = await matchmakingAPI.matchByProject(payload);
@@ -498,7 +504,7 @@ export default function AiMatchmaking() {
 
                                         {/* Quick-add suggestions */}
                                         <div style={{ marginTop: '0.55rem' }}>
-                                            <div style={{ fontSize: '0.68rem', color: '#94A3B8', fontFamily: 'Inter,sans-serif', fontWeight: 600, marginBottom: '0.3rem' }}>Quick add:</div>
+                                            <div style={{ fontSize: 'var(--fs-floor, 0.75rem)', color: '#94A3B8', fontFamily: 'Inter,sans-serif', fontWeight: 600, marginBottom: '0.3rem' }}>Quick add:</div>
                                             <div className="aim-quick-add">
                                                 {ALL_SKILLS.slice(0, 6).filter(s => !skills.includes(s)).map(s => (
                                                     <button
@@ -530,6 +536,7 @@ export default function AiMatchmaking() {
 
                             {/* ════ RIGHT — Match Stage ════ */}
                             <div
+                                ref={resultsRef}
                                 className="aim-results"
                                 role="region"
                                 aria-label="Match results"

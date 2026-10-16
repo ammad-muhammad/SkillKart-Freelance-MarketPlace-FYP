@@ -14,8 +14,11 @@
 }
 
 .sk-job-card-wrapper--slider {
-  flex: 0 0 360px;
-  width: 360px;
+  /* 360px on wide screens, but never wider than the phone viewport minus
+     the page gutters (a fixed 360px overflowed 360-390px phones) */
+  flex: 0 0 min(360px, calc(100vw - 56px));
+  width: min(360px, calc(100vw - 56px));
+  scroll-snap-align: start;
 }
 
 .sk-job-card-wrapper--grid {
@@ -24,9 +27,11 @@
   min-width: 0;
 }
 
-.sk-job-card-wrapper:hover {
-  transform: translateY(-4px);
-  filter: drop-shadow(0 14px 30px rgba(16, 185, 129, 0.16));
+@media (hover: hover) {
+  .sk-job-card-wrapper:hover {
+    transform: translateY(-4px);
+    filter: drop-shadow(0 14px 30px rgba(16, 185, 129, 0.16));
+  }
 }
 
 .sk-job-card {
@@ -98,7 +103,7 @@
   background: #0B2942;
   color: #FFFFFF;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -184,7 +189,7 @@
 .sk-job-card__match-pill {
   display: inline-flex;
   width: fit-content;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: #059669;
   background: #EAFBF4;
@@ -196,8 +201,8 @@
 
 /* Bookmark button */
 .sk-job-card__save-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--tap-min, 40px);
+  height: var(--tap-min, 40px);
   border-radius: 50%;
   border: 1px solid #E2E8F0;
   background: #FFFFFF;
@@ -264,7 +269,7 @@
 }
 
 .sk-job-card__meta-lbl {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #94A3B8;
   text-transform: uppercase;
@@ -311,7 +316,7 @@
   border-radius: 999px;
   background: #F1F5F9;
   color: #475569;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -322,7 +327,7 @@
   border-radius: 999px;
   background: #E2E8F0;
   color: #334155;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
@@ -352,7 +357,7 @@
 }
 
 .sk-job-card__budget-label {
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 800;
   color: #059669;
   text-transform: uppercase;

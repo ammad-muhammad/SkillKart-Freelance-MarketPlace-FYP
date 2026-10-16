@@ -185,7 +185,7 @@
 }
 
 .fp-summary-lbl {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 600;
   color: #64748B;
   text-transform: uppercase;
@@ -260,7 +260,7 @@
 }
 
 .fp-chip-count {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
@@ -442,7 +442,7 @@
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(4px);
   color: #065F46;
-  font-size: 10px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -583,7 +583,7 @@
 }
 
 .fp-card-meta-tag {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   color: #94A3B8;
   font-weight: 500;
 }
@@ -762,7 +762,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   color: #059669;
   letter-spacing: 0.05em;
@@ -778,7 +778,7 @@
 }
 
 .fp-gigs-count-badge {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #065F46;
   background: #ECFDF5;
@@ -827,7 +827,7 @@
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(4px);
   color: #FFFFFF;
-  font-size: 10px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 4px;
@@ -1099,7 +1099,7 @@
 }
 
 .fp-preview-tag {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   color: #10B981;
   text-transform: uppercase;
@@ -1167,11 +1167,11 @@
   }
 
   .fp-projects-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fp-gigs-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fp-list-row {
@@ -1199,5 +1199,45 @@
   .fp-overlay-btn {
     transition: none !important;
     transform: none !important;
+  }
+}
+
+/* ── Touch screens: the Preview/Edit/Delete overlay was hover-only, so there was
+   no way to edit or delete a project on a phone. Always show it, as a slim
+   action strip at the bottom of the thumbnail instead of a full cover. ── */
+@media (hover: none) {
+  .fp-card-overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(11, 41, 66, 0.72) 0%, rgba(11, 41, 66, 0) 62%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px;
+  }
+  .fp-card:hover { transform: none; }
+  .fp-card:hover .fp-card-img { transform: none; }
+  .fp-dropzone-preview-overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(11, 41, 66, 0.7), rgba(11, 41, 66, 0) 55%);
+    align-items: flex-end;
+    padding-bottom: 10px;
+  }
+}
+
+@media (pointer: coarse) {
+  .fp-overlay-btn,
+  .fp-view-btn {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .fp-overlay-link,
+  .fp-filter-chip,
+  .fp-btn-outline,
+  .fp-remove-img-btn,
+  .fp-sort-wrap {
+    min-height: var(--tap-min, 40px);
   }
 }

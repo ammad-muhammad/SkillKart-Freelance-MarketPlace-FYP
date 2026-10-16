@@ -7,7 +7,7 @@
 /* ─── PAGE WRAPPER ─── */
 .gd-page-wrapper {
   width: 100%;
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   padding-top: calc(var(--navbar-h, 68px) + 14px);
   padding-bottom: 80px;
   background: radial-gradient(circle at 10% 8%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
@@ -25,7 +25,7 @@
   box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .gd-container {
     padding: 0 16px;
   }
@@ -161,7 +161,7 @@
 .gd-hero-unified-details .gd-badge-chip {
   height: 24px;
   padding: 0 9px;
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
 }
 
 .gd-hero-unified-details .gd-h1-title {
@@ -234,7 +234,7 @@
   font-size: 12px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .gd-hero-unified-card {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -242,7 +242,7 @@
   }
 
   .gd-hero-unified-media .gd-slider-viewport {
-    max-height: 260px;
+    max-height: min(62vw, 420px);
   }
 }
 
@@ -306,7 +306,7 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .gd-h1-title {
     font-size: 28px;
     line-height: 34px;
@@ -457,7 +457,7 @@
   display: inline-flex;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .gd-action-icon-pill--expand {
     display: none;
   }
@@ -549,6 +549,12 @@
   opacity: 1;
 }
 
+@media (hover: none) {
+  .gd-slider-arrow {
+    opacity: 1;
+  }
+}
+
 .gd-slider-arrow:hover {
   background: #10B981;
   color: #FFFFFF;
@@ -563,7 +569,7 @@
   right: 18px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .gd-slider-arrow {
     opacity: 1;
     width: 38px;
@@ -635,7 +641,7 @@
   width: 100%;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .gd-main-grid {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -657,7 +663,7 @@
 }
 
 .gd-section-eyebrow {
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -740,7 +746,7 @@
   margin-bottom: 24px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .gd-features-tiles-grid {
     grid-template-columns: 1fr;
   }
@@ -839,7 +845,7 @@
   gap: 18px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .gd-deliverables-grid {
     grid-template-columns: 1fr;
   }
@@ -934,7 +940,7 @@
   margin-bottom: 14px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .gd-portfolio-featured-card {
     grid-template-columns: 1fr;
   }
@@ -961,7 +967,7 @@
   background: rgba(11, 41, 66, 0.75);
   backdrop-filter: blur(6px);
   color: #FFFFFF;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 9999px;
@@ -1011,7 +1017,7 @@
 
 .gd-portfolio-chip {
   background: #F1F5F9;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   color: #334155;
   padding: 3px 8px;
@@ -1039,7 +1045,7 @@
 }
 
 .gd-portfolio-stat__lbl {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
 }
 
@@ -1110,7 +1116,8 @@
   margin-bottom: 24px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767.98px), (min-width: 1024px) and (max-width: 1279.98px) {
+  /* narrow column beside the sticky order panel -> stack instead of squeezing 3 cards */
   .gd-tier-cards-grid {
     grid-template-columns: 1fr;
   }
@@ -1147,7 +1154,7 @@
   transform: translateX(-50%);
   background: #10B981;
   color: #FFFFFF;
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 3px 12px;
   border-radius: 9999px;
@@ -1161,7 +1168,7 @@
 }
 
 .gd-tier-card-eyebrow {
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1171,7 +1178,8 @@
 }
 
 .gd-tier-card-price {
-  font-size: 28px;
+  font-size: clamp(22px, 1rem + 1vw, 28px);
+  overflow-wrap: anywhere;
   font-weight: 800;
   color: #0B2942;
   margin-bottom: 8px;
@@ -1328,6 +1336,7 @@
 
 .gd-compare-table {
   width: 100%;
+  min-width: 520px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -1380,7 +1389,7 @@
 }
 
 .gd-compare-tier-select-indicator {
-  font-size: 11px;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
   font-weight: 600;
 }
@@ -1389,7 +1398,15 @@
   border-bottom: 1px solid #F1F5F9;
 }
 
+.gd-compare-th-fixed,
 .gd-compare-td-fixed {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.gd-compare-td-fixed {
+  background: #FFFFFF;
   padding: 14px 20px;
   font-size: 13.5px;
   font-weight: 600;
@@ -1503,7 +1520,7 @@
   align-items: center;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .gd-reviews-header-card {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -1520,7 +1537,7 @@
   padding-right: 16px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .gd-reviews-score-col {
     border-right: none;
     border-bottom: 1px solid #F1F5F9;
@@ -1834,7 +1851,7 @@
   margin-bottom: 20px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
   .gd-seller-card-stats-grid {
     grid-template-columns: 1fr 1fr;
     gap: 16px;
@@ -1851,7 +1868,7 @@
 }
 
 .gd-sc-lbl {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
 }
 
@@ -1919,7 +1936,7 @@
 .gd-right-col {
   position: sticky;
   top: calc(var(--navbar-h, 68px) + 24px);
-  max-height: calc(100vh - 110px);
+  max-height: calc(var(--vh-full, 100vh) - 110px);
   overflow-y: auto;
   min-width: 0;
   display: flex;
@@ -1992,13 +2009,16 @@
 
 .gd-tier-price-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .gd-tier-price-number {
-  font-size: 34px;
+  font-size: clamp(26px, 2.4vw, 34px);
+  overflow-wrap: anywhere;
   font-weight: 800;
   color: #0B2942;
   letter-spacing: -0.02em;
@@ -2008,7 +2028,8 @@
 .gd-tier-milestone-chip {
   background: #EAFBF4;
   color: #065F46;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 0.75rem);
+  white-space: nowrap;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 9999px;
@@ -2201,7 +2222,7 @@
   width: 100%;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .gd-mobile-packages-slot {
     display: block;
     margin-top: 10px;
@@ -2216,12 +2237,12 @@
   display: none;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .gd-mobile-fixed-bottom-bar {
     display: block;
     position: fixed;
-    bottom: 16px;
-    left: 16px;
+    bottom: calc(16px + var(--safe-bottom, 0px));
+    left: calc(16px + var(--safe-left, 0px));
     right: 88px; /* Leave space for Buddy AI circular button */
     z-index: 1000;
     pointer-events: auto;
@@ -2239,6 +2260,7 @@
     border-radius: 9999px;
     padding: 8px 14px 8px 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    min-width: 0;
   }
 
   .gd-mobile-bottom-info {
@@ -2248,7 +2270,7 @@
   }
 
   .gd-mobile-bottom-tier-name {
-    font-size: 11px;
+    font-size: var(--fs-floor, 0.75rem);
     color: #94A3B8;
     font-weight: 600;
     text-transform: uppercase;
@@ -2262,7 +2284,8 @@
   }
 
   .gd-mobile-order-btn {
-    height: 40px;
+    height: var(--tap-min, 40px);
+    flex-shrink: 0;
     padding: 0 18px;
     border-radius: 9999px;
     background: #10B981;
@@ -2295,7 +2318,7 @@
 .gd-lightbox-modal {
   position: relative;
   max-width: 90vw;
-  max-height: 85vh;
+  max-height: calc(var(--app-vh, var(--vh-full)) * 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2303,7 +2326,7 @@
 
 .gd-lightbox-img {
   max-width: 100%;
-  max-height: 85vh;
+  max-height: calc(var(--app-vh, var(--vh-full)) * 0.85);
   object-fit: contain;
   border-radius: 16px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
@@ -2353,10 +2376,7 @@
   right: -64px;
 }
 
-@media (max-width: 768px) {
-  .gd-lightbox-btn--prev { left: 8px; }
-  .gd-lightbox-btn--next { right: 8px; }
-}
+
 
 .gd-lightbox-close-btn {
   position: absolute;
@@ -2377,6 +2397,36 @@
 
 .gd-lightbox-close-btn:hover {
   background: #EF4444;
+}
+
+/* Controls pinned to the viewport edges whenever the image box leaves too little
+   margin for the desktop "outside the image" placement (<1280px wide, or short
+   landscape screens where top:-48px would fall off-screen). */
+@media (max-width: 1279.98px), (max-height: 640px) {
+  .gd-lightbox-backdrop {
+    padding: calc(56px + var(--safe-top, 0px)) 24px calc(24px + var(--safe-bottom, 0px));
+  }
+  .gd-lightbox-modal {
+    position: static;
+  }
+  .gd-lightbox-btn--prev { left: max(8px, var(--safe-left, 0px)); }
+  .gd-lightbox-btn--next { right: max(8px, var(--safe-right, 0px)); }
+  .gd-lightbox-counter-pill {
+    top: calc(14px + var(--safe-top, 0px));
+    left: max(12px, var(--safe-left, 0px));
+  }
+  .gd-lightbox-close-btn {
+    top: calc(10px + var(--safe-top, 0px));
+    right: max(12px, var(--safe-right, 0px));
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .gd-lightbox-img {
+    max-height: calc(var(--app-vh, var(--vh-full)) - 80px - var(--safe-top, 0px) - var(--safe-bottom, 0px));
+  }
+  .gd-lightbox-modal {
+    max-height: none;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2459,5 +2509,35 @@
   .gd-deliverable-card {
     transition: none !important;
     transform: none !important;
+  }
+}
+
+/* ── Touch devices: 40px minimum tap targets ── */
+@media (pointer: coarse) {
+  .gd-action-icon-pill,
+  .gd-hero-actions-row .gd-action-icon-pill,
+  .gd-rf-chip,
+  .gd-read-more-pill,
+  .gd-back-text-link,
+  .gd-show-more-reviews-pill,
+  .gd-sc-contact-btn,
+  .gd-tier-seg-tab,
+  .gd-matrix-toggle-btn,
+  .gd-primary-pill-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .gd-tier-more-features-btn,
+  .gd-custom-order-link,
+  .gd-sc-profile-link {
+    min-height: var(--tap-min, 40px);
+    display: inline-flex;
+    align-items: center;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .gd-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
   }
 }

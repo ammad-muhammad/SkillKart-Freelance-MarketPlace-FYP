@@ -110,7 +110,7 @@
 }
 
 .fsec-overview-lbl {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   color: #64748B;
   text-transform: uppercase;
@@ -130,7 +130,7 @@
 }
 
 .fsec-chip-status {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   padding: 2.5px 8px;
   border-radius: 999px;
@@ -392,7 +392,7 @@
 }
 
 .fsec-strength-label {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
 }
 
@@ -406,7 +406,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 600;
   color: #64748B;
   background: #FFFFFF;
@@ -674,7 +674,7 @@
 }
 
 .fsec-session-meta {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   color: #64748B;
 }
 
@@ -710,7 +710,7 @@
 }
 
 .fsec-activity-sub {
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   color: #64748B;
 }
 
@@ -729,7 +729,7 @@
   flex-direction: column;
   gap: 3px;
   flex: 1;
-  min-width: 260px;
+  min-width: min(260px, 100%);
 }
 
 .fsec-danger-name {
@@ -789,7 +789,7 @@
   }
 
   .fsec-columns-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fsec-overview-strip-card {
@@ -807,7 +807,7 @@
   }
 
   .fsec-fields-2col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fsec-card {
@@ -817,5 +817,33 @@
 
   .fsec-overview-item--score {
     max-width: 100%;
+  }
+}
+
+/* Grid/flex children must be allowed to shrink or a wide row (session list,
+   device names) widens the whole column on phones */
+.fsec-columns-grid > *,
+.fsec-col-left,
+.fsec-col-right,
+.fsec-session-info-col,
+.fsec-toggle-text-col,
+.fsec-activity-info {
+  min-width: 0;
+}
+
+/* Switch: visual size stays 44x24, hit area grows to ~40px tall */
+.fsec-switch::before {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+
+@media (hover: none) {
+  .fsec-card:hover { transform: none; }
+}
+
+@media (pointer: coarse) {
+  .fsec-modal-btn-ghost {
+    min-height: var(--tap-min, 40px);
   }
 }

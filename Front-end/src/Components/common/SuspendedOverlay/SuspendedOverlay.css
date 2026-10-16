@@ -1,16 +1,14 @@
 .suspended-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background-color: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(10px);
   z-index: 99999;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
+  padding: max(1rem, var(--safe-top, 0px)) max(1rem, var(--safe-right, 0px)) max(1rem, var(--safe-bottom, 0px)) max(1rem, var(--safe-left, 0px));
+  /* Scrollable on short viewports (landscape / keyboard): the card centres via
+     auto margins so overflow is reachable instead of cut off at the top. */
+  overflow-y: auto;
 }
 
 .suspended-card {
@@ -19,6 +17,7 @@
   padding: 3rem 2rem;
   max-width: 500px;
   width: 100%;
+  margin: auto;
   text-align: center;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(183, 201, 226, 0.35);
@@ -60,6 +59,7 @@
 .suspended-actions {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
@@ -106,5 +106,18 @@
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .suspended-card {
+    padding: 2rem 1.25rem;
+  }
+  .suspended-title {
+    font-size: 1.4rem;
+  }
+  .suspended-btn {
+    min-height: var(--tap-min, 40px);
+    justify-content: center;
   }
 }

@@ -359,7 +359,7 @@
   z-index: var(--z-dropdown);
   padding: 24px 0;
   margin-top: 8px;
-  max-height: 80vh;
+  max-height: calc(var(--vh-full, 100vh) * 0.8);
   overflow: hidden;
 }
 
@@ -911,7 +911,7 @@ a.navbar__mega-subtitle:hover {
 }
 
 /* ── Responsive ── */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   .navbar__links,
   .navbar__search,
   .navbar__actions {
@@ -923,7 +923,7 @@ a.navbar__mega-subtitle:hover {
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .navbar__inner {
     padding: 0 16px;
   }

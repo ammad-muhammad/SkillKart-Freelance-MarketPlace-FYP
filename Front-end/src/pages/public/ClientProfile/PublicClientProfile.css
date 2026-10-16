@@ -18,7 +18,7 @@
 }
 
 .pub-cl-page {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background-color: var(--pfp-bg);
   position: relative;
   overflow-x: clip;
@@ -47,7 +47,7 @@
 }
 
 .pub-cl-page--loading::before {
-  height: 100vh;
+  height: var(--vh-full, 100vh);
 }
 
 /* Background Blobs for Premium Feel */
@@ -386,7 +386,7 @@
 }
 
 .pub-cl-stat-lbl {
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748b;
   font-weight: 600;
   text-transform: uppercase;
@@ -447,7 +447,7 @@
   gap: 1.5rem;
   align-items: start;
 }
-@media (max-width: 968px) {
+@media (max-width: 1023.98px) {
   .pub-cl-grid {
     grid-template-columns: 1fr;
   }
@@ -530,7 +530,7 @@
   min-width: 0;
 }
 .pub-cl-info-label {
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   color: #94a3b8;
   text-transform: uppercase;
@@ -544,7 +544,7 @@
   line-height: 1.4;
 }
 .pub-cl-info-sub {
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748b;
   font-weight: 400;
   margin-top: 1px;
@@ -828,7 +828,7 @@
   text-transform: capitalize;
 }
 .pub-cl-lang-level {
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #475569;
   background: #f1f5f9;
   padding: 0.15rem 0.5rem;
@@ -935,32 +935,6 @@
   margin: 0;
 }
 
-@media (max-width: 640px) {
-  .pub-cl-hero-content {
-    padding: 0 1.5rem 1.5rem;
-    gap: 1rem;
-    text-align: center;
-  }
-  .pub-cl-avatar-wrapper {
-    margin: -60px auto 0;
-    width: fit-content;      /* so margin:auto actually centers it on screen */
-    display: block;
-  }
-  .pub-cl-meta-tags {
-    justify-content: center;
-  }
-  .pub-cl-hero-actions {
-    width: 100%;
-    align-items: center;
-    padding-top: 1rem;
-  }
-  .pub-cl-rate-box {
-    text-align: center;
-  }
-  .pub-cl-action-buttons {
-    width: 100%;
-  }
-}
 
 .pub-cl-verified-badge {
   position: absolute;
@@ -1001,7 +975,7 @@
 }
 
 .pub-cl-page {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background-color: var(--pub-cl-bg);
   position: relative;
   overflow-x: clip;
@@ -1352,7 +1326,7 @@
   gap: 2rem;
   align-items: start;
 }
-@media (max-width: 968px) {
+@media (max-width: 1023.98px) {
   .pub-cl-grid {
     grid-template-columns: 1fr;
   }
@@ -1601,3 +1575,93 @@
   background: linear-gradient(to bottom, white, #f8fafc);
 }
 
+/* ============================================================
+   RESPONSIVE (kept LAST so it beats both copies of the hero rules above)
+   ============================================================ */
+.pub-cl-avatar-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-end;
+}
+
+.pub-cl-hero-main {
+  min-width: min(280px, 100%);
+}
+
+.pub-cl-name {
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1024px) {
+  .pub-cl-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .pub-cl-hero-content {
+    padding: 0 1.25rem 1.5rem;
+    gap: 1rem;
+    text-align: center;
+    justify-content: center;
+  }
+  .pub-cl-avatar-wrapper {
+    margin: -56px auto 0;
+    width: fit-content;
+    max-width: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .pub-cl-avatar {
+    width: 104px;
+    height: 104px;
+    border-width: 4px;
+    font-size: 2.2rem;
+  }
+  .pub-cl-hero-main {
+    flex-basis: 100%;
+    min-width: 0;
+    padding-top: 0.25rem;
+  }
+  .pub-cl-name {
+    font-size: 1.6rem;
+  }
+  .pub-cl-meta-tags {
+    justify-content: center;
+  }
+  .pub-cl-hero-actions {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    padding-top: 0.5rem;
+  }
+  .pub-cl-rate-box {
+    text-align: center;
+  }
+  .pub-cl-action-buttons {
+    width: 100%;
+  }
+  .pub-cl-card-header {
+    padding: 1.1rem 1.1rem 0;
+  }
+  .pub-cl-card-body {
+    padding: 1.1rem;
+    font-size: 1rem;
+  }
+  .pub-cl-about-text p {
+    text-align: left;
+    font-size: 1rem;
+  }
+  .pub-cl-bio {
+    font-size: 1rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .pub-cl-btn,
+  .pub-cl-cert-link {
+    min-height: var(--tap-min, 40px);
+  }
+}

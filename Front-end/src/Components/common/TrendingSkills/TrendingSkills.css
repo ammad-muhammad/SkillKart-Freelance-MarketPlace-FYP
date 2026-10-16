@@ -14,8 +14,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 2rem;
+  flex-wrap: wrap; /* button drops under the title on phones instead of squeezing it */
+  gap: 1rem 2rem;
   margin-bottom: 2.2rem;
+}
+
+.trending-header__left {
+  flex: 1 1 300px;
+  min-width: 0;
 }
 
 .trending-title {
@@ -49,7 +55,7 @@
   background: #F1F5F9;
   color: #1E293B;
   border: 1px solid #E2E8F0;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 3px 9px;
@@ -178,7 +184,7 @@
   background: linear-gradient(180deg, #FDE68A 0%, #F59E0B 100%);
   color: #78350F;
   border: 1px solid #FCD34D;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   padding: 4px 14px;
@@ -321,7 +327,7 @@
 }
 
 .ts-gauge-meta {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: #A7F3D0;
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -401,12 +407,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap; /* three pills no longer fit one row at >=12px text on narrow cards */
   gap: 0.4rem;
   width: 100%;
 }
 
 .ts-meta-pill {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 5px 8px;
   background: #FFFFFF;
@@ -414,7 +421,7 @@
   border-radius: 8px;
   color: #334155;
   white-space: nowrap;
-  flex: 1;
+  flex: 1 1 auto;
   text-align: center;
 }
 
@@ -519,10 +526,12 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
-.ts-timeline-card:hover {
-  border-color: #10B981;
-  transform: translateX(4px);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08);
+@media (hover: hover) {
+  .ts-timeline-card:hover {
+    border-color: #10B981;
+    transform: translateX(4px);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08);
+  }
 }
 
 .ts-timeline-card--active {
@@ -598,7 +607,7 @@
 }
 
 .ts-card-tag {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #047857;
   background: #D1FAE5;
@@ -654,7 +663,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: #64748B;
 }
 
@@ -723,7 +732,7 @@
 
 .ts-ticker-bullet {
   color: #10B981;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   flex-shrink: 0;
   animation: tsTickerDotPulse 2s ease-in-out infinite;
 }
@@ -839,7 +848,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: #64748B;
   font-weight: 500;
 }
@@ -868,7 +877,7 @@
 }
 
 /* ── Responsive adjustments ── */
-@media (max-width: 1120px) {
+@media (max-width: 1119.98px) {
   .ts-dashboard-stage {
     grid-template-columns: 1fr;
     gap: 2rem;

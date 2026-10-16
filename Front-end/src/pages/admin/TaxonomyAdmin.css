@@ -5,7 +5,7 @@
 
 .tax-admin-page {
   background-color: #0b0f19;
-  min-height: 100vh;
+  min-height: var(--app-vh, var(--vh-full, 100vh));
   color: #f3f4f6;
   font-family: 'Outfit', 'Inter', sans-serif;
   display: flex;
@@ -46,8 +46,9 @@
 /* Toast Notification */
 .tax-toast {
   position: fixed;
-  top: 5rem;
+  top: calc(5rem + var(--safe-top, 0px));
   right: 2rem;
+  max-width: calc(100vw - 2rem);
   z-index: 1000;
   padding: 1rem 1.5rem;
   border-radius: 8px;
@@ -95,7 +96,7 @@
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 350px);
+  height: calc(var(--app-vh, var(--vh-full, 100vh)) - 350px);
   min-height: 550px;
 }
 
@@ -265,7 +266,7 @@
 }
 
 .tax-badge {
-  font-size: 0.7rem;
+  font-size: var(--fs-floor, 0.75rem);
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -321,7 +322,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  height: calc(100vh - 350px);
+  height: calc(var(--app-vh, var(--vh-full, 100vh)) - 350px);
   min-height: 550px;
 }
 
@@ -532,16 +533,17 @@
 /* Modal Styling */
 .tax-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0; /* not 100vw/100vh: 100vw includes the scrollbar, 100vh ignores the mobile visible area */
+  padding: 12px;
+  padding-bottom: calc(12px + var(--safe-bottom, 0px));
+  box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
 }
 
 .tax-modal {
@@ -550,6 +552,8 @@
   border-radius: 16px;
   width: 100%;
   max-width: 500px;
+  max-height: 100%;
+  overflow-y: auto;
   padding: 2rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -594,14 +598,17 @@
 /* Tab Selectors */
 .tax-tabs-container {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   max-width: 1400px;
   width: 100%;
   margin: 1.5rem auto 0;
   padding: 0 2rem;
+  box-sizing: border-box;
 }
 
 .tax-tab-btn {
+  min-height: var(--tap-min, 40px);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   color: #9ca3af;
@@ -714,18 +721,22 @@
 }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 899.98px) {
   .tax-admin-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .tax-admin-left {
+  /* Both panels flow with the page on a single column (the right one used to keep
+     its fixed vh height and became a small nested scroll box under the list). */
+  .tax-admin-left,
+  .tax-admin-right {
     height: auto;
     min-height: 0;
   }
+  .tax-admin-left { max-height: none; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
   .tax-admin-hero {
     padding: 2.5rem 1.25rem;
   }
@@ -739,9 +750,47 @@
     gap: 1.25rem;
   }
 
+  .tax-tabs-container {
+    padding: 0 1rem;
+    gap: 0.5rem;
+  }
+
+  .tax-tab-btn {
+    padding: 0.6rem 1rem;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .tax-admin-right {
+    padding: 1.25rem;
+  }
+
   .tax-panel-header {
     flex-wrap: wrap;
     gap: 0.75rem;
   }
-}
 
+  .tax-metadata-grid,
+  .tax-form-group-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tax-merge-inputs,
+  .tax-form-row {
+    flex-wrap: wrap;
+  }
+  .tax-merge-inputs select,
+  .tax-merge-inputs .csel,
+  .tax-form-row select,
+  .tax-form-row input,
+  .tax-form-row .csel {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .relation-arrow { transform: rotate(90deg); margin: 0 auto; }
+
+  .tax-modal { padding: 1.25rem; }
+  .tax-action-buttons-row { flex-wrap: wrap; }
+
+  .tax-toast { left: 1rem; right: 1rem; }
+}

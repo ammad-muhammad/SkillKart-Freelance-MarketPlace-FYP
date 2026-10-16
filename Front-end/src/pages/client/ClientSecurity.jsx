@@ -11,6 +11,7 @@ import { validatePassword } from '../../utils/validation';
 import Modal from '../../Components/common/Modal/Modal';
 import Reveal from '../freelancer/components/Reveal';
 import '../freelancer/FreelancerSecurity.css';
+import './ClientResponsive.css';
 import { log } from '../../utils/logger';
 
 export default function ClientSecurity() {

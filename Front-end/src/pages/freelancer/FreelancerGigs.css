@@ -66,8 +66,8 @@
 
 .fl-gigs-header__title {
   font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-  font-size: 32px;
-  line-height: 40px;
+  font-size: clamp(24px, 6.5vw, 32px);
+  line-height: 1.25;
   font-weight: 800;
   color: #0B2942;
   margin: 0;
@@ -111,7 +111,7 @@
 /* ─── Compact Stats Strip (4 KPI Cards) ─── */
 .fl-gigs-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -218,7 +218,7 @@
   justify-content: center;
   padding: 1px 6px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   background: rgba(255, 255, 255, 0.25);
   color: inherit;
@@ -255,6 +255,8 @@
   font-size: 13px;
   color: #0B2942;
   width: 180px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .fl-search-pill input::placeholder {
@@ -319,7 +321,7 @@
 /* ─── Grid View (3 per row at 1280+, 2 tablet, 1 mobile) ─── */
 .fl-gigs-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
 }
 
@@ -402,13 +404,13 @@
   background: #F8FAFC;
   border-radius: 8px;
   border: 1px solid #E2E8F0;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   text-align: center;
 }
 
 .fl-gig-list-tier-chip span {
   display: block;
-  font-size: 9px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -493,7 +495,7 @@ html.fl-editor-locked .app-shell__main {
   width: 100%;
   max-width: 100%;
   height: 100%;
-  height: 100dvh;
+  height: var(--app-vh, var(--vh-full, 100dvh));
   z-index: 99999;
   background: linear-gradient(180deg, #F0FDF4 0%, #F8FAFC 360px, #FFFFFF 100%);
   display: flex;
@@ -546,7 +548,8 @@ html.fl-editor-locked .app-shell__main {
 .fl-editor-topbar {
   position: sticky;
   top: 0;
-  height: 72px;
+  height: calc(72px + var(--safe-top, 0px));
+  padding-top: var(--safe-top, 0px);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -554,7 +557,8 @@ html.fl-editor-locked .app-shell__main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding-right: 32px;
+  padding-left: 32px;
   z-index: 100;
   box-shadow: 0 2px 14px rgba(11, 41, 66, 0.04);
   flex-shrink: 0;
@@ -639,7 +643,7 @@ html.fl-editor-locked .app-shell__main {
   gap: 5px;
   padding: 2px 8px;
   border-radius: 9999px;
-  font-size: 11.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   text-transform: capitalize;
 }
@@ -795,7 +799,7 @@ html.fl-editor-locked .app-shell__main {
   width: 100%;
   max-width: 960px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   height: 100%;
   align-items: stretch;
@@ -832,7 +836,7 @@ html.fl-editor-locked .app-shell__main {
 
 .fl-editor-nav-tab__num {
   font-family: 'Outfit', sans-serif;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   color: #10B981;
   background: #EAFBF4;
@@ -893,7 +897,7 @@ html.fl-editor-locked .app-shell__main {
   gap: 4px;
   padding: 2px 8px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   flex-shrink: 0;
   border: 1px solid transparent;
@@ -939,7 +943,7 @@ html.fl-editor-locked .app-shell__main {
   box-sizing: border-box;
 }
 
-.fl-section-card {
+.fl-fullscreen-editor .fl-section-card {
   background: #FFFFFF;
   border-radius: 24px;
   border: 1px solid #DDEFE6;
@@ -952,7 +956,7 @@ html.fl-editor-locked .app-shell__main {
   scroll-margin-top: 140px;
 }
 
-.fl-section-card__header {
+.fl-fullscreen-editor .fl-section-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -977,7 +981,7 @@ html.fl-editor-locked .app-shell__main {
   color: #DC2626;
 }
 
-.fl-section-card__title {
+.fl-fullscreen-editor .fl-section-card__title {
   font-family: 'Outfit', sans-serif;
   font-size: 20px;
   font-weight: 800;
@@ -986,7 +990,7 @@ html.fl-editor-locked .app-shell__main {
   letter-spacing: -0.01em;
 }
 
-.fl-section-card__hint {
+.fl-fullscreen-editor .fl-section-card__hint {
   font-size: 13.5px;
   color: #64748B;
   margin-top: 2px;
@@ -1021,7 +1025,7 @@ html.fl-editor-locked .app-shell__main {
 }
 
 /* ─── Media Banner & Gallery ─── */
-.fl-media-dropzone {
+.fl-fullscreen-editor .fl-media-dropzone {
   width: 100%;
   aspect-ratio: 16 / 9;
   max-height: 280px;
@@ -1037,24 +1041,24 @@ html.fl-editor-locked .app-shell__main {
   transition: all 0.2s ease;
 }
 
-.fl-media-dropzone:hover {
+.fl-fullscreen-editor .fl-media-dropzone:hover {
   border-color: #10B981;
   background: #F0FDF4;
 }
 
-.fl-banner-preview-box {
+.fl-fullscreen-editor .fl-banner-preview-box {
   width: 100%;
   height: 100%;
   position: relative;
 }
 
-.fl-banner-preview-img {
+.fl-fullscreen-editor .fl-banner-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.fl-banner-preview-actions {
+.fl-fullscreen-editor .fl-banner-preview-actions {
   position: absolute;
   bottom: 14px;
   right: 14px;
@@ -1063,7 +1067,7 @@ html.fl-editor-locked .app-shell__main {
   gap: 8px;
 }
 
-.fl-banner-change-btn {
+.fl-fullscreen-editor .fl-banner-change-btn {
   height: 34px;
   padding: 0 14px;
   border-radius: 9999px;
@@ -1077,11 +1081,11 @@ html.fl-editor-locked .app-shell__main {
   transition: all 0.15s ease;
 }
 
-.fl-banner-change-btn:hover {
+.fl-fullscreen-editor .fl-banner-change-btn:hover {
   background: #0B2942;
 }
 
-.fl-banner-delete-btn {
+.fl-fullscreen-editor .fl-banner-delete-btn {
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -1095,12 +1099,12 @@ html.fl-editor-locked .app-shell__main {
   transition: all 0.15s ease;
 }
 
-.fl-banner-delete-btn:hover {
+.fl-fullscreen-editor .fl-banner-delete-btn:hover {
   background: #DC2626;
   transform: scale(1.05);
 }
 
-.fl-dropzone-prompt {
+.fl-fullscreen-editor .fl-dropzone-prompt {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1109,7 +1113,7 @@ html.fl-editor-locked .app-shell__main {
   padding: 20px;
 }
 
-.fl-dropzone-icon {
+.fl-fullscreen-editor .fl-dropzone-icon {
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -1120,18 +1124,18 @@ html.fl-editor-locked .app-shell__main {
   justify-content: center;
 }
 
-.fl-dropzone-title {
+.fl-fullscreen-editor .fl-dropzone-title {
   font-size: 15px;
   font-weight: 800;
   color: #0B2942;
 }
 
-.fl-dropzone-sub {
+.fl-fullscreen-editor .fl-dropzone-sub {
   font-size: 12.5px;
   color: #64748B;
 }
 
-.fl-cover-badge {
+.fl-fullscreen-editor .fl-cover-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1146,11 +1150,11 @@ html.fl-editor-locked .app-shell__main {
 /* ─── Gallery Grid ─── */
 .fl-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-.fl-gallery-slot {
+.fl-fullscreen-editor .fl-gallery-slot {
   position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 16px;
@@ -1171,13 +1175,13 @@ html.fl-editor-locked .app-shell__main {
   left: 8px;
   background: #10B981;
   color: #FFFFFF;
-  font-size: 10.5px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 6px;
 }
 
-.fl-gallery-slot__overlay {
+.fl-fullscreen-editor .fl-gallery-slot__overlay {
   position: absolute;
   inset: 0;
   background: rgba(11, 41, 66, 0.7);
@@ -1191,7 +1195,7 @@ html.fl-editor-locked .app-shell__main {
   padding: 10px;
 }
 
-.fl-gallery-slot:hover .fl-gallery-slot__overlay {
+.fl-fullscreen-editor .fl-gallery-slot:hover .fl-gallery-slot__overlay {
   opacity: 1;
 }
 
@@ -1200,7 +1204,7 @@ html.fl-editor-locked .app-shell__main {
   border-radius: 9999px;
   background: #10B981;
   color: #FFFFFF;
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   font-weight: 700;
   border: none;
   cursor: pointer;
@@ -1220,7 +1224,7 @@ html.fl-editor-locked .app-shell__main {
   cursor: pointer;
 }
 
-.fl-gallery-add-slot {
+.fl-fullscreen-editor .fl-gallery-add-slot {
   aspect-ratio: 1 / 1;
   border-radius: 16px;
   border: 2px dashed #CBD5E1;
@@ -1237,7 +1241,7 @@ html.fl-editor-locked .app-shell__main {
   transition: all 0.15s ease;
 }
 
-.fl-gallery-add-slot:hover {
+.fl-fullscreen-editor .fl-gallery-add-slot:hover {
   border-color: #10B981;
   color: #10B981;
   background: #EAFBF4;
@@ -1324,7 +1328,7 @@ html.fl-editor-locked .app-shell__main {
 }
 
 /* ─── D) PREVIEW RIGHT DRAWER ─── */
-.fl-preview-drawer-backdrop {
+.fl-fullscreen-editor .fl-preview-drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(11, 41, 66, 0.45);
@@ -1341,7 +1345,7 @@ html.fl-editor-locked .app-shell__main {
   to { opacity: 1; }
 }
 
-.fl-preview-drawer {
+.fl-fullscreen-editor .fl-preview-drawer {
   width: 100%;
   max-width: 440px;
   height: 100%;
@@ -1358,7 +1362,7 @@ html.fl-editor-locked .app-shell__main {
   to { transform: translateX(0); }
 }
 
-.fl-preview-drawer__header {
+.fl-fullscreen-editor .fl-preview-drawer__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1367,7 +1371,7 @@ html.fl-editor-locked .app-shell__main {
   flex-shrink: 0;
 }
 
-.fl-preview-drawer__title {
+.fl-fullscreen-editor .fl-preview-drawer__title {
   margin: 0;
   font-family: 'Outfit', sans-serif;
   font-size: 17px;
@@ -1375,7 +1379,7 @@ html.fl-editor-locked .app-shell__main {
   color: #0B2942;
 }
 
-.fl-preview-drawer__close {
+.fl-fullscreen-editor .fl-preview-drawer__close {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -1389,7 +1393,7 @@ html.fl-editor-locked .app-shell__main {
   transition: all 0.15s ease;
 }
 
-.fl-preview-drawer__close:hover {
+.fl-fullscreen-editor .fl-preview-drawer__close:hover {
   background: #E2E8F0;
   color: #0B2942;
 }
@@ -1435,7 +1439,7 @@ html.fl-editor-locked .app-shell__main {
   color: #059669;
 }
 
-.fl-preview-drawer__body {
+.fl-fullscreen-editor .fl-preview-drawer__body {
   padding: 20px;
   overflow-y: auto;
   display: flex;
@@ -1443,7 +1447,7 @@ html.fl-editor-locked .app-shell__main {
   gap: 16px;
 }
 
-.fl-preview-drawer__note {
+.fl-fullscreen-editor .fl-preview-drawer__note {
   margin: 0;
   font-size: 13px;
   color: #64748B;
@@ -1453,31 +1457,90 @@ html.fl-editor-locked .app-shell__main {
 /* ─── Responsive Breakpoints ─── */
 @media (max-width: 1279px) {
   .fl-gigs-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1023px) {
   .fl-gigs-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
-  .fl-tiers-grid {
-    grid-template-columns: 1fr;
+/* List-view rows (768–1023): thumb + info on the first line, tiers and
+   actions wrap underneath instead of squeezing the title to nothing. */
+@media (max-width: 1023.98px) {
+  .fl-gig-list-row {
+    flex-wrap: wrap;
   }
-  .fl-price-compare-strip {
-    flex-direction: column;
+  .fl-gig-list-row__info {
+    flex: 1 1 220px;
+  }
+  .fl-gig-list-row__tiers {
+    flex-wrap: wrap;
+  }
+
+  /* Editor section tabs: scroll instead of truncating titles to nothing */
+  .fl-editor-nav-bar {
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .fl-editor-nav-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .fl-editor-nav-inner {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    gap: 8px;
+  }
+  .fl-editor-nav-tab {
+    flex: 1 0 auto;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .fl-gigs-stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .fl-gigs-stat-card {
+    padding: 12px;
+    gap: 10px;
+  }
+  .fl-gigs-stat-card__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+  .fl-gigs-stat-card__val {
+    font-size: 20px;
   }
   .fl-gigs-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fl-gigs-toolbar {
+    padding: 12px;
+  }
+  .fl-gigs-toolbar__left {
+    width: 100%;
+  }
+  .fl-status-tabs-pill {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fl-search-pill {
+    flex: 1 1 100%;
+  }
+  .fl-search-pill input {
+    width: 100%;
+  }
+  .fl-gigs-toolbar__right {
+    width: 100%;
+    justify-content: space-between;
   }
   .fl-gig-list-row {
     flex-direction: column;
@@ -1487,14 +1550,44 @@ html.fl-editor-locked .app-shell__main {
     width: 100%;
     height: 160px;
   }
+  .fl-gig-list-row__info {
+    flex: 0 0 auto;
+    width: 100%;
+  }
 
-  /* Compact Mobile Header */
+  /* Compact Mobile Header
+     Left group is allowed to shrink, the right group stays compact so the
+     Save button is always on screen (it used to be pushed past the edge). */
   .fl-editor-topbar {
+    padding: var(--safe-top, 0px) 12px 0;
+    height: calc(64px + var(--safe-top, 0px));
+    gap: 8px;
+  }
+  .fl-editor-topbar__left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 10px;
+  }
+  .fl-editor-gig-thumb {
+    display: none;
+  }
+  .fl-editor-topbar__right {
+    gap: 8px;
+  }
+  .fl-unsaved-text {
+    display: none;
+  }
+  .fl-unsaved-badge {
+    padding: 8px;
+  }
+  .fl-preview-btn-pill {
+    padding: 0 12px;
+  }
+  .fl-save-changes-pill {
     padding: 0 16px;
-    height: 64px;
   }
   .fl-editor-gig-title {
-    max-width: 160px;
+    max-width: 100%;
     font-size: 15px;
   }
   .fl-editor-last-edited {
@@ -1511,18 +1604,9 @@ html.fl-editor-locked .app-shell__main {
   .fl-editor-nav-bar {
     height: 48px;
     padding: 0 12px;
-    justify-content: flex-start;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .fl-editor-nav-bar::-webkit-scrollbar {
-    display: none;
   }
   .fl-editor-nav-inner {
-    display: flex;
-    width: max-content;
-    gap: 8px;
+    min-width: 0;
   }
   .fl-editor-nav-tab {
     padding: 0 10px;
@@ -1531,24 +1615,24 @@ html.fl-editor-locked .app-shell__main {
 
   /* Compact content stack */
   .fl-editor-content-stack {
-    padding: 18px 12px 120px 12px;
+    padding: 18px 12px calc(120px + var(--safe-bottom, 0px)) 12px;
     gap: 20px;
   }
-  .fl-section-card {
+  .fl-fullscreen-editor .fl-section-card {
     padding: 20px 16px;
     border-radius: 20px;
   }
   .fl-gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   /* Drawer as bottom sheet on mobile */
-  .fl-preview-drawer-backdrop {
+  .fl-fullscreen-editor .fl-preview-drawer-backdrop {
     align-items: flex-end;
   }
-  .fl-preview-drawer {
+  .fl-fullscreen-editor .fl-preview-drawer {
     max-width: 100%;
-    max-height: 85vh;
+    max-height: calc(var(--app-vh, var(--vh-full, 100vh)) - 56px);
     height: auto;
     border-radius: 24px 24px 0 0;
     animation: flDrawerSlideUpMobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1562,7 +1646,47 @@ html.fl-editor-locked .app-shell__main {
 
 @media (prefers-reduced-motion: reduce) {
   .fl-fullscreen-editor,
-  .fl-preview-drawer {
+  .fl-fullscreen-editor .fl-preview-drawer {
     animation: none !important;
+  }
+}
+
+/* ── Touch screens: reveal hover-only gallery actions and use 40px targets ── */
+@media (hover: none) {
+  .fl-fullscreen-editor .fl-gallery-slot__overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(11, 41, 66, 0.72), rgba(11, 41, 66, 0) 60%);
+    justify-content: flex-end;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px;
+  }
+  .fl-gigs-stat-card:hover,
+  .fl-gig-list-row:hover { transform: none; }
+}
+
+@media (pointer: coarse) {
+  .fl-view-toggle-btn {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .fl-gallery-del-btn,
+  .fl-fullscreen-editor .fl-preview-drawer__close,
+  .fl-editor-back-btn {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .fl-gallery-cover-btn {
+    min-height: 32px;
+    padding: 4px 12px;
+  }
+  .fl-status-tab-btn,
+  .fl-cancel-ghost-btn,
+  .fl-preview-btn-pill,
+  .fl-ai-mint-pill,
+  .fl-btn-danger-outline,
+  .fl-search-pill {
+    min-height: var(--tap-min, 40px);
   }
 }

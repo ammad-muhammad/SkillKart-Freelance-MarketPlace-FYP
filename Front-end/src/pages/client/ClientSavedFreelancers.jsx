@@ -120,13 +120,8 @@ const ClientSavedFreelancers = () => {
       <style>{`
         .cl-saved-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
           gap: 1.5rem;
-        }
-        @media (min-width: 1024px) {
-          .cl-saved-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
         }
         .cl-freelancer-card {
           position: relative;
@@ -151,8 +146,8 @@ const ClientSavedFreelancers = () => {
           right: 1.4rem;
           background: #F8FAFC;
           border: 1px solid #E2E8F0;
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -171,7 +166,7 @@ const ClientSavedFreelancers = () => {
           display: flex;
           align-items: center;
           gap: 1rem;
-          padding-right: 2.5rem;
+          padding-right: 3rem;
         }
         .cl-freelancer-card__avatar {
           width: 60px;
@@ -251,6 +246,14 @@ const ClientSavedFreelancers = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+        }
+        @media (max-width: 479.98px) {
+          .cl-saved-grid { gap: 1rem; }
+          .cl-freelancer-card { padding: 1.15rem; }
+          .cl-freelancer-card__unsave { top: 1rem; right: 1rem; }
+        }
+        @media (hover: none) {
+          .cl-freelancer-card:hover { transform: none; }
         }
       `}</style>
     </div>

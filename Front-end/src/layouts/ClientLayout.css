@@ -22,32 +22,6 @@
   display: none !important;
 }
 
-/* ── Fullscreen Messages Page Override (Edge-to-Edge) ── */
-.app-shell:has(.cl-messages-layout),
-.app-shell:has(.flm-page) {
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden !important;
-  background: #FFFFFF !important;
-}
-
-.app-shell:has(.cl-messages-layout) .app-shell__main,
-.app-shell:has(.flm-page) .app-shell__main {
-  height: calc(100vh - 72px) !important;
-  max-height: calc(100vh - 72px) !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.app-shell:has(.cl-messages-layout) .app-shell__container,
-.app-shell:has(.flm-page) .app-shell__container {
-  max-width: 100% !important;
-  width: 100% !important;
-  height: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
+/* Fullscreen messages shell (.app-shell--flush / :has(.flm-page) /
+   :has(.cl-messages-layout)) lives in FreelancerLayout.css, which this layout
+   imports as well — kept in one place so the two can't drift apart. */

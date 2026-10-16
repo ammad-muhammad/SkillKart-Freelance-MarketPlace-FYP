@@ -374,7 +374,7 @@ export default function ReviewProposals() {
                       <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
                         <input
                           className="cl-input"
-                          style={{ flex: 2 }}
+                          style={{ flex: 2, minWidth: 0 }}
                           placeholder={`Milestone ${i + 1} title`}
                           value={m.title}
                           onChange={(e) => updateMilestoneRow(i, 'title', e.target.value)}
@@ -382,7 +382,7 @@ export default function ReviewProposals() {
                         <input
                           className="cl-input"
                           type="number"
-                          style={{ flex: 1, ...(!(Number(m.amount) > 0) ? { borderColor: 'var(--color-error)' } : {}) }}
+                          style={{ flex: 1, minWidth: 0, ...(!(Number(m.amount) > 0) ? { borderColor: 'var(--color-error)' } : {}) }}
                           placeholder="Amount"
                           min="1"
                           step="0.01"

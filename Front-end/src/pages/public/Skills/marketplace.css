@@ -72,7 +72,7 @@
   color: #059669;
   padding: 4px 14px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   margin-bottom: 0.6rem;
@@ -126,7 +126,7 @@
 }
 
 .cat-hero-stat-lbl {
-  font-size: 11px;
+  font-size: 0.75rem;
   color: #64748B;
   font-weight: 600;
   text-transform: uppercase;
@@ -183,6 +183,7 @@
   font-family: inherit;
   border: none;
   border-radius: 999px;
+  min-height: var(--tap-min, 40px);
   padding: 9px 20px;
   cursor: pointer;
   white-space: nowrap;
@@ -198,7 +199,7 @@
 
 /* ── Page Shell ── */
 .mp-page {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background: linear-gradient(180deg, #EAFBF4 0%, #F5FAF8 30%, #F8FAFC 100%);
   color: #0B2942;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -245,7 +246,7 @@
   border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 4px 12px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -276,6 +277,7 @@
   font-weight: 700;
   color: #10B981;
   text-decoration: none;
+  min-height: var(--tap-min, 40px);
   padding: 6px 14px;
   background: #EAFBF4;
   border-radius: 999px;
@@ -295,7 +297,7 @@
    ========================================================= */
 .mp-skills-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   gap: 20px;
 }
 
@@ -405,6 +407,7 @@
   background: #ffffff;
   border: 1.5px solid #E2E8F0;
   border-radius: 999px;
+  min-height: var(--tap-min, 40px);
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
@@ -438,7 +441,7 @@
 }
 
 .mp-subcat-card__count {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   background: rgba(0, 0, 0, 0.06);
   color: inherit;
@@ -546,6 +549,7 @@
   background: #FEF2F2;
   border: 1.5px solid #FCA5A5;
   border-radius: 10px;
+  min-height: var(--tap-min, 40px);
   padding: 7px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -561,7 +565,7 @@
    ========================================================= */
 .mp-gigs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr));
   gap: 24px;
 }
 
@@ -610,8 +614,14 @@
   transition: opacity 0.25s ease;
 }
 
-.mp-gig-card:hover .mp-gig-card__overlay {
+.mp-gig-card:hover .mp-gig-card__overlay,
+.mp-gig-card:focus-within .mp-gig-card__overlay {
   opacity: 1;
+}
+
+/* hover-only reveal: it is decorative, so skip it on touch */
+@media (hover: none) {
+  .mp-gig-card__overlay { display: none; }
 }
 
 .mp-gig-card__overlay-btn {
@@ -698,7 +708,7 @@
 }
 
 .mp-gig-card__price span {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #64748B;
 }
@@ -718,6 +728,16 @@
   overflow-x: auto;
   padding-bottom: 14px;
   scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* mouse users get a visible (thin) scrollbar so the strip is discoverable */
+@media (hover: hover) and (pointer: fine) {
+  .mp-freelancers-scroll { scrollbar-width: thin; }
+  .mp-freelancers-scroll::-webkit-scrollbar { display: block; height: 6px; }
+  .mp-freelancers-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
 }
 
 .mp-freelancers-scroll::-webkit-scrollbar {
@@ -734,6 +754,7 @@
   min-width: 180px;
   max-width: 195px;
   flex-shrink: 0;
+  scroll-snap-align: start;
   text-align: center;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(11, 41, 66, 0.03);
@@ -790,7 +811,7 @@
 }
 
 .mp-freelancer-card__reviews {
-  font-size: 11px;
+  font-size: 0.75rem;
   color: #94A3B8;
   font-weight: 400;
 }
@@ -823,6 +844,7 @@
   background: #ffffff;
   border: 1.5px solid #E2E8F0;
   color: #334155;
+  min-height: var(--tap-min, 40px);
   padding: 8px 18px;
   border-radius: 999px;
   font-size: 13px;
@@ -892,7 +914,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 50vh;
+  min-height: calc(var(--vh-full, 100vh) * 0.5);
   text-align: center;
   gap: 12px;
   padding: 40px 20px;
@@ -934,10 +956,8 @@
 /* =========================================================
    10) RESPONSIVE DESIGN
    ========================================================= */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .mp-section { padding: 32px 0; }
-  .mp-skills-grid { grid-template-columns: 1fr; }
-  .mp-gigs-grid { grid-template-columns: 1fr; }
   .mp-filter-bar { gap: 10px; padding: 12px 14px; }
   .mp-filter-select { min-width: 100%; }
   .mp-filter-results { margin-left: 0; width: 100%; text-align: center; }

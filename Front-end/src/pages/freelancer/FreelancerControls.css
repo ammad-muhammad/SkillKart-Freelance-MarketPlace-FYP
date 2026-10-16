@@ -1,0 +1,133 @@
+/* ==========================================================================
+   Shared freelancer control primitives (used by Gigs, Work, CreateGig).
+   These class names were referenced in JSX but never defined, so the buttons
+   and status badges rendered as unstyled native elements.
+   ========================================================================== */
+
+/* Pill action button (outline) — works on <button> and <a> */
+.sk-pill-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #0B2942;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.sk-pill-action-btn:hover:not(:disabled) {
+  border-color: #10B981;
+  color: #065F46;
+  background: #F0FDF4;
+}
+
+.sk-pill-action-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.sk-pill-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Round icon button */
+.sk-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.sk-icon-btn:hover:not(:disabled) {
+  border-color: #10B981;
+  color: #059669;
+  background: #F0FDF4;
+}
+
+.sk-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sk-icon-btn--pause { color: #B45309; }
+.sk-icon-btn--pause:hover:not(:disabled) { border-color: #F59E0B; color: #B45309; background: #FFFBEB; }
+.sk-icon-btn--play { color: #059669; }
+
+.sk-icon-btn--danger { color: #DC2626; }
+.sk-icon-btn--danger:hover:not(:disabled) { border-color: #EF4444; color: #B91C1C; background: #FEF2F2; }
+
+/* Status badge */
+.sk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  font-size: var(--fs-floor, 12px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sk-badge__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.sk-badge--status-active {
+  background: #ECFDF5;
+  color: #065F46;
+  border-color: #A7F3D0;
+}
+
+.sk-badge--status-paused {
+  background: #FFFBEB;
+  color: #B45309;
+  border-color: #FDE68A;
+}
+
+/* Small meta chip used in contract sublines */
+.sk-gig-card__skill-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: var(--fs-floor, 12px);
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .sk-pill-action-btn { padding: 0 14px; }
+}
+
+/* Touch screens: 40px minimum hit area */
+@media (pointer: coarse) {
+  .sk-pill-action-btn { min-height: var(--tap-min, 40px); }
+  .sk-icon-btn { width: var(--tap-min, 40px); height: var(--tap-min, 40px); }
+}

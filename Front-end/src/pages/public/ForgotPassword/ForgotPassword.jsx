@@ -97,25 +97,29 @@ const ForgotPassword = () => {
                     </div>
                     <h1 className="auth-title">
                         Reset Your <br />
-                        <span style={{ color: 'var(--auth-accent)' }}>Access.</span>
+                        <span className="auth-title-accent">Access.</span>
                     </h1>
                     <p className="auth-description">
                         Don't worry, it happens to the best of us. Just enter your email and we'll help you get back into your account.
                     </p>
 
-                    <div className="auth-feature-badges" style={{ marginTop: '2rem', display: 'flex', gap: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <ShieldCheck size={20} color="var(--auth-accent)" />
+                    <div className="auth-feature-badges">
+                        <div className="auth-badge-card">
+                            <div className="auth-badge-icon" aria-hidden="true">
+                                <ShieldCheck size={18} />
+                            </div>
                             <div>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Privacy</div>
-                                <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Data Encrypted</div>
+                                <div className="auth-badge-title">Privacy</div>
+                                <div className="auth-badge-sub">Data Encrypted</div>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <RefreshCw size={20} color="var(--auth-accent)" />
+                        <div className="auth-badge-card">
+                            <div className="auth-badge-icon" aria-hidden="true">
+                                <RefreshCw size={18} />
+                            </div>
                             <div>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Simple</div>
-                                <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Quick Recovery</div>
+                                <div className="auth-badge-title">Simple</div>
+                                <div className="auth-badge-sub">Quick Recovery</div>
                             </div>
                         </div>
                     </div>
@@ -219,7 +223,7 @@ const ForgotPassword = () => {
                         </form>
 
                         <div className="auth-footer">
-                            <Link to="/login" className="auth-link" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                            <Link to="/login" className="auth-link" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', minHeight: 'var(--tap-min, 40px)', fontSize: '0.85rem' }}>
                                 <ArrowLeft size={16} /> Return to Sign In
                             </Link>
                         </div>

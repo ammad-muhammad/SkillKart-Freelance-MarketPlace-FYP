@@ -1,11 +1,11 @@
 /* Payment Confirmation — SkillKart Theme */
 .pay-confirm {
-  min-height: 100vh;
+  min-height: var(--app-vh, var(--vh-full, 100vh));
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--sk-bg-secondary, #F3F7F5);
-  padding: 1.5rem;
+  padding: max(1.5rem, var(--safe-top, 0px)) max(1.5rem, var(--safe-right, 0px)) max(1.5rem, var(--safe-bottom, 0px)) max(1.5rem, var(--safe-left, 0px));
 }
 .pay-confirm__card {
   background: #fff;
@@ -40,6 +40,13 @@
   padding: 0.75rem 1.75rem;
   font-weight: 700;
   cursor: pointer;
+  min-height: var(--tap-min, 40px);
   transition: all 0.2s;
 }
 .pay-confirm__btn:hover { background: var(--sk-hover-emerald, #059669); }
+
+@media (max-width: 479.98px) {
+  .pay-confirm__card {
+    padding: 2rem 1.25rem;
+  }
+}

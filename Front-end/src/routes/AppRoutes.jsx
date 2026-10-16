@@ -147,12 +147,12 @@ const Unauthorized = () => {
     : user?.role === 'admin' || user?.role === 'superadmin' ? '/admin'
     : '/';
   return (
-    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', textAlign: 'center', padding: '2rem' }}>
-      <h1 style={{ fontSize: '2rem', margin: 0 }}>403 – Not Authorized</h1>
+    <div style={{ minHeight: 'calc(var(--vh-full, 100vh) * 0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', textAlign: 'center', padding: 'calc(2rem + var(--safe-top, 0px)) calc(1.25rem + var(--safe-right, 0px)) calc(2rem + var(--safe-bottom, 0px)) calc(1.25rem + var(--safe-left, 0px))' }}>
+      <h1 style={{ fontSize: 'clamp(1.5rem, 6vw, 2rem)', margin: 0 }}>403 – Not Authorized</h1>
       <p style={{ color: 'var(--color-text-mid, #555)', margin: 0 }}>
         Your account doesn't have access to that page.
       </p>
-      <Link to={homeLink} style={{ fontWeight: 600 }}>Go to your dashboard</Link>
+      <Link to={homeLink} style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 'var(--tap-min, 40px)', padding: '0 1rem' }}>Go to your dashboard</Link>
     </div>
   );
 };

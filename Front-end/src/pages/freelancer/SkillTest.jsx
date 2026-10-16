@@ -935,7 +935,7 @@ const SkillTest = () => {
                   <span
                     style={{
                       color: '#94A3B8',
-                      fontSize: '11.5px',
+                      fontSize: '12px',
                       fontWeight: 500,
                       marginLeft: '10px',
                       letterSpacing: '0.02em',

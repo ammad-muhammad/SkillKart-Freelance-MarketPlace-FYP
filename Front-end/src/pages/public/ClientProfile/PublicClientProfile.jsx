@@ -217,7 +217,7 @@ export default function PublicClientProfile() {
             </div>
             
             <div className="pub-cl-hero-content">
-              <div className="pub-cl-avatar-wrapper" style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-end' }}>
+              <div className="pub-cl-avatar-wrapper">
                 {profile.companyLogo && (
                   <div className="pub-cl-avatar" style={{ position: 'relative' }} title="Company Logo">
                     <img src={profile.companyLogo} alt={companyName} />

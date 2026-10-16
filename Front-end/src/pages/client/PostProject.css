@@ -187,7 +187,7 @@
 }
 
 .fl-step-node__sub {
-  font-size: 11px;
+  font-size: var(--fs-floor, 12px);
   color: #94A3B8;
 }
 
@@ -785,21 +785,90 @@
 
 .fl-preview-drawer__body {
   padding: 24px;
+  padding-bottom: calc(24px + var(--safe-bottom, 0px));
+  flex: 1 1 auto;
+  min-height: 0; /* lets the body scroll inside the fixed-height drawer */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* Responsive */
-@media (max-width: 900px) {
+/* Responsive — breakpoint scale 480 / 768 / 1024 / 1280 / 1700 */
+
+/* Small laptops / large tablets: 5 stepper nodes + sub-labels don't fit in one row */
+@media (max-width: 1279.98px) {
+  .fl-step-node__sub { display: none; }
+  .fl-step-node { padding: 6px 8px; gap: 10px; }
+  .fl-stepper-line { margin: 0 8px; }
+}
+
+/* Tablet and below: compact progress bar instead of the horizontal stepper */
+@media (max-width: 1023.98px) {
   .fl-stepper-horizontal {
     display: none;
   }
   .fl-stepper-mobile-bar {
     display: flex;
   }
+  .fl-stepper-horizontal-card { padding: 16px 20px; }
+}
+
+@media (max-width: 767.98px) {
   .fl-fields-2col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+
+  /* The shell container already provides the page gutter; don't double it. */
+  .fl-wizard-page {
+    padding: 4px 0 calc(96px + var(--safe-bottom, 0px));
+    gap: 18px;
+  }
+  .fl-section-card { padding: 18px 16px; border-radius: 18px; gap: 16px; }
+  .fl-review-hero { padding: 18px 16px; }
+  .fl-ai-strip { flex-wrap: wrap; padding: 14px 16px; }
+  .fl-ai-strip__left { flex: 1 1 220px; min-width: 0; }
+  .fl-ai-strip__btn { width: 100%; justify-content: center; }
+  .fl-top-preview-trigger { width: 100%; justify-content: center; }
+  .fl-preview-drawer__body { padding: 16px 16px calc(16px + var(--safe-bottom, 0px)); }
+  .fl-preview-drawer__header { padding: 16px; }
+}
+
+/* Phones: step footer becomes a stacked action sheet (primary action first) */
+@media (max-width: 639.98px) {
+  .fl-card-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .fl-card-footer__left,
+  .fl-card-footer__right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .fl-card-footer__right { flex-direction: column-reverse; }
+  .fl-card-footer__hint { justify-content: center; text-align: center; }
+  .fl-btn-ghost-pill,
+  .fl-btn-outline-pill,
+  .fl-btn-navy-pill,
+  .fl-btn-publish-pill {
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    justify-content: center;
+    text-align: center;
+  }
+  .fl-segmented-btn { white-space: normal; padding: 9px 8px; }
+  .fl-attach-item { flex-wrap: wrap; }
+}
+
+@media (pointer: coarse) {
+  .fl-top-preview-trigger,
+  .fl-ai-strip__btn,
+  .fl-cat-chip,
+  .fl-segmented-btn { min-height: var(--tap-min, 40px); }
+  .fl-preview-drawer__close { width: var(--tap-min, 40px); height: var(--tap-min, 40px); }
 }

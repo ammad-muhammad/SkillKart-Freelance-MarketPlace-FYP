@@ -189,11 +189,13 @@
   animation: orbit-float 5s ease-in-out infinite alternate;
 }
 
-.orbit-card:hover {
-  border-color: #10B981;
-  transform: translateY(-5px) scale(1.03) !important;
-  box-shadow: 0 16px 36px rgba(16, 185, 129, 0.22), 0 4px 12px rgba(11, 41, 66, 0.06);
-  z-index: 10;
+@media (hover: hover) {
+  .orbit-card:hover {
+    border-color: #10B981;
+    transform: translateY(-5px) scale(1.03) !important;
+    box-shadow: 0 16px 36px rgba(16, 185, 129, 0.22), 0 4px 12px rgba(11, 41, 66, 0.06);
+    z-index: 10;
+  }
 }
 
 /* Coordinates matching reference image */
@@ -278,7 +280,7 @@
 }
 
 .orbit-card__count {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #059669;
   white-space: nowrap;
@@ -307,7 +309,7 @@
   background: #FFFFFF;
   border: 1px solid #D1FAE5;
   border-radius: 9999px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #059669;
   letter-spacing: 0.04em;
@@ -365,18 +367,20 @@
 }
 
 /* ── Responsive Adaptations ── */
-@media (max-width: 1200px) {
-  .orbit-card {
-    min-width: 160px;
-    padding: 0.65rem 0.95rem;
-  }
-  .orbit-card--top-left { left: 1%; }
-  .orbit-card--top-right { right: 1%; }
-  .orbit-card--bot-left-out { left: 1%; }
-  .orbit-card--bot-right-out { right: 1%; }
+
+/* Laptop band: the absolutely-positioned orbit cards crowd the centred
+   headline, so pull the inner cards outward and shrink the title a little. */
+@media (min-width: 1280px) and (max-width: 1399.98px) {
+  .orbit-title { font-size: clamp(2rem, 3.4vw, 2.8rem); }
+  .orbit-card { min-width: 160px; padding: 0.65rem 0.95rem; }
+  .orbit-card--mid-left-in { left: 11%; }
+  .orbit-card--mid-right-in { right: 11%; }
+  .orbit-card--bot-left-in { left: 12%; }
+  .orbit-card--bot-right-in { right: 12%; }
 }
 
-@media (max-width: 992px) {
+/* Below 1280 the orbit no longer fits beside the headline: use a grid. */
+@media (max-width: 1279.98px) {
   .orbit-arena {
     min-height: auto;
     flex-direction: column;
@@ -388,7 +392,7 @@
   .orbit-cards-container {
     position: static;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.85rem;
     margin-top: 2rem;
     width: 100%;
@@ -401,12 +405,12 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .orbit-section {
     padding: 3.5rem 0 2.5rem;
   }
   .orbit-cards-container {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .orbit-ticker-strip {
     flex-direction: column;
@@ -416,5 +420,18 @@
   }
   .orbit-ticker-badge {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .orbit-card {
+    gap: 0.6rem;
+    padding: 0.65rem 0.75rem;
+  }
+  /* two narrow columns: let the title wrap instead of "Graphic De…" */
+  .orbit-card__title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
   }
 }

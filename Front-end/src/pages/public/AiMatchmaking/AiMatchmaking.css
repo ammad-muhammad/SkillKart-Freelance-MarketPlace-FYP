@@ -4,7 +4,7 @@
 
 /* ── Page wrapper ── */
 .aim-page {
-  min-height: 100vh;
+  min-height: var(--vh-full, 100vh);
   background: #F5FBF8;
   position: relative;
 }
@@ -89,7 +89,7 @@
   border-radius: 999px;
   padding: 0.38rem 1.1rem;
   font-family: 'Inter', sans-serif;
-  font-size: 0.74rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #059669;
   letter-spacing: 0.07em;
@@ -179,8 +179,6 @@
    LEFT — Brief Builder Panel
    ════════════════════════════════════ */
 .aim-input-panel {
-  position: sticky;
-  top: calc(var(--navbar-h, 64px) + 1rem);
   align-self: start;
   z-index: 20;
   /* Single glass card */
@@ -191,6 +189,15 @@
   border-radius: 20px;
   box-shadow: 0 4px 24px rgba(11,41,66,0.07), 0 1px 4px rgba(16,185,129,0.06), inset 0 1px 0 rgba(255,255,255,0.95);
   overflow: hidden;
+}
+
+/* Sticky only when the whole brief card fits the viewport; on shorter windows it
+   scrolls with the page so the 'Find Best Matches' button is never hidden. */
+@media (min-width: 1024px) and (min-height: 960px) {
+  .aim-input-panel {
+    position: sticky;
+    top: calc(var(--navbar-h, 64px) + 1rem);
+  }
 }
 
 /* Panel header */
@@ -244,7 +251,7 @@
 
 .aim-section__title {
   font-family: 'Inter', sans-serif;
-  font-size: 0.72rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #10B981;
   text-transform: uppercase;
@@ -331,7 +338,7 @@
   border-radius: 999px;
   padding: 3px 10px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.71rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s;
@@ -396,7 +403,7 @@
   border: 1px solid #A7F3D0;
   border-radius: 999px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.73rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 2px 9px 2px 11px;
   animation: aim-chip-pop 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
@@ -416,6 +423,13 @@
   line-height: 1;
   padding: 0;
   transition: color 0.15s;
+  position: relative;
+}
+
+.aim-tag__rm::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
 }
 
 .aim-tag__rm:hover { color: #ef4444; }
@@ -434,9 +448,10 @@
   border-radius: 999px;
   color: #64748B;
   font-family: 'Inter', sans-serif;
-  font-size: 0.71rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 600;
   padding: 2px 9px;
+  min-height: 28px;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -489,6 +504,7 @@
    RIGHT — Match Stage
    ════════════════════════════════════ */
 .aim-results {
+  scroll-margin-top: calc(var(--navbar-h, 64px) + 12px);
   background: rgba(255,255,255,0.88);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -660,7 +676,7 @@
   border-radius: 999px;
   padding: 2px 9px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.63rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #059669;
   white-space: nowrap;
@@ -810,7 +826,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: var(--fs-floor, 0.75rem);
   flex-shrink: 0;
   transition: all 0.3s;
 }
@@ -935,7 +951,7 @@
 
 .aim-analysis-stat__lbl {
   font-family: 'Inter', sans-serif;
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
   margin-top: 2px;
 }
@@ -1002,7 +1018,7 @@
   top: -10px;
   left: 1.2rem;
   font-family: 'Inter', sans-serif;
-  font-size: 0.68rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1081,7 +1097,7 @@
   border: 1px solid #A7F3D0;
   border-radius: 999px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.66rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   padding: 2px 7px;
   margin-top: 4px;
@@ -1120,7 +1136,7 @@
 
 .aim-score-lbl {
   font-family: 'Inter', sans-serif;
-  font-size: 0.65rem;
+  font-size: var(--fs-floor, 0.75rem);
   color: #64748B;
   font-weight: 600;
   text-align: right;
@@ -1139,7 +1155,7 @@
 }
 
 .aim-rating__star { color: #f59e0b; }
-.aim-rating__count { color: #64748B; font-weight: 400; font-size: 0.73rem; }
+.aim-rating__count { color: #64748B; font-weight: 400; font-size: var(--fs-floor, 0.75rem); }
 .aim-rating__sep { color: #CBD5E1; margin: 0 3px; }
 .aim-rating__rate { color: #64748B; font-weight: 600; }
 .aim-rating__online { color: #10B981; font-weight: 600; font-size: 0.77rem; }
@@ -1180,7 +1196,7 @@
 
 .aim-reasons__title {
   font-family: 'Inter', sans-serif;
-  font-size: 0.73rem;
+  font-size: var(--fs-floor, 0.75rem);
   font-weight: 700;
   color: #0B2942;
   text-transform: uppercase;
@@ -1298,13 +1314,15 @@
 /* ════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════ */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   .aim-layout {
     grid-template-columns: 1fr;
   }
 
   .aim-input-panel {
     position: static;
+    max-height: none;
+    overflow: hidden;
   }
 
   .aim-analysis-grid {
@@ -1312,7 +1330,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .aim-hero {
     padding: calc(var(--navbar-h, 64px) + 1.4rem) 0 1.4rem;
   }
@@ -1377,5 +1395,42 @@
   .aim-check-item {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* decorative blurred layers + backdrop blur cost scroll smoothness on phones */
+  .aim-blob {
+    display: none;
+  }
+  .aim-hero__tag,
+  .aim-hero__pulse,
+  .aim-input-panel,
+  .aim-results,
+  .aim-toolbar,
+  .aim-match-card,
+  .aim-orbit-node,
+  .aim-orbit-chip {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ── Touch devices: 40px minimum tap targets (44px for the primary actions) ── */
+@media (pointer: coarse) {
+  .aim-quick-pill,
+  .aim-autofill-btn,
+  .aim-add-btn,
+  .aim-btn-view,
+  .aim-btn-invite,
+  .aim-retry-btn {
+    min-height: var(--tap-min, 40px);
+  }
+  .aim-input,
+  .aim-select {
+    min-height: var(--tap-min, 40px);
+  }
+  .aim-match-btn {
+    min-height: 44px;
   }
 }

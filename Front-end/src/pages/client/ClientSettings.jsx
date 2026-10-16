@@ -8,6 +8,7 @@ import Modal from '../../Components/common/Modal/Modal';
 import { clientsAPI } from '../../api/clients';
 import Reveal from '../freelancer/components/Reveal';
 import '../freelancer/FreelancerSettings.css';
+import './ClientResponsive.css';
 
 export default function ClientSettings() {
   const { user, logout } = useAuth();
@@ -244,7 +245,7 @@ export default function ClientSettings() {
   };
 
   return (
-    <div className="fs-page-root">
+    <div className="fs-page-root cl-settings-page">
       <div className="fs-container">
 
         {/* ─── SHARED PAGE HEADER ─── */}

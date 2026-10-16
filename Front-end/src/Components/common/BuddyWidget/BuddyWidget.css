@@ -7,9 +7,11 @@
 /* ── Floating Launcher (FAB) ── */
 .buddy-fab {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
+  bottom: max(24px, calc(var(--safe-bottom, 0px) + 16px));
+  right: max(24px, calc(var(--safe-right, 0px) + 16px));
+  /* Below modals / drawers / the cookie bar / toasts (see --layer-* in
+     variables.css) but above ordinary page content. */
+  z-index: var(--layer-buddy, 1500);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -62,7 +64,7 @@
   margin-top: 4px;
   background: #0B2942;
   color: #6EE7B7;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   padding: 2px 7px;
@@ -88,15 +90,17 @@
    ══════════════════════════════════════════════════════════════════════ */
 .buddy-panel-v3 {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: min(370px, calc(100vw - 32px));
-  height: min(575px, calc(100vh - 64px));
+  bottom: max(24px, calc(var(--safe-bottom, 0px) + 16px));
+  right: max(24px, calc(var(--safe-right, 0px) + 16px));
+  width: min(370px, calc(100% - 32px));
+  height: min(575px, calc(var(--vh-full, 100vh) - 64px));
   background: #FFFFFF;
   border-radius: 20px;
   border: 1px solid rgba(226, 232, 240, 0.85);
   box-shadow: 0 16px 48px -6px rgba(4, 46, 76, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  z-index: 10000;
+  /* A chat window, not a blocking dialog: above the navbar + drawer layer so
+     its header is never covered, below modals (--layer-modal) and toasts. */
+  z-index: calc(var(--layer-drawer, 2500) + 50);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -494,7 +498,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   color: #94A3B8;
   font-weight: 500;
   margin-top: 2px;
@@ -504,18 +508,87 @@
   color: #F59E0B;
 }
 
+/* ── Avoid collisions with other fixed UI ──────────────────────────────────
+   The FAB is web-only (BuddyWidget returns null in the native app), so :has()
+   support on old Android WebViews is irrelevant here.
+   - Sticky save / action bars: lift the FAB above them (they are ~64-72px).
+   - Any open modal / drawer / search overlay: hide the FAB entirely so it never
+     floats over page-level dialogs that sit at lower z-indexes. */
+body:has(.fs-dirty-sticky-bar, .flp-sticky-action-bar, .fl-live-preview-pill) .buddy-fab {
+  bottom: calc(max(24px, calc(var(--safe-bottom, 0px) + 16px)) + 80px);
+}
+
+@media (max-width: 1023.98px) {
+  body:has(.jd-mobile-bar, .gd-mobile-fixed-bottom-bar) .buddy-fab {
+    bottom: calc(max(16px, calc(var(--safe-bottom, 0px) + 16px)) + 80px);
+  }
+}
+
+body:has([aria-modal="true"], .sk-modal-overlay, .rm-overlay, .app-drawer-overlay, .app-search-overlay, .navbar__mobile-drawer--open) .buddy-fab {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ── Touch devices & small phones: real tap targets, readable text ── */
+@media (pointer: coarse), (max-width: 480px) {
+  .buddy-fab__status-pill,
+  .buddy-panel-v3__status,
+  .buddy-panel-v3__meter-label,
+  .buddy-v3-footer-tag,
+  .buddy-panel-v3__quick-pill,
+  .buddy-v3-chip-btn,
+  .buddy-v3-login-btn,
+  .buddy-v3-action-bubble {
+    font-size: 0.75rem;
+  }
+  .buddy-panel-v3__close {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .buddy-v3-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .buddy-v3-send-btn {
+    width: var(--tap-min, 40px);
+    height: var(--tap-min, 40px);
+  }
+  .buddy-v3-input-bar {
+    min-height: 48px;
+  }
+  .buddy-v3-chip-btn {
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+  .buddy-panel-v3__quick-pill {
+    min-height: 32px;
+  }
+  .buddy-v3-login-btn {
+    min-height: 36px;
+  }
+}
+
 /* ── Mobile Responsiveness ── */
 @media (max-width: 480px) {
   .buddy-panel-v3 {
-    width: calc(100vw - 20px);
-    height: calc(100dvh - 32px);
-    bottom: 10px;
-    right: 10px;
+    width: calc(100% - 20px);
+    height: calc(var(--vh-full, 100dvh) - 32px);
+    bottom: max(10px, var(--safe-bottom, 0px));
+    right: max(10px, var(--safe-right, 0px));
     border-radius: 18px;
   }
 
   .buddy-fab {
-    bottom: 16px;
-    right: 16px;
+    bottom: max(16px, calc(var(--safe-bottom, 0px) + 12px));
+    right: max(16px, calc(var(--safe-right, 0px) + 12px));
+  }
+}
+
+/* Landscape phones: the panel fills the short viewport instead of overflowing */
+@media (max-height: 500px) {
+  .buddy-panel-v3 {
+    height: calc(var(--vh-full, 100vh) - 16px);
+    bottom: 8px;
   }
 }

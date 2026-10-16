@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertCircle, Globe, Plus, Sparkles, X } from 'lucide-react';
 import Loader from '../Loader/Loader';
 import { skillsAPI } from '../../../api/skills';
+import useDropdownPlacement from '../useDropdownPlacement';
 import './TagInput.css';
 
 const TagInput = ({
@@ -26,6 +27,7 @@ const TagInput = ({
   const [error, setError] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const dropdownRef = useRef(null);
+  const containerRef = useRef(null);
   const debounceTimer = useRef(null);
 
   const isStatic = Array.isArray(options);
@@ -175,8 +177,13 @@ const TagInput = ({
     }
   };
 
+  // Flip the suggestion list upward when there is no room below (viewport edge
+  // or a scrolling ancestor such as a modal body).
+  const dropdownOpen = showSuggestions && suggestions.length > 0;
+  const placement = useDropdownPlacement(dropdownOpen, containerRef, dropdownRef, suggestions.length);
+
   return (
-    <div className="fl-tag-container">
+    <div className="fl-tag-container" ref={containerRef}>
       <div className={`fl-tag-input-wrapper ${error ? 'fl-tag-input--error' : ''} ${loading ? 'fl-tag-input--loading' : ''}`}>
         <div className="fl-tag-list">
           {tags.map((tag, idx) => {
@@ -211,7 +218,11 @@ const TagInput = ({
 
         {/* Suggestions Dropdown */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="fl-tag-dropdown" ref={dropdownRef}>
+          <div
+            className="fl-tag-dropdown"
+            ref={dropdownRef}
+            style={placement.up ? { top: 'auto', bottom: 'calc(100% + 8px)' } : undefined}
+          >
             <div className="fl-tag-dropdown__header">
               <span className="fl-tag-header-icon">
                 {isStatic ? <Globe size={14} /> : <Sparkles size={14} />}

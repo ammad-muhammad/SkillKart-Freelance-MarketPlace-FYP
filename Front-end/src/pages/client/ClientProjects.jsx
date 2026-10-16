@@ -522,7 +522,7 @@ const ClientProjects = () => {
                 className={`cl-filter-pill ${filter === f ? 'cl-filter-pill--active' : ''}`}
                 onClick={() => setFilter(f)}
               >
-                {FILTER_LABELS[f] || f.charAt(0).toUpperCase() + f.slice(1)} <span style={{ opacity: 0.85, fontSize: 11 }}>({count})</span>
+                {FILTER_LABELS[f] || f.charAt(0).toUpperCase() + f.slice(1)} <span style={{ opacity: 0.85, fontSize: 12 }}>({count})</span>
               </button>
             );
           })}
@@ -551,7 +551,7 @@ const ClientProjects = () => {
                     {' '} · Posted {proj.createdAt}
                   </p>
                 </div>
-                <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', minWidth: 0 }}>
                   <span
                     className="cl-badge"
                     style={proj.source === 'gig'
@@ -665,7 +665,7 @@ const ClientProjects = () => {
                         Reason: {proj.endRequest.reason}
                         {proj.endRequest.additionalDetails && <span> - {proj.endRequest.additionalDetails}</span>}
                       </p>
-                      <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
                         <Button variant="success" size="sm" onClick={() => handleRespondEnd(proj.contractId, 'approve')} disabled={actioning}>
                           Approve & End Contract
                         </Button>
@@ -705,9 +705,9 @@ const ClientProjects = () => {
                     )}
                   </div>
                   {proj.status !== 'completed' && proj.status !== 'closed' && (
-                    <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(183, 201, 226, 0.35)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(183, 201, 226, 0.35)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
                       <Wallet size={14} style={{ color: (proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-success)' }} />
-                      <span style={{ color: (proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-text-mid)' }}>
+                      <span style={{ minWidth: 0, flex: '1 1 180px', color: (proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-text-mid)' }}>
                         Escrow locked: <strong>Rs. {(proj.hourlyEscrow?.lockedBalance || 0).toFixed(2)}</strong>
                         {(proj.hourlyEscrow?.lockedBalance || 0) < (proj.hourlyRate || 0) * 2 && ' — running low'}
                       </span>
@@ -898,7 +898,7 @@ const ClientProjects = () => {
         ) : (
           <form className="cl-edit-form" onSubmit={handleEditSubmit}>
             <div className="cl-edit-form__scroll" style={{ paddingRight: '0.75rem', marginRight: '-0.75rem' }}>
-              <div className="cl-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+              <div className="cl-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
                 <div className="cl-form-group full" style={{ gridColumn: '1 / -1' }}>
                   <label className="cl-label" htmlFor="cp-edit-title">Project Title *</label>
                   <input

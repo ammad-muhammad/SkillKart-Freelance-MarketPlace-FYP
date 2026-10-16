@@ -163,6 +163,7 @@ function ResultStage({ estimate, formData, navigate }) {
             {estimate.breakdown.length > 0 && (
                 <div className="ce-breakdown">
                     <h4 className="ce-breakdown__title">Project Cost Breakdown</h4>
+                    <div className="ce-table-scroll">
                     <table className="breakdown-table" aria-label="Project cost breakdown">
                         <thead>
                             <tr>
@@ -179,6 +180,7 @@ function ResultStage({ estimate, formData, navigate }) {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             )}
 
