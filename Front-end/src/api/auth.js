@@ -36,6 +36,11 @@ export const authAPI = {
   updateRole: (role) =>
     client.put('/auth/role/change', role),
 
+  // "Skip to Dashboard" on the client/freelancer onboarding wizard. The caller
+  // falls back to navigating anyway, so don't flash a global error toast.
+  skipOnboarding: () =>
+    client.post('/auth/onboarding/skip', {}, { suppressErrorToast: true }),
+
   registerPushToken: (token) =>
     client.post('/auth/push-token', { token }, { suppressErrorToast: true }),
 

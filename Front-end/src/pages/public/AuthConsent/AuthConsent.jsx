@@ -64,7 +64,8 @@ const AuthConsent = () => {
         
         const user = response?.data?.user;
         const userRole = user?.role;
-        const isOnboardingCompleted = user?.isOnBoardingCompleted;
+        // Skipped onboarding ("Skip to Dashboard") also lands on the dashboard.
+        const isOnboardingCompleted = user?.isOnBoardingCompleted || !!user?.onboardingSkippedAt;
 
         log(`🧭 Redirecting: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
 

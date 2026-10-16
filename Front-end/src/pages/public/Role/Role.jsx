@@ -32,7 +32,8 @@ const Role = () => {
 
             if (['freelancer', 'client'].includes(user?.role)) {
                 const userRole = user?.role;
-                const isOnboardingCompleted = user?.isOnBoardingCompleted;
+                // Skipped onboarding ("Skip to Dashboard") also lands on the dashboard.
+                const isOnboardingCompleted = user?.isOnBoardingCompleted || !!user?.onboardingSkippedAt;
                 
                 log(`🧭 Role redirect: Role=${userRole}, OnboardingCompleted=${isOnboardingCompleted}`);
                 

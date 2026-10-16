@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { FinishOnboardingBanner } from '../../Components/common/SkipOnboarding/SkipOnboarding';
 import { useClient } from '../../context/ClientContext';
 import { FolderOpen, Zap, Users2, Building2, MapPin, Calendar, Globe, User, Edit2, PlusSquare, Search, MessageSquare, Bot, CheckCircle2, ChevronRight } from 'lucide-react';
 import PkrIcon from '../../Components/common/PkrIcon';
@@ -52,6 +53,8 @@ const ClientDashboardOverview = () => {
         <h1 className="cl-page-title">Welcome back, {(personalInfo.fullName || 'User').split(' ')[0]}!</h1>
         <p className="cl-page-sub">Here's an overview of your client activity on SkillKart.</p>
       </div>
+
+      <FinishOnboardingBanner role="client" />
 
       {/* Profile Hero */}
       <div className="cl-card" style={{ marginBottom: '1.5rem' }}>

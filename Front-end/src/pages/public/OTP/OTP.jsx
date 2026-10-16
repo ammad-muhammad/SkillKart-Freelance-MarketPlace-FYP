@@ -148,7 +148,8 @@ const OTP = () => {
                         }
                     } else {
                         const userRole = response?.data?.user?.role;
-                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted;
+                        // Skipped onboarding ("Skip to Dashboard") also lands on the dashboard.
+                        const isOnboardingcompleted = response?.data?.user?.isOnBoardingCompleted || !!response?.data?.user?.onboardingSkippedAt;
 
                         sessionStorage.removeItem('OTPEmail');
                         sessionStorage.removeItem('registrationType');

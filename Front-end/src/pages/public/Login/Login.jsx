@@ -87,7 +87,8 @@ const Login = () => {
 
                 // Role-based redirect logic (same as OTP.jsx)
                 const userRole = response.data.data.user.role;
-                const isOnboardingCompleted = response.data.data.user.isOnBoardingCompleted;
+                // Skipped onboarding ("Skip to Dashboard") also lands on the dashboard.
+                const isOnboardingCompleted = response.data.data.user.isOnBoardingCompleted || !!response.data.data.user.onboardingSkippedAt;
 
                 // Honor a pending redirect (e.g. guest tried to Post a Project, or
                 // tapped "Apply Now" on a job). Works for any onboarded role; if

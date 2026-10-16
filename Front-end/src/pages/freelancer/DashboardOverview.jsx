@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { FinishOnboardingBanner } from '../../Components/common/SkipOnboarding/SkipOnboarding';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { Package, Zap, CheckCircle2, Eye, MapPin, Calendar, Star, FolderOpen, Award, Search, ClipboardList, MessageSquare, Bot, Play, RotateCcw, Circle, PauseCircle, ChevronRight, Plus } from 'lucide-react';
@@ -101,6 +102,8 @@ const DashboardOverview = () => {
         <h1 className="fl-page-title">Welcome back, {(personalInfo.fullName || 'User').split(' ')[0]}!</h1>
         <p className="fl-page-sub">Here's an overview of your freelance activity.</p>
       </div>
+
+      <FinishOnboardingBanner role="freelancer" />
 
       {/* Profile Hero Card */}
       <div className="fl-card fl-dashboard-hero" style={{ marginBottom: '1.5rem' }}>

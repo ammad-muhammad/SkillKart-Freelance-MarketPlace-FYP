@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { SkipOnboardingButton } from "../common/SkipOnboarding/SkipOnboarding";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -582,6 +583,7 @@ const FreelancerOnboardingForm = () => {
 
       <div className="fob-container">
         <div className="fob-card">
+          <SkipOnboardingButton role="freelancer" />
           {/* Progress Bar */}
           <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
 

@@ -152,6 +152,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Set when the user chose "Skip for now" on the onboarding wizard. Lets the
+  // post-login redirects send them to the dashboard instead of back into the
+  // wizard every time. isOnBoardingCompleted stays false, so features that
+  // need a finished profile (e.g. applying to jobs) are still gated.
+  onboardingSkippedAt: {
+    type: Date,
+    default: null
+  },
 
   // Account Status
   isActive: {
@@ -394,6 +402,7 @@ userSchema.methods.toAuthJSON = function () {
     isEmailVerified: this.isEmailVerified,
     authProvider: this.authProvider,
     isOnBoardingCompleted: this.isOnBoardingCompleted,
+    onboardingSkippedAt: this.onboardingSkippedAt,
     supabaseId: this.supabaseId,
     isBlocked: this.isBlocked,
     blockedReason: this.blockedReason,

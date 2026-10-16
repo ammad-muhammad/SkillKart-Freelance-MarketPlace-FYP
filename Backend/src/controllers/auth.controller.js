@@ -179,6 +179,31 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Skip onboarding for now (client / freelancer)
+ * Records the choice so login/role redirects land on the dashboard. The user can
+ * still finish onboarding later; completing it sets isOnBoardingCompleted as usual.
+ */
+const skipOnboarding = asyncHandler(async (req, res) => {
+  if (!['client', 'freelancer'].includes(req.user.role)) {
+    throw new BadRequestError('Only clients and freelancers have an onboarding flow');
+  }
+
+  // req.user is a lean object (auth middleware) — load the document for toAuthJSON().
+  const user = await User.findById(req.user._id);
+  if (!user.isOnBoardingCompleted && !user.onboardingSkippedAt) {
+    // updateOne, not save(): avoids re-running full-document validation/hooks on
+    // older accounts just to set one timestamp.
+    user.onboardingSkippedAt = new Date();
+    await User.updateOne({ _id: user._id }, { $set: { onboardingSkippedAt: user.onboardingSkippedAt } });
+  }
+
+  sendSuccess(res, {
+    message: 'Onboarding skipped. You can complete your profile anytime.',
+    data: { user: user.toAuthJSON() }
+  });
+});
+
+/**
  * Update user role
  */
 const updateRole = asyncHandler(async (req, res) => {
@@ -912,6 +937,7 @@ module.exports = {
   verifyOtp,
   superAdminLogin,
   getCurrentUser,
+  skipOnboarding,
   refreshToken,
   changePassword,
   requestPasswordReset,

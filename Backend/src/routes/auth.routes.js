@@ -345,6 +345,12 @@ router.put('/me',
   authController.updateMe
 );
 
+// "Skip for now" on the client/freelancer onboarding wizard.
+router.post('/onboarding/skip',
+  authenticate,
+  authController.skipOnboarding
+);
+
 // Mobile app push notification device tokens (see services/push.service.js —
 // no-ops until Firebase is configured).
 router.post('/push-token',

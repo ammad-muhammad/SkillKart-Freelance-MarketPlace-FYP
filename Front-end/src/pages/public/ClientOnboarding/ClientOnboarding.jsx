@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { SkipOnboardingButton } from "../../../Components/common/SkipOnboarding/SkipOnboarding";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Select, { components } from 'react-select';
@@ -1137,6 +1138,7 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__container">
                 <div className="onboarding__card">
+                    {step <= 5 && <SkipOnboardingButton role="client" />}
                     {step <= 5 && (
                         <>
                             <div className="onboarding__stepper-wrapper">
