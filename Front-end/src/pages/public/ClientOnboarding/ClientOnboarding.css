@@ -878,3 +878,18 @@
     transform: none;
   }
 }
+
+/* Small phones: the "Prefer to explore first?" text keeps a readable width and
+   the Skip button drops underneath instead of squeezing it to 1-2 words/line. */
+@media (max-width: 480px) {
+  .onboarding__skip-banner {
+    flex-wrap: wrap;
+  }
+  .onboarding__skip-text {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+  .onboarding__skip-btn {
+    margin-left: auto;
+  }
+}
