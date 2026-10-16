@@ -5,7 +5,8 @@ import './AppDownload.css';
 
 export default function AppDownload() {
   const [qrSrc, setQrSrc] = useState('');
-  const apkDownloadPath = '/downloads/skillkart.apk';
+  // Always the latest build (Front-end/public/downloads); /downloads/skillkart.apk redirects here too.
+  const apkDownloadPath = '/downloads/SkillKart-v1.0.apk';
 
   useEffect(() => {
     // Generate QR code pointing to direct APK download URL

@@ -1,5 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/downloads/skillkart.apk",
+      "destination": "/downloads/SkillKart-v1.0.apk",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/sitemap.xml",
