@@ -2,15 +2,22 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { FreelancerProvider } from '../context/FreelancerContext';
 import AppNavbar from '../Components/common/AppNavbar/AppNavbar';
 import usePageTitle from '../hooks/usePageTitle';
+import { useAuth } from '../hooks/useAuth';
+import Loader from '../Components/common/Loader/Loader';
 import '../styles/freelancer-ds.css';
 import './FreelancerLayout.css';
 
 const FreelancerLayoutInner = () => {
+  const { loading } = useAuth();
   usePageTitle('/freelancer');
   const { pathname } = useLocation();
   // Full-bleed messenger: flag the shell by route so the edge-to-edge layout
   // doesn't depend on CSS :has() (missing from older Android WebViews).
   const flush = /\/messages(\/|$)/.test(pathname);
+
+  if (loading) {
+    return <Loader text="Loading" fullScreen={true} />;
+  }
 
   return (
     <div className={`app-shell${flush ? ' app-shell--flush' : ''}`}>

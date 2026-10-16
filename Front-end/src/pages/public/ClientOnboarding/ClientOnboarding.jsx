@@ -8,7 +8,7 @@ import {
     ChevronRight, ChevronLeft, CheckCircle2, Info, Lightbulb,
     Target, Zap, Clock, MessageSquare, Terminal, Layout, ShieldCheck,
     Search, Trash2, Sliders, Settings, Sparkles, X, Plus,
-    Rocket, Github, Linkedin, Globe2
+    Rocket, Github, Linkedin, Globe2, LayoutDashboard, ArrowRight
 } from "lucide-react";
 import { safeToast as toast } from "../../../utils/safeToast";
 import { clientsAPI } from "../../../api/clients";
@@ -24,13 +24,38 @@ import AiGenerateText from "../../../Components/common/AiSuggest/AiGenerateText"
 import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import ImageSourcePicker from "../../../Components/common/ImageSourcePicker/ImageSourcePicker";
 import Loader from "../../../Components/common/Loader/Loader";
-import { SkipOnboardingButton } from "../../../Components/common/SkipOnboarding/SkipOnboarding";
+import { useSkipOnboarding } from "../../../Components/common/SkipOnboarding/SkipOnboarding";
 import "./ClientOnboarding.css";
 
+
+const TOTAL_STEPS = 4;
+
+const STEP_METADATA = [
+    { label: "Organization", title: "Identity & Organization", sub: "Start by introducing yourself and your organization." },
+    { label: "Background", title: "Company Background", sub: "Help us understand your hiring history and focus." },
+    { label: "Strategy", title: "Strategy & Timeline", sub: "Define the urgency and complexity of your mission." },
+    { label: "Preferences", title: "Preferences & Terms", sub: "Complete your setup and activate premium AI matching." },
+];
+
+const slideVariants = {
+    enter: (direction) => ({
+        x: direction > 0 ? 30 : -30,
+        opacity: 0,
+    }),
+    center: {
+        x: 0,
+        opacity: 1,
+    },
+    exit: (direction) => ({
+        x: direction < 0 ? 30 : -30,
+        opacity: 0,
+    }),
+};
 
 const ClientOnboarding = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
+    const [direction, setDirection] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [showDraftPrompt, setShowDraftPrompt] = useState(false);
     const [draftData, setDraftData] = useState(null);
@@ -43,6 +68,9 @@ const ClientOnboarding = () => {
     const companyPicRef = useRef(null);
     const registerFieldRef = (name) => (el) => { fieldRefs.current[name] = el; };
     const { refreshAuth, user } = useAuth();
+    // "Skip to Dashboard" is saved server-side so the next login doesn't send
+    // the client back into this wizard (a plain navigate did).
+    const { skip: skipOnboarding, busy: skipping } = useSkipOnboarding("client");
 
 
 
@@ -236,20 +264,24 @@ const ClientOnboarding = () => {
 
     const nextStep = () => {
         if (validateStep()) {
-            setStep(s => Math.min(s + 1, 6));
+            setDirection(1);
+            setStep(s => Math.min(s + 1, 5));
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
-    const prevStep = () => setStep(s => Math.max(s - 1, 1));
+    const prevStep = () => {
+        setDirection(-1);
+        setStep(s => Math.max(s - 1, 1));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     // Field order per step, used to pick which invalid field to scroll to first.
     const STEP_FIELD_ORDER = {
         1: ['fullName', 'workEmail', 'companyType', 'companyName', 'country'],
         2: ['isNewToHiring', 'industryType', 'bio', 'languages'],
-        3: ['techStack', 'budgetRange', 'hiringFrequency'],
-        4: ['urgency'],
-        5: ['termsAccepted'],
+        3: ['urgency'],
+        4: ['termsAccepted'],
     };
 
     const validateStep = () => {
@@ -277,14 +309,9 @@ const ClientOnboarding = () => {
             }
         }
         if (step === 3) {
-            if (formData.techStack.length === 0) newErrors.techStack = "Please add at least one required skill";
-            if (!formData.budgetRange) newErrors.budgetRange = "Please select a Budget Allocation";
-            if (!formData.hiringFrequency) newErrors.hiringFrequency = "Please select an Engagement Type";
-        }
-        if (step === 4) {
             if (!formData.urgency) newErrors.urgency = "Please define your project urgency";
         }
-        if (step === 5 && !formData.termsAccepted) {
+        if (step === 4 && !formData.termsAccepted) {
             newErrors.termsAccepted = "Please agree to the Terms & Conditions to proceed";
         }
 
@@ -304,7 +331,7 @@ const ClientOnboarding = () => {
     };
 
     const handleFinish = async (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         if (!validateStep()) return;
 
         setIsLoading(true);
@@ -335,8 +362,10 @@ const ClientOnboarding = () => {
 
             await clientsAPI.submitOnboarding(submitData);
             toast.success("Onboarding profile deployed successfully!");
-            await refreshAuth(); // Refresh user data locally
-            setStep(6);
+            await refreshAuth(); // Refresh user data locally to update isOnBoardingCompleted
+            setDirection(1);
+            setStep(5);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error("Onboarding submission error:", error);
             toast.error(error.response?.data?.message || "Failed to submit profile");
@@ -370,32 +399,32 @@ const ClientOnboarding = () => {
         control: (base, state) => ({
             ...base,
             background: "#fff",
-            borderColor: state.isFocused ? "var(--onboard-accent-primary)" : "#e2e8f0",
+            borderColor: state.isFocused ? "var(--onboard-accent-primary)" : "#E2E8F0",
             borderWidth: "1.5px",
             borderRadius: "12px",
-            minHeight: "56px",
-            padding: "0 8px",
-            color: "#0f172a",
-            fontSize: "16px",
-            boxShadow: state.isFocused ? "0 0 0 4px rgba(26, 111, 168, 0.08)" : "none",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            minHeight: "48px",
+            padding: "0 6px",
+            color: "var(--onboard-accent-dark)",
+            fontSize: "14.5px",
+            boxShadow: state.isFocused ? "0 0 0 3.5px var(--onboard-accent-glow)" : "none",
+            transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             cursor: "pointer",
             "&:hover": {
-                borderColor: state.isFocused ? "var(--onboard-accent-primary)" : "#cbd5e1"
+                borderColor: state.isFocused ? "var(--onboard-accent-primary)" : "#CBD5E1"
             }
         }),
         menu: (base) => ({
             ...base,
             background: "rgba(255, 255, 255, 0.98)",
             backdropFilter: "blur(12px)",
-            border: "1px solid #e2e8f0",
+            border: "1px solid #E2E8F0",
             borderRadius: "12px",
             overflow: "hidden",
-            boxShadow: "0 12px 30px rgba(4, 46, 76, 0.1)",
-            padding: "8px",
+            boxShadow: "0 12px 32px -8px rgba(11, 41, 66, 0.12)",
+            padding: "6px",
             zIndex: 9999,
-            marginTop: "8px",
-            animation: "dropdownSlideIn 0.3s cubic-bezier(0.19, 1, 0.22, 1)"
+            marginTop: "6px",
+            animation: "dropdownSlideIn 0.2s cubic-bezier(0.19, 1, 0.22, 1)"
         }),
         menuPortal: (base) => ({
             ...base,
@@ -404,37 +433,40 @@ const ClientOnboarding = () => {
         option: (base, state) => ({
             ...base,
             background: state.isSelected
-                ? "rgba(26, 111, 168, 0.08)"
+                ? "var(--onboard-mint)"
                 : state.isFocused
-                    ? "rgba(4, 46, 76, 0.05)"
+                    ? "rgba(16, 185, 129, 0.08)"
                     : "transparent",
-            color: "var(--onboard-accent-primary)",
-            fontWeight: state.isSelected ? "700" : "600",
+            color: state.isSelected ? "var(--onboard-accent-dark)" : "var(--onboard-accent-dark)",
+            fontWeight: state.isSelected ? "700" : "500",
             cursor: "pointer",
-            borderRadius: "10px",
+            borderRadius: "8px",
             margin: "2px 0",
-            padding: "12px 16px",
-            transition: "all 0.2s ease",
+            padding: "10px 14px",
+            fontSize: "14px",
+            transition: "all 0.15s ease",
             "&:active": {
-                background: "rgba(26, 111, 168, 0.15)"
+                background: "var(--onboard-mint-hover)"
             }
         }),
         singleValue: (base) => ({
             ...base,
-            color: "#0f172a",
-            marginLeft: "8px",
-            fontWeight: "500"
+            color: "var(--onboard-accent-dark)",
+            marginLeft: "6px",
+            fontWeight: "500",
+            fontSize: "14.5px"
         }),
         placeholder: (base) => ({
             ...base,
             color: "#94a3b8",
-            marginLeft: "8px",
-            fontWeight: "500"
+            marginLeft: "6px",
+            fontWeight: "500",
+            fontSize: "14.5px"
         }),
         dropdownIndicator: (base, state) => ({
             ...base,
             color: state.isFocused ? "var(--onboard-accent-primary)" : "#94a3b8",
-            transition: "transform 0.3s ease",
+            transition: "transform 0.25s ease",
             transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : "rotate(0deg)",
             "&:hover": {
                 color: "var(--onboard-accent-primary)"
@@ -656,6 +688,39 @@ const ClientOnboarding = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Side-by-Side Compact Skip & Tip Grid (Identical to Freelancer Onboarding) */}
+            <div className="onboarding__skip-grid">
+                <div className="onboarding__skip-banner">
+                    <div className="onboarding__skip-text">
+                        <span className="onboarding__skip-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <LayoutDashboard size={14} style={{ color: "var(--onboard-accent-primary)" }} />
+                            Prefer to explore first?
+                        </span>
+                        <span className="onboarding__skip-sub">
+                            Skip directly to dashboard and complete later.
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        className="onboarding__skip-btn"
+                        onClick={skipOnboarding}
+                        disabled={skipping}
+                    >
+                        Skip to Dashboard <ArrowRight size={13} />
+                    </button>
+                </div>
+
+                <div className="onboarding__tip-card">
+                    <div className="onboarding__tip-header">
+                        <CheckCircle2 size={15} className="onboarding__tip-icon" />
+                        <strong>Pro Tip for Smart Hiring</strong>
+                    </div>
+                    <p>
+                        Clients with complete profiles attract top 1% verified talent 3x faster. You can fill out details anytime!
+                    </p>
+                </div>
+            </div>
         </motion.div>
     );
 
@@ -864,64 +929,12 @@ const ClientOnboarding = () => {
 
     const renderStep3 = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <div className="onboarding__form-group" ref={registerFieldRef('techStack')}>
-                <label className="onboarding__label">Skills Required*</label>
-                <TagInput
-                    tags={formData.techStack}
-                    onChange={(tags) => setFormData(p => ({ ...p, techStack: tags }))}
-                    placeholder="e.g. React, Node.js, Graphic Design..."
-                />
-                {errors.techStack && <p className="onboarding__field-error">{errors.techStack}</p>}
-            </div>
-
-            <div className="onboarding__form-group" ref={registerFieldRef('budgetRange')}>
-                <label className="onboarding__label">Budget Allocation</label>
-                <div className="onboarding__choices">
-                    {[
-                        { id: '<Rs. 5k', label: 'Startup', desc: 'Up to Rs. 5,000' },
-                        { id: 'Rs. 5k-Rs. 20k', label: 'Growth', desc: 'Rs. 5,000 - Rs. 20,000' },
-                        { id: 'Rs. 20k+', label: 'Enterprise', desc: 'Rs. 20,000+' }
-                    ].map(item => (
-                        <div
-                            key={item.id}
-                            className={`onboarding__choice-card ${formData.budgetRange === item.id ? 'onboarding__choice-card--active' : ''}`}
-                            onClick={() => setFormData(p => ({ ...p, budgetRange: item.id }))}
-                        >
-                            <span className="onboarding__choice-label">{item.label}</span>
-                            <span style={{ fontSize: '13px', color: 'var(--onboard-text-secondary)', fontWeight: '500' }}>{item.desc}</span>
-                        </div>
-                    ))}
-                </div>
-                {errors.budgetRange && <p className="onboarding__field-error">{errors.budgetRange}</p>}
-            </div>
-
-            <div className="onboarding__form-group" ref={registerFieldRef('hiringFrequency')}>
-                <label className="onboarding__label">Engagement Type</label>
-                <div className="onboarding__tags">
-                    {['One-time Project', 'Monthly Retainer', 'Full-time Dedicated', 'Part-time Support'].map(t => (
-                        <div
-                            key={t}
-                            className={`onboarding__tag ${formData.hiringFrequency === t ? 'onboarding__tag--active' : ''}`}
-                            onClick={() => setFormData(p => ({ ...p, hiringFrequency: t }))}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFormData(p => ({ ...p, hiringFrequency: t })); } }}
-                        >{t}</div>
-                    ))}
-                </div>
-                {errors.hiringFrequency && <p className="onboarding__field-error">{errors.hiringFrequency}</p>}
-            </div>
-        </motion.div>
-    );
-
-    const renderStep4 = () => (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="onboarding__form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                     <label className="onboarding__label" htmlFor="ob-tech-understanding">Technical Complexity Awareness</label>
                     <span style={{ color: 'var(--onboard-accent-primary)', fontWeight: '700' }}>{formData.technicalUnderstanding}/10</span>
                 </div>
-                <input id="ob-tech-understanding" type="range" name="technicalUnderstanding" min="1" max="10" value={formData.technicalUnderstanding} onChange={handleChange} className="onboarding__slider" style={{ background: `linear-gradient(to right, var(--onboard-accent-primary, #0052cc) ${((formData.technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((formData.technicalUnderstanding - 1) / 9) * 100}%)` }} />
+                <input id="ob-tech-understanding" type="range" name="technicalUnderstanding" min="1" max="10" value={formData.technicalUnderstanding} onChange={handleChange} className="onboarding__slider" style={{ background: `linear-gradient(to right, var(--onboard-accent-primary, #10B981) ${((formData.technicalUnderstanding - 1) / 9) * 100}%, #e2e8f0 ${((formData.technicalUnderstanding - 1) / 9) * 100}%)` }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: 'var(--onboard-text-secondary)' }}>
                     <span>Conceptual</span>
                     <span>Deep Tech</span>
@@ -951,7 +964,7 @@ const ClientOnboarding = () => {
         </motion.div>
     );
 
-    const renderStep5 = () => (
+    const renderStep4 = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="onboarding__form-group" style={{ background: '#f8fafc', padding: '24px', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
@@ -966,6 +979,7 @@ const ClientOnboarding = () => {
                     </div>
                     <div
                         className={`onboarding__toggle ${formData.aiAssistance ? 'active' : ''}`}
+                        onClick={() => setFormData(p => ({ ...p, aiAssistance: !p.aiAssistance }))}
                         role="switch"
                         aria-checked={!!formData.aiAssistance}
                         aria-label="Activate Buddy AI guidance"
@@ -976,7 +990,6 @@ const ClientOnboarding = () => {
                                 setFormData(p => ({ ...p, aiAssistance: !p.aiAssistance }));
                             }
                         }}
-                        onClick={() => setFormData(p => ({ ...p, aiAssistance: !p.aiAssistance }))}
                         style={{
                             width: '50px',
                             height: '26px',
@@ -1006,17 +1019,6 @@ const ClientOnboarding = () => {
                     style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}
                 >
                     <div
-                        className="onboarding__checkbox"
-                        role="checkbox"
-                        aria-checked={!!formData.termsAccepted}
-                        aria-label="Accept the Service Agreement"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                            if (e.key === ' ' || e.key === 'Enter') {
-                                e.preventDefault();
-                                setFormData(p => ({ ...p, termsAccepted: !p.termsAccepted }));
-                            }
-                        }}
                         style={{
                             minWidth: '24px',
                             height: '24px',
@@ -1032,6 +1034,17 @@ const ClientOnboarding = () => {
                             marginTop: '2px'
                         }}
                         onClick={() => setFormData(p => ({ ...p, termsAccepted: !p.termsAccepted }))}
+                        className="onboarding__checkbox"
+                        role="checkbox"
+                        aria-checked={!!formData.termsAccepted}
+                        aria-label="Accept the Service Agreement"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                                setFormData(p => ({ ...p, termsAccepted: !p.termsAccepted }));
+                            }
+                        }}
                     >
                         {formData.termsAccepted && <CheckCircle2 size={16} color="white" />}
                     </div>
@@ -1055,34 +1068,45 @@ const ClientOnboarding = () => {
     );
 
     const renderSuccess = () => (
-        <motion.div className="onboarding__success" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-            <div style={{ fontSize: '80px', marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
-                <Rocket size={72} style={{ color: '#1a6fa8' }} />
+        <motion.div className="onboarding__success" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }}>
+            <div className="onboarding__success-icon-wrap">
+                <Rocket size={42} style={{ color: 'var(--onboard-accent-primary)' }} />
             </div>
             <h1 className="onboarding__title">You're All Set!</h1>
-            <p className="onboarding__subtitle">Your project ecosystem is being prepared. Our AI is already analyzing local and global talent for you.</p>
+            <p className="onboarding__subtitle">Your client profile has been deployed. Our AI is already analyzing local and global talent matching your requirements.</p>
 
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.2 }}
                 className="onboarding__report-card"
             >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                    <div style={{ padding: '10px', background: 'rgba(100, 181, 232, 0.1)', borderRadius: '14px' }}>
-                        <Terminal size={24} color="var(--onboard-accent-primary)" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ padding: '10px', background: 'var(--onboard-mint)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Terminal size={22} color="var(--onboard-accent-primary)" />
                     </div>
-                    <h3 style={{ margin: 0, fontSize: '18px' }}>Initialization Report</h3>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '17px', color: 'var(--onboard-accent-dark)', fontWeight: 700 }}>Initialization Report</h3>
+                        <span style={{ fontSize: '12px', color: 'var(--onboard-text-secondary)' }}>AI Matching Profile Active</span>
+                    </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <p style={{ color: 'var(--onboard-text-secondary)', margin: 0, fontSize: '15px', lineHeight: 1.6 }}>
-                        Hello <b>{formData.fullName ? formData.fullName.split(' ')[0] : 'Client'}</b>, we've identified <b>12+ verified experts</b> in <b>{formData.techStack?.[0] || 'your field'}</b> who match your <b>{formData.budgetRange || 'your range'}</b> budget.
+                    <p style={{ color: 'var(--onboard-text-secondary)', margin: 0, fontSize: '14.5px', lineHeight: 1.6 }}>
+                        Hello <b style={{ color: 'var(--onboard-accent-dark)' }}>{formData.fullName ? formData.fullName.split(' ')[0] : 'Client'}</b>, we've identified verified talent in <b style={{ color: 'var(--onboard-accent-dark)' }}>{formData.techStack?.[0] || 'your domain'}</b> ready to collaborate within your <b style={{ color: 'var(--onboard-accent-dark)' }}>{formData.budgetRange || 'target'}</b> budget.
                     </p>
-                    <button className="onboarding__btn-next" style={{ alignSelf: 'flex-start' }} onClick={() => navigate("/client/dashboard")}>Go to Dashboard</button>
+                    <button
+                        className="onboarding__btn-next"
+                        style={{ alignSelf: 'flex-start' }}
+                        onClick={() => navigate("/client/dashboard")}
+                    >
+                        Go to Dashboard <ChevronRight size={18} />
+                    </button>
                 </div>
             </motion.div>
         </motion.div>
     );
+
+    const progressPercent = Math.round(((step - 1) / (TOTAL_STEPS - 1)) * 100);
 
     return (
         <section className="onboarding">
@@ -1094,45 +1118,48 @@ const ClientOnboarding = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         style={{
-                            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)',
-                            backdropFilter: 'blur(4px)', zIndex: 99999,
+                            position: 'fixed', inset: 0, background: 'rgba(11, 41, 66, 0.65)',
+                            backdropFilter: 'blur(6px)', zIndex: 99999,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             padding: 'max(16px, var(--safe-top, 0px)) 16px max(16px, var(--safe-bottom, 0px))'
                         }}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, y: 20 }}
+                            initial={{ scale: 0.95, y: 15 }}
                             animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.95, y: 20 }}
+                            exit={{ scale: 0.95, y: 15 }}
                             style={{
-                                background: '#fff', borderRadius: '24px', padding: 'clamp(20px, 5vw, 40px)',
-                                maxWidth: '440px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                                textAlign: 'center',
+                                background: '#fff', borderRadius: '20px', padding: 'clamp(20px, 5vw, 36px) clamp(18px, 5vw, 32px)',
+                                maxWidth: '440px', width: '92%', boxShadow: '0 20px 45px -10px rgba(11, 41, 66, 0.25)',
+                                textAlign: 'center', border: '1px solid rgba(16, 185, 129, 0.2)',
                                 maxHeight: 'calc(var(--app-vh, var(--vh-full)) - 32px)', overflowY: 'auto'
                             }}
                         >
                             <div style={{
-                                width: '72px', height: '72px', background: 'rgba(26, 111, 168, 0.1)', borderRadius: '20px',
+                                width: '64px', height: '64px', background: 'var(--onboard-mint)', borderRadius: '18px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                margin: '0 auto 28px', color: 'var(--onboard-accent-primary)'
+                                margin: '0 auto 20px', color: 'var(--onboard-accent-primary)',
+                                border: '1px solid var(--onboard-mint-border)'
                             }}>
-                                <Rocket size={36} />
+                                <Clock size={32} />
                             </div>
-                            <h3 style={{ margin: '0 0 12px', fontSize: '1.5rem', color: '#0f172a', fontWeight: 800 }}>
-                                Resume Onboarding?
+                            <h3 style={{ margin: '0 0 10px', fontSize: '1.35rem', color: 'var(--onboard-accent-dark)', fontWeight: 800 }}>
+                                Unfinished Onboarding
                             </h3>
-                            <p style={{ margin: '0 0 32px', color: '#64748b', fontSize: '1rem', lineHeight: 1.6, fontWeight: '500' }}>
-                                We found your unfinished setup. Would you like to continue where you left off or start fresh?
+                            <p style={{ margin: '0 0 26px', color: 'var(--onboard-text-secondary)', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                                We found your previous onboarding progress. Would you like to continue where you left off or start fresh?
                             </p>
-                            <div style={{ display: 'flex', gap: '16px' }}>
+                            <div style={{ display: 'flex', gap: '12px' }}>
                                 <button
                                     type="button"
                                     onClick={handleDiscardDraft}
                                     style={{
-                                        flex: 1, padding: '16px', borderRadius: '14px', border: '2px solid #e2e8f0',
-                                        background: 'transparent', color: '#64748b', fontWeight: '700', cursor: 'pointer',
+                                        flex: 1, padding: '12px', borderRadius: '10px', border: '1.5px solid #E2E8F0',
+                                        background: 'transparent', color: 'var(--onboard-text-secondary)', fontWeight: 700, cursor: 'pointer',
                                         transition: 'all 0.2s'
                                     }}
+                                    onMouseOver={(e) => e.target.style.background = '#F8FAFC'}
+                                    onMouseOut={(e) => e.target.style.background = 'transparent'}
                                 >
                                     Start Fresh
                                 </button>
@@ -1140,10 +1167,12 @@ const ClientOnboarding = () => {
                                     type="button"
                                     onClick={handleRestoreDraft}
                                     style={{
-                                        flex: 1, padding: '16px', borderRadius: '14px', border: 'none',
-                                        background: 'var(--onboard-accent-primary)', color: '#fff', fontWeight: '700', cursor: 'pointer',
-                                        transition: 'all 0.2s', boxShadow: '0 8px 16px rgba(26, 111, 168, 0.2)'
+                                        flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff', fontWeight: 700, cursor: 'pointer',
+                                        transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
                                     }}
+                                    onMouseOver={(e) => e.target.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)'}
+                                    onMouseOut={(e) => e.target.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)'}
                                 >
                                     Resume
                                 </button>
@@ -1162,84 +1191,138 @@ const ClientOnboarding = () => {
 
             <div className="onboarding__container">
                 <div className="onboarding__card">
-                    {step <= 5 && <SkipOnboardingButton role="client" />}
-                    {step <= 5 && (
-                        <>
-                            <div className="onboarding__stepper-wrapper">
-                                <div className="onboarding__stepper">
-                                    <div className="onboarding__stepper-line-bg" />
-                                    <div
-                                        className="onboarding__stepper-line-fill"
-                                        style={{ width: `${((step - 1) / 4) * 100}%` }}
-                                    />
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <div
-                                            key={s}
-                                            className={`onboarding__step-node ${step === s ? 'onboarding__step-node--active' :
-                                                step > s ? 'onboarding__step-node--completed' : ''
-                                                }`}
-                                        >
-                                            {step > s ? <CheckCircle2 size={18} /> : s}
-                                        </div>
-                                    ))}
-                                </div>
+                    {step <= 4 && (
+                        <div className="onboarding__progress-wrapper">
+                            <div className="onboarding__progress-top-row">
+                                <span className="onboarding__progress-step-indicator">
+                                    <Sparkles size={13} style={{ color: "var(--onboard-accent-primary)" }} />
+                                    Step {step} of {TOTAL_STEPS}: {STEP_METADATA[step - 1].label}
+                                </span>
+                                <span className="onboarding__progress-percentage">
+                                    {progressPercent}% Completed
+                                </span>
                             </div>
 
-                            <div className="onboarding__header">
-                                <h1 className="onboarding__title">
-                                    {step === 1 && "Identity & Organization"}
-                                    {step === 2 && "Company Background"}
-                                    {step === 3 && "Project Requirements"}
-                                    {step === 4 && "Strategy & Timeline"}
-                                    {step === 5 && "Final Security Check"}
-                                </h1>
-                                <p className="onboarding__subtitle">
-                                    {step === 1 && "Start by introducing yourself and your organization."}
-                                    {step === 2 && "Help us understand your hiring history and focus."}
-                                    {step === 3 && "Specify what you're building and your investment range."}
-                                    {step === 4 && "Define the urgency and complexity of your mission."}
-                                    {step === 5 && "Complete your setup and activate premium AI matching."}
-                                </p>
+                            <div className="onboarding__progress-bar-track">
+                                <motion.div
+                                    className="onboarding__progress-bar-fill"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${progressPercent}%` }}
+                                    transition={{ duration: 0.5, ease: "easeOut" }}
+                                />
                             </div>
-                        </>
+
+                            <div className="onboarding__stepper">
+                                {STEP_METADATA.map((meta, idx) => {
+                                    const stepNum = idx + 1;
+                                    const isCompleted = step > stepNum;
+                                    const isActive = step === stepNum;
+
+                                    return (
+                                        <div key={stepNum} className="onboarding__step-item">
+                                            <div
+                                                className={`onboarding__step-node ${
+                                                    isActive
+                                                        ? "onboarding__step-node--active"
+                                                        : isCompleted
+                                                        ? "onboarding__step-node--completed"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {isCompleted ? <CheckCircle2 size={16} /> : stepNum}
+                                            </div>
+                                            <span
+                                                className={`onboarding__step-label ${
+                                                    isActive
+                                                        ? "onboarding__step-label--active"
+                                                        : isCompleted
+                                                        ? "onboarding__step-label--completed"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {meta.label}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <AnimatePresence mode="wait" custom={direction}>
+                                <motion.div
+                                    key={`header-${step}`}
+                                    custom={direction}
+                                    variants={slideVariants}
+                                    initial="enter"
+                                    animate="center"
+                                    exit="exit"
+                                    transition={{ duration: 0.35, ease: "easeOut" }}
+                                    className="onboarding__header"
+                                >
+                                    <h1 className="onboarding__title">{STEP_METADATA[step - 1].title}</h1>
+                                    <p className="onboarding__subtitle">{STEP_METADATA[step - 1].sub}</p>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
                     )}
 
                     <form onSubmit={(e) => e.preventDefault()} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <AnimatePresence mode="wait">
+                        <AnimatePresence mode="wait" custom={direction}>
                             <motion.div
                                 key={step}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.3 }}
+                                custom={direction}
+                                variants={slideVariants}
+                                initial="enter"
+                                animate="center"
+                                exit="exit"
+                                transition={{ duration: 0.35, ease: "easeOut" }}
                                 style={{ flex: 1 }}
                             >
                                 {step === 1 && renderStep1()}
                                 {step === 2 && renderStep2()}
                                 {step === 3 && renderStep3()}
                                 {step === 4 && renderStep4()}
-                                {step === 5 && renderStep5()}
-                                {step === 6 && renderSuccess()}
+                                {step === 5 && renderSuccess()}
                             </motion.div>
                         </AnimatePresence>
 
-                        {step <= 5 && (
+                        {step <= 4 && (
                             <div className="onboarding__nav">
-                                {step > 1 ? (
-                                    <button type="button" onClick={prevStep} className="onboarding__btn-back">
-                                        <ChevronLeft size={20} /> Back
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    {step > 1 ? (
+                                        <button type="button" onClick={prevStep} className="onboarding__btn-back">
+                                            <ChevronLeft size={18} /> Back
+                                        </button>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        onClick={skipOnboarding}
+                                        disabled={skipping}
+                                        className="onboarding__nav-skip"
+                                    >
+                                        <LayoutDashboard size={14} /> Skip to Dashboard
                                     </button>
-                                ) : <div />}
+                                </div>
 
                                 <button
                                     type="button"
-                                    onClick={step === 5 ? handleFinish : nextStep}
-                                    className="onboarding__btn-next"
+                                    onClick={step === 4 ? handleFinish : nextStep}
+                                    className={`onboarding__btn-next ${step === 4 ? 'onboarding__btn-submit' : ''}`}
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? <Loader size="sm" text="" /> : (
+                                    {isLoading ? (
+                                        <Loader size="sm" text="" />
+                                    ) : (
                                         <>
-                                            {step === 5 ? "Deploy Profile" : "Continue"} {step !== 5 && <ChevronRight size={20} />}
+                                            {step === 4 ? (
+                                                <>
+                                                    <Rocket size={18} />
+                                                    Deploy Profile
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Continue <ChevronRight size={18} />
+                                                </>
+                                            )}
                                         </>
                                     )}
                                 </button>
