@@ -31,6 +31,8 @@ const validatePassword = (password) => {
     return false;
   }
 
+  
+
   if (!/[A-Z]/.test(password)) {
     console.log('❌ Password must contain at least one uppercase letter');
     return false;
