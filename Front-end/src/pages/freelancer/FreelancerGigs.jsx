@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useFreelancer } from '../../context/FreelancerContext';
-import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import TagInput from '../../Components/common/TagInput/TagInput';
 import ComboSelect from '../../Components/common/ComboSelect/ComboSelect';
@@ -9,271 +9,221 @@ import AiSuggestFill from '../../Components/common/AiSuggest/AiSuggestFill';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
 import ImageCropModal from '../../Components/common/ImageCropModal/ImageCropModal';
 import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
+import Loader from '../../Components/common/Loader/Loader';
+import GigCard from '../../Components/common/GigCard/GigCard';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { validateFile } from '../../utils/uploadHelper';
-import { Plus, X, Upload, Trash2, Image as ImageIcon, Eye, Star, Pause, Play, Edit2, Package } from 'lucide-react';
+import { aiAPI } from '../../api/ai';
+import {
+  Plus, X, Upload, Trash2, Eye, Star, Pause, Play, Edit2,
+  Package, LayoutGrid, List, Search, ShoppingBag, Clock, RefreshCw,
+  Sparkles, CheckCircle2, ChevronRight, AlertCircle, ArrowLeft,
+  FileText, AlignLeft, Image as ImageIcon, Zap, HelpCircle,
+  ShieldAlert, Check, CheckSquare
+} from 'lucide-react';
 import { JOB_CATEGORIES, GIG_SUBCATEGORIES } from '../../constants/jobCategories';
-import './FreelancerDashboard.css';
+import { Field, Input, Textarea, Select } from '../../Components/common/Field/Field';
+import './CreateGig.css';
+import './FreelancerGigs.css';
 
-// Canonical platform taxonomy (matches backend) so edited gigs stay countable.
 const CATEGORIES = JOB_CATEGORIES;
 const SUBCATEGORIES = GIG_SUBCATEGORIES;
 
-const GigCard = ({ gig, onDelete, onToggleStatus, onEdit }) => (
-  <div className="fl-gig-card">
-    <div className="fl-gig-card__banner">
-      {gig.media?.banner ? (
-        <img src={gig.media.banner} alt={gig.title} loading="lazy" />
-      ) : (
-        <div className="fl-gig-card__placeholder">
-          <Package size={40} style={{ color: 'var(--color-text-light)' }} />
-        </div>
-      )}
-      <div className="fl-gig-card__badges">
-        <span className={`fl-badge fl-badge--${gig.status}`}>
-          {gig.status === 'active' ? '● Active' : '⏸ Paused'}
-        </span>
-      </div>
-      <div className="fl-gig-card__stats-overlay">
-        <div className="fl-stat-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Eye size={14} /> {gig.stats?.views || 0}</div>
-        <div className="fl-stat-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Star size={14} /> {gig.stats?.rating?.toFixed(1) || '0.0'}</div>
-      </div>
-    </div>
-    <div className="fl-gig-card__body">
-      <p className="fl-gig-card__category">{gig.category} · {gig.subcategory}</p>
-      <h3 className="fl-gig-card__title">{gig.title}</h3>
-      <p className="fl-gig-card__desc">{gig.shortDescription}</p>
-      
-      <div className="fl-gig-card__full-desc-preview">
-        {gig.fullDescription?.substring(0, 100)}...
-      </div>
-
-      <div className="fl-gig-card__tags">
-        {gig.skills.slice(0, 4).map((s) => (
-          <span key={s} className="fl-tag">{s}</span>
-        ))}
-      </div>
-
-      <div className="fl-gig-card__pricing-tiers">
-        <div className="fl-tier-preview">
-          <span>Basic</span>
-          <strong>Rs. {gig.pricing?.basic?.price || '—'}</strong>
-        </div>
-        <div className="fl-tier-preview">
-          <span>Standard</span>
-          <strong>Rs. {gig.pricing?.standard?.price || '—'}</strong>
-        </div>
-        <div className="fl-tier-preview">
-          <span>Premium</span>
-          <strong>Rs. {gig.pricing?.premium?.price || '—'}</strong>
-        </div>
-      </div>
-
-      <div className="fl-gig-card__footer">
-        <div className="fl-gig-card__orders">
-          <strong>{gig.stats?.ordersCompleted || 0}</strong> orders
-        </div>
-        <div className="fl-gig-card__actions">
-          <button
-            className={`fl-btn fl-btn--sm fl-btn--${gig.status === 'active' ? 'ghost' : 'outline'}`}
-            onClick={() => onToggleStatus(gig._id)}
-            title={gig.status === 'active' ? 'Pause Gig' : 'Activate Gig'}
-          >
-            {gig.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
-          </button>
-          <button className="fl-btn fl-btn--sm fl-btn--outline" onClick={() => onEdit(gig)}>
-            <Edit2 size={14} />
-          </button>
-          <button
-            className="fl-btn fl-btn--sm fl-btn--danger"
-            onClick={() => onDelete(gig._id)}
-            disabled={!!gig.activeOrders}
-            title={gig.activeOrders ? 'This gig has an active order and cannot be deleted' : 'Delete gig'}
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
 const SUGGESTED_FEATURES = [
-  'Source Code',
-  'Responsive Design',
-  'Content Upload',
-  'Design Customization',
-  'Commercial Use',
-  'Speed Optimization'
+  'Source Code', 'Responsive Design', 'Content Upload',
+  'Design Customization', 'Database Setup', 'API Integration',
+  'Speed Optimization', 'SEO Friendly'
 ];
 
 const TIERS_CONFIG = [
-  { tier: 'basic', label: 'Basic', icon: '🥉' },
-  { tier: 'standard', label: 'Standard', icon: '🥈' },
-  { tier: 'premium', label: 'Premium', icon: '🥇' }
+  { tier: 'basic', label: 'Basic', badge: '🥉', accentClass: 'fl-tier-card--basic' },
+  { tier: 'standard', label: 'Standard', badge: '🥈', ribbon: 'Most Popular', accentClass: 'fl-tier-card--standard' },
+  { tier: 'premium', label: 'Premium', badge: '🥇', accentClass: 'fl-tier-card--premium' }
 ];
 
-const PricingTierEdit = ({ tier, label, icon, data = {}, onChange }) => {
+/* ─── Shared Pricing Tier Card for Full-Page Editor ─── */
+const PricingTierEditCard = ({
+  tier,
+  label,
+  badge,
+  ribbon,
+  accentClass,
+  data = {},
+  onChange,
+  onAiFillTier,
+  aiLoading
+}) => {
   const [featureInput, setFeatureInput] = useState('');
 
   const handleAddFeature = (featText) => {
     const text = (featText || featureInput).trim();
     if (!text) return;
     const current = Array.isArray(data.features) ? data.features : [];
-    if (!current.includes(text)) {
-      onChange({ ...data, features: [...current, text] });
+    const normalized = current.map(f => (typeof f === 'string' ? f : f?.text || ''));
+    if (!normalized.includes(text)) {
+      onChange({ ...data, features: [...normalized, text] });
     }
-    if (!featText) setFeatureInput('');
+    setFeatureInput('');
   };
 
-  const handleRemoveFeature = (idx) => {
+  const removeFeature = (idx) => {
     const current = Array.isArray(data.features) ? data.features : [];
-    onChange({ ...data, features: current.filter((_, i) => i !== idx) });
+    const normalized = current.map(f => (typeof f === 'string' ? f : f?.text || ''));
+    onChange({ ...data, features: normalized.filter((_, i) => i !== idx) });
   };
+
+  const getFeatureText = (f) => (typeof f === 'string' ? f : f?.text || '');
 
   return (
-    <div className={`fl-tier-edit fl-tier-edit--${tier}`}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.85rem' }}>
-        <span style={{ fontSize: '1.25rem' }}>{icon}</span>
-        <h5 className="fl-tier-edit__label" style={{ margin: 0 }}>{label}</h5>
-      </div>
-
-      <div className="fl-form-group">
-        <label>Package Title</label>
-        <input
-          type="text"
-          maxLength={100}
-          value={data.title || ''}
-          onChange={(e) => onChange({ ...data, title: e.target.value })}
-          placeholder={tier === 'basic' ? 'e.g. Basic Fixes & Setup' : tier === 'standard' ? 'e.g. Standard Web App' : 'e.g. Full-Stack Solution'}
-        />
-      </div>
-
-      <div className="fl-form-group">
-        <label>Description (What's included)</label>
-        <textarea
-          rows={2}
-          maxLength={300}
-          value={data.description || ''}
-          onChange={(e) => onChange({ ...data, description: e.target.value })}
-          placeholder="Brief description of what you will deliver in this tier..."
-          style={{ resize: 'vertical', fontSize: '0.82rem' }}
-        />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.65rem', marginBottom: '0.65rem' }}>
-        <div className="fl-form-group" style={{ margin: 0 }}>
-          <label>Delivery (days)</label>
-          <input
-            type="number"
-            min={1}
-            value={data.deliveryTime ?? ''}
-            onChange={(e) => onChange({ ...data, deliveryTime: e.target.value })}
-            placeholder="e.g. 3"
-            required={tier === 'basic'}
-          />
+    <div className={`fl-tier-card ${accentClass || ''}`}>
+      <div className="fl-tier-card__header-bar">
+        <div className="fl-tier-card__title-group">
+          <span className="fl-tier-card__badge-icon">{badge}</span>
+          <h4 className="fl-tier-card__name">{label} Package</h4>
         </div>
-        <div className="fl-form-group" style={{ margin: 0 }}>
-          <label>Revisions</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={data.revisions ?? ''}
-            onChange={(e) => onChange({ ...data, revisions: e.target.value })}
-            placeholder="e.g. 2"
-            required={tier === 'basic'}
-          />
-        </div>
-      </div>
-
-      <div className="fl-form-group">
-        <label>Price (PKR) {tier === 'basic' ? '*' : ''}</label>
-        <input
-          type="number"
-          min={0}
-          value={data.price ?? ''}
-          onChange={(e) => onChange({ ...data, price: e.target.value })}
-          placeholder="e.g. 500"
-          required={tier === 'basic'}
-        />
-      </div>
-
-      <div className="fl-form-group" style={{ marginTop: 'auto', marginBottom: 0 }}>
-        <label>Included Features ({data.features?.length || 0})</label>
-        
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem', minHeight: '26px' }}>
-          {(data.features || []).map((feat, idx) => (
-            <span
-              key={idx}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                background: '#e0f2fe',
-                color: '#0369a1',
-                padding: '2px 8px',
-                borderRadius: '99px',
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                maxWidth: '100%',
-                wordBreak: 'break-word'
-              }}
-            >
-              ✓ {feat}
-              <button
-                type="button"
-                onClick={() => handleRemoveFeature(idx)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0284c7', fontSize: '0.85rem', lineHeight: 1 }}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          {(!data.features || data.features.length === 0) && (
-            <span style={{ fontSize: '0.74rem', color: 'var(--color-text-light)' }}>No features added yet.</span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.35rem', width: '100%', minWidth: 0 }}>
-          <input
-            type="text"
-            value={featureInput}
-            onChange={(e) => setFeatureInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
-            placeholder="Add custom feature..."
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', minWidth: 0, flex: 1, boxSizing: 'border-box' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {ribbon && <span className="fl-tier-ribbon">{ribbon}</span>}
           <button
             type="button"
-            className="fl-btn fl-btn--outline fl-btn--sm"
-            onClick={() => handleAddFeature()}
-            style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.65rem', fontSize: '0.8rem', flexShrink: 0 }}
+            className="fl-tier-ai-fill-btn"
+            onClick={() => onAiFillTier?.(tier)}
+            title={`Auto-fill ${label} tier with AI`}
+            disabled={aiLoading}
           >
-            + Add
+            {aiLoading ? <Loader size={11} color="#065F46" /> : <Sparkles size={11} />}
+            <span>AI fill</span>
           </button>
         </div>
+      </div>
 
-        <div style={{ marginTop: '0.45rem', width: '100%' }}>
-          <span style={{ fontSize: '0.68rem', color: 'var(--color-text-light)', display: 'block', marginBottom: '0.2rem' }}>Quick add:</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-            {SUGGESTED_FEATURES.filter(f => !(data.features || []).includes(f)).slice(0, 4).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => handleAddFeature(f)}
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  fontSize: '0.68rem',
-                  color: '#475569',
-                  cursor: 'pointer'
-                }}
-              >
-                + {f}
-              </button>
+      <div className="fl-tier-card__body">
+        {/* Package Title */}
+        <Field label="Package Title" required>
+          <Input
+            value={data.title || ''}
+            onChange={e => onChange({ ...data, title: e.target.value })}
+            placeholder={
+              tier === 'basic'
+                ? 'e.g. Starter Setup'
+                : tier === 'standard'
+                ? 'e.g. Standard App'
+                : 'e.g. Complete Enterprise'
+            }
+          />
+        </Field>
+
+        {/* Description */}
+        <Field label="Description" required>
+          <Textarea
+            style={{ minHeight: 80, fontSize: 13 }}
+            maxLength={200}
+            value={data.description || ''}
+            onChange={e => onChange({ ...data, description: e.target.value })}
+            placeholder={`Deliverables included in the ${label} tier...`}
+          />
+        </Field>
+
+        {/* Delivery + Revisions in 2-col */}
+        <div className="sk-grid-2col">
+          <Field label="Delivery" icon={<Clock size={13} />} required>
+            <Input
+              type="number"
+              min={1}
+              value={data.deliveryTime != null ? data.deliveryTime : (data.deliveryDays || '')}
+              onChange={e => onChange({ ...data, deliveryTime: e.target.value, deliveryDays: e.target.value })}
+              placeholder="Days (e.g. 3)"
+            />
+          </Field>
+
+          <Field label="Revisions" icon={<RefreshCw size={13} />}>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={data.revisions ?? ''}
+              onChange={e => onChange({ ...data, revisions: e.target.value })}
+              placeholder="e.g. 2"
+            />
+          </Field>
+        </div>
+
+        {/* Price (PKR) with inside Rs. prefix */}
+        <Field label="Price (PKR)" required prefix="Rs.">
+          <Input
+            type="number"
+            min={1}
+            hasPrefix
+            value={data.price || ''}
+            onChange={e => onChange({ ...data, price: e.target.value })}
+            placeholder="e.g. 5000"
+            style={{ fontWeight: 700 }}
+          />
+        </Field>
+
+        {/* Included Features */}
+        <div className="fl-tier-features-section">
+          <div className="sk-field__label-row">
+            <label className="sk-field__label">
+              Included Features
+            </label>
+            <span className="sk-field__counter">
+              {(data.features || []).length} items
+            </span>
+          </div>
+
+          <div className="fl-tier-chips-wrap">
+            {(data.features || []).map((feat, idx) => (
+              <span key={idx} className="fl-tier-chip">
+                <span>✓ {getFeatureText(feat)}</span>
+                <button
+                  type="button"
+                  onClick={() => removeFeature(idx)}
+                  className="fl-tier-chip__remove"
+                  aria-label="Remove feature"
+                >
+                  ×
+                </button>
+              </span>
             ))}
+          </div>
+
+          <div className="fl-tier-add-feature-row">
+            <input
+              type="text"
+              className="sk-field__input"
+              style={{ height: 44, fontSize: 13 }}
+              value={featureInput}
+              onChange={e => setFeatureInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddFeature();
+                }
+              }}
+              placeholder="Add feature..."
+            />
+            <button
+              type="button"
+              className="fl-tier-add-btn"
+              onClick={() => handleAddFeature()}
+            >
+              + Add
+            </button>
+          </div>
+
+          <div className="fl-tier-quick-chips">
+            {SUGGESTED_FEATURES.filter(f => !(data.features || []).map(getFeatureText).includes(f))
+              .slice(0, 3)
+              .map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  className="fl-tier-quick-chip"
+                  onClick={() => handleAddFeature(f)}
+                >
+                  + {f}
+                </button>
+              ))}
           </div>
         </div>
       </div>
@@ -281,768 +231,1671 @@ const PricingTierEdit = ({ tier, label, icon, data = {}, onChange }) => {
   );
 };
 
-const FreelancerGigs = () => {
-  const { gigs, deleteGig, toggleGigStatus, updateGig } = useFreelancer();
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [editTarget, setEditTarget] = useState(null);
-  const [filter, setFilter] = useState('all');
+/* ══════════════════════════════════════════════════════════════════════════
+   MAIN COMPONENT: FreelancerGigs
+   ══════════════════════════════════════════════════════════════════════════ */
+export default function FreelancerGigs() {
+  const {
+    gigs, loading,
+    updateGig, deleteGig, toggleGigStatus,
+    addToast
+  } = useFreelancer();
 
-  // Form state for full gig schema editing
-  const [formData, setFormData] = useState({
-    title: '',
-    shortDescription: '',
-    fullDescription: '',
-    category: '',
-    subcategory: '',
-    skills: [],
-    pricing: {
-      basic: { title: '', description: '', price: '', deliveryTime: 1, revisions: 1, features: [] },
-      standard: { title: '', description: '', price: '', deliveryTime: 1, revisions: 1, features: [] },
-      premium: { title: '', description: '', price: '', deliveryTime: 1, revisions: 1, features: [] }
-    },
-    media: { banner: null, images: [], videoLink: '', portfolioLinks: [] },
-    faqs: []
-  });
+  const [tab, setTab] = useState('all');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [viewMode, setViewMode] = useState('grid');
 
-  const [, setUploading] = useState(false);
-  const bannerRef = useRef(null);
-  const imagesRef = useRef(null);
-  const [bannerCropFile, setBannerCropFile] = useState(null);
-  const [imageQueue, setImageQueue] = useState([]); // remaining raw files awaiting their crop turn
-  const [croppedImages, setCroppedImages] = useState([]); // results collected so far this batch
+  // Full-Page Editor State
+  const [editingGig, setEditingGig] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [initialSnapshot, setInitialSnapshot] = useState('');
+  const [editActiveSection, setEditActiveSection] = useState('basic');
+  const [saving, setSaving] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
+  const [aiSectionLoading, setAiSectionLoading] = useState(false);
+  const [tierAiLoading, setTierAiLoading] = useState({});
+  const editSheetRef = useRef(null);
+  const editorScrollRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
-  const filtered = gigs.filter((g) => filter === 'all' || g.status === filter);
+  // Delete Confirm
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    const result = await deleteGig(deleteTarget);
-    if (result?.success) setDeleteTarget(null); // keep modal open on failure
-  };
+  // Image Upload / Crop in Edit Sheet
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState(null);
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
+  const [showImageSourcePicker, setShowImageSourcePicker] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [rawImage, setRawImage] = useState(null);
 
-  const handleEditClick = (gig) => {
-    setEditTarget(gig);
-    setFormData({
+  // Counts & Stats
+  const activeCount = gigs.filter(g => g.status === 'active').length;
+  const pausedCount = gigs.filter(g => g.status === 'paused').length;
+  const totalViews = gigs.reduce((sum, g) => sum + (g.stats?.views || 0), 0);
+  const totalOrders = gigs.reduce((sum, g) => sum + (g.stats?.ordersCompleted || g.stats?.orders || 0), 0);
+
+  // Filtered & Sorted Gigs
+  const filteredGigs = useMemo(() => {
+    return gigs
+      .filter(g => {
+        if (tab === 'active' && g.status !== 'active') return false;
+        if (tab === 'paused' && g.status !== 'paused') return false;
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const title = (g.title || '').toLowerCase();
+          const cat = (g.category || '').toLowerCase();
+          const skills = Array.isArray(g.skills) ? g.skills.join(' ').toLowerCase() : '';
+          return title.includes(q) || cat.includes(q) || skills.includes(q);
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'views') return (b.stats?.views || 0) - (a.stats?.views || 0);
+        if (sortBy === 'orders') return (b.stats?.ordersCompleted || 0) - (a.stats?.ordersCompleted || 0);
+        if (sortBy === 'price') {
+          const pA = a.pricing?.basic?.price || a.startingPrice || 0;
+          const pB = b.pricing?.basic?.price || b.startingPrice || 0;
+          return pB - pA;
+        }
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+  }, [gigs, tab, search, sortBy]);
+
+  // Open Full-Page Editor
+  const openEdit = (gig) => {
+    setEditingGig(gig);
+    const initialForm = {
       title: gig.title || '',
-      shortDescription: gig.shortDescription || '',
-      fullDescription: gig.fullDescription || '',
       category: gig.category || '',
       subcategory: gig.subcategory || '',
-      skills: Array.isArray(gig.skills) ? gig.skills : [],
+      shortDescription: gig.shortDescription || '',
+      fullDescription: gig.fullDescription || '',
+      skills: Array.isArray(gig.skills) ? [...gig.skills] : [],
       pricing: {
         basic: {
-          title: gig.pricing?.basic?.title || '',
+          title: gig.pricing?.basic?.title || 'Basic Package',
           description: gig.pricing?.basic?.description || '',
-          price: gig.pricing?.basic?.price ?? '',
-          deliveryTime: gig.pricing?.basic?.deliveryTime ?? 1,
-          revisions: gig.pricing?.basic?.revisions ?? 1,
-          features: Array.isArray(gig.pricing?.basic?.features) ? [...gig.pricing.basic.features] : []
+          price: gig.pricing?.basic?.price != null ? String(gig.pricing.basic.price) : '',
+          deliveryTime: gig.pricing?.basic?.deliveryTime != null ? String(gig.pricing.basic.deliveryTime) : (gig.pricing?.basic?.deliveryDays != null ? String(gig.pricing.basic.deliveryDays) : '3'),
+          revisions: gig.pricing?.basic?.revisions != null ? String(gig.pricing.basic.revisions) : '1',
+          features: Array.isArray(gig.pricing?.basic?.features)
+            ? gig.pricing.basic.features.map(f => (typeof f === 'string' ? f : f?.text || ''))
+            : []
         },
         standard: {
-          title: gig.pricing?.standard?.title || '',
+          title: gig.pricing?.standard?.title || 'Standard Package',
           description: gig.pricing?.standard?.description || '',
-          price: gig.pricing?.standard?.price ?? '',
-          deliveryTime: gig.pricing?.standard?.deliveryTime ?? 1,
-          revisions: gig.pricing?.standard?.revisions ?? 1,
-          features: Array.isArray(gig.pricing?.standard?.features) ? [...gig.pricing.standard.features] : []
+          price: gig.pricing?.standard?.price != null ? String(gig.pricing.standard.price) : '',
+          deliveryTime: gig.pricing?.standard?.deliveryTime != null ? String(gig.pricing.standard.deliveryTime) : (gig.pricing?.standard?.deliveryDays != null ? String(gig.pricing.standard.deliveryDays) : '5'),
+          revisions: gig.pricing?.standard?.revisions != null ? String(gig.pricing.standard.revisions) : '3',
+          features: Array.isArray(gig.pricing?.standard?.features)
+            ? gig.pricing.standard.features.map(f => (typeof f === 'string' ? f : f?.text || ''))
+            : []
         },
         premium: {
-          title: gig.pricing?.premium?.title || '',
+          title: gig.pricing?.premium?.title || 'Premium Package',
           description: gig.pricing?.premium?.description || '',
-          price: gig.pricing?.premium?.price ?? '',
-          deliveryTime: gig.pricing?.premium?.deliveryTime ?? 1,
-          revisions: gig.pricing?.premium?.revisions ?? 1,
-          features: Array.isArray(gig.pricing?.premium?.features) ? [...gig.pricing.premium.features] : []
-        }
+          price: gig.pricing?.premium?.price != null ? String(gig.pricing.premium.price) : '',
+          deliveryTime: gig.pricing?.premium?.deliveryTime != null ? String(gig.pricing.premium.deliveryTime) : (gig.pricing?.premium?.deliveryDays != null ? String(gig.pricing.premium.deliveryDays) : '7'),
+          revisions: gig.pricing?.premium?.revisions != null ? String(gig.pricing.premium.revisions) : '5',
+          features: Array.isArray(gig.pricing?.premium?.features)
+            ? gig.pricing.premium.features.map(f => (typeof f === 'string' ? f : f?.text || ''))
+            : []
+        },
       },
-      media: gig.media || { banner: null, images: [], videoLink: '', portfolioLinks: [] },
-      faqs: gig.faqs || []
-    });
+      faqs: Array.isArray(gig.faqs)
+        ? gig.faqs.map(f => ({ question: f.question || '', answer: f.answer || '' }))
+        : [],
+    };
+    setEditForm(initialForm);
+    setInitialSnapshot(JSON.stringify(initialForm));
+    setBannerPreview(gig.media?.banner || null);
+    setBannerFile(null);
+    setGalleryFiles([]);
+    setGalleryPreviews(Array.isArray(gig.media?.images) ? [...gig.media.images] : []);
+    setEditActiveSection('basic');
+    setPreviewDrawerOpen(false);
   };
 
-  const handleBannerUpload = (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    const check = validateFile(file);
-    if (!check.valid) {
-      console.error(check.error);
-      return;
+  const closeEditSheet = () => {
+    setEditingGig(null);
+    setEditForm(null);
+    setShowExitConfirm(false);
+    setPreviewDrawerOpen(false);
+    setInitialSnapshot('');
+  };
+
+  // Body & document scroll locking when editor is open (eradicates double scrollbars)
+  useEffect(() => {
+    if (editingGig) {
+      const prevBodyOverflow = document.body.style.overflow;
+      const prevHtmlOverflow = document.documentElement.style.overflow;
+      const prevBodyHeight = document.body.style.height;
+      const prevHtmlHeight = document.documentElement.style.height;
+
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.height = '100%';
+      document.body.classList.add('fl-editor-locked');
+      document.documentElement.classList.add('fl-editor-locked');
+
+      return () => {
+        document.body.style.overflow = prevBodyOverflow;
+        document.documentElement.style.overflow = prevHtmlOverflow;
+        document.body.style.height = prevBodyHeight;
+        document.documentElement.style.height = prevHtmlHeight;
+        document.body.classList.remove('fl-editor-locked');
+        document.documentElement.classList.remove('fl-editor-locked');
+      };
     }
-    setBannerCropFile(file);
-  };
+  }, [editingGig]);
 
-  const handleBannerCropConfirm = async (finalFile) => {
-    setBannerCropFile(null);
-    setUploading(true);
+  // Dirty State Detection
+  const isDirty = useMemo(() => {
+    if (!editForm || !initialSnapshot) return false;
+    if (bannerFile) return true;
+    if (galleryFiles.length > 0) return true;
+    if (bannerPreview !== (editingGig?.media?.banner || null)) return true;
+    return JSON.stringify(editForm) !== initialSnapshot;
+  }, [editForm, initialSnapshot, bannerFile, galleryFiles, bannerPreview, editingGig]);
+
+  // Per-Section Status (complete, dirty)
+  const sectionStatus = useMemo(() => {
+    if (!editForm || !initialSnapshot) return { basic: {}, pricing: {}, description: {}, media: {} };
+    let initialObj = {};
     try {
-      const { uploadBanner } = await import('../../utils/uploadHelper');
-      const url = await uploadBanner(finalFile);
-      setFormData(prev => ({
-        ...prev,
-        media: { ...prev.media, banner: url }
-      }));
-    } catch (error) {
-      console.error('Banner upload failed:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleImagesUpload = (e) => {
-    const files = Array.from(e.target.files).filter((f) => validateFile(f).valid);
-    e.target.value = '';
-    if (!files.length) return;
-    setImageQueue(files);
-    setCroppedImages([]);
-  };
-
-  // Walks the multi-file queue one crop at a time — `result` is the
-  // cropped/original File on confirm, or null if that one image was
-  // skipped (Cancel). Once the queue empties, uploads whatever was collected.
-  const handleImageQueueAdvance = async (result) => {
-    const remaining = imageQueue.slice(1);
-    const collected = result ? [...croppedImages, result] : croppedImages;
-    setImageQueue(remaining);
-
-    if (remaining.length > 0) {
-      setCroppedImages(collected);
-      return;
+      initialObj = JSON.parse(initialSnapshot);
+    } catch {
+      initialObj = {};
     }
 
-    setCroppedImages([]);
-    if (collected.length === 0) return;
-    setUploading(true);
-    try {
-      const { uploadPortfolioImage } = await import('../../utils/uploadHelper');
-      const urls = await Promise.all(collected.map((file) => uploadPortfolioImage(file)));
-      setFormData(prev => ({
-        ...prev,
-        media: { ...prev.media, images: [...prev.media.images, ...urls].slice(0, 5) }
-      }));
-    } catch (error) {
-      console.error('Images upload failed:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
+    const basicDirty = (
+      editForm.title !== initialObj.title ||
+      editForm.category !== initialObj.category ||
+      editForm.subcategory !== initialObj.subcategory ||
+      editForm.shortDescription !== initialObj.shortDescription ||
+      JSON.stringify(editForm.skills) !== JSON.stringify(initialObj.skills)
+    );
+    const basicComplete = (
+      editForm.title.trim().length >= 5 &&
+      Boolean(editForm.category) &&
+      editForm.shortDescription.trim().length > 0 &&
+      editForm.skills.length > 0
+    );
 
-  const addFaq = () => setFormData(prev => ({ ...prev, faqs: [...prev.faqs, { question: '', answer: '' }] }));
-  const removeFaq = (i) => setFormData(prev => ({ ...prev, faqs: prev.faqs.filter((_, idx) => idx !== i) }));
-  const updateFaq = (i, key, val) => setFormData(prev => ({
-    ...prev,
-    faqs: prev.faqs.map((f, idx) => (idx === i ? { ...f, [key]: val } : f))
-  }));
+    const pricingDirty = JSON.stringify(editForm.pricing) !== JSON.stringify(initialObj.pricing);
+    const basicPrice = Number(editForm.pricing?.basic?.price);
+    const pricingComplete = (
+      basicPrice > 0 &&
+      Boolean(editForm.pricing?.basic?.description?.trim())
+    );
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    
-    // Prepare nested data
-    const updatedPricing = {
-      basic: {
-        title: formData.pricing.basic?.title || '',
-        description: formData.pricing.basic?.description || '',
-        price: Number(formData.pricing.basic?.price) || 0,
-        deliveryTime: Number(formData.pricing.basic?.deliveryTime) || 1,
-        revisions: Number(formData.pricing.basic?.revisions) || 0,
-        features: Array.isArray(formData.pricing.basic?.features) ? formData.pricing.basic.features : []
+    const descDirty = (
+      editForm.fullDescription !== initialObj.fullDescription ||
+      JSON.stringify(editForm.faqs) !== JSON.stringify(initialObj.faqs)
+    );
+    const descComplete = editForm.fullDescription.trim().length >= 20;
+
+    const mediaDirty = (
+      Boolean(bannerFile) ||
+      galleryFiles.length > 0 ||
+      bannerPreview !== (editingGig?.media?.banner || null)
+    );
+    const mediaComplete = Boolean(bannerPreview);
+
+    return {
+      basic: { dirty: basicDirty, complete: basicComplete },
+      pricing: { dirty: pricingDirty, complete: pricingComplete },
+      description: { dirty: descDirty, complete: descComplete },
+      media: { dirty: mediaDirty, complete: mediaComplete }
+    };
+  }, [editForm, initialSnapshot, bannerFile, galleryFiles, bannerPreview, editingGig]);
+
+  // Scrollspy: updates active tab as user scrolls through sections
+  useEffect(() => {
+    if (!editingGig) return;
+    const scrollContainer = editorScrollRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const sections = ['basic', 'pricing', 'description', 'media'];
+      const scrollY = scrollContainer.scrollTop + 140;
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const el = document.getElementById(`fl-edit-sec-${sections[i]}`);
+        if (el && el.offsetTop <= scrollY) {
+          setEditActiveSection(sections[i]);
+          break;
+        }
       }
     };
 
-    if (formData.pricing.standard?.price && Number(formData.pricing.standard.price) > 0) {
-      updatedPricing.standard = {
-        title: formData.pricing.standard?.title || '',
-        description: formData.pricing.standard?.description || '',
-        price: Number(formData.pricing.standard.price),
-        deliveryTime: Number(formData.pricing.standard?.deliveryTime) || 1,
-        revisions: Number(formData.pricing.standard?.revisions) || 0,
-        features: Array.isArray(formData.pricing.standard?.features) ? formData.pricing.standard.features : []
-      };
-    }
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [editingGig]);
 
-    if (formData.pricing.premium?.price && Number(formData.pricing.premium.price) > 0) {
-      updatedPricing.premium = {
-        title: formData.pricing.premium?.title || '',
-        description: formData.pricing.premium?.description || '',
-        price: Number(formData.pricing.premium.price),
-        deliveryTime: Number(formData.pricing.premium?.deliveryTime) || 1,
-        revisions: Number(formData.pricing.premium?.revisions) || 0,
-        features: Array.isArray(formData.pricing.premium?.features) ? formData.pricing.premium.features : []
-      };
-    }
-
-    const updatedData = {
-      title: formData.title,
-      shortDescription: formData.shortDescription,
-      fullDescription: formData.fullDescription,
-      category: formData.category,
-      subcategory: formData.subcategory,
-      skills: formData.skills,
-      pricing: updatedPricing,
-      media: formData.media,
-      faqs: formData.faqs
-    };
-    
-    const result = await updateGig(editTarget._id, updatedData);
-    if (result?.success) {
-      setEditTarget(null); // keep edit modal open on failure
+  const scrollToSection = (secId) => {
+    setEditActiveSection(secId);
+    const el = document.getElementById(`fl-edit-sec-${secId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
+  // Keyboard trap & Esc handling for full-page editor
+  const handleSheetEsc = useCallback(() => {
+    if (previewDrawerOpen) {
+      setPreviewDrawerOpen(false);
+      return;
+    }
+    if (showImageSourcePicker) {
+      setShowImageSourcePicker(false);
+      return;
+    }
+    if (showCropModal) {
+      setShowCropModal(false);
+      return;
+    }
+    if (editingGig) {
+      if (isDirty) {
+        setShowExitConfirm(true);
+      } else {
+        closeEditSheet();
+      }
+    }
+  }, [previewDrawerOpen, showImageSourcePicker, showCropModal, editingGig, isDirty]);
+
+  useFocusTrap(editSheetRef, !!editingGig, handleSheetEsc);
+
+  // AI Auto-Fill Section 1 (Basic Info)
+  const handleAiFillSection1 = async () => {
+    if (!editForm) return;
+    setAiSectionLoading(true);
+    try {
+      const res = await aiAPI.suggestBrief(
+        editForm.shortDescription || editForm.title || 'Professional digital freelance service',
+        editForm.title || ''
+      );
+      const brief = res.data?.data;
+      if (brief) {
+        if (brief.category && CATEGORIES.includes(brief.category)) {
+          setEditForm(f => ({ ...f, category: brief.category }));
+        }
+        if (Array.isArray(brief.skills) && brief.skills.length) {
+          setEditForm(f => ({ ...f, skills: [...new Set([...f.skills, ...brief.skills])] }));
+        }
+      }
+
+      if (!editForm.title.trim()) {
+        const titleRes = await aiAPI.generateText(
+          'a catchy freelance service gig title starting with "I will"',
+          { category: editForm.category, skills: editForm.skills }
+        );
+        const titleText = titleRes.data?.data?.text;
+        if (titleText) setEditForm(f => ({ ...f, title: titleText.replace(/^"|"$/g, '').slice(0, 80) }));
+      }
+
+      if (!editForm.shortDescription.trim()) {
+        const descRes = await aiAPI.generateText(
+          'a catchy one-sentence summary for marketplace card preview',
+          { title: editForm.title, category: editForm.category, skills: editForm.skills }
+        );
+        const descText = descRes.data?.data?.text;
+        if (descText) setEditForm(f => ({ ...f, shortDescription: descText.replace(/^"|"$/g, '').slice(0, 150) }));
+      }
+
+      addToast?.({ type: 'success', message: 'Basic info enriched with AI! ✨' });
+    } catch {
+      addToast?.({ type: 'error', message: 'AI suggestion unavailable. Please edit fields manually.' });
+    } finally {
+      setAiSectionLoading(false);
+    }
+  };
+
+  // AI Auto-Fill All Pricing Tiers
+  const handleAiFillAllTiers = async () => {
+    if (!editForm) return;
+    setAiSectionLoading(true);
+    try {
+      const cat = editForm.category || 'Web Development';
+      const basePrice = cat.toLowerCase().includes('design') ? 4000 : cat.toLowerCase().includes('writing') ? 3000 : 6000;
+
+      const draftTiers = {
+        basic: {
+          title: `Starter Setup`,
+          description: `Core delivery covering fundamental setup and essential requirements.`,
+          price: String(basePrice),
+          deliveryTime: '3',
+          revisions: '1',
+          features: ['Initial Setup & Consultation', 'Core Deliverable', 'Source Files']
+        },
+        standard: {
+          title: `Complete Package`,
+          description: `Full standard delivery with responsive design, optimizations, and revisions.`,
+          price: String(basePrice * 2),
+          deliveryTime: '5',
+          revisions: '3',
+          features: ['Everything in Basic', 'Custom Revisions', 'Performance Optimization', 'Documentation']
+        },
+        premium: {
+          title: `Full Enterprise Solution`,
+          description: `Comprehensive end-to-end package with priority support and complete handover.`,
+          price: String(Math.round(basePrice * 3.5)),
+          deliveryTime: '7',
+          revisions: '5',
+          features: ['Everything in Standard', 'Priority 24/7 Support', 'Deployment & Handover', 'Unlimited Revisions']
+        }
+      };
+
+      setEditForm(f => ({ ...f, pricing: draftTiers }));
+      addToast?.({ type: 'success', message: 'All 3 pricing packages structured with AI! ✨' });
+    } catch {
+      addToast?.({ type: 'error', message: 'Could not fill packages with AI.' });
+    } finally {
+      setAiSectionLoading(false);
+    }
+  };
+
+  // AI Auto-Fill Single Pricing Tier
+  const handleAiFillTier = async (targetTier) => {
+    if (!editForm) return;
+    setTierAiLoading(prev => ({ ...prev, [targetTier]: true }));
+    try {
+      const cat = editForm.category || 'Web Development';
+      const basePrice = cat.toLowerCase().includes('design') ? 4000 : cat.toLowerCase().includes('writing') ? 3000 : 6000;
+
+      const tierDrafts = {
+        basic: {
+          title: `Starter Setup`,
+          description: `Core delivery covering fundamental setup and essential requirements.`,
+          price: String(basePrice),
+          deliveryTime: '3',
+          revisions: '1',
+          features: ['Initial Setup & Consultation', 'Core Deliverable', 'Source Files']
+        },
+        standard: {
+          title: `Complete Package`,
+          description: `Full standard delivery with responsive design, optimizations, and revisions.`,
+          price: String(basePrice * 2),
+          deliveryTime: '5',
+          revisions: '3',
+          features: ['Everything in Basic', 'Custom Revisions', 'Performance Optimization', 'Documentation']
+        },
+        premium: {
+          title: `Full Enterprise Solution`,
+          description: `Comprehensive end-to-end package with priority support and complete handover.`,
+          price: String(Math.round(basePrice * 3.5)),
+          deliveryTime: '7',
+          revisions: '5',
+          features: ['Everything in Standard', 'Priority 24/7 Support', 'Deployment & Handover', 'Unlimited Revisions']
+        }
+      };
+
+      setEditForm(f => ({
+        ...f,
+        pricing: {
+          ...f.pricing,
+          [targetTier]: {
+            ...f.pricing[targetTier],
+            ...tierDrafts[targetTier]
+          }
+        }
+      }));
+      addToast?.({ type: 'success', message: `${targetTier.toUpperCase()} package drafted with AI! ✨` });
+    } catch {
+      addToast?.({ type: 'error', message: `Could not draft ${targetTier} tier with AI.` });
+    } finally {
+      setTierAiLoading(prev => ({ ...prev, [targetTier]: false }));
+    }
+  };
+
+  // AI Auto-Generate FAQs
+  const handleAiGenerateFaqs = async () => {
+    if (!editForm) return;
+    setAiSectionLoading(true);
+    try {
+      if (editForm.fullDescription.trim().length < 50) {
+        const genDesc = await aiAPI.generateText(
+          'a detailed comprehensive gig description including deliverables, workflow process, and guarantees',
+          { title: editForm.title, category: editForm.category, skills: editForm.skills }
+        );
+        const descText = genDesc.data?.data?.text;
+        if (descText) setEditForm(f => ({ ...f, fullDescription: descText.slice(0, 2000) }));
+      }
+
+      const defaultFaqs = [
+        {
+          question: `What deliverables will I receive upon project completion?`,
+          answer: `You will receive all source files, documentation, and the final tested deliverable ready for immediate deployment or use.`
+        },
+        {
+          question: `How do milestone revisions and feedback work?`,
+          answer: `Every package includes structured revision rounds where you can request tweaks or functional modifications before approving the escrow release.`
+        },
+        {
+          question: `Is payment protected by SkillKart escrow?`,
+          answer: `Yes! You deposit into secure escrow to start, and funds are only released after you inspect and accept the completed deliverables.`
+        }
+      ];
+
+      setEditForm(f => ({ ...f, faqs: [...(f.faqs || []), ...defaultFaqs] }));
+      addToast?.({ type: 'success', message: 'FAQs and description generated with AI! ✨' });
+    } catch {
+      addToast?.({ type: 'error', message: 'Could not generate FAQs with AI.' });
+    } finally {
+      setAiSectionLoading(false);
+    }
+  };
+
+  // Gallery file handler
+  const handleGalleryUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+
+    const validFiles = [];
+    const validPreviews = [];
+
+    for (const f of files) {
+      const err = validateFile(f, { maxSizeMB: 5, accept: ['image/jpeg', 'image/png', 'image/webp'] });
+      if (err) {
+        addToast?.({ type: 'error', message: `${f.name}: ${err}` });
+      } else {
+        validFiles.push(f);
+        validPreviews.push(URL.createObjectURL(f));
+      }
+    }
+
+    if (validFiles.length > 0) {
+      setGalleryFiles(prev => [...prev, ...validFiles]);
+      setGalleryPreviews(prev => [...prev, ...validPreviews]);
+      addToast?.({ type: 'success', message: `Added ${validFiles.length} portfolio sample(s).` });
+    }
+  };
+
+  const removeGalleryItem = (idx) => {
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== idx));
+    setGalleryFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSetCover = (imgUrl) => {
+    setBannerPreview(imgUrl);
+    addToast?.({ type: 'info', message: 'Cover banner updated.' });
+  };
+
+  // Save Edit Changes
+  const handleEditSave = async () => {
+    if (!editingGig || !editForm) return;
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append('title',            editForm.title);
+      fd.append('category',         editForm.category);
+      fd.append('subcategory',      editForm.subcategory);
+      fd.append('shortDescription', editForm.shortDescription);
+      fd.append('fullDescription',  editForm.fullDescription);
+      fd.append('skills',           JSON.stringify(editForm.skills));
+      fd.append('pricing',          JSON.stringify(editForm.pricing));
+      if (Array.isArray(editForm.faqs)) {
+        fd.append('faqs', JSON.stringify(editForm.faqs));
+      }
+      if (bannerFile) fd.append('banner', bannerFile);
+      galleryFiles.forEach(f => fd.append('gallery', f));
+
+      await updateGig(editingGig._id, fd);
+      addToast?.({ type: 'success', message: 'Gig updated successfully! ✨' });
+      closeEditSheet();
+    } catch {
+      addToast?.({ type: 'error', message: 'Failed to save gig.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete Gig
+  const handleDelete = async () => {
+    if (!deleteConfirmId) return;
+    setDeleting(true);
+    try {
+      await deleteGig(deleteConfirmId);
+      addToast?.({ type: 'info', message: 'Gig deleted successfully.' });
+      setDeleteConfirmId(null);
+    } catch {
+      addToast?.({ type: 'error', message: 'Failed to delete gig.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Toggle Gig Status
+  const handleToggle = async (id) => {
+    try {
+      await toggleGigStatus(id);
+    } catch {
+      addToast?.({ type: 'error', message: 'Failed to update gig status.' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="fl-gigs-page">
+        <Loader fullScreen text="Loading your gigs..." />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="fl-page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 className="fl-page-title">My Gigs</h1>
-          <p className="fl-page-sub">Manage all your freelance service offerings.</p>
-        </div>
-        <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--primary">＋ Create New Gig</Link>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="fl-gig-tabs">
-        {['all', 'active', 'paused'].map((f) => (
-          <button
-            key={f}
-            className={`fl-gig-tab${filter === f ? ' fl-gig-tab--active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f === 'all' ? `All (${gigs.length})` : f === 'active' ? `Active (${gigs.filter(g => g.status === 'active').length})` : `Paused (${gigs.filter(g => g.status === 'paused').length})`}
-          </button>
-        ))}
-      </div>
-
-      {/* Gig Grid */}
-      {filtered.length === 0 ? (
-        <div className="fl-card fl-empty-message">
-          <p style={{ marginBottom: '0.75rem' }}><Package size={48} style={{ color: 'var(--color-primary)' }} /></p>
-          <h3 style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)', marginBottom: '0.5rem' }}>
-            {filter === 'all' ? 'No Gigs Yet' : `No ${filter} gigs`}
-          </h3>
-          <p style={{ color: 'var(--color-text-light)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-            {filter === 'all' ? 'Create your first gig to start earning.' : `You have no ${filter} gigs at the moment.`}
+    <div className="fl-gigs-page">
+      {/* ─── Breadcrumb & Header ─── */}
+      <div className="fl-gigs-header">
+        <div className="fl-gigs-header__left">
+          <nav className="fl-gigs-breadcrumb" aria-label="Breadcrumb">
+            <Link to="/freelancer/dashboard">Dashboard</Link>
+            <span className="fl-gigs-breadcrumb__sep">/</span>
+            <span className="fl-gigs-breadcrumb__curr">My Gigs</span>
+          </nav>
+          <h1 className="fl-gigs-header__title">My Gigs</h1>
+          <p className="fl-gigs-header__sub">
+            {gigs.length} gig{gigs.length !== 1 ? 's' : ''} · {activeCount} active · {pausedCount} paused
           </p>
-          {filter === 'all' && (
-            <Link to="/freelancer/gigs/create" className="fl-btn fl-btn--primary">＋ Create Your First Gig</Link>
+        </div>
+
+        <Link to="/freelancer/gigs/create" className="fl-gigs-header__cta">
+          <Plus size={16} />
+          <span>Create New Gig</span>
+        </Link>
+      </div>
+
+      {/* ─── Stats Strip (4 Compact Bento Cards) ─── */}
+      <section className="fl-gigs-stats-grid" aria-label="Gigs Statistics">
+        <div className="fl-gigs-stat-card">
+          <div className="fl-gigs-stat-card__icon" style={{ background: '#EAFBF4', color: '#10B981' }}>
+            <Package size={22} />
+          </div>
+          <div>
+            <div className="fl-gigs-stat-card__val">{gigs.length}</div>
+            <div className="fl-gigs-stat-card__label">Total Gigs</div>
+          </div>
+        </div>
+
+        <div className="fl-gigs-stat-card">
+          <div className="fl-gigs-stat-card__icon" style={{ background: '#ECFDF5', color: '#059669' }}>
+            <CheckCircle2 size={22} />
+          </div>
+          <div>
+            <div className="fl-gigs-stat-card__val">{activeCount}</div>
+            <div className="fl-gigs-stat-card__label">Active Gigs</div>
+          </div>
+        </div>
+
+        <div className="fl-gigs-stat-card">
+          <div className="fl-gigs-stat-card__icon" style={{ background: '#E0F2FE', color: '#0284C7' }}>
+            <Eye size={22} />
+          </div>
+          <div>
+            <div className="fl-gigs-stat-card__val">{totalViews.toLocaleString()}</div>
+            <div className="fl-gigs-stat-card__label">Total Views</div>
+          </div>
+        </div>
+
+        <div className="fl-gigs-stat-card">
+          <div className="fl-gigs-stat-card__icon" style={{ background: '#FEF3C7', color: '#D97706' }}>
+            <ShoppingBag size={22} />
+          </div>
+          <div>
+            <div className="fl-gigs-stat-card__val">{totalOrders.toLocaleString()}</div>
+            <div className="fl-gigs-stat-card__label">Orders Completed</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Glass Toolbar ─── */}
+      <div className="fl-gigs-toolbar">
+        <div className="fl-gigs-toolbar__left">
+          {/* Status Tabs */}
+          <div className="fl-status-tabs-pill">
+            {[
+              { key: 'all',    label: 'All',    count: gigs.length },
+              { key: 'active', label: 'Active', count: activeCount },
+              { key: 'paused', label: 'Paused', count: pausedCount },
+            ].map(t => (
+              <button
+                key={t.key}
+                type="button"
+                className={`fl-status-tab-btn ${tab === t.key ? 'fl-status-tab-btn--active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                <span>{t.label}</span>
+                <span className="fl-status-tab-badge">{t.count}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Search Pill */}
+          <div className="fl-search-pill">
+            <Search size={15} color="#94A3B8" />
+            <input
+              type="text"
+              placeholder="Search gigs..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: 0 }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="fl-gigs-toolbar__right">
+          {/* Sort Dropdown */}
+          <select
+            className="fl-sort-select"
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            aria-label="Sort gigs"
+          >
+            <option value="newest">Sort: Newest</option>
+            <option value="views">Sort: Most Views</option>
+            <option value="orders">Sort: Most Orders</option>
+            <option value="price">Sort: Price</option>
+          </select>
+
+          {/* Grid / List Toggle */}
+          <div className="fl-view-toggle">
+            <button
+              type="button"
+              className={`fl-view-toggle-btn ${viewMode === 'grid' ? 'fl-view-toggle-btn--active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+              aria-label="Grid View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              type="button"
+              className={`fl-view-toggle-btn ${viewMode === 'list' ? 'fl-view-toggle-btn--active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="List View"
+              aria-label="List View"
+            >
+              <List size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Gigs Display (Grid or List) ─── */}
+      {filteredGigs.length === 0 ? (
+        <div className="fl-gigs-empty-card">
+          <div className="fl-gigs-empty-card__icon">
+            <Package size={28} />
+          </div>
+          <h3 className="fl-gigs-empty-card__title">
+            {search ? 'No gigs match your search' : `No ${tab !== 'all' ? tab : ''} gigs found`}
+          </h3>
+          <p className="fl-gigs-empty-card__sub">
+            {search
+              ? 'Try adjusting your search terms or clearing filters to see all your gigs.'
+              : 'Create your first service gig to offer pre-packaged offerings to clients on SkillKart.'}
+          </p>
+          {search ? (
+            <button
+              type="button"
+              className="fl-gigs-header__cta"
+              onClick={() => { setSearch(''); setTab('all'); }}
+            >
+              Clear Filters
+            </button>
+          ) : (
+            <Link to="/freelancer/gigs/create" className="fl-gigs-header__cta">
+              <Plus size={15} />
+              <span>Create Your First Gig</span>
+            </Link>
           )}
         </div>
-      ) : (
-        <div className="fl-gig-grid">
-          {filtered.map((gig) => (
+      ) : viewMode === 'grid' ? (
+        <div className="fl-gigs-grid">
+          {filteredGigs.map(gig => (
             <GigCard
               key={gig._id}
               gig={gig}
-              onDelete={setDeleteTarget}
-              onToggleStatus={toggleGigStatus}
-              onEdit={handleEditClick}
+              variant="owner"
+              onToggleStatus={handleToggle}
+              onEdit={openEdit}
+              onDelete={setDeleteConfirmId}
             />
+          ))}
+        </div>
+      ) : (
+        /* List View: Wide Row Cards */
+        <div className="fl-gigs-list">
+          {filteredGigs.map(gig => (
+            <div key={gig._id} className="fl-gig-list-row">
+              <div className="fl-gig-list-row__thumb">
+                {gig.media?.banner ? (
+                  <img src={gig.media.banner} alt={gig.title} loading="lazy" />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                    <Package size={24} />
+                  </div>
+                )}
+              </div>
+
+              <div className="fl-gig-list-row__info">
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+                  {gig.category}{gig.subcategory ? ` • ${gig.subcategory}` : ''}
+                </span>
+                <h3 className="fl-gig-list-row__title" title={gig.title}>
+                  {gig.title}
+                </h3>
+                <div className="fl-gig-list-row__meta">
+                  <span>Starting at <strong>Rs. {gig.pricing?.basic?.price ? Number(gig.pricing.basic.price).toLocaleString() : '—'}</strong></span>
+                  <span>•</span>
+                  <span><Eye size={12} style={{ verticalAlign: 'middle' }} /> {gig.stats?.views || 0} views</span>
+                  <span>•</span>
+                  <span><Star size={12} fill="#F59E0B" color="#F59E0B" style={{ verticalAlign: 'middle' }} /> {(gig.stats?.rating || 0).toFixed(1)}</span>
+                </div>
+              </div>
+
+              {/* Tiers summary */}
+              <div className="fl-gig-list-row__tiers">
+                {['basic', 'standard', 'premium'].map(tKey => (
+                  <div key={tKey} className="fl-gig-list-tier-chip">
+                    <span>{tKey}</span>
+                    <strong>{gig.pricing?.[tKey]?.price ? `Rs. ${Number(gig.pricing[tKey].price).toLocaleString()}` : '—'}</strong>
+                  </div>
+                ))}
+              </div>
+
+              {/* Status Badge */}
+              <span className={`sk-badge sk-badge--status-${gig.status === 'active' ? 'active' : 'paused'}`}>
+                <span className="sk-badge__status-dot" />
+                {gig.status === 'active' ? 'Active' : 'Paused'}
+              </span>
+
+              {/* Row Actions */}
+              <div className="fl-gig-list-row__actions">
+                <button
+                  type="button"
+                  className={`sk-icon-btn ${gig.status === 'active' ? 'sk-icon-btn--pause' : 'sk-icon-btn--play'}`}
+                  onClick={() => handleToggle(gig._id)}
+                  title={gig.status === 'active' ? 'Pause gig' : 'Activate gig'}
+                >
+                  {gig.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button
+                  type="button"
+                  className="sk-pill-action-btn"
+                  onClick={() => openEdit(gig)}
+                >
+                  <Edit2 size={13} />
+                  <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  className="sk-icon-btn sk-icon-btn--danger"
+                  onClick={() => setDeleteConfirmId(gig._id)}
+                  disabled={!!gig.activeOrders}
+                  title={gig.activeOrders ? 'Has active orders — cannot delete' : 'Delete gig'}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Edit Modal */}
-      <Modal open={!!editTarget} title="Edit Gig Details" onClose={() => setEditTarget(null)} size="xl">
-        <form onSubmit={handleUpdate} className="fl-edit-form">
-            <h4 className="fl-edit-section-title">General Info</h4>
-            <div className="fl-form-grid">
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Gig Title</label>
-                <input 
-                  type="text" 
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  required 
-                />
-              </div>
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <AiSuggestFill
-                  label="Suggest category & skills (AI)"
-                  getContext={() => ({
-                    title: formData.title,
-                    description: [formData.shortDescription, formData.fullDescription].filter(Boolean).join('\n'),
-                    skills: formData.skills,
-                  })}
-                  allowedCategories={CATEGORIES}
-                  existingSkills={formData.skills}
-                  onCategory={(cat) => setFormData((p) => ({
-                    ...p,
-                    category: cat,
-                    subcategory: (SUBCATEGORIES[cat] || ['Other'])[0],
-                  }))}
-                  onSkills={(newSkills) => setFormData((p) => ({
-                    ...p,
-                    skills: Array.from(new Set([...(p.skills || []), ...newSkills])),
-                  }))}
-                />
+      {/* ─── Delete Confirm Dialog ─── */}
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        title="Delete this service gig?"
+        message="This action cannot be undone. Your gig listing and historical views will be permanently removed."
+        confirmLabel="Delete Gig"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onClose={() => setDeleteConfirmId(null)}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          FULL-PAGE GIG EDITOR (Edge-to-edge full screen layer)
+          ══════════════════════════════════════════════════════════════════════ */}
+      {editingGig && editForm && createPortal(
+        <div
+          ref={editSheetRef}
+          className="fl-fullscreen-editor"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Editing Gig: ${editForm.title || editingGig.title}`}
+        >
+          {/* ─── A) Top Header Bar (Sticky, 72px, White Glass) ─── */}
+          <header className="fl-editor-topbar">
+            <div className="fl-editor-topbar__left">
+              <button
+                type="button"
+                className="fl-editor-back-btn"
+                onClick={() => {
+                  if (isDirty) setShowExitConfirm(true);
+                  else closeEditSheet();
+                }}
+                aria-label="Back to My Gigs"
+                title="Exit editor"
+              >
+                <ArrowLeft size={18} />
+              </button>
+
+              <div className="fl-editor-gig-thumb">
+                {bannerPreview ? (
+                  <img src={bannerPreview} alt="Gig Thumbnail" />
+                ) : (
+                  <Package size={20} color="#94A3B8" />
+                )}
               </div>
 
-              <div className="fl-form-group">
-                <label>Category</label>
-                <ComboSelect
-                  options={CATEGORIES}
-                  value={formData.category}
-                  onChange={(val) => setFormData({
-                    ...formData,
-                    category: val,
-                    subcategory: (SUBCATEGORIES[val] || ['Other'])[0]
-                  })}
-                  placeholder="Type to search categories…"
-                />
-              </div>
-              <div className="fl-form-group">
-                <label>Subcategory</label>
-                <ComboSelect
-                  options={SUBCATEGORIES[formData.category] || ['Other']}
-                  value={formData.subcategory}
-                  onChange={(val) => setFormData({...formData, subcategory: val})}
-                  placeholder="Type to search subcategories…"
-                />
-              </div>
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Short Description (for cards)</label>
-                <textarea
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData({...formData, shortDescription: e.target.value})}
-                  rows={2}
-                  required
-                />
-                <AiGenerateText
-                  className="fl-ai-generate"
-                  fieldLabel="a freelancer's short, catchy one-line gig description (pitching their own service) shown on gig cards in a freelance marketplace"
-                  getContext={() => ({ title: formData.title, category: formData.category, skills: formData.skills })}
-                  getExistingText={() => formData.shortDescription}
-                  onGenerated={(text) => setFormData({ ...formData, shortDescription: text.slice(0, 150) })}
-                />
-              </div>
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Full Description</label>
-                <textarea
-                  value={formData.fullDescription}
-                  onChange={(e) => setFormData({...formData, fullDescription: e.target.value})}
-                  rows={5}
-                  required
-                />
-                <AiGenerateText
-                  className="fl-ai-generate"
-                  fieldLabel="a freelancer's detailed gig description — what the buyer receives, the process, requirements, and why to choose this freelancer"
-                  getContext={() => ({ title: formData.title, category: formData.category, skills: formData.skills, shortDescription: formData.shortDescription })}
-                  getExistingText={() => formData.fullDescription}
-                  onGenerated={(text) => setFormData({ ...formData, fullDescription: text.slice(0, 2000) })}
-                />
-              </div>
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Skills</label>
-                <TagInput 
-                  tags={formData.skills} 
-                  onChange={(tags) => setFormData({...formData, skills: tags})} 
-                  placeholder="e.g. React, Node.js" 
-                />
-              </div>
-            </div>
-
-            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Media & Portfolio</h4>
-            
-            <div className="fl-form-grid">
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Banner Image</label>
-                <div 
-                  className="fl-upload-box" 
-                  onClick={() => bannerRef.current?.click()}
-                  style={{ 
-                    height: '160px', 
-                    border: '2px dashed var(--color-primary-light)', 
-                    borderRadius: '12px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    overflow: 'hidden',
-                    background: 'rgba(4,46,76,0.02)',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(4,46,76,0.05)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(4,46,76,0.02)'}
-                >
-                  {formData.media?.banner ? (
-                    <img src={formData.media.banner} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ textAlign: 'center', color: 'var(--color-primary)' }}>
-                      <Upload size={32} style={{ marginBottom: '0.75rem', opacity: 0.8 }} />
-                      <p style={{ fontSize: '0.9rem', fontWeight: 'var(--fw-medium)' }}>Click to upload banner image</p>
-                    </div>
+              <div className="fl-editor-title-group">
+                <h2 className="fl-editor-gig-title" title={editForm.title || editingGig.title}>
+                  {editForm.title || editingGig.title || 'Untitled Service Gig'}
+                </h2>
+                <div className="fl-editor-meta-row">
+                  <span className={`fl-editor-status-pill fl-editor-status-pill--${editingGig.status === 'active' ? 'active' : 'paused'}`}>
+                    <span className="fl-editor-status-dot" />
+                    {editingGig.status === 'active' ? 'Active' : 'Paused'}
+                  </span>
+                  {(editingGig.updatedAt || editingGig.createdAt) && (
+                    <span className="fl-editor-last-edited">
+                      Last edited {new Date(editingGig.updatedAt || editingGig.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
                   )}
                 </div>
-                <ImageSourcePicker ref={bannerRef} accept="image/*" onChange={handleBannerUpload} />
-              </div>
-
-              <div className="fl-form-group" style={{ gridColumn: '1 / -1' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                  <label style={{ margin: 0 }}>Portfolio Images (Max 5)</label>
-                  <button type="button" className="fl-btn fl-btn--outline fl-btn--xs" onClick={() => imagesRef.current?.click()}>
-                    <Plus size={14} /> Add Images
-                  </button>
-                </div>
-                <ImageSourcePicker ref={imagesRef} accept="image/*" multiple onChange={handleImagesUpload} />
-                <div className="fl-edit-images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-                  {(formData.media?.images || []).map((img, i) => (
-                    <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-secondary)' }}>
-                      <img src={img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button 
-                        type="button"
-                        onClick={() => setFormData(p => ({ ...p, media: { ...p.media, images: p.media.images.filter((_, idx) => idx !== i) } }))}
-                        style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,0.9)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px', transition: 'transform 0.2s' }}
-                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                        aria-label={`Remove image ${i + 1}`}
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="fl-form-group">
-                <label>Video Link (YouTube/Vimeo)</label>
-                <input 
-                  type="url" 
-                  value={formData.media?.videoLink || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    media: { ...formData.media, videoLink: e.target.value }
-                  })}
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className="fl-form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                  <label style={{ margin: 0 }}>Portfolio Links</label>
-                  <button type="button" className="fl-btn fl-btn--outline fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: [...(p.media.portfolioLinks || []), ''] } }))}>
-                    <Plus size={14} /> Add Link
-                  </button>
-                </div>
-              <div className="fl-links-edit-list">
-                {(formData.media?.portfolioLinks || []).map((link, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <input 
-                      type="url" 
-                      value={link}
-                      onChange={(e) => {
-                        const newLinks = [...formData.media.portfolioLinks];
-                        newLinks[i] = e.target.value;
-                        setFormData({...formData, media: { ...formData.media, portfolioLinks: newLinks }});
-                      }}
-                      placeholder="https://..."
-                    />
-                    <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => setFormData(p => ({ ...p, media: { ...p.media, portfolioLinks: p.media.portfolioLinks.filter((_, idx) => idx !== i) } }))} aria-label={`Remove portfolio link ${i + 1}`}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
               </div>
             </div>
-            
-            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Frequently Asked Questions</h4>
-            <div className="fl-faqs-edit-list">
-              {formData.faqs.map((faq, i) => (
-                <div key={i} className="fl-faq-edit-item" style={{ background: 'var(--color-secondary)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid rgba(183, 201, 226, 0.35)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-mid)' }}>FAQ #{i + 1}</span>
-                    <button type="button" className="fl-btn fl-btn--danger fl-btn--xs" onClick={() => removeFaq(i)}>
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                  <div className="fl-form-group">
-                    <input 
-                      type="text" 
-                      placeholder="Question" 
-                      value={faq.question}
-                      onChange={(e) => updateFaq(i, 'question', e.target.value)}
-                      style={{ marginBottom: '0.5rem' }}
-                    />
-                    <textarea
-                      placeholder="Answer"
-                      value={faq.answer}
-                      onChange={(e) => updateFaq(i, 'answer', e.target.value)}
-                      rows={2}
-                    />
-                    <AiGenerateText
-                      className="fl-ai-generate"
-                      fieldLabel="the answer to a freelancer-written FAQ on their gig listing"
-                      getContext={() => ({ title: formData.title, category: formData.category, question: faq.question })}
-                      getExistingText={() => faq.answer}
-                      onGenerated={(text) => updateFaq(i, 'answer', text)}
-                    />
-                  </div>
+
+            <div className="fl-editor-topbar__right">
+              {isDirty && (
+                <div className="fl-unsaved-badge" title="You have unsaved changes">
+                  <span className="fl-unsaved-dot" />
+                  <span className="fl-unsaved-text">Unsaved changes</span>
                 </div>
-              ))}
-              <button type="button" className="fl-btn fl-btn--ghost fl-btn--sm" onClick={addFaq} style={{ width: '100%' }}>
-                <Plus size={14} /> Add New FAQ
+              )}
+
+              <button
+                type="button"
+                className="fl-preview-btn-pill"
+                onClick={() => setPreviewDrawerOpen(true)}
+                title="Preview how buyers see this gig"
+              >
+                <Eye size={15} />
+                <span className="fl-btn-label-desktop">Preview</span>
+              </button>
+
+              <button
+                type="button"
+                className="fl-cancel-ghost-btn"
+                onClick={() => {
+                  if (isDirty) setShowExitConfirm(true);
+                  else closeEditSheet();
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="fl-save-changes-pill"
+                onClick={handleEditSave}
+                disabled={!isDirty || saving}
+                title={!isDirty ? 'No changes to save' : 'Save changes'}
+              >
+                {saving ? (
+                  <>
+                    <Loader size={14} color="#FFFFFF" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} />
+                    <span>Save Changes</span>
+                  </>
+                )}
               </button>
             </div>
+          </header>
 
-            <h4 className="fl-edit-section-title" style={{ marginTop: '1.5rem' }}>Pricing Packages</h4>
-            <div className="fl-pricing-edit-grid">
-              {TIERS_CONFIG.map(({ tier, label, icon }) => (
-                <PricingTierEdit
-                  key={tier}
-                  tier={tier}
-                  label={label}
-                  icon={icon}
-                  data={formData.pricing[tier] || {}}
-                  onChange={(updatedTierData) => setFormData((prev) => ({
-                    ...prev,
-                    pricing: {
-                      ...prev.pricing,
-                      [tier]: updatedTierData
-                    }
-                  }))}
-                />
-              ))}
+          {/* ─── B) Section Navigation Bar (Sticky Under Header, Integrated Design) ─── */}
+          <nav className="fl-editor-nav-bar" aria-label="Editor sections navigation">
+            <div className="fl-editor-nav-inner">
+              {[
+                { id: 'basic', num: '01', label: 'Basic Info', icon: Sparkles, status: sectionStatus.basic },
+                { id: 'pricing', num: '02', label: 'Pricing Packages', icon: ShoppingBag, status: sectionStatus.pricing },
+                { id: 'description', num: '03', label: 'Description & FAQs', icon: AlignLeft, status: sectionStatus.description },
+                { id: 'media', num: '04', label: 'Media Assets', icon: Upload, status: sectionStatus.media },
+              ].map(tabItem => {
+                const Icon = tabItem.icon;
+                const isActive = editActiveSection === tabItem.id;
+                const { dirty: isChanged, complete: isComplete } = tabItem.status;
+
+                return (
+                  <button
+                    key={tabItem.id}
+                    type="button"
+                    className={`fl-editor-nav-tab ${isActive ? 'fl-editor-nav-tab--active' : ''}`}
+                    onClick={() => scrollToSection(tabItem.id)}
+                  >
+                    <div className="fl-editor-nav-tab__left">
+                      <span className="fl-editor-nav-tab__num">{tabItem.num}</span>
+                      <Icon size={14} className="fl-editor-nav-tab__icon" />
+                      <span className="fl-editor-nav-tab__title">{tabItem.label}</span>
+                    </div>
+
+                    <div className="fl-editor-nav-tab__right">
+                      {isChanged ? (
+                        <span className="fl-tab-badge fl-tab-badge--dirty" title="Unsaved modifications">
+                          Edited
+                        </span>
+                      ) : isComplete ? (
+                        <span className="fl-tab-badge fl-tab-badge--done" title="Section complete">
+                          <Check size={11} strokeWidth={3} />
+                          <span>Ready</span>
+                        </span>
+                      ) : (
+                        <span className="fl-tab-badge fl-tab-badge--req" title="Required fields incomplete">
+                          Required
+                        </span>
+                      )}
+                    </div>
+
+                    {isActive && <span className="fl-editor-nav-indicator" />}
+                  </button>
+                );
+              })}
             </div>
+          </nav>
 
-          <div className="fl-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-secondary)' }}>
-            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setEditTarget(null)}>Cancel</button>
-            <button type="submit" className="fl-btn fl-btn--primary">Save Changes</button>
+          {/* ─── Scrollable Body Container ─── */}
+          <div ref={editorScrollRef} className="fl-editor-scroll-body">
+            {/* ─── C) Main Content: ONE Centered Column, Max-Width 960px ─── */}
+            <main className="fl-editor-content-stack">
+              {/* ─── SECTION 1: BASIC INFO ─── */}
+              <section id="fl-edit-sec-basic" className="fl-section-card">
+                <div className="fl-section-card__header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="fl-sec-icon-circle">
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 className="fl-section-card__title">Basic Information</h3>
+                      <span className="fl-section-card__hint">Gig title, category classification, and verified skills</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="fl-ai-mint-pill"
+                    onClick={handleAiFillSection1}
+                    disabled={aiSectionLoading}
+                    title="Enrich basic info with AI suggestions"
+                  >
+                    {aiSectionLoading ? <Loader size={12} color="#065F46" /> : <Sparkles size={12} />}
+                    <span>AI fill section</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  {/* Gig Title: label row with counter, input full width, AI suggest directly UNDER input with 8px gap */}
+                  <div>
+                    <Field
+                      id="edit-gig-title"
+                      label="Gig Title"
+                      required
+                      counter={`${editForm.title.length}/80`}
+                      helper="Keep it clear and specific. State the exact outcome you deliver."
+                    >
+                      <Input
+                        id="edit-gig-title"
+                        type="text"
+                        value={editForm.title}
+                        onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                        maxLength={80}
+                        placeholder="I will build a modern responsive React web application..."
+                      />
+                    </Field>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                      <AiSuggestFill
+                        getContext={() => ({ title: editForm.title, description: editForm.shortDescription, skills: editForm.skills })}
+                        onCategory={(cat) => setEditForm(f => ({ ...f, category: cat }))}
+                        onSkills={(fresh) => setEditForm(f => ({ ...f, skills: [...new Set([...f.skills, ...fresh])] }))}
+                        allowedCategories={CATEGORIES}
+                        label="AI suggest"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Category & Subcategory 2-col grid */}
+                  <div className="sk-grid-2col">
+                    <Field label="Category" required>
+                      <Select
+                        value={editForm.category}
+                        onChange={e => setEditForm(f => ({ ...f, category: e.target.value, subcategory: '' }))}
+                      >
+                        <option value="">Select category</option>
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </Select>
+                    </Field>
+
+                    <Field label="Subcategory">
+                      <ComboSelect
+                        value={editForm.subcategory}
+                        onChange={v => setEditForm(f => ({ ...f, subcategory: v }))}
+                        options={(SUBCATEGORIES[editForm.category] || []).map(s => ({ value: s, label: s }))}
+                        placeholder="Select or type subcategory..."
+                        allowFreeText={true}
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Required Skills Tag Input */}
+                  <Field label="Required Skills" required helperText="Verified skills appear higher in client searches. Add up to 10 skills.">
+                    <TagInput
+                      tags={editForm.skills}
+                      onChange={tags => setEditForm(f => ({ ...f, skills: tags }))}
+                      placeholder="Type skill name and press Enter..."
+                      maxTags={10}
+                    />
+                  </Field>
+
+                  {/* Short Description: textarea, counter, Generate chip directly under */}
+                  <div>
+                    <Field
+                      id="edit-short-desc"
+                      label="Short Description"
+                      required
+                      counter={`${editForm.shortDescription.length}/150`}
+                      helper="One-line summary displayed on search result cards across the marketplace."
+                    >
+                      <Textarea
+                        id="edit-short-desc"
+                        value={editForm.shortDescription}
+                        onChange={e => setEditForm(f => ({ ...f, shortDescription: e.target.value }))}
+                        maxLength={150}
+                        rows={3}
+                        style={{ minHeight: 90 }}
+                        placeholder="Brief summary of your service (shown on search cards across the marketplace)..."
+                      />
+                    </Field>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                      <AiGenerateText
+                        fieldLabel="a catchy short one-line gig summary for marketplace cards"
+                        getContext={() => ({ title: editForm.title, category: editForm.category, skills: editForm.skills })}
+                        getExistingText={() => editForm.shortDescription}
+                        onGenerated={(text) => setEditForm(f => ({ ...f, shortDescription: text.slice(0, 150) }))}
+                        label="Generate with AI"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ─── SECTION 2: PRICING ─── */}
+              <section id="fl-edit-sec-pricing" className="fl-section-card">
+                <div className="fl-section-card__header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="fl-sec-icon-circle">
+                      <ShoppingBag size={20} />
+                    </div>
+                    <div>
+                      <h3 className="fl-section-card__title">Pricing Packages</h3>
+                      <span className="fl-section-card__hint">Three tier packages for starter, standard, and enterprise deliverables</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="fl-ai-mint-pill"
+                    onClick={handleAiFillAllTiers}
+                    disabled={aiSectionLoading}
+                    title="Auto-fill all 3 tiers with market-aligned pricing"
+                  >
+                    {aiSectionLoading ? <Loader size={12} color="#065F46" /> : <Zap size={12} />}
+                    <span>Fill all tiers with AI</span>
+                  </button>
+                </div>
+
+                {/* 3 Tier Cards Side by Side (Equal height, stack under 900px) */}
+                <div className="fl-tiers-grid">
+                  {TIERS_CONFIG.map(({ tier, label, badge, ribbon, accentClass }) => (
+                    <PricingTierEditCard
+                      key={tier}
+                      tier={tier}
+                      label={label}
+                      badge={badge}
+                      ribbon={ribbon}
+                      accentClass={accentClass}
+                      data={editForm.pricing[tier]}
+                      onChange={vals => setEditForm(f => ({
+                        ...f,
+                        pricing: {
+                          ...f.pricing,
+                          [tier]: { ...f.pricing[tier], ...vals }
+                        }
+                      }))}
+                      onAiFillTier={handleAiFillTier}
+                      aiLoading={tierAiLoading[tier]}
+                    />
+                  ))}
+                </div>
+
+                {/* Slim Price Comparison Strip */}
+                <div className="fl-price-compare-strip">
+                  <div className="fl-price-compare-col">
+                    <span>🥉 Basic Package</span>
+                    <strong>
+                      {editForm.pricing.basic?.price
+                        ? `Rs. ${Number(editForm.pricing.basic.price).toLocaleString()}`
+                        : '—'}
+                    </strong>
+                    <small>{editForm.pricing.basic?.deliveryTime ? `${editForm.pricing.basic.deliveryTime} days delivery` : 'No delivery set'}</small>
+                  </div>
+                  <div className="fl-price-compare-col fl-price-compare-col--featured">
+                    <span>🥈 Standard (Recommended)</span>
+                    <strong>
+                      {editForm.pricing.standard?.price
+                        ? `Rs. ${Number(editForm.pricing.standard.price).toLocaleString()}`
+                        : '—'}
+                    </strong>
+                    <small>{editForm.pricing.standard?.deliveryTime ? `${editForm.pricing.standard.deliveryTime} days delivery` : 'No delivery set'}</small>
+                  </div>
+                  <div className="fl-price-compare-col">
+                    <span>🥇 Premium Package</span>
+                    <strong>
+                      {editForm.pricing.premium?.price
+                        ? `Rs. ${Number(editForm.pricing.premium.price).toLocaleString()}`
+                        : '—'}
+                    </strong>
+                    <small>{editForm.pricing.premium?.deliveryTime ? `${editForm.pricing.premium.deliveryTime} days delivery` : 'No delivery set'}</small>
+                  </div>
+                </div>
+              </section>
+
+              {/* ─── SECTION 3: DESCRIPTION & FAQ ─── */}
+              <section id="fl-edit-sec-description" className="fl-section-card">
+                <div className="fl-section-card__header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="fl-sec-icon-circle">
+                      <AlignLeft size={20} />
+                    </div>
+                    <div>
+                      <h3 className="fl-section-card__title">Description & FAQs</h3>
+                      <span className="fl-section-card__hint">Comprehensive overview and common client questions</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="fl-ai-mint-pill"
+                    onClick={handleAiGenerateFaqs}
+                    disabled={aiSectionLoading}
+                    title="Generate description & FAQs with AI"
+                  >
+                    {aiSectionLoading ? <Loader size={12} color="#065F46" /> : <Sparkles size={12} />}
+                    <span>Generate FAQs with AI</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  {/* Full Description: min 240px, counter, Generate chip directly under */}
+                  <div>
+                    <Field
+                      id="edit-full-desc"
+                      label="Comprehensive Description"
+                      required
+                      counter={`${editForm.fullDescription.length}/2000`}
+                      helper="Detail your workflow, client deliverables, communication process, and guarantees."
+                    >
+                      <Textarea
+                        id="edit-full-desc"
+                        style={{ minHeight: 240 }}
+                        maxLength={2000}
+                        value={editForm.fullDescription}
+                        onChange={e => setEditForm(f => ({ ...f, fullDescription: e.target.value }))}
+                        placeholder="Describe your gig in detail. Include deliverables, workflow process, requirements, and why clients should choose you..."
+                      />
+                    </Field>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                      <AiGenerateText
+                        fieldLabel="a detailed comprehensive gig description including deliverables, process, and reasons to choose you"
+                        getContext={() => ({
+                          title: editForm.title,
+                          category: editForm.category,
+                          skills: editForm.skills,
+                          shortDescription: editForm.shortDescription,
+                        })}
+                        getExistingText={() => editForm.fullDescription}
+                        onGenerated={text => setEditForm(f => ({ ...f, fullDescription: text.slice(0, 2000) }))}
+                        label="Generate with AI"
+                      />
+                    </div>
+                  </div>
+
+                  {/* FAQs Section */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0B2942' }}>
+                        Frequently Asked Questions ({(editForm.faqs || []).length})
+                      </h4>
+                      <button
+                        type="button"
+                        className="sk-pill-action-btn"
+                        onClick={() => setEditForm(f => ({
+                          ...f,
+                          faqs: [...(f.faqs || []), { question: '', answer: '' }]
+                        }))}
+                      >
+                        <Plus size={14} />
+                        <span>Add FAQ</span>
+                      </button>
+                    </div>
+
+                    {(!editForm.faqs || editForm.faqs.length === 0) ? (
+                      <button
+                        type="button"
+                        className="fl-faq-empty-card"
+                        onClick={() => setEditForm(f => ({
+                          ...f,
+                          faqs: [{ question: '', answer: '' }]
+                        }))}
+                      >
+                        <HelpCircle size={24} color="#10B981" />
+                        <strong style={{ color: '#0B2942' }}>No FAQs added yet</strong>
+                        <span>Click here or use &quot;Generate FAQs with AI&quot; to answer questions on revisions, tools, and deliverables.</span>
+                      </button>
+                    ) : (
+                      <div className="fl-faq-list">
+                        {editForm.faqs.map((faq, i) => (
+                          <div key={i} className="fl-faq-card">
+                            <div className="fl-faq-card__head">
+                              <span className="fl-faq-card__num">FAQ #{i + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditForm(f => ({
+                                  ...f,
+                                  faqs: f.faqs.filter((_, idx) => idx !== i)
+                                }))}
+                                className="fl-faq-card__remove"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <Field label="Question" required>
+                              <Input
+                                placeholder="e.g. Do you provide the Figma and source files?"
+                                value={faq.question}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(f => ({
+                                    ...f,
+                                    faqs: f.faqs.map((item, idx) => idx === i ? { ...item, question: val } : item)
+                                  }));
+                                }}
+                              />
+                            </Field>
+
+                            <Field label="Answer" required>
+                              <Textarea
+                                style={{ minHeight: 80 }}
+                                placeholder="Clear answer explaining how you handle this..."
+                                value={faq.answer}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(f => ({
+                                    ...f,
+                                    faqs: f.faqs.map((item, idx) => idx === i ? { ...item, answer: val } : item)
+                                  }));
+                                }}
+                              />
+                            </Field>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          className="fl-add-faq-dashed-btn"
+                          onClick={() => setEditForm(f => ({
+                            ...f,
+                            faqs: [...(f.faqs || []), { question: '', answer: '' }]
+                          }))}
+                        >
+                          <Plus size={15} />
+                          <span>Add Another FAQ</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* ─── SECTION 4: MEDIA ─── */}
+              <section id="fl-edit-sec-media" className="fl-section-card">
+                <div className="fl-section-card__header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="fl-sec-icon-circle">
+                      <Upload size={20} />
+                    </div>
+                    <div>
+                      <h3 className="fl-section-card__title">Media & Visual Assets</h3>
+                      <span className="fl-section-card__hint">High-resolution 16:9 cover banner and portfolio gallery samples</span>
+                    </div>
+                  </div>
+                  {bannerPreview && (
+                    <span className="fl-cover-badge">✓ Cover Active</span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {/* 16:9 Cover Banner Dropzone */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label className="sk-field__label" style={{ fontWeight: 800, color: '#0B2942' }}>
+                      Primary 16:9 Cover Banner <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+
+                    <div className="fl-media-dropzone" onClick={() => setShowImageSourcePicker(true)}>
+                      {bannerPreview ? (
+                        <div className="fl-banner-preview-box">
+                          <img src={bannerPreview} alt="Cover Preview" className="fl-banner-preview-img" />
+                          <div className="fl-banner-preview-actions">
+                            <button
+                              type="button"
+                              className="fl-banner-change-btn"
+                              onClick={(e) => { e.stopPropagation(); setShowImageSourcePicker(true); }}
+                            >
+                              Change Cover
+                            </button>
+                            <button
+                              type="button"
+                              className="fl-banner-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setBannerFile(null);
+                                setBannerPreview(null);
+                              }}
+                              aria-label="Remove banner"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="fl-dropzone-prompt">
+                          <div className="fl-dropzone-icon">
+                            <Upload size={24} />
+                          </div>
+                          <strong className="fl-dropzone-title">Click to upload 16:9 Cover Banner</strong>
+                          <span className="fl-dropzone-sub">WEBP, PNG, JPG up to 5MB · Recommended 1200×675</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Portfolio Gallery Grid */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <label className="sk-field__label" style={{ fontWeight: 800, color: '#0B2942' }}>
+                          Portfolio Gallery Samples ({galleryPreviews.length}/5)
+                        </label>
+                        <span style={{ display: 'block', fontSize: 12, color: '#64748B' }}>
+                          Add completed project deliverables or sample screenshots to build buyer trust
+                        </span>
+                      </div>
+                      {galleryPreviews.length < 5 && (
+                        <button
+                          type="button"
+                          className="sk-pill-action-btn"
+                          onClick={() => galleryInputRef.current?.click()}
+                        >
+                          <Plus size={14} />
+                          <span>Add Sample</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      style={{ display: 'none' }}
+                      onChange={handleGalleryUpload}
+                    />
+
+                    <div className="fl-gallery-grid">
+                      {galleryPreviews.map((imgUrl, idx) => (
+                        <div key={idx} className="fl-gallery-slot">
+                          <img src={imgUrl} alt={`Sample ${idx + 1}`} className="fl-gallery-slot__img" />
+                          {bannerPreview === imgUrl && (
+                            <span className="fl-gallery-slot__badge">★ Cover</span>
+                          )}
+                          <div className="fl-gallery-slot__overlay">
+                            {bannerPreview !== imgUrl && (
+                              <button
+                                type="button"
+                                className="fl-gallery-cover-btn"
+                                onClick={() => handleSetCover(imgUrl)}
+                              >
+                                Set as Cover
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="fl-gallery-del-btn"
+                              onClick={() => removeGalleryItem(idx)}
+                              aria-label="Remove sample"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {galleryPreviews.length < 5 && (
+                        <button
+                          type="button"
+                          className="fl-gallery-add-slot"
+                          onClick={() => galleryInputRef.current?.click()}
+                        >
+                          <Plus size={22} />
+                          <span>Add Sample</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ─── SECTION 5: DANGER & STATUS CARD ─── */}
+              <section id="fl-edit-sec-danger" className="fl-section-card fl-section-card--danger">
+                <div className="fl-section-card__header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="fl-sec-icon-circle fl-sec-icon-circle--danger">
+                      <ShieldAlert size={20} />
+                    </div>
+                    <div>
+                      <h3 className="fl-section-card__title">Status & Danger Zone</h3>
+                      <span className="fl-section-card__hint">Pause marketplace visibility or permanently remove this service listing</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="fl-danger-actions-row">
+                  <div className="fl-danger-action-item">
+                    <div>
+                      <strong style={{ display: 'block', fontSize: 14, color: '#0B2942', fontWeight: 800 }}>
+                        {editingGig.status === 'active' ? 'Pause Service Gig' : 'Activate Service Gig'}
+                      </strong>
+                      <span style={{ fontSize: 12.5, color: '#64748B' }}>
+                        {editingGig.status === 'active'
+                          ? 'Temporarily hides this gig from search results while preserving your reviews and ratings.'
+                          : 'Makes this gig visible in marketplace searches and available for buyer orders.'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`sk-pill-action-btn ${editingGig.status === 'active' ? 'sk-pill-action-btn--warning' : 'sk-pill-action-btn--success'}`}
+                      onClick={() => handleToggle(editingGig._id)}
+                    >
+                      {editingGig.status === 'active' ? <><Pause size={14} /> Pause Gig</> : <><Play size={14} /> Activate Gig</>}
+                    </button>
+                  </div>
+
+                  <div className="fl-danger-action-item fl-danger-action-item--delete">
+                    <div>
+                      <strong style={{ display: 'block', fontSize: 14, color: '#DC2626', fontWeight: 800 }}>
+                        Delete Service Listing
+                      </strong>
+                      <span style={{ fontSize: 12.5, color: '#64748B' }}>
+                        {editingGig.activeOrders
+                          ? 'This gig currently has active client orders and cannot be deleted until orders are completed.'
+                          : 'Permanently deletes this gig, packages, and historical view metrics. This action cannot be undone.'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="fl-btn-danger-outline"
+                      onClick={() => setDeleteConfirmId(editingGig._id)}
+                      disabled={!!editingGig.activeOrders}
+                    >
+                      <Trash2 size={14} />
+                      <span>Delete Gig</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </main>
           </div>
-        </form>
-      </Modal>
 
-      <ImageCropModal
-        file={bannerCropFile}
-        aspect={16 / 9}
-        cropShape="rect"
-        title="Adjust Gig Banner"
-        onCancel={() => setBannerCropFile(null)}
-        onConfirm={handleBannerCropConfirm}
-      />
+          {/* ─── D) PREVIEW RIGHT DRAWER ─── */}
+          {previewDrawerOpen && (
+            <div className="fl-preview-drawer-backdrop" onClick={() => setPreviewDrawerOpen(false)}>
+              <aside
+                className="fl-preview-drawer"
+                onClick={e => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Live Buyer Preview"
+              >
+                <div className="fl-preview-drawer__header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="fl-sec-icon-circle" style={{ width: 34, height: 34 }}>
+                      <Eye size={17} color="#10B981" />
+                    </div>
+                    <div>
+                      <h3 className="fl-preview-drawer__title">Live Buyer Preview</h3>
+                      <span style={{ fontSize: 12, color: '#64748B' }}>How buyers see your gig in search & cards</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="fl-preview-drawer__close"
+                    onClick={() => setPreviewDrawerOpen(false)}
+                    aria-label="Close preview"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
 
-      <ImageCropModal
-        file={imageQueue[0] || null}
-        aspect={16 / 9}
-        cropShape="rect"
-        title={imageQueue.length > 1 ? `Adjust Image (${croppedImages.length + 1} of ${croppedImages.length + imageQueue.length})` : 'Adjust Portfolio Image'}
-        onCancel={() => handleImageQueueAdvance(null)}
-        onConfirm={handleImageQueueAdvance}
-      />
+                {/* Small Active/Paused Status Strip */}
+                <div className="fl-preview-drawer__status-strip">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className={`sk-status-dot ${editingGig.status === 'active' ? 'sk-status-dot--active' : 'sk-status-dot--paused'}`} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0B2942' }}>
+                      Status: {editingGig.status === 'active' ? 'Active in Marketplace' : 'Paused'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="sk-pill-action-btn sk-pill-action-btn--xs"
+                    onClick={() => handleToggle(editingGig._id)}
+                  >
+                    {editingGig.status === 'active' ? 'Pause' : 'Activate'}
+                  </button>
+                </div>
 
-      {/* Delete Modal */}
+                <div className="fl-preview-drawer__body" style={{ padding: 20, overflowY: 'auto' }}>
+                  <p className="fl-preview-drawer__note">
+                    Real-time preview updated live as you edit package details and copy. The card below never clips and reflects exact buyer view:
+                  </p>
+
+                  <div style={{ width: '100%', overflow: 'visible' }}>
+                    <GigCard
+                      gig={{
+                        ...editingGig,
+                        ...editForm,
+                        status: editingGig.status,
+                        media: {
+                          ...editingGig.media,
+                          banner: bannerPreview,
+                          images: [...(editingGig.media?.images || []), ...galleryPreviews]
+                        },
+                        startingPrice: editForm.pricing?.basic?.price || editingGig.startingPrice,
+                        deliveryTime: editForm.pricing?.basic?.deliveryTime || editingGig.deliveryTime
+                      }}
+                      variant="public"
+                    />
+                  </div>
+                </div>
+              </aside>
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
+
+      {/* Discard changes confirm */}
       <ConfirmDialog
-        open={!!deleteTarget}
-        title="Delete Gig"
-        message="Are you sure you want to delete this gig? All associated data will be permanently removed."
-        confirmLabel="Yes, Delete"
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTarget(null)}
+        open={showExitConfirm}
+        title="Discard unsaved changes?"
+        message="You have unsaved changes in your gig editor. Are you sure you want to close without saving?"
+        confirmLabel="Discard & Close"
+        danger={true}
+        onConfirm={closeEditSheet}
+        onClose={() => setShowExitConfirm(false)}
       />
 
-      <style>{`
-        .fl-gig-tabs {
-          display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
-          background: var(--color-white); padding: 0.35rem;
-          border-radius: 12px; border: 1px solid rgba(183,201,226,0.35);
-          width: fit-content;
-        }
-        .fl-gig-tab {
-          padding: 0.45rem 1rem; border-radius: 8px;
-          font-size: 0.82rem; font-weight: 600; color: var(--color-text-mid);
-          transition: all 0.2s;
-        }
-        .fl-gig-tab:hover { background: var(--color-secondary); color: var(--color-text-dark); }
-        .fl-gig-tab--active { background: var(--color-primary); color: var(--color-white); }
-        
-        .fl-gig-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 1.5rem;
-        }
-        
-        .fl-gig-card {
-          background: var(--color-bg);
-          border-radius: var(--radius-xl);
-          overflow: hidden;
-          border: 1px solid var(--color-secondary);
-          box-shadow: var(--shadow-md);
-          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-        }
-        .fl-gig-card:hover { 
-          transform: translateY(-6px); 
-          box-shadow: var(--shadow-lg); 
-          border-color: var(--color-accent);
-        }
-        
-        .fl-gig-card__banner {
-          height: 160px; 
-          background: var(--gradient-primary);
-          position: relative; 
-          overflow: hidden;
-        }
-        .fl-gig-card__banner img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .fl-gig-card:hover .fl-gig-card__banner img { transform: scale(1.08); }
-        .fl-gig-card__placeholder {
-          width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-          font-size: 3.5rem; opacity: 0.5;
-        }
-        
-        .fl-gig-card__badges { position: absolute; top: 1rem; right: 1rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 2; }
-        .fl-badge { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .fl-gig-card__stats-overlay {
-          position: absolute; bottom: 1rem; left: 1rem; right: 1rem;
-          display: flex; justify-content: space-between; pointer-events: none; z-index: 2;
-        }
-        .fl-stat-chip {
-          background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
-          padding: 0.2rem 0.5rem; border-radius: var(--radius-md); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--color-primary);
-          box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 0.2rem;
-        }
-        
-        .fl-gig-card__body { padding: var(--space-5); flex-grow: 1; display: flex; flex-direction: column; }
-        .fl-gig-card__category { 
-          font-size: 0.65rem; font-weight: var(--fw-bold); color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em; 
-          margin-bottom: var(--space-2);
-        }
-        .fl-gig-card__title {
-          font-family: var(--font-heading); font-size: var(--fs-md); font-weight: var(--fw-bold);
-          color: var(--color-primary-dark); margin-bottom: var(--space-2); line-height: var(--lh-snug);
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-          text-overflow: ellipsis;
-          transition: color 0.2s;
-        }
-        .fl-gig-card:hover .fl-gig-card__title { color: var(--color-primary-light); }
-        .fl-gig-card__desc {
-          font-size: var(--fs-sm); color: var(--color-text-mid); margin-bottom: var(--space-3); line-height: var(--lh-normal);
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .fl-gig-card__full-desc-preview {
-          display: none;
-        }
-        
-        .fl-gig-card__tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: var(--space-4); }
-        .fl-gig-card__tags .fl-tag { 
-          font-size: var(--fs-xs); 
-          padding: 0.25rem 0.6rem; 
-          border-radius: var(--radius-xl); 
-          background: var(--color-primary); 
-          color: var(--color-white); 
-          font-weight: var(--fw-bold);
-        }
-        
-        .fl-gig-card__pricing-tiers {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
-          margin-bottom: var(--space-4); background: var(--color-secondary); 
-          padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--color-accent);
-        }
-        .fl-tier-preview { text-align: center; display: flex; flex-direction: column; gap: 0.2rem; }
-        .fl-tier-preview span { font-size: 0.65rem; color: var(--color-text-mid); text-transform: uppercase; font-weight: var(--fw-bold); letter-spacing: 0.05em; }
-        .fl-tier-preview strong { font-size: var(--fs-md); color: var(--color-primary-dark); font-weight: var(--fw-bold); }
+      {/* Image Upload Modals */}
+      {showImageSourcePicker && (
+        <ImageSourcePicker
+          onFileSelected={file => {
+            const err = validateFile(file, { maxSizeMB: 5, accept: ['image/jpeg', 'image/png', 'image/webp'] });
+            if (err) { addToast?.({ type: 'error', message: err }); return; }
+            setRawImage(URL.createObjectURL(file));
+            setShowImageSourcePicker(false);
+            setShowCropModal(true);
+          }}
+          onClose={() => setShowImageSourcePicker(false)}
+        />
+      )}
 
-        .fl-gig-card__footer {
-          display: flex; align-items: center; justify-content: space-between;
-          padding-top: var(--space-4); border-top: 1px solid var(--color-secondary); margin-top: auto;
-        }
-        .fl-gig-card__orders { font-size: var(--fs-sm); color: var(--color-text-mid); display: flex; align-items: center; gap: 0.3rem; }
-        .fl-gig-card__orders strong { color: var(--color-primary-dark); font-weight: var(--fw-bold); font-size: var(--fs-md); }
-        .fl-gig-card__actions { display: flex; gap: var(--space-2); }
-
-        /* Edit Form Styles */
-        .fl-edit-section-title { 
-          font-size: 0.8rem; font-weight: 800; color: var(--color-primary); 
-          text-transform: uppercase; border-bottom: 2px solid rgba(183, 201, 226, 0.2);
-          padding-bottom: 0.5rem; margin-bottom: 1.25rem; 
-        }
-        .fl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-        .fl-pricing-edit-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 1.25rem;
-          width: 100%;
-          box-sizing: border-box;
-        }
-        @media (max-width: 900px) { .fl-pricing-edit-grid { grid-template-columns: 1fr; } }
-        
-        .fl-tier-edit {
-          background: var(--color-white);
-          padding: 1.25rem;
-          border-radius: 16px;
-          border: 1px solid rgba(183, 201, 226, 0.35);
-          box-shadow: 0 4px 12px rgba(4, 46, 76, 0.03);
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s ease;
-          min-width: 0;
-          width: 100%;
-          box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
-        }
-        .fl-tier-edit:hover {
-          box-shadow: 0 8px 24px rgba(4, 46, 76, 0.08);
-          transform: translateY(-2px);
-          border-color: rgba(183, 201, 226, 0.6);
-        }
-
-        .fl-tier-edit::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 5px;
-        }
-        /* Tier progression uses one brand-navy family (light → dark) instead of
-           unrelated amber/gray/green hues, so Basic/Standard/Premium read as a
-           depth scale rather than three arbitrary colors. */
-        .fl-tier-edit--basic { border-color: rgba(183, 201, 226, 0.5); }
-        .fl-tier-edit--basic::before { background: linear-gradient(90deg, var(--color-accent), var(--color-primary-light)); }
-        .fl-tier-edit--standard { border-color: rgba(10, 74, 115, 0.3); }
-        .fl-tier-edit--standard::before { background: var(--color-primary-light); }
-        .fl-tier-edit--premium { border-color: rgba(4, 46, 76, 0.35); }
-        .fl-tier-edit--premium::before { background: var(--gradient-primary); }
-
-        .fl-tier-edit__label {
-          display: inline-block;
-          font-size: 0.75rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          padding: 0.3rem 0.8rem;
-          border-radius: 20px;
-        }
-        .fl-tier-edit--basic .fl-tier-edit__label { background: rgba(183, 201, 226, 0.25); color: var(--color-text-mid); }
-        .fl-tier-edit--standard .fl-tier-edit__label { background: rgba(10, 74, 115, 0.1); color: var(--color-primary-light); }
-        .fl-tier-edit--premium .fl-tier-edit__label { background: rgba(4, 46, 76, 0.1); color: var(--color-primary); }
-
-        .fl-form-group { margin-bottom: 1.25rem; }
-        .fl-form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-mid); margin-bottom: 0.4rem; }
-        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field), .fl-form-group textarea {
-          width: 100%; padding: 0.65rem 0.85rem; border-radius: 10px; border: 1px solid rgba(183, 201, 226, 0.35);
-          font-size: 0.88rem; font-family: var(--font-body); transition: all 0.2s; background: var(--color-secondary);
-          box-sizing: border-box; min-width: 0;
-        }
-        .fl-form-group input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-form-group textarea:focus {
-          outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(4,46,76,0.05); background: var(--color-white);
-        }
-        
-        .fl-tier-edit .fl-form-group { margin-bottom: 0.75rem; }
-        .fl-tier-edit .fl-form-group label { font-size: 0.75rem; margin-bottom: 0.25rem; }
-        .fl-tier-edit input:not(.cmbo__input):not(.fl-tag-input__field), .fl-tier-edit textarea {
-          padding: 0.45rem 0.65rem; font-size: 0.82rem; background: #f8fafc;
-        }
-        .fl-tier-edit input:not(.cmbo__input):not(.fl-tag-input__field):focus, .fl-tier-edit textarea:focus {
-          background: var(--color-white);
-        }
-        
-        .fl-empty-message { text-align: center; padding: 4rem 2rem; }
-        @media (max-width: 600px) {
-          .fl-gig-grid { grid-template-columns: 1fr; }
-          .fl-form-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
+      {showCropModal && rawImage && (
+        <ImageCropModal
+          src={rawImage}
+          aspect={16 / 9}
+          onCrop={(blob, url) => {
+            setBannerFile(blob);
+            setBannerPreview(url);
+            setShowCropModal(false);
+            setRawImage(null);
+          }}
+          onClose={() => { setShowCropModal(false); setRawImage(null); }}
+        />
+      )}
     </div>
   );
-};
-
-export default FreelancerGigs;
+}

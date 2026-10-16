@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paymentsAPI } from '../../api/payments';
 import { safeToast as toast } from '../../utils/safeToast';
+import Loader from '../../Components/common/Loader/Loader';
 
 export default function StripeCallback() {
   const navigate = useNavigate();
-  const [status] = useState('Verifying your Stripe account...');
 
   useEffect(() => {
     const verifyStripe = async () => {
@@ -27,13 +27,5 @@ export default function StripeCallback() {
     verifyStripe();
   }, [navigate]);
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-      <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid rgba(183, 201, 226, 0.35)', borderTop: '3px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1rem' }} />
-      <h2>{status}</h2>
-      <style>{`
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      `}</style>
-    </div>
-  );
+  return <Loader fullScreen text="Verifying" />;
 }

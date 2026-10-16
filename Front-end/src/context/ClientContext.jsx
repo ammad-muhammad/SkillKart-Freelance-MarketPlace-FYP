@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getUserId } from '../utils/user';
 import { tokenManager } from '../utils/tokenManager';
 import { log } from "../utils/logger";
+import { notify } from '../utils/notify';
 
 const ClientContext = createContext(null);
 
@@ -299,11 +300,9 @@ export const ClientProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.role, user?.id, user?._id, authLoading, fetchProfile]);
 
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
-  };
+  const showToast = useCallback((message, type = 'success') => {
+    notify(message, { type });
+  }, []);
 
   const saveProfile = async (updatedData = null, options = { skipFetch: false }) => {
     setLoading(true);

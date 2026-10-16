@@ -2,141 +2,203 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useFreelancer } from '../../../context/FreelancerContext';
 import { useAuth } from '../../../hooks/useAuth';
-import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import { useNotification } from '../../../context/NotificationContext';
 import { isMobileApp } from '../../../utils/platform';
+import UserAvatar from '../../../Components/common/UserAvatar/UserAvatar';
 import {
-  Zap,
-  Search,
-  User,
-  Eye,
-  Package,
-  PlusSquare,
-  Briefcase,
-  CreditCard,
-  Layers,
-  ClipboardList,
-  FileText,
-  MessageSquare,
-  Bell,
-  Settings,
-  Lock,
-  CheckCircle2,
-  LogOut,
-  Bot,
-  X
+  LayoutDashboard, Search, Bot, User, Eye, Package, PlusSquare,
+  Briefcase, ClipboardList, FolderOpen, FileText, MessageSquare,
+  Bell, Settings, Lock, CreditCard, LogOut, CheckCircle2,
+  ChevronLeft, ChevronRight, X
 } from 'lucide-react';
-import './FreelancerSidebar.css';
 
-const NAV_ITEMS = [
-  { to: '/freelancer/dashboard', icon: <Zap size={20} />, label: 'Dashboard' },
-  { to: '/browse-projects', icon: <Search size={20} />, label: 'Find Work' },
-  { to: '/freelancer/buddy', icon: <Bot size={20} />, label: 'Buddy AI' },
-  { to: '/freelancer/profile', icon: <User size={20} />, label: 'My Profile' },
-  // The public-profile route isn't registered at all on the mobile build
-  // (see AppRoutes.jsx) — filtered out below rather than left as a dead link.
-  { to: '__public_profile__', icon: <Eye size={20} />, label: 'View Public Profile', mobileHidden: true },
-  { to: '/freelancer/gigs', icon: <Package size={20} />, label: 'My Gigs' },
-  { to: '/freelancer/gigs/create', icon: <PlusSquare size={20} />, label: 'Create New Gig' },
-  { to: '/freelancer/work', icon: <Briefcase size={20} />, label: 'My Work' },
-  { to: '/freelancer/wallet', icon: <CreditCard size={20} />, label: 'Wallet & Earnings' },
-  { to: '/freelancer/portfolio', icon: <Layers size={20} />, label: 'Portfolio' },
-  { to: '/freelancer/proposals', icon: <ClipboardList size={20} />, label: 'My Proposals' },
-  { to: '/freelancer/saved', icon: <FileText size={20} />, label: 'Saved Projects' },
-  { to: '/freelancer/messages', icon: <MessageSquare size={20} />, label: 'Messages' },
-  { to: '/freelancer/notifications', icon: <Bell size={20} />, label: 'Notifications' },
-  { to: '/freelancer/settings', icon: <Settings size={20} />, label: 'Settings' },
-  { to: '/freelancer/security', icon: <Lock size={20} />, label: 'Security' },
+const NAV_GROUPS = [
+  {
+    label: 'MAIN',
+    items: [
+      { to: '/freelancer/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/browse-projects',       icon: Search,           label: 'Find Work' },
+      { to: '/freelancer/buddy',      icon: Bot,              label: 'Buddy AI' },
+    ],
+  },
+  {
+    label: 'PROFILE',
+    items: [
+      { to: '/freelancer/profile', icon: User, label: 'My Profile' },
+      { to: '__public__',          icon: Eye,  label: 'View Public Profile', mobileHidden: true },
+      { to: '/freelancer/portfolio', icon: FolderOpen, label: 'Portfolio' },
+    ],
+  },
+  {
+    label: 'WORK',
+    items: [
+      { to: '/freelancer/gigs',         icon: Package,       label: 'My Gigs' },
+      { to: '/freelancer/gigs/create',  icon: PlusSquare,    label: 'Create New Gig' },
+      { to: '/freelancer/work',         icon: Briefcase,     label: 'My Work' },
+      { to: '/freelancer/proposals',    icon: ClipboardList, label: 'My Proposals' },
+      { to: '/freelancer/saved',        icon: FileText,      label: 'Saved Projects' },
+    ],
+  },
+  {
+    label: 'MONEY',
+    items: [
+      { to: '/freelancer/wallet', icon: CreditCard, label: 'Wallet & Earnings' },
+    ],
+  },
+  {
+    label: 'ACCOUNT',
+    items: [
+      { to: '/freelancer/messages',      icon: MessageSquare, label: 'Messages' },
+      { to: '/freelancer/notifications', icon: Bell,          label: 'Notifications', badge: true },
+      { to: '/freelancer/settings',      icon: Settings,      label: 'Settings' },
+      { to: '/freelancer/security',      icon: Lock,          label: 'Security' },
+    ],
+  },
 ];
 
-const FreelancerSidebar = () => {
-  const [open, setOpen] = useState(false);
+const FreelancerSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
   const { unreadCount } = useNotification();
   const { profile } = useFreelancer();
   const { logout, user } = useAuth();
-  const { fullName, title, avatar } = profile.personalInfo;
+  const [confirmLogout, setConfirmLogout] = useState(false);
+
+  const { fullName, title, avatar } = profile?.personalInfo || {};
   const userId = user?._id || user?.id;
+  const initials = (fullName || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const isVerified = profile?.verificationStatus === 'verified';
+
+  const handleLogout = () => {
+    if (confirmLogout) {
+      setMobileOpen?.(false);
+      logout();
+    } else {
+      setConfirmLogout(true);
+      setTimeout(() => setConfirmLogout(false), 3000);
+    }
+  };
+
+  const sidebarClass = [
+    'fl2-sidebar',
+    collapsed ? 'fl2-sidebar--col' : '',
+    mobileOpen ? 'fl2-sidebar--mob-open' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <>
-      {/* Mobile Header Bar */}
-      <div className="fl-mobile-header">
-        <button 
-          className={`fl-hamburger${open ? ' fl-hamburger--open' : ''}`} 
-          onClick={() => setOpen(!open)} 
-          aria-label={open ? 'Close menu' : 'Open menu'}
-        >
-          <span /><span /><span />
-        </button>
-        <span className="fl-mobile-logo">SkillKart</span>
-      </div>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fl2-mob-overlay" onClick={() => setMobileOpen?.(false)} />
+      )}
 
-      {/* Overlay */}
-      {open && <div className="fl-overlay" onClick={() => setOpen(false)} />}
-
-      <aside className={`fl-sidebar${open ? ' fl-sidebar--open' : ''}`}>
-        {/* Brand */}
-        <div className="fl-sidebar__brand">
-          <span className="fl-sidebar__logo">SkillKart</span>
-          <button className="fl-sidebar__close" onClick={() => setOpen(false)} aria-label="Close menu"><X size={16} /></button>
-        </div>
-
-        {/* Avatar */}
-        <div className="fl-sidebar__avatar-wrap">
-          <div className="fl-sidebar__avatar-container" style={{ position: 'relative', display: 'flex' }}>
-            <div className="fl-sidebar__avatar">
-              <UserAvatar 
-                src={avatar}
-                fullName={fullName}
-              />
-            </div>
-            <span className="fl-sidebar__online-dot" />
-          </div>
-          <div className="fl-sidebar__user-info">
-            <p className="fl-sidebar__name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fullName}</span>
-              {profile.verificationStatus === 'verified' && (
-                <span className="fl-verified-badge" style={{ flexShrink: 0 }} title="Verified Expert">
-                  <CheckCircle2 size={14} color="var(--color-accent)" style={{ marginLeft: 4 }} />
-                </span>
-              )}
-            </p>
-            <p className="fl-sidebar__title">{title}</p>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="fl-sidebar__nav">
-          {NAV_ITEMS.filter((item) => !item.mobileHidden || !isMobileApp()).map((item) => {
-            const to = item.to === '__public_profile__' ? `/freelancers/${userId}` : item.to;
-            return (
-              <NavLink
-                key={item.to}
-                to={to}
-                end={item.to === '/freelancer/gigs' || item.to === '/freelancer/dashboard' || item.to === '/freelancer/profile'}
-                className={({ isActive }) =>
-                  `fl-sidebar__link${isActive ? ' fl-sidebar__link--active' : ''}`
-                }
-                onClick={() => setOpen(false)}
+      <aside className={sidebarClass} aria-label="Freelancer navigation">
+        {/* Brand row */}
+        <div className="fl2-sidebar__brand">
+          <span className="fl2-sidebar__logo">SkillKart</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {/* Mobile close */}
+            {mobileOpen && (
+              <button
+                className="fl2-sidebar__col-btn"
+                onClick={() => setMobileOpen?.(false)}
+                aria-label="Close menu"
               >
-                <span className="fl-sidebar__icon">{item.icon}</span>
-                <span>{item.label}</span>
-                {item.to === '/freelancer/notifications' && unreadCount > 0 && (
-                  <span className="fl-sidebar__notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
-                )}
-              </NavLink>
-            );
-          })}
+                <X size={15} />
+              </button>
+            )}
+            {/* Desktop collapse */}
+            {!mobileOpen && (
+              <button
+                className="fl2-sidebar__col-btn"
+                onClick={() => setCollapsed?.(!collapsed)}
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Profile card */}
+        <div className="fl2-sidebar__profile">
+          <div className="fl2-sidebar__av-wrap">
+            <div className="fl2-sidebar__av">
+              {avatar
+                ? <img src={avatar} alt={fullName} />
+                : <UserAvatar src={avatar} fullName={fullName} size={40} />
+              }
+            </div>
+            <span className="fl2-sidebar__online" title="Online" />
+          </div>
+          <div className="fl2-sidebar__user">
+            <div className="fl2-sidebar__name">
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {fullName || 'Freelancer'}
+              </span>
+              {isVerified && (
+                <CheckCircle2 size={13} className="fl2-verified" title="Verified Expert" />
+              )}
+            </div>
+            <div className="fl2-sidebar__role">Freelancer</div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="fl2-sidebar__nav">
+          {NAV_GROUPS.map(group => (
+            <div key={group.label}>
+              <div className="fl2-nav-group">{group.label}</div>
+              {group.items
+                .filter(item => !item.mobileHidden || !isMobileApp())
+                .map(item => {
+                  const to = item.to === '__public__' ? `/freelancers/${userId}` : item.to;
+                  const Icon = item.icon;
+                  const isEnd = [
+                    '/freelancer/dashboard',
+                    '/freelancer/profile',
+                    '/freelancer/gigs',
+                  ].includes(item.to);
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={to}
+                      end={isEnd}
+                      className={({ isActive }) =>
+                        `fl2-nav-link${isActive ? ' fl2-nav-link--active' : ''}`
+                      }
+                      onClick={() => setMobileOpen?.(false)}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      <span className="fl2-nav-link__icon">
+                        <Icon size={17} strokeWidth={1.75} />
+                      </span>
+                      <span className="fl2-nav-link__label">{item.label}</span>
+                      {item.badge && unreadCount > 0 && (
+                        <span className="fl2-nav-badge">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+            </div>
+          ))}
         </nav>
 
-        {/* Logout */}
-        <div className="fl-sidebar__footer">
+        {/* Footer / Logout */}
+        <div className="fl2-sidebar__foot">
           <button
-            className="fl-sidebar__logout"
-            onClick={() => { setOpen(false); logout(); }}
+            className={`fl2-nav-link${confirmLogout ? ' fl2-nav-link--logout-confirm' : ''}`}
+            onClick={handleLogout}
+            style={{ color: confirmLogout ? 'var(--fl-danger)' : undefined }}
+            title={collapsed ? (confirmLogout ? 'Click again to confirm' : 'Logout') : undefined}
           >
-            <span className="fl-sidebar__icon"><LogOut size={20} /></span>
-            <span>Logout</span>
+            <span className="fl2-nav-link__icon">
+              <LogOut size={17} strokeWidth={1.75} />
+            </span>
+            <span className="fl2-nav-link__label">
+              {confirmLogout ? 'Confirm logout?' : 'Logout'}
+            </span>
           </button>
         </div>
       </aside>

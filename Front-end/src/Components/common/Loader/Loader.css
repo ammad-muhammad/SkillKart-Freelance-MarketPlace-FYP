@@ -1,60 +1,296 @@
-.sk-loader-container {
-  display: flex;
-  justify-content: center;
+/* ==========================================================================
+   SkillKart Dual Loader Styles
+   - Wi-Fi Rotating Arcs Loader (Page Navigation / FullScreen)
+   - Standard Circular Spinner (Buttons, Chips, Fill with AI)
+   ========================================================================== */
+
+.sk-loader-wrapper {
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  min-height: 200px;
-  width: 100%;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  box-sizing: border-box;
 }
 
-.sk-loader--fullscreen {
+/* Inline variant for buttons, tags, pills, chips, and AI fills */
+.sk-loader-wrapper--inline {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* Fullscreen overlay variant for page navigation */
+.sk-loader-wrapper--fullscreen {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  inset: 0;
   z-index: 9999;
-}
-
-.sk-loader-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  animation: sk-fade-in 0.3s ease-out;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  max-width: 100vw;
+  min-height: 100vh;
 }
 
-.sk-loader-icon {
-  color: var(--color-primary);
+/* ==========================================================================
+   Wi-Fi Loader (SkillKart Theme: Mint / Emerald #10B981 / Navy #0B2942)
+   ========================================================================== */
+#wifi-loader {
+  --background: #EAFBF4;
+  --front-color: #10B981;
+  --back-color: #A7F3D0;
+  --text-color: #0B2942;
+  width: 64px;
+  height: 64px;
+  border-radius: 50px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#wifi-loader svg {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#wifi-loader svg circle {
+  position: absolute;
+  fill: none;
+  stroke-width: 6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(-100deg);
+  transform-origin: center;
+}
+
+#wifi-loader svg circle.back {
+  stroke: var(--back-color);
+  opacity: 0.6;
+}
+
+#wifi-loader svg circle.front {
+  stroke: var(--front-color);
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.4));
+}
+
+#wifi-loader svg circle.new {
+  stroke: var(--front-color);
+  opacity: 0;
+}
+
+#wifi-loader svg.circle-outer {
+  height: 86px;
+  width: 86px;
+}
+
+#wifi-loader svg.circle-outer circle {
+  stroke-dasharray: 62.75 188.25;
+}
+
+#wifi-loader svg.circle-outer circle.back {
+  animation: circle-outer135 1.8s ease infinite 0.3s;
+}
+
+#wifi-loader svg.circle-outer circle.front {
+  animation: circle-outer135 1.8s ease infinite 0.15s;
+}
+
+#wifi-loader svg.circle-middle {
+  height: 60px;
+  width: 60px;
+}
+
+#wifi-loader svg.circle-middle circle {
+  stroke-dasharray: 42.5 127.5;
+}
+
+#wifi-loader svg.circle-middle circle.back {
+  animation: circle-middle6123 1.8s ease infinite 0.25s;
+}
+
+#wifi-loader svg.circle-middle circle.front {
+  animation: circle-middle6123 1.8s ease infinite 0.1s;
+}
+
+#wifi-loader svg.circle-inner {
+  height: 34px;
+  width: 34px;
+}
+
+#wifi-loader svg.circle-inner circle {
+  stroke-dasharray: 22 66;
+}
+
+#wifi-loader svg.circle-inner circle.back {
+  animation: circle-inner162 1.8s ease infinite 0.2s;
+}
+
+#wifi-loader svg.circle-inner circle.front {
+  animation: circle-inner162 1.8s ease infinite 0.05s;
+}
+
+#wifi-loader .text {
+  position: absolute;
+  bottom: -40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-transform: capitalize;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+#wifi-loader .text::before,
+#wifi-loader .text::after {
+  content: attr(data-text);
+}
+
+#wifi-loader .text::before {
+  color: var(--text-color);
+}
+
+#wifi-loader .text::after {
+  color: var(--front-color);
+  animation: text-animation76 3.6s ease infinite;
+  position: absolute;
+  left: 0;
+}
+
+@keyframes circle-outer135 {
+  0% {
+    stroke-dashoffset: 25;
+  }
+
+  25% {
+    stroke-dashoffset: 0;
+  }
+
+  65% {
+    stroke-dashoffset: 301;
+  }
+
+  80% {
+    stroke-dashoffset: 276;
+  }
+
+  100% {
+    stroke-dashoffset: 276;
+  }
+}
+
+@keyframes circle-middle6123 {
+  0% {
+    stroke-dashoffset: 17;
+  }
+
+  25% {
+    stroke-dashoffset: 0;
+  }
+
+  65% {
+    stroke-dashoffset: 204;
+  }
+
+  80% {
+    stroke-dashoffset: 187;
+  }
+
+  100% {
+    stroke-dashoffset: 187;
+  }
+}
+
+@keyframes circle-inner162 {
+  0% {
+    stroke-dashoffset: 9;
+  }
+
+  25% {
+    stroke-dashoffset: 0;
+  }
+
+  65% {
+    stroke-dashoffset: 106;
+  }
+
+  80% {
+    stroke-dashoffset: 97;
+  }
+
+  100% {
+    stroke-dashoffset: 97;
+  }
+}
+
+@keyframes text-animation76 {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  50% {
+    clip-path: inset(0);
+  }
+
+  100% {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+/* ==========================================================================
+   Standard Normal Circular Spinner (Buttons / Fill with AI)
+   ========================================================================== */
+.sk-normal-spinner {
+  display: block;
+  flex-shrink: 0;
+  animation: sk-spinner-rotate 0.8s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes sk-spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .sk-loader-text {
-  font-family: var(--font-heading);
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: var(--color-text-dark);
-  letter-spacing: 0.5px;
-  margin: 0;
-  animation: sk-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: -0.01em;
+  text-align: center;
+  user-select: none;
 }
 
-.spin {
-  animation: sk-spin 1s linear infinite;
-}
-
-@keyframes sk-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes sk-fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes sk-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .sk-normal-spinner {
+    animation-duration: 2s;
+  }
+  #wifi-loader svg circle.back,
+  #wifi-loader svg circle.front,
+  #wifi-loader .text::after {
+    animation: none !important;
+  }
 }

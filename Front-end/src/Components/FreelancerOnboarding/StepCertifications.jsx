@@ -32,20 +32,20 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 30 }}
+      initial={{ opacity: 0, x: 25 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      exit={{ opacity: 0, x: -25 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
     >
       <div className="fob-form-group">
         <div className="fob-section-header">
           <div>
             <label className="fob-label">
-              <Award size={15} className="fob-label-icon" />
-              Certifications & Credentials
+              <Award size={16} className="fob-label-icon" />
+              Certifications & Professional Credentials
             </label>
             <p className="fob-hint">
-              Verified certifications boost your credibility and earning potential.
+              Industry certifications (AWS, Google, Meta, Scrum) boost your profile verification and client trust.
             </p>
           </div>
           <button
@@ -66,9 +66,12 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
               exit={{ opacity: 0 }}
               className="fob-empty-state"
             >
-              <Award size={40} className="fob-empty-icon" />
-              <p>
-                No certifications yet. Add certificates to stand out!
+              <Award size={42} className="fob-empty-icon" />
+              <p style={{ fontWeight: 600, color: "var(--fob-text)", marginBottom: "4px" }}>
+                No certifications added yet
+              </p>
+              <p style={{ fontSize: "13px", color: "var(--fob-text-muted)" }}>
+                Click "Add Certification" to show off your verified credentials.
               </p>
             </motion.div>
           )}
@@ -76,15 +79,16 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
           {certifications.map((cert, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25 }}
               className="fob-dynamic-item"
             >
               <div className="fob-dynamic-item-header">
                 <span className="fob-item-number">
-                  <Award size={14} /> Certification #{index + 1}
+                  <Award size={14} style={{ color: "#10B981" }} />
+                  Certification #{index + 1}
                 </span>
                 <button
                   type="button"
@@ -106,7 +110,7 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
                       updateCertification(index, "name", e.target.value)
                     }
                     className="fob-input"
-                    placeholder="e.g. AWS Solutions Architect"
+                    placeholder="e.g. AWS Certified Solutions Architect"
                   />
                 </div>
                 <div className="fob-form-group">
@@ -123,8 +127,8 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
                 </div>
               </div>
 
-              <div className="fob-form-row">
-                <div className="fob-form-group">
+              <div className="fob-form-row" style={{ marginBottom: 0 }}>
+                <div className="fob-form-group" style={{ marginBottom: 0 }}>
                   <label className="fob-label">Issue Date</label>
                   <input
                     type="month"
@@ -135,10 +139,10 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
                     className="fob-input"
                   />
                 </div>
-                <div className="fob-form-group">
+                <div className="fob-form-group" style={{ marginBottom: 0 }}>
                   <label className="fob-label">
                     <ExternalLink size={13} className="fob-label-icon" />
-                    Credential URL
+                    Verification URL / Credential ID
                   </label>
                   <input
                     type="url"
@@ -147,7 +151,7 @@ const StepCertifications = ({ formData, setFormData, errors }) => {
                       updateCertification(index, "url", e.target.value)
                     }
                     className="fob-input"
-                    placeholder="https://credential.net/..."
+                    placeholder="https://credly.com/badges/..."
                   />
                 </div>
               </div>

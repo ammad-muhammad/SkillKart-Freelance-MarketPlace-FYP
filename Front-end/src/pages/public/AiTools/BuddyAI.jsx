@@ -6,6 +6,10 @@ import { aiAPI } from '../../../api/ai';
 import { useAuth } from '../../../hooks/useAuth';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+    Bot, Send, Sparkles, MessageSquareText, IndianRupee, Clock,
+    ShieldCheck, Lock, Trash2, CheckCircle2, ChevronDown
+} from 'lucide-react';
 import './AiTools.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -13,15 +17,47 @@ gsap.registerPlugin(ScrollTrigger);
 const GUEST_LIMIT = 3;
 const GUEST_KEY = 'buddyGuestUsed'; // shared with the floating BuddyWidget
 
+const FEATURES = [
+    { icon: MessageSquareText, title: 'Smart Proposals', desc: 'Generate personalized project bids that resonate with specific client project briefs.', prompt: 'Help me write a winning proposal for a web development project' },
+    { icon: Sparkles, title: 'Negotiation Strategy', desc: 'Get real-time advice on how to handle pricing objections and communication gaps.', prompt: 'Give me negotiation tips for handling a client who wants to lower my rate' },
+    { icon: IndianRupee, title: 'Pricing Insights', desc: 'Buddy AI analyzes market trends to help you set profitable and competitive rates.', prompt: 'What is a fair rate for a React developer with 2 years of experience?' },
+    { icon: Clock, title: 'Instant Responses', desc: 'No queues, no waiting — Buddy replies instantly, any hour of any day.', prompt: 'How can I respond professionally to a difficult client?' },
+];
+
+const FAQS = [
+    { q: "How accurate is Buddy AI's market data?", a: "Buddy syncs with SkillKart's internal platform data hourly, giving you the most up-to-date pricing and skill demand insights." },
+    { q: "Can Buddy write my whole profile?", a: "Buddy can certainly draft it for you! We recommend using its output as a strong base and adding your personal voice for the best results." },
+    { q: "Is Buddy AI available to all users?", a: "Yes, currently Buddy AI is accessible to all SkillKart freelancers to help bridge the gap for new students entering the market." },
+];
+
+/* ── Orbiting decorative chip ── */
+function OrbitChip({ label, angle }) {
+    const r = 88; // orbit radius in px
+    const rad = (angle * Math.PI) / 180;
+    const x = Math.cos(rad) * r;
+    const y = Math.sin(rad) * r;
+    return (
+        <span
+            className="buddy-orbit-chip"
+            aria-hidden="true"
+            style={{ transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))` }}
+        >
+            {label}
+        </span>
+    );
+}
+
 export default function BuddyAI() {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
+    const chatPanelRef = useRef(null);
     const [messages, setMessages] = useState([
         { role: 'ai', text: "Hello! I'm your SkillKart Buddy. How can I assist you with your freelance journey today?" }
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [limitReached, setLimitReached] = useState(false);
+    const [openFaq, setOpenFaq] = useState(null);
     const scrollRef = useRef(null);
     const pageRef = useRef(null);
 
@@ -40,25 +76,43 @@ export default function BuddyAI() {
 
         const ctx = gsap.context(() => {
             const tl = gsap.timeline();
-            tl.from(".ai-hero__badge", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" })
-              .from(".ai-hero__title", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, "-=0.3")
-              .from(".ai-hero__sub", { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.5")
-              .from(".ai-hero-stat", { opacity: 0, y: 15, stagger: 0.08, duration: 0.4, ease: "power3.out" }, "-=0.3")
-              .from(".ai-hero .ai-btn-primary", { opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.7)" }, "-=0.4");
+            tl.from(".bai-badge", { opacity: 0, y: -16, duration: 0.5, ease: "power3.out" })
+              .from(".bai-title", { opacity: 0, y: 24, duration: 0.7, ease: "power3.out" }, "-=0.25")
+              .from(".bai-sub", { opacity: 0, y: 18, duration: 0.6, ease: "power3.out" }, "-=0.4")
+              .from(".bai-chip", { opacity: 0, y: 12, stagger: 0.07, duration: 0.4, ease: "power3.out" }, "-=0.3")
+              .from(".bai-try-label,.bai-try-chips", { opacity: 0, y: 8, duration: 0.35, ease: "power3.out" }, "-=0.2")
+              .from(".bai-chat-col", { opacity: 0, y: 40, duration: 0.9, ease: "power3.out" }, "-=0.6")
+              .from(".buddy-orb", { opacity: 0, scale: 0.7, duration: 0.6, ease: "back.out(1.5)" }, "-=0.7");
 
-            gsap.fromTo(".buddy-chat", 
-                { opacity: 0, y: 40 },
-                { 
-                    opacity: 1, y: 0, duration: 1, ease: "power3.out",
-                    scrollTrigger: { trigger: ".buddy-chat", start: "top 85%" }
+            gsap.fromTo(".bai-bento-tile",
+                { opacity: 0, y: 30 },
+                {
+                    opacity: 1, y: 0, stagger: 0.1, duration: 0.7, ease: "power3.out",
+                    scrollTrigger: { trigger: ".bai-bento", start: "top 88%" }
                 }
             );
 
-            gsap.fromTo(".ai-feature-card", 
-                { opacity: 0, y: 30 },
-                { 
-                    opacity: 1, y: 0, stagger: 0.15, duration: 0.8, ease: "power3.out",
-                    scrollTrigger: { trigger: ".ai-features", start: "top 85%" }
+            gsap.fromTo(".bai-privacy-text,.bai-security-card",
+                { opacity: 0, y: 28 },
+                {
+                    opacity: 1, y: 0, stagger: 0.12, duration: 0.8, ease: "power3.out",
+                    scrollTrigger: { trigger: ".bai-privacy", start: "top 88%" }
+                }
+            );
+
+            gsap.fromTo(".bai-faq-item",
+                { opacity: 0, y: 20 },
+                {
+                    opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: "power3.out",
+                    scrollTrigger: { trigger: ".bai-faq", start: "top 88%" }
+                }
+            );
+
+            gsap.fromTo(".bai-cta-panel",
+                { opacity: 0, scale: 0.96 },
+                {
+                    opacity: 1, scale: 1, duration: 0.7, ease: "power3.out",
+                    scrollTrigger: { trigger: ".bai-cta", start: "top 90%" }
                 }
             );
 
@@ -130,183 +184,276 @@ export default function BuddyAI() {
         "Best pricing strategy"
     ];
 
+    const scrollToChat = () => {
+        chatPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+            chatPanelRef.current?.querySelector('.ai-input')?.focus();
+        }, 400);
+    };
+
+    const handleBentoAsk = (prompt) => {
+        setInput(prompt);
+        scrollToChat();
+    };
+
     return (
-        <div className="ai-page" ref={pageRef}>
+        <div className="bai-page" ref={pageRef}>
+            {/* Ambient background blobs */}
+            <div className="bai-bg" aria-hidden="true">
+                <div className="bai-blob bai-blob--1" />
+                <div className="bai-blob bai-blob--2" />
+                <div className="bai-blob bai-blob--3" />
+            </div>
+
             <Navbar />
 
-            {/* ══ HERO ══ */}
-            <header className="ai-hero">
-                <div className="ai-hero__bg">
-                    <div className="ai-hero__orb ai-hero__orb--1" />
-                    <div className="ai-hero__orb ai-hero__orb--2" />
-                    <div className="ai-hero__grid" />
-                </div>
-                <div className="container ai-hero__inner">
-                    <span className="ai-hero__badge">AI Productivity Assistant</span>
-                    <h1 className="ai-hero__title">
-                        Your 24/7 Smart <span className="ai-hero__accent">Freelance</span><br />
-                        Business Partner
-                    </h1>
-                    <p className="ai-hero__sub">
-                        SkillKart Buddy helps you craft perfect proposals, set competitive rates, 
-                        and navigate complex client communications with ease.
-                    </p>
-                    <div className="ai-hero-stats">
-                        <span className="ai-hero-stat">🤖 24/7 Availability</span>
-                        <span className="ai-hero-stat">📝 Smart Proposals</span>
-                        <span className="ai-hero-stat">📊 Pricing Analysis</span>
-                        <span className="ai-hero-stat">⚡ Instant Responses</span>
-                    </div>
-                </div>
-            </header>
+            {/* ══ HERO + CHAT TOGETHER ══ */}
+            <section className="bai-hero-section">
+                <div className="container bai-hero-grid">
 
-            {/* ══ CHAT INTERFACE ══ */}
-            <section className="ai-tool-section">
-                <div className="container">
-                    <div className="buddy-chat">
-                        <div className="buddy-chat-header">
-                            <div style={{ width: '40px', height: '40px', background: '#042E4C', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🤖</span>
-                            </div>
-                            <div>
-                                <h3 style={{ fontWeight: 700, color: '#042E4C' }}>Buddy AI Assistant</h3>
-                                <p style={{ fontSize: '0.75rem', color: '#10b981' }}>● Online & Ready to help</p>
-                            </div>
+                    {/* Left — text + chips */}
+                    <div className="bai-left-col">
+                        <span className="bai-badge">
+                            <Bot size={14} /> AI Productivity Assistant
+                        </span>
+                        <h1 className="bai-title">
+                            Your 24/7 Smart{' '}
+                            <span className="bai-accent">Freelance</span>{' '}
+                            Business Partner
+                        </h1>
+                        <p className="bai-sub">
+                            SkillKart Buddy helps you craft perfect proposals, set competitive rates,
+                            and navigate complex client communications with ease.
+                        </p>
+
+                        {/* Feature chips */}
+                        <div className="bai-chips-row">
+                            <span className="bai-chip"><Bot size={13} /> 24/7 Availability</span>
+                            <span className="bai-chip"><MessageSquareText size={13} /> Smart Proposals</span>
+                            <span className="bai-chip"><IndianRupee size={13} /> Pricing Analysis</span>
+                            <span className="bai-chip"><Clock size={13} /> Instant Responses</span>
                         </div>
 
-                        <div className="buddy-chat-messages" ref={scrollRef}>
-                            {messages.map((m, i) => (
-                                <div key={i} className={`buddy-bubble buddy-bubble--${m.role}`}>
-                                    {m.text}
-                                </div>
-                            ))}
-                            {isTyping && (
-                                <div className="buddy-bubble buddy-bubble--ai" style={{ width: '60px', textAlign: 'center' }}>
-                                    ...
-                                </div>
-                            )}
-                        </div>
-
-                        {limitReached ? (
-                            <div style={{ margin: '0 1.5rem 1.25rem', padding: '1.1rem', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '14px', textAlign: 'center' }}>
-                                <p style={{ fontSize: '0.9rem', color: '#3730a3', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
-                                    You've used your {GUEST_LIMIT} free messages. Log in to keep chatting with Buddy — it's free and unlimited.
-                                </p>
-                                <button className="ai-btn-primary" style={{ width: 'auto', padding: '0.6rem 1.5rem' }} onClick={() => navigate('/login')}>
-                                    Log in to continue
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <div style={{ padding: '0 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                                    {suggestions.map((s, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => handleSend(s)}
-                                            disabled={isTyping}
-                                            style={{ padding: '0.4rem 0.8rem', background: '#f1f5f9', borderRadius: '20px', fontSize: '0.8rem', color: '#4a5568', fontWeight: 600, border: '1px solid #e2e8f0', cursor: 'pointer' }}
-                                        >
-                                            {s}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="buddy-chat-input-wrap">
-                                    <input
-                                        type="text"
-                                        className="ai-input"
-                                        style={{ borderRadius: '24px' }}
-                                        placeholder="Ask Buddy anything about your freelance project..."
-                                        value={input}
-                                        onChange={e => setInput(e.target.value)}
-                                        onKeyPress={e => e.key === 'Enter' && handleSend()}
-                                    />
+                        {/* Try asking row */}
+                        <div className="bai-try-row">
+                            <span className="bai-try-label">Try asking:</span>
+                            <div className="bai-try-chips">
+                                {suggestions.map((s, i) => (
                                     <button
-                                        onClick={() => handleSend()}
-                                        className="ai-btn-primary"
-                                        style={{ borderRadius: '50%', width: '48px', height: '48px', padding: 0, flexShrink: 0 }}
-                                        disabled={!input.trim() || isTyping}
+                                        key={i}
+                                        className="buddy-suggestion"
+                                        onClick={() => handleSend(s)}
+                                        disabled={isTyping || limitReached}
                                     >
-                                        ➔
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right — chat window with orb */}
+                    <div className="bai-chat-col" ref={chatPanelRef}>
+                        {/* Orb + orbiting decorative chips */}
+                        <div className="buddy-orb-wrap" aria-hidden="true">
+                            <div className="buddy-orb">
+                                <Bot size={28} />
+                            </div>
+                            <div className="buddy-orb-halo" />
+                            <OrbitChip label="Proposals" angle={-30} />
+                            <OrbitChip label="Pricing" angle={60} />
+                            <OrbitChip label="Clients" angle={150} />
+                            <OrbitChip label="Strategy" angle={240} />
+                        </div>
+
+                        {/* Chat window */}
+                        <div className="buddy-chat">
+                            {/* Light glass header */}
+                            <div className="buddy-chat-header">
+                                <div className="buddy-chat-header__avatar">
+                                    <Bot size={20} />
+                                </div>
+                                <div>
+                                    <div className="buddy-chat-header__name">Buddy AI Assistant</div>
+                                    <div className="buddy-chat-header__status">Online &amp; ready to help</div>
+                                </div>
+                            </div>
+
+                            <div
+                                className="buddy-chat-messages"
+                                ref={scrollRef}
+                                aria-live="polite"
+                                aria-label="Chat messages"
+                            >
+                                {messages.map((m, i) => (
+                                    <div key={i} className={`buddy-bubble buddy-bubble--${m.role}`}>
+                                        {m.text}
+                                    </div>
+                                ))}
+                                {isTyping && (
+                                    <div className="buddy-bubble buddy-bubble--ai buddy-typing" aria-label="Buddy is typing">
+                                        <span /><span /><span />
+                                    </div>
+                                )}
+                            </div>
+
+                            {limitReached ? (
+                                <div className="buddy-limit">
+                                    <p>
+                                        You've used your {GUEST_LIMIT} free messages. Log in to keep
+                                        chatting with Buddy — it's free and unlimited.
+                                    </p>
+                                    <button className="ai-btn-primary" onClick={() => navigate('/login')}>
+                                        Log in to continue
                                     </button>
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="buddy-chat-input-wrap">
+                                        <input
+                                            type="text"
+                                            className="ai-input"
+                                            placeholder="Ask Buddy anything about your freelance project..."
+                                            value={input}
+                                            onChange={e => setInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleSend()}
+                                            aria-label="Message Buddy AI"
+                                        />
+                                        <button
+                                            onClick={() => handleSend()}
+                                            className="buddy-send"
+                                            disabled={!input.trim() || isTyping}
+                                            aria-label="Send message"
+                                        >
+                                            <Send size={17} />
+                                        </button>
+                                    </div>
 
-                                {!isAuthenticated && (
-                                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', margin: '0.6rem 1.5rem 0' }}>
-                                        {guestRemaining} free message{guestRemaining === 1 ? '' : 's'} left ·{' '}
-                                        <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: 'var(--color-primary, #042e4c)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.75rem' }}>
-                                            log in
-                                        </button>{' '}for unlimited
-                                    </p>
-                                )}
-                            </>
-                        )}
+                                    {!isAuthenticated && (
+                                        <p className="buddy-note">
+                                            {guestRemaining} free message{guestRemaining === 1 ? '' : 's'} left ·{' '}
+                                            <button onClick={() => navigate('/login')}>log in</button> for unlimited
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* ══ FEATURES ══ */}
-            <section className="ai-features">
+            {/* ══ CAPABILITIES BENTO ══ */}
+            <section className="bai-bento-section">
                 <div className="container">
-                    <div className="ai-section-title">
-                        <h2>Advanced AI Capabilities</h2>
-                        <p>Leverage the power of cutting-edge NLP models trained on successful freelancing data.</p>
+                    <div className="bai-section-head">
+                        <span className="bai-section-eyebrow"><Sparkles size={13} /> Capabilities</span>
+                        <h2 className="bai-section-title">
+                            Advanced AI <span className="bai-accent">Capabilities</span>
+                        </h2>
+                        <p className="bai-section-sub">
+                            Leverage the power of cutting-edge NLP models trained on successful freelancing data.
+                        </p>
                     </div>
-                    <div className="ai-features-grid">
-                        {[
-                            { icon: '📝', title: 'Smart Proposals', desc: 'Generate personalized project bids that resonate with specific client project briefs.' },
-                            { icon: '💬', title: 'Negotiation Strategy', desc: 'Get real-time advice on how to handle pricing objections and communication gaps.' },
-                            { icon: '✨', title: 'Content Polishing', desc: 'Refine your gig titles, descriptions, and FAQs to maximize conversion rates.' },
-                            { icon: '📊', title: 'Pricing Insights', desc: 'Buddy AI analyzes market trends to help you set profitable and competitive rates.' }
-                        ].map((f, i) => (
-                            <div key={i} className="ai-feature-card">
-                                <span className="ai-feature-icon">{f.icon}</span>
-                                <h4 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.75rem' }}>{f.title}</h4>
-                                <p style={{ fontSize: '0.95rem', color: '#4a5568' }}>{f.desc}</p>
+
+                    <div className="bai-bento">
+                        {FEATURES.map((f, i) => (
+                            <div
+                                key={i}
+                                className={`bai-bento-tile bai-bento-tile--${i}`}
+                                onMouseMove={e => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                    e.currentTarget.style.setProperty('--mx', `${x}%`);
+                                    e.currentTarget.style.setProperty('--my', `${y}%`);
+                                }}
+                            >
+                                <span className="bai-bento-icon"><f.icon size={22} /></span>
+                                <h4 className="bai-bento-h4">{f.title}</h4>
+                                <p className="bai-bento-p">{f.desc}</p>
+                                <button
+                                    className="bai-bento-ask"
+                                    onClick={() => handleBentoAsk(f.prompt)}
+                                    aria-label={`Ask Buddy about ${f.title}`}
+                                >
+                                    Ask Buddy ↗
+                                </button>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* ══ SECURE DATA ══ */}
-            <section style={{ padding: '100px 0', background: '#042E4C', color: '#fff' }}>
-                <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '4rem', alignItems: 'center' }}>
-                    <div>
-                        <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem', color: '#fff' }}>Encrypted &amp; Private</h2>
-                        <p style={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.8, marginBottom: '2rem' }}>
-                            Your conversations with Buddy AI are fully encrypted and only used to improve your personal experience. 
-                            We do not share your strategic data with other freelancers or third parties.
+            {/* ══ PRIVACY — light split ══ */}
+            <section className="bai-privacy">
+                <div className="container bai-privacy-grid">
+                    {/* Left — text */}
+                    <div className="bai-privacy-text">
+                        <span className="bai-section-eyebrow"><ShieldCheck size={13} /> Privacy</span>
+                        <h2 className="bai-section-title">
+                            Encrypted &amp; <span className="bai-accent">Private</span>
+                        </h2>
+                        <p className="bai-section-sub" style={{ textAlign: 'left', marginLeft: 0, maxWidth: '100%' }}>
+                            Your conversations with Buddy AI are fully encrypted and only used to
+                            improve your personal experience. We do not share your strategic data
+                            with other freelancers or third parties.
                         </p>
-                        <ul style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <li style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>✅ End-to-end Encryption</li>
-                            <li style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>✅ Compliance with Data Privacy</li>
-                            <li style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>✅ One-Click History Clearing</li>
+                        <ul className="bai-privacy-list">
+                            <li><ShieldCheck size={17} /> End-to-end Encryption</li>
+                            <li><CheckCircle2 size={17} /> Compliance with Data Privacy</li>
+                            <li><Trash2 size={17} /> One-Click History Clearing</li>
                         </ul>
                     </div>
-                    <div className="ai-card" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}>
-                        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔐</div>
-                        <h4 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#fff' }}>Enterprise-Grade Security</h4>
-                        <p style={{ color: 'rgba(255,255,255,0.7)' }}>Trust is the foundation of SkillKart. Our AI assistant is designed with a "Privacy First" architecture.</p>
+
+                    {/* Right — animated security card */}
+                    <div className="bai-security-card">
+                        {/* Animated shield illustration */}
+                        <div className="bai-shield-wrap" aria-hidden="true">
+                            <div className="bai-shield-ring bai-shield-ring--1" />
+                            <div className="bai-shield-ring bai-shield-ring--2" />
+                            <div className="bai-shield-ring bai-shield-ring--3" />
+                            <div className="bai-shield-core">
+                                <Lock size={28} />
+                            </div>
+                        </div>
+                        <h4 className="bai-security-card__title">Enterprise-Grade Security</h4>
+                        <p className="bai-security-card__text">
+                            Trust is the foundation of SkillKart. Our AI assistant is designed
+                            with a "Privacy First" architecture.
+                        </p>
                     </div>
                 </div>
             </section>
 
             {/* ══ FAQ ══ */}
-            <section className="ai-faq">
-                <div className="container">
-                    <div className="ai-section-title">
-                        <h2>Buddy AI Help & Tips</h2>
+            <section className="bai-faq">
+                <div className="container bai-faq-grid">
+                    {/* Left — sticky heading */}
+                    <div className="bai-faq-head">
+                        <span className="bai-section-eyebrow">Help</span>
+                        <h2 className="bai-section-title">Buddy AI Help &amp; Tips</h2>
+                        <p className="bai-section-sub" style={{ textAlign: 'left', marginLeft: 0, maxWidth: '100%' }}>
+                            Everything you need to know about working with Buddy.
+                        </p>
                     </div>
-                    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        {[
-                            { q: "How accurate is Buddy AI's market data?", a: "Buddy syncs with SkillKart's internal platform data hourly, giving you the most up-to-date pricing and skill demand insights." },
-                            { q: "Can Buddy write my whole profile?", a: "Buddy can certainly draft it for you! We recommend using its output as a strong base and adding your personal voice for the best results." },
-                            { q: "Is Buddy AI available to all users?", a: "Yes, currently Buddy AI is accessible to all SkillKart freelancers to help bridge the gap for new students entering the market." }
-                        ].map((faq, i) => (
-                            <div key={i} className="ai-faq-item">
-                                <div className="ai-faq-question">{faq.q}</div>
-                                <div className="ai-faq-answer">{faq.a}</div>
+                    {/* Right — accordion */}
+                    <div className="bai-faq-items">
+                        {FAQS.map((faq, i) => (
+                            <div
+                                key={i}
+                                className={`bai-faq-item${openFaq === i ? ' bai-faq-item--open' : ''}`}
+                            >
+                                <button
+                                    className="bai-faq-question"
+                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                    aria-expanded={openFaq === i}
+                                >
+                                    {faq.q}
+                                    <ChevronDown size={18} className="bai-faq-chevron" />
+                                </button>
+                                <div className="bai-faq-answer">
+                                    <p>{faq.a}</p>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -314,13 +461,26 @@ export default function BuddyAI() {
             </section>
 
             {/* ══ CTA ══ */}
-            <section className="ai-cta">
+            <section className="bai-cta">
                 <div className="container">
-                    <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>Start Growing Your Business</h2>
-                    <p style={{ fontSize: '1.1rem', marginBottom: '2rem', opacity: 0.9 }}>Connect with Buddy AI and transform your freelance professional workflow.</p>
-                    <button onClick={() => window.scrollTo({ top: 300, behavior: 'smooth' })} className="ai-btn-primary" style={{ background: '#fff', color: '#042E4C' }}>
-                        Chat with Buddy Now
-                    </button>
+                    <div className="bai-cta-panel">
+                        {/* Decorative circles */}
+                        <div className="bai-cta-circle bai-cta-circle--1" aria-hidden="true" />
+                        <div className="bai-cta-circle bai-cta-circle--2" aria-hidden="true" />
+                        <div className="bai-cta-circle bai-cta-circle--3" aria-hidden="true" />
+
+                        <div className="bai-cta-orb" aria-hidden="true"><Bot size={24} /></div>
+                        <h2 className="bai-cta-title">Start Growing Your Business</h2>
+                        <p className="bai-cta-sub">
+                            Connect with Buddy AI and transform your freelance professional workflow.
+                        </p>
+                        <button
+                            onClick={scrollToChat}
+                            className="ai-btn-primary bai-cta-btn"
+                        >
+                            <Sparkles size={17} /> Chat with Buddy Now
+                        </button>
+                    </div>
                 </div>
             </section>
 

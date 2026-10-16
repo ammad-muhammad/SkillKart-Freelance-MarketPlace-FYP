@@ -5,6 +5,11 @@ import { Link } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { publicAPI } from '../../../api/publicData';
+import {
+    MessageSquare, Mail, Phone, User, Tag, Send, Lock, CheckCircle2,
+    Clock3, Building2, Bot, ChevronDown, ArrowRight, MapPin
+} from 'lucide-react';
+import Loader from '../../../Components/common/Loader/Loader';
 import './Contact.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -13,33 +18,23 @@ gsap.registerPlugin(ScrollTrigger);
 
 const CONTACT_CHANNELS = [
     {
-        icon: '💬',
+        Icon: MessageSquare,
         title: 'Live Chat',
         desc: 'Chat with our support team in real time for instant answers.',
         action: 'Start Chat',
-        color: '#0a4a73',
     },
     {
-        icon: '📧',
+        Icon: Mail,
         title: 'Email Support',
         desc: 'Send us a detailed message — we reply within 24 hours.',
         action: 'support@skillkart.com',
-        color: '#276749',
     },
     {
-        icon: '📞',
+        Icon: Phone,
         title: 'Phone',
         desc: 'Speak directly with our team Mon–Fri, 9 AM – 6 PM PKT.',
         action: '+92 300 000 0000',
-        color: '#553c9a',
     },
-];
-
-const SUPPORT_TEAM = [
-    { name: 'Aisha Binte Owais', role: 'Head of Support', avatar: 'AB', bg: '#0a4a73', response: '< 1 hour' },
-    { name: 'Neha Izhar', role: 'Technical Support', avatar: 'NI', bg: '#276749', response: '< 2 hours' },
-    { name: 'Muhammad Shahmeer', role: 'Billing & Payments', avatar: 'MS', bg: '#553c9a', response: '< 4 hours' },
-    { name: 'Lamiz khan', role: 'Enterprise & Clients', avatar: 'LK', bg: '#c05621', response: '< 2 hours' },
 ];
 
 const FAQ_ITEMS = [
@@ -112,43 +107,34 @@ export default function Contact() {
     const [isSubjectOpen, setIsSubjectOpen] = useState(false);
 
     /* ── Refs for animations ── */
-    const heroRef = useRef(null);
     const channelsRef = useRef(null);
     const formRef = useRef(null);
-    const teamRef = useRef(null);
     const faqRef = useRef(null);
-    const ctaRef = useRef(null);
-    const subjectRef = useRef(null);
 
     useEffect(() => {
         document.title = 'Contact Us – SkillKart';
+        window.scrollTo(0, 0);
 
         /* Hero entrance */
-        const tl = gsap.timeline({ delay: 0.15 });
-        tl.fromTo('.contact-hero__tag', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' })
-            .fromTo('.contact-hero__heading', { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power4.out' }, '-=0.2')
-            .fromTo('.contact-hero__sub', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.3')
-            .fromTo('.contact-hero__channels', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+        const tl = gsap.timeline({ delay: 0.12 });
+        tl.fromTo('.contact-hero__tag', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' })
+            .fromTo('.contact-hero__heading', { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+            .fromTo('.contact-hero__sub', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+            .fromTo('.contact-channel__card', { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, ease: 'power3.out' }, '-=0.2');
 
         /* Scroll-triggered sections */
-        const sections = [
-            { ref: formRef, sel: '.contact-form__card' },
-            { ref: teamRef, sel: '.team__card' },
-            { ref: faqRef, sel: '.cfaq__item' },
-            { ref: ctaRef, sel: null },
-        ];
-
-        sections.forEach(({ ref, sel }) => {
-            const targets = sel ? ref.current?.querySelectorAll(sel) : ref.current?.children;
-            if (!targets?.length) return;
-            gsap.fromTo(targets,
-                { y: 40, opacity: 0 },
-                {
-                    y: 0, opacity: 1, stagger: 0.1, duration: 0.7, ease: 'power3.out',
-                    scrollTrigger: { trigger: ref.current, start: 'top 82%' },
-                }
+        if (formRef.current) {
+            gsap.fromTo(formRef.current.children,
+                { y: 30, opacity: 0 },
+                { y: 0, opacity: 1, stagger: 0.12, duration: 0.6, ease: 'power3.out', scrollTrigger: { trigger: formRef.current, start: 'top 85%' } }
             );
-        });
+        }
+        if (faqRef.current) {
+            gsap.fromTo('.cfaq__item',
+                { y: 16, opacity: 0 },
+                { y: 0, opacity: 1, stagger: 0.06, duration: 0.45, ease: 'power3.out', scrollTrigger: { trigger: faqRef.current, start: 'top 88%' } }
+            );
+        }
 
         return () => ScrollTrigger.getAll().forEach(t => t.kill());
     }, []);
@@ -157,7 +143,8 @@ export default function Contact() {
     useEffect(() => {
         if (!isSubjectOpen) return;
         const handler = (e) => {
-            if (subjectRef.current && !subjectRef.current.contains(e.target)) {
+            const wrap = document.querySelector('.contact-form__input-wrap--select');
+            if (wrap && !wrap.contains(e.target)) {
                 setIsSubjectOpen(false);
             }
         };
@@ -220,20 +207,10 @@ export default function Contact() {
             <Navbar />
 
             {/* ══════════════════ HERO ══════════════════ */}
-            <section ref={heroRef} className="contact-hero" aria-label="Contact Hero">
-                <div className="contact-hero__bg">
-                    <div className="contact-hero__orb contact-hero__orb--1" />
-                    <div className="contact-hero__orb contact-hero__orb--2" />
-                    <div className="contact-hero__orb contact-hero__orb--3" />
-                    <div className="contact-hero__grid" />
-                </div>
-
+            <section className="contact-hero" aria-label="Contact Hero">
                 <div className="container contact-hero__inner">
-                    <div
-                        className="section-tag contact-hero__tag"
-                        style={{ color: '#e3e5e8', borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)' }}
-                    >
-                        <span>📬</span> Get In Touch
+                    <div className="contact-hero__tag">
+                        <MapPin size={14} /> Get In Touch
                     </div>
                     <h1 className="contact-hero__heading">
                         We're Here to <span className="contact-hero__accent">Help You</span> Succeed
@@ -247,8 +224,8 @@ export default function Contact() {
                     <div className="contact-hero__channels" ref={channelsRef} role="list">
                         {CONTACT_CHANNELS.map((ch) => (
                             <div key={ch.title} className="contact-channel__card" role="listitem">
-                                <div className="contact-channel__icon" style={{ background: `${ch.color}20`, color: ch.color }}>
-                                    {ch.icon}
+                                <div className="contact-channel__icon">
+                                    <ch.Icon size={20} />
                                 </div>
                                 <div>
                                     <div className="contact-channel__title">{ch.title}</div>
@@ -258,12 +235,6 @@ export default function Contact() {
                             </div>
                         ))}
                     </div>
-                </div>
-
-                <div className="contact-hero__wave">
-                    <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                        <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#f8fafc" />
-                    </svg>
                 </div>
             </section>
 
@@ -282,7 +253,7 @@ export default function Contact() {
 
                             {submitState === 'success' ? (
                                 <div className="contact-form__success" role="alert" aria-live="polite">
-                                    <div className="contact-form__success-icon">✅</div>
+                                    <div className="contact-form__success-icon"><CheckCircle2 size={34} /></div>
                                     <h3 className="contact-form__success-title">Message Sent!</h3>
                                     <p className="contact-form__success-text">
                                         Thanks for reaching out. We've received your message and will reply within 24 hours.
@@ -309,7 +280,7 @@ export default function Contact() {
                                                 Full Name <span aria-hidden="true" className="contact-form__required">*</span>
                                             </label>
                                             <div className={`contact-form__input-wrap ${errors.name && touched.name ? 'contact-form__input-wrap--error' : ''} ${!errors.name && touched.name ? 'contact-form__input-wrap--ok' : ''}`}>
-                                                <span className="contact-form__input-icon">👤</span>
+                                                <span className="contact-form__input-icon"><User size={17} /></span>
                                                 <input
                                                     id="cf-name"
                                                     name="name"
@@ -324,7 +295,9 @@ export default function Contact() {
                                                     aria-invalid={!!(errors.name && touched.name)}
                                                     autoComplete="name"
                                                 />
-                                                {!errors.name && touched.name && <span className="contact-form__ok-tick" aria-hidden="true">✓</span>}
+                                                {!errors.name && touched.name && (
+                                                    <span className="contact-form__ok-tick" aria-hidden="true"><CheckCircle2 size={16} /></span>
+                                                )}
                                             </div>
                                             {errors.name && touched.name && (
                                                 <p id="cf-name-error" className="contact-form__error" role="alert">{errors.name}</p>
@@ -336,7 +309,7 @@ export default function Contact() {
                                                 Email Address <span aria-hidden="true" className="contact-form__required">*</span>
                                             </label>
                                             <div className={`contact-form__input-wrap ${errors.email && touched.email ? 'contact-form__input-wrap--error' : ''} ${!errors.email && touched.email ? 'contact-form__input-wrap--ok' : ''}`}>
-                                                <span className="contact-form__input-icon">📧</span>
+                                                <span className="contact-form__input-icon"><Mail size={17} /></span>
                                                 <input
                                                     id="cf-email"
                                                     name="email"
@@ -351,7 +324,9 @@ export default function Contact() {
                                                     aria-invalid={!!(errors.email && touched.email)}
                                                     autoComplete="email"
                                                 />
-                                                {!errors.email && touched.email && <span className="contact-form__ok-tick" aria-hidden="true">✓</span>}
+                                                {!errors.email && touched.email && (
+                                                    <span className="contact-form__ok-tick" aria-hidden="true"><CheckCircle2 size={16} /></span>
+                                                )}
                                             </div>
                                             {errors.email && touched.email && (
                                                 <p id="cf-email-error" className="contact-form__error" role="alert">{errors.email}</p>
@@ -364,12 +339,11 @@ export default function Contact() {
                                         <label htmlFor="cf-subject" className="contact-form__label">
                                             Subject <span aria-hidden="true" className="contact-form__required">*</span>
                                         </label>
-                                        <div 
-                                            ref={subjectRef}
+                                        <div
                                             className={`contact-form__input-wrap contact-form__input-wrap--select ${isSubjectOpen ? 'contact-form__input-wrap--open' : ''} ${errors.subject && touched.subject ? 'contact-form__input-wrap--error' : ''} ${!errors.subject && touched.subject ? 'contact-form__input-wrap--ok' : ''}`}
                                         >
-                                            <span className="contact-form__input-icon">📌</span>
-                                            <div 
+                                            <span className="contact-form__input-icon"><Tag size={17} /></span>
+                                            <div
                                                 className="contact-form__custom-select"
                                                 onClick={() => setIsSubjectOpen(!isSubjectOpen)}
                                                 role="button"
@@ -382,14 +356,16 @@ export default function Contact() {
                                                     {fields.subject || 'Choose a topic…'}
                                                 </span>
                                             </div>
-                                            <span className={`contact-form__select-arrow ${isSubjectOpen ? 'contact-form__select-arrow--open' : ''}`} aria-hidden="true">▾</span>
-                                            
+                                            <span className={`contact-form__select-arrow ${isSubjectOpen ? 'contact-form__select-arrow--open' : ''}`} aria-hidden="true">
+                                                <ChevronDown size={16} />
+                                            </span>
+
                                             {/* Custom Dropdown Menu */}
                                             {isSubjectOpen && (
                                                 <div className="contact-form__dropdown-menu" role="listbox">
                                                     {SUBJECT_OPTIONS.map(opt => (
-                                                        <div 
-                                                            key={opt} 
+                                                        <div
+                                                            key={opt}
                                                             className={`contact-form__dropdown-item ${fields.subject === opt ? 'contact-form__dropdown-item--selected' : ''}`}
                                                             onClick={() => {
                                                                 handleChange({ target: { name: 'subject', value: opt } });
@@ -400,7 +376,7 @@ export default function Contact() {
                                                             aria-selected={fields.subject === opt}
                                                         >
                                                             {opt}
-                                                            {fields.subject === opt && <span className="contact-form__dropdown-check">✓</span>}
+                                                            {fields.subject === opt && <span className="contact-form__dropdown-check"><CheckCircle2 size={15} /></span>}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -443,7 +419,8 @@ export default function Contact() {
 
                                     {/* Privacy note */}
                                     <p className="contact-form__privacy">
-                                        🔒 Your information is encrypted and never shared with third parties.
+                                        <Lock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                                        Your information is encrypted and never shared with third parties.
                                         See our <Link to="/privacy" className="contact-form__privacy-link">Privacy Policy</Link>.
                                     </p>
 
@@ -462,15 +439,12 @@ export default function Contact() {
                                     >
                                         {submitState === 'loading' ? (
                                             <>
-                                                <span className="contact-form__spinner" aria-hidden="true" />
+                                                <Loader size="sm" text="" />
                                                 Sending…
                                             </>
                                         ) : (
                                             <>
-                                                Send Message
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
+                                                Send Message <Send size={16} />
                                             </>
                                         )}
                                     </button>
@@ -484,13 +458,13 @@ export default function Contact() {
                                 <h3 className="contact-info__title">Response Times</h3>
                                 <ul className="contact-info__list" role="list">
                                     {[
-                                        { type: 'Live Chat', time: 'Instant', icon: '💬' },
-                                        { type: 'Email', time: '< 24 hours', icon: '📧' },
-                                        { type: 'Phone', time: 'Business hours', icon: '📞' },
-                                        { type: 'Enterprise', time: '< 2 hours', icon: '🏢' },
+                                        { type: 'Live Chat', time: 'Instant', Icon: MessageSquare },
+                                        { type: 'Email', time: '< 24 hours', Icon: Mail },
+                                        { type: 'Phone', time: 'Business hours', Icon: Phone },
+                                        { type: 'Enterprise', time: '< 2 hours', Icon: Building2 },
                                     ].map(r => (
                                         <li key={r.type} className="contact-info__list-item" role="listitem">
-                                            <span className="contact-info__list-icon">{r.icon}</span>
+                                            <span className="contact-info__list-icon"><r.Icon size={16} /></span>
                                             <span className="contact-info__list-type">{r.type}</span>
                                             <span className="contact-info__list-time">{r.time}</span>
                                         </li>
@@ -507,7 +481,10 @@ export default function Contact() {
                                         { day: 'Sunday', hrs: 'Closed' },
                                     ].map(o => (
                                         <li key={o.day} className="contact-info__hours-item" role="listitem">
-                                            <span className="contact-info__hours-day">{o.day}</span>
+                                            <span className="contact-info__hours-day">
+                                                <Clock3 size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6, opacity: 0.7 }} />
+                                                {o.day}
+                                            </span>
                                             <span className="contact-info__hours-time">{o.hrs}</span>
                                         </li>
                                     ))}
@@ -516,58 +493,25 @@ export default function Contact() {
                             </div>
 
                             <div className="contact-info__card contact-info__card--accent">
-                                <div className="contact-info__accent-icon">🤖</div>
+                                <div className="contact-info__accent-icon"><Bot size={24} /></div>
                                 <h3 className="contact-info__accent-title">Try Buddy AI First</h3>
                                 <p className="contact-info__accent-text">
                                     Buddy AI resolves 80% of common questions instantly — no wait time required.
                                 </p>
-                                <Link to="/ai/buddy" className="contact-info__accent-btn">Ask Buddy AI →</Link>
+                                <Link to="/ai/buddy" className="contact-info__accent-btn">Ask Buddy AI <ArrowRight size={15} /></Link>
                             </div>
 
                             <div className="contact-info__social">
                                 <p className="contact-info__social-label">Find us on</p>
                                 <div className="contact-info__social-links" role="list">
-                                    {[
-                                        { name: 'LinkedIn', icon: '🔗' },
-                                        { name: 'Twitter/X', icon: '🐦' },
-                                        { name: 'GitHub', icon: '💻' },
-                                        { name: 'Instagram', icon: '📸' },
-                                    ].map(s => (
-                                        <Link key={s.name} to="/contact" className="contact-info__social-pill" aria-label={s.name} role="listitem">
-                                            {s.icon} {s.name}
+                                    {['LinkedIn', 'Twitter/X', 'GitHub', 'Instagram'].map(s => (
+                                        <Link key={s} to="/contact" className="contact-info__social-pill" aria-label={s} role="listitem">
+                                            {s}
                                         </Link>
                                     ))}
                                 </div>
                             </div>
                         </aside>
-                    </div>
-                </div>
-            </section>
-
-            {/* ══════════════════ SUPPORT TEAM ══════════════════ */}
-            <section className="team" aria-label="Support Team">
-                <div className="container">
-                    <div className="team__header">
-                        <div className="section-tag"><span>👥</span> Meet the Team</div>
-                        <h2 className="section-title">Real People, Ready to Help</h2>
-                        <p className="section-subtitle">
-                            Every inquiry goes directly to a dedicated specialist — not a bot queue.
-                        </p>
-                    </div>
-                    <div ref={teamRef} className="team__grid" role="list">
-                        {SUPPORT_TEAM.map((member) => (
-                            <div key={member.name} className="team__card" role="listitem">
-                                <div className="team__card-avatar" style={{ background: member.bg }}>
-                                    {member.avatar}
-                                </div>
-                                <div className="team__card-name">{member.name}</div>
-                                <div className="team__card-role">{member.role}</div>
-                                <div className="team__card-response">
-                                    <span className="team__card-dot" aria-hidden="true" />
-                                    Avg. response {member.response}
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </section>
@@ -593,7 +537,9 @@ export default function Contact() {
                             >
                                 <div className="cfaq__q">
                                     <span>{faq.q}</span>
-                                    <span className="cfaq__arrow" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
+                                    <span className="cfaq__arrow" aria-hidden="true">
+                                        <ChevronDown size={16} />
+                                    </span>
                                 </div>
                                 <div className="cfaq__a" aria-hidden={openFaq !== i}>
                                     <p>{faq.a}</p>
@@ -606,23 +552,17 @@ export default function Contact() {
 
             {/* ══════════════════ FINAL CTA ══════════════════ */}
             <section className="contact-cta" aria-label="Call to action">
-                <div className="contact-cta__bg">
-                    <div className="contact-cta__orb contact-cta__orb--1" />
-                    <div className="contact-cta__orb contact-cta__orb--2" />
-                </div>
                 <div className="container">
-                    <div ref={ctaRef} className="contact-cta__inner">
-                        <div className="contact-cta__badge">🚀 Join SkillKart Today</div>
-                        <h2 className="contact-cta__heading">
-                            Still Exploring? <span className="contact-cta__accent">Start Free</span>
-                        </h2>
-                        <p className="contact-cta__sub">
-                            Create your free account, get AI-verified, and land your first project — no credit card needed.
-                        </p>
-                        <div className="contact-cta__btns">
-                            <Link to="/registration" className="contact-cta__btn-primary">Create Free Account →</Link>
-                            <Link to="/about" className="contact-cta__btn-secondary">Learn About SkillKart</Link>
-                        </div>
+                    <div className="contact-cta__badge">🚀 Join SkillKart Today</div>
+                    <h2 className="contact-cta__heading">
+                        Still Exploring? <span className="contact-cta__accent">Start Free</span>
+                    </h2>
+                    <p className="contact-cta__sub">
+                        Create your free account, get AI-verified, and land your first project — no credit card needed.
+                    </p>
+                    <div className="contact-cta__btns">
+                        <Link to="/registration" className="contact-cta__btn-primary">Create Free Account <ArrowRight size={16} /></Link>
+                        <Link to="/about" className="contact-cta__btn-secondary">Learn About SkillKart</Link>
                     </div>
                 </div>
             </section>

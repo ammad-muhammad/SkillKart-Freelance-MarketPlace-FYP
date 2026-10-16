@@ -2,12 +2,12 @@
    CustomSelect – Premium SaaS UI Core
    ============================================================ */
 :root {
-    --csel-bg: var(--color-white);
-    --csel-border: #d1d9e6; /* standard form-field border, kept as literal per project convention */
-    --csel-border-hover: var(--color-accent);
-    --csel-accent: var(--color-primary, #042e4c);
-    --csel-accent-soft: rgba(4, 46, 76, 0.08);
-    --csel-shadow: 0 4px 15px rgba(4, 46, 76, 0.08);
+    --csel-bg: #FFFFFF;
+    --csel-border: #E2E8F0;
+    --csel-border-hover: #CBD5E1;
+    --csel-accent: #10B981;
+    --csel-accent-soft: rgba(16, 185, 129, 0.14);
+    --csel-shadow: 0 16px 40px rgba(11, 41, 66, 0.12), 0 4px 14px rgba(16, 185, 129, 0.08);
     --csel-radius: 12px;
 }
 
@@ -172,27 +172,28 @@
 }
 
 .csel__option:hover {
-    background: var(--csel-accent-soft);
-    color: var(--csel-accent);
+    background: #EAFBF4;
+    color: #065F46;
     padding-left: 1.25rem;
 }
 
 .csel__option--selected {
-    background: rgba(4, 46, 76, 0.05);
-    color: var(--color-primary);
-    font-weight: 600;
+    background: #F0FDF4;
+    color: #059669;
+    font-weight: 700;
 }
 
 .csel__option--selected .csel__check {
     opacity: 1;
     transform: scale(1);
+    color: #10B981;
 }
 
 .csel__check {
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    color: var(--color-primary);
+    color: #10B981;
     opacity: 0;
     transform: scale(0.5);
     transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);

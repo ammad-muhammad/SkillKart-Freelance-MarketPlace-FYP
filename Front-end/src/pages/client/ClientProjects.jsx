@@ -25,7 +25,8 @@ import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
 import Button from '../../Components/common/Button/Button';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Search, Plus } from 'lucide-react';
+import '../freelancer/FreelancerWork.css';
 import './ClientDashboard.css';
 
 const PROJECT_STATUS_TONE = {
@@ -63,6 +64,7 @@ const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const ClientProjects = () => {
   const { projects, deleteProject, updateProject, showToast, fetchProfile } = useClient();
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [deleteModal, setDeleteModal] = useState(null);
   const [editingProject, setEditingProject] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -103,7 +105,11 @@ const ClientProjects = () => {
     return () => clearInterval(interval);
   }, [fetchProfile, reviewing, editingProject, deleteModal, showReviewModal, endRequestModal, disputeModal, cancelOrderModal]);
 
-  const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter);
+  const filtered = projects.filter((p) => {
+    if (filter !== 'all' && p.status !== filter) return false;
+    if (searchTerm.trim() && !p.title?.toLowerCase().includes(searchTerm.trim().toLowerCase())) return false;
+    return true;
+  });
 
   const openReview = async (proj) => {
     setRevisionNote('');
@@ -420,32 +426,107 @@ const ClientProjects = () => {
     if (ok) setEditingProject(null); // updateProject already toasts success/error
   };
 
+  const openCount = projects.filter(p => p.status === 'open').length;
+  const inProgressCount = projects.filter(p => p.status === 'in-progress').length;
+  const completedCount = projects.filter(p => p.status === 'completed').length;
+  const totalBids = projects.reduce((acc, p) => acc + (p.proposals?.length || 0), 0);
+
   return (
-    <div>
-      <div className="cl-page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="fl-work-page">
+      {/* Header */}
+      <div className="fl-work-header">
         <div>
-          <h1 className="cl-page-title">My Projects</h1>
-          <p className="cl-page-sub">Manage all your posted freelance projects.</p>
+          <div className="fl-work-breadcrumb">
+            <Link to="/client/dashboard">Workspace</Link>
+            <span>/</span>
+            <span style={{ color: '#10B981' }}>Projects & Hiring</span>
+          </div>
+          <h1 className="fl-work-title">My Projects & Jobs</h1>
+          <p className="fl-work-sub">Track active project contracts, milestone deliverables, and incoming bids.</p>
         </div>
-        <Link to="/client/projects/create" className="cl-btn cl-btn--primary">
-          ＋ Post New Project
+        <Link to="/client/projects/create" className="fl-pill-btn fl-pill-btn--primary">
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Post New Project</span>
         </Link>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        {STATUS_FILTERS.map((f) => {
-          const count = f === 'all' ? projects.length : projects.filter((p) => p.status === f).length;
-          return (
-            <button
-              key={f}
-              className={`cl-btn cl-btn--sm${filter === f ? ' cl-btn--primary' : ' cl-btn--ghost'}`}
-              onClick={() => setFilter(f)}
-            >
-              {FILTER_LABELS[f] || f.charAt(0).toUpperCase() + f.slice(1)} ({count})
-            </button>
-          );
-        })}
+      {/* Bento Summary Row (4-card layout matching FreelancerWork) */}
+      <div className="fl-work-summary-grid">
+        <div className="fl-work-hero-card">
+          <div>
+            <div className="fl-work-hero-label">Workspace Overview</div>
+            <div className="fl-work-hero-value">{projects.length} Total Projects</div>
+            <div className="fl-work-hero-sub">
+              {openCount} active postings currently open for proposals on marketplace
+            </div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <Link to="/client/projects/create" className="fl-pill-btn fl-pill-btn--secondary" style={{ background: '#FFFFFF', color: '#065F46', borderColor: '#FFFFFF', padding: '6px 16px', fontSize: 13, fontWeight: 800 }}>
+              + Create Posting
+            </Link>
+          </div>
+        </div>
+
+        <div className="fl-work-kpi-card">
+          <div className="fl-work-hero-label" style={{ color: '#64748B' }}>Open Postings</div>
+          <div className="fl-work-kpi-val" style={{ color: '#10B981', fontSize: 32, fontWeight: 800, fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            {openCount}
+          </div>
+          <div className="fl-work-hero-sub" style={{ color: '#64748B' }}>
+            {totalBids} proposals received
+          </div>
+        </div>
+
+        <div className="fl-work-kpi-card">
+          <div className="fl-work-hero-label" style={{ color: '#64748B' }}>In Progress</div>
+          <div className="fl-work-kpi-val" style={{ color: '#D97706', fontSize: 32, fontWeight: 800, fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            {inProgressCount}
+          </div>
+          <div className="fl-work-hero-sub" style={{ color: '#64748B' }}>
+            Active contracts running
+          </div>
+        </div>
+
+        <div className="fl-work-kpi-card">
+          <div className="fl-work-hero-label" style={{ color: '#64748B' }}>Completed</div>
+          <div className="fl-work-kpi-val" style={{ color: '#0B2942', fontSize: 32, fontWeight: 800, fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            {completedCount}
+          </div>
+          <div className="fl-work-hero-sub" style={{ color: '#64748B' }}>
+            Successfully delivered
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filters Toolbar */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 220 }}>
+          <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            className="cl-input"
+            placeholder="Search projects by title..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ paddingLeft: 38, height: 42, borderRadius: 999 }}
+          />
+        </div>
+
+        {/* Filter Pills */}
+        <div className="cl-filter-bar" style={{ margin: 0, padding: 0, flex: '2 1 auto' }}>
+          {STATUS_FILTERS.map((f) => {
+            const count = f === 'all' ? projects.length : projects.filter((p) => p.status === f).length;
+            return (
+              <button
+                key={f}
+                className={`cl-filter-pill ${filter === f ? 'cl-filter-pill--active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {FILTER_LABELS[f] || f.charAt(0).toUpperCase() + f.slice(1)} <span style={{ opacity: 0.85, fontSize: 11 }}>({count})</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Project List */}
@@ -811,9 +892,8 @@ const ClientProjects = () => {
         onClose={() => !savingEdit && setEditingProject(null)}
       >
         {editLoading || !editingProject?.title ? (
-          <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-            <div className="cl-spinner" />
-            <Loader text="Loading project details…" />
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '180px', padding: '2.5rem 1rem' }}>
+            <Loader size="md" text="Loading project details…" />
           </div>
         ) : (
           <form className="cl-edit-form" onSubmit={handleEditSubmit}>
@@ -1182,22 +1262,16 @@ const ClientProjects = () => {
       </Modal>
 
       <style>{`
-        .cl-proj-card { display: flex; flex-direction: column; gap: 0.75rem; }
+        .cl-proj-card { display: flex; flex-direction: column; gap: 0.85rem; }
         .cl-proj-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
-        .cl-proj-card__title { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.2rem; }
-        .cl-proj-card__meta { font-size: 0.78rem; color: var(--color-text-light); }
-        .cl-proj-card__summary { font-size: 0.875rem; color: var(--color-text-mid); line-height: 1.5; overflow-wrap: break-word;word-break: break-word;}
-        .cl-proj-card__footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; border-top: 1px solid rgba(183, 201, 226, 0.35); padding-top: 0.75rem; margin-top: 0.25rem; }
-        .cl-proj-card__actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
-        .cl-proj-card__btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-        .cl-status-select { min-width: 130px !important; }
-        .cl-status-select .csel__trigger { height: 32px; padding: 0 0.75rem; font-size: 0.8rem; }
-        .cl-spinner {
-          width: 38px; height: 38px; margin: 0 auto;
-          border: 3px solid rgba(183, 201, 226, 0.35); border-top-color: var(--color-primary);
-          border-radius: 50%; animation: cl-spin 0.8s linear infinite;
-        }
-        @keyframes cl-spin { to { transform: rotate(360deg); } }
+        .cl-proj-card__title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.15rem; font-weight: 800; color: #0B2942; margin-bottom: 0.25rem; letter-spacing: -0.01em; }
+        .cl-proj-card__meta { font-size: 0.82rem; color: #64748B; font-weight: 500; }
+        .cl-proj-card__summary { font-size: 0.9rem; color: #334155; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
+        .cl-proj-card__footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; border-top: 1px solid #EDF2F7; padding-top: 0.95rem; margin-top: 0.35rem; }
+        .cl-proj-card__actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: nowrap; }
+        .cl-proj-card__btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .cl-status-select { min-width: 140px !important; }
+        .cl-status-select .csel__trigger { height: 34px; padding: 0 0.85rem; font-size: 0.82rem; border-radius: 8px; }
       `}</style>
     </div>
   );

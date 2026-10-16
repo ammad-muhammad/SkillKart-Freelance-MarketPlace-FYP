@@ -1,0 +1,821 @@
+/* =============================================================
+   SKILLKART — Freelancer Security Page Styles (Redesigned)
+   Theme: Emerald (#10B981), Navy (#0B2942), Light Mint Gradient
+   Container: Max 1200px, 2-Column Grid (Col 7 + Col 5)
+   ============================================================= */
+
+.fsec-page-root {
+  width: 100%;
+  color: #0F172A;
+  padding-top: 0;
+  padding-bottom: 32px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.fsec-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+/* ─── SHARED PAGE HEADER ─── */
+.fsec-shared-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.fsec-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fsec-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.fsec-bc-link {
+  color: #64748B;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.fsec-bc-link:hover {
+  color: #0B2942;
+}
+
+.fsec-bc-sep {
+  color: #CBD5E1;
+}
+
+.fsec-bc-curr {
+  color: #0B2942;
+  font-weight: 600;
+}
+
+.fsec-page-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.fsec-page-subtitle {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ─── TOP SECURITY OVERVIEW STRIP ─── */
+.fsec-overview-strip-card {
+  background: #FFFFFF;
+  border: 1px solid #DDEFE6;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(11, 41, 66, 0.03);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.fsec-overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 140px;
+}
+
+.fsec-overview-item--score {
+  flex: 1;
+  max-width: 260px;
+}
+
+.fsec-overview-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fsec-overview-val-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fsec-overview-strong {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0B2942;
+}
+
+.fsec-chip-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2.5px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.fsec-chip-status--green {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.fsec-chip-status--amber {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.fsec-overview-divider {
+  width: 1px;
+  height: 32px;
+  background: #E2E8F0;
+}
+
+.fsec-score-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fsec-score-percent {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0B2942;
+}
+
+.fsec-score-track {
+  width: 100%;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.fsec-score-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* ─── 2 COLUMNS DESKTOP (Col 7 + Col 5) ─── */
+.fsec-columns-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.fsec-col-left,
+.fsec-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Shared Card Box ─── */
+.fsec-card {
+  background: #FFFFFF;
+  border: 1px solid #DDEFE6;
+  border-radius: 24px;
+  box-shadow: 0 2px 10px rgba(11, 41, 66, 0.03);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fsec-card--danger {
+  border-color: #F5C6C8;
+}
+
+.fsec-card-hd {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.fsec-card-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #ECFDF5;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fsec-card-icon-box--danger {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
+.fsec-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 0 0 3px 0;
+  letter-spacing: -0.01em;
+}
+
+.fsec-card-title--danger {
+  color: #B91C1C;
+}
+
+.fsec-card-desc {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ─── SHARED FIELD SYSTEM ─── */
+/* Label above, 48px height, 14px radius, 1px border #DDEFE6 */
+.fsec-pw-fields-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fsec-fields-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fsec-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fsec-field-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fsec-field-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.fsec-forgot-link-btn {
+  background: transparent;
+  border: none;
+  color: #10B981;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.fsec-forgot-link-btn:hover {
+  color: #059669;
+  text-decoration: underline;
+}
+
+.fsec-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fsec-field-input {
+  height: 48px;
+  background: #FFFFFF;
+  border: 1px solid #DDEFE6;
+  border-radius: 14px;
+  padding: 0 42px 0 16px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #0F172A;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.fsec-field-input:focus {
+  border-color: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.fsec-field-input--error {
+  border-color: #EF4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.fsec-eye-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s ease;
+}
+
+.fsec-eye-btn:hover {
+  color: #0F172A;
+}
+
+.fsec-field-err {
+  font-size: 12px;
+  color: #EF4444;
+  font-weight: 600;
+}
+
+/* Password Strength & Rules Checklist */
+.fsec-strength-block {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fsec-strength-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fsec-strength-track {
+  flex: 1;
+  height: 5px;
+  background: #CBD5E1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fsec-strength-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: all 0.3s ease;
+}
+
+.fsec-strength-label {
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.fsec-rules-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fsec-rule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  padding: 2px 7px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.fsec-rule-chip--pass {
+  background: #ECFDF5;
+  color: #065F46;
+  border-color: #A7F3D0;
+}
+
+/* OAuth Notice */
+.fsec-oauth-notice {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.fsec-oauth-icon {
+  color: #10B981;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ─── Card Footers & Buttons ─── */
+.fsec-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.fsec-card-footer-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.fsec-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #10B981;
+  color: #FFFFFF;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.fsec-btn-primary:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.fsec-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fsec-btn-outline-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fsec-btn-outline-danger:hover {
+  background: #FEE2E2;
+}
+
+.fsec-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fsec-btn-danger:hover:not(:disabled) {
+  background: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+}
+
+.fsec-text-link-btn {
+  background: transparent;
+  border: none;
+  color: #10B981;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.15s ease;
+}
+
+.fsec-text-link-btn:hover {
+  color: #059669;
+  text-decoration: underline;
+}
+
+/* ─── Toggles Stack ─── */
+.fsec-toggles-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.fsec-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.fsec-toggle-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.fsec-toggle-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #F1F5F9;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fsec-toggle-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.fsec-toggle-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.fsec-toggle-desc {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+/* Switch */
+.fsec-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #CBD5E1;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.fsec-switch--on {
+  background: #10B981;
+}
+
+.fsec-switch-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.fsec-switch--on .fsec-switch-thumb {
+  transform: translateX(20px);
+}
+
+/* ─── Active Sessions & Activity ─── */
+.fsec-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fsec-session-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.fsec-session-device-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #ECFDF5;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fsec-session-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.fsec-session-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fsec-session-device-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.fsec-session-meta {
+  font-size: 11.5px;
+  color: #64748B;
+}
+
+/* Activity Table */
+.fsec-activity-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.fsec-activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.fsec-activity-row:last-child {
+  border-bottom: none;
+}
+
+.fsec-activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fsec-activity-date {
+  font-size: 12.5px;
+  color: #1E293B;
+  font-weight: 700;
+}
+
+.fsec-activity-sub {
+  font-size: 11.5px;
+  color: #64748B;
+}
+
+/* ─── Danger Zone ─── */
+.fsec-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.fsec-danger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.fsec-danger-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #B91C1C;
+}
+
+.fsec-danger-sub {
+  font-size: 12.5px;
+  color: #7F1D1D;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+/* ─── Modal Inner Styles ─── */
+.fsec-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fsec-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.fsec-modal-actions-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.fsec-modal-btn-ghost {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.fsec-modal-btn-ghost:hover {
+  color: #0F172A;
+}
+
+/* ─── Responsive Queries ─── */
+@media (max-width: 1024px) {
+  .fsec-container {
+    padding: 0;
+  }
+
+  .fsec-columns-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fsec-overview-strip-card {
+    gap: 14px;
+  }
+
+  .fsec-overview-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .fsec-container {
+    padding: 0;
+  }
+
+  .fsec-fields-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .fsec-card {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+
+  .fsec-overview-item--score {
+    max-width: 100%;
+  }
+}

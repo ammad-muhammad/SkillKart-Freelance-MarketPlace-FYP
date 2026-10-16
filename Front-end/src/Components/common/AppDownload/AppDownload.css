@@ -1,0 +1,278 @@
+/* ==========================================================================
+   SkillKart Mobile App Download Banner Card
+   Matches User Reference: Compact Deep Emerald Gradient Card with QR Code
+   ========================================================================== */
+
+.sk-app-banner-section {
+  padding: 32px 0 40px;
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.sk-app-banner-card {
+  position: relative;
+  background: linear-gradient(135deg, #095944 0%, #064E3B 55%, #04382A 100%);
+  border-radius: 28px;
+  padding: 42px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  box-shadow:
+    0 16px 40px -10px rgba(6, 78, 59, 0.35),
+    0 4px 16px rgba(11, 41, 66, 0.08);
+  border: 1px solid rgba(167, 243, 208, 0.22);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Ambient subtle lighting inside card */
+.sk-app-banner-ambient {
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.22) 0%, rgba(6, 78, 59, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ── Left Column: Content & Actions ── */
+.sk-app-banner-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Pill Badge */
+.sk-app-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 5px 14px;
+  border-radius: 999px;
+  width: fit-content;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.sk-app-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34D399;
+  box-shadow: 0 0 8px #34D399;
+  display: inline-block;
+}
+
+/* Title */
+.sk-app-banner-title {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: clamp(1.85rem, 3.2vw, 2.45rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px 0;
+}
+
+/* Subtitle */
+.sk-app-banner-sub {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.55;
+  max-width: 540px;
+  margin: 0 0 20px 0;
+}
+
+/* Checklist */
+.sk-app-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sk-app-checkitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.sk-app-check-icon {
+  color: #34D399;
+  flex-shrink: 0;
+}
+
+/* Buttons Row */
+.sk-app-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.sk-app-btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFFFFF;
+  color: #064E3B;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.sk-app-btn-download:hover {
+  background: #F0FDF4;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  color: #047857;
+}
+
+.sk-app-btn-ios {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 11px 22px;
+  border-radius: 999px;
+  user-select: none;
+}
+
+/* Footnote */
+.sk-app-banner-footnote {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.68);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 540px;
+}
+
+/* ── Right Column: QR Code Box ── */
+.sk-app-banner-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.sk-app-qr-box {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.22),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s ease;
+}
+
+.sk-app-qr-box:hover {
+  transform: scale(1.03);
+}
+
+.sk-app-qr-skeleton {
+  width: 152px;
+  height: 152px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  background: #F8FAFC;
+  border-radius: 12px;
+}
+
+.sk-app-scan-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 12px;
+  text-align: center;
+  max-width: 180px;
+  line-height: 1.4;
+}
+
+.sk-app-scan-icon {
+  color: #34D399;
+  flex-shrink: 0;
+}
+
+/* ── Responsive Adjustments ── */
+@media (max-width: 900px) {
+  .sk-app-banner-card {
+    flex-direction: column;
+    padding: 32px 24px;
+    gap: 32px;
+    text-align: left;
+  }
+
+  .sk-app-banner-right {
+    width: 100%;
+    align-items: center;
+  }
+
+  .sk-app-scan-caption {
+    max-width: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sk-app-banner-title {
+    font-size: 1.6rem;
+  }
+
+  .sk-app-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sk-app-btn-download,
+  .sk-app-btn-ios {
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

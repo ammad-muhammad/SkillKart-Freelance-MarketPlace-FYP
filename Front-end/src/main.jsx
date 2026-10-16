@@ -6,6 +6,9 @@ import { NotificationProvider } from './context/NotificationContext';
 import { BrowserRouter } from "react-router-dom";
 import { isMobileApp } from "./utils/platform";
 import "./styles/variables.css";
+// Phase-1 design system (additive — loaded after variables.css so ds-* layer
+// sits on top of the brand tokens without overriding any home-page rules).
+import "./styles/design-system.css";
 import "./styles/responsive.css";
 import "./styles/native-app.css";
 

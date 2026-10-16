@@ -785,11 +785,3 @@
   gap: 0.75rem;
 }
 
-.rs-spinner {
-  animation: rsSpin 1s linear infinite;
-}
-
-@keyframes rsSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}

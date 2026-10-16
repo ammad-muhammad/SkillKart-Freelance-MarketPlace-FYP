@@ -9,6 +9,12 @@ import { JOB_CATEGORIES } from '../../../constants/jobCategories';
 import { aiAPI } from '../../../api/ai';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+    Calculator, TrendingUp, CalendarClock, ShieldAlert, Gavel,
+    Wallet, AlertTriangle, FileText, Rocket, BarChart3, Clock, Layers,
+    Sparkles, ChevronDown
+} from 'lucide-react';
+import Loader from '../../../Components/common/Loader/Loader';
 import './AiTools.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -21,6 +27,178 @@ const formatMoney = (amount, currency = 'PKR') => {
     }
     return `${Number(amount).toLocaleString()} ${currency}`;
 };
+
+const FEATURES = [
+    { icon: Wallet, title: 'Fair Market Pricing', desc: 'Ensure you earn what you deserve based on real-time demand for your specific skill stack.' },
+    { icon: CalendarClock, title: 'Timeline Prediction', desc: 'Our model analyzes similar project cycles to provide a realistic delivery schedule.' },
+    { icon: ShieldAlert, title: 'Risk Reduction', desc: 'Identify potential overheads and complexities before you even sign the contract.' },
+    { icon: BarChart3, title: 'Competitive Bidding', desc: 'Use our data to place the most competitive bids that dont undervalue your skills.' },
+];
+
+const TIPS = [
+    { title: 'The Value-Based Approach', tip: 'Instead of hours, charge for the outcomes you deliver. A Rs. 1,000 solution is more attractive than Rs. 50/hour.' },
+    { title: 'Bundle Your Services', tip: 'Combine design and development into one package to increase your average project size by 40%.' },
+    { title: 'Niche Specialization', tip: 'Specializing in specific tools like Webflow or Shopify can increase your market rate by 2.5×.' },
+];
+
+const CE_FAQS = [
+    { q: "How accurate are these estimates?", a: "The AI analysis is based on 50,000+ completed projects on SkillKart and global market data, with an average accuracy of +/- 12%." },
+    { q: "Does complexity really affect my rate?", a: "Absolutely. Projects with advanced integrations or high risk require specialist oversight, which the market values at a higher premium." },
+    { q: "Is this tool free for clients too?", a: "Yes, we provide this tool to both clients and freelancers to ensure a fair, transparent, and sustainable pricing ecosystem." },
+];
+
+/* ── Animated count-up hook ── */
+function useCountUp(target, duration = 1200) {
+    const [value, setValue] = useState(0);
+    useEffect(() => {
+        if (!target || isNaN(Number(target))) { setValue(target); return; }
+        const start = Date.now();
+        const end = Number(target);
+        const tick = () => {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setValue(Math.round(end * eased));
+            if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }, [target, duration]);
+    return value;
+}
+
+/* ── Shimmer skeleton ── */
+function SkeletonStage() {
+    return (
+        <div className="ce-skeleton" aria-label="Loading estimate" aria-live="polite">
+            <div className="ce-skel-block ce-skel-hero" />
+            <div className="ce-skel-row">
+                <div className="ce-skel-block ce-skel-card" />
+                <div className="ce-skel-block ce-skel-card" />
+                <div className="ce-skel-block ce-skel-card" />
+            </div>
+            <div className="ce-skel-block ce-skel-wide" />
+        </div>
+    );
+}
+
+/* ── Empty stage ── */
+function EmptyStage() {
+    return (
+        <div className="ce-empty">
+            <div className="ce-empty-motif" aria-hidden="true">
+                <div className="ce-coin ce-coin--1" />
+                <div className="ce-coin ce-coin--2" />
+                <div className="ce-coin ce-coin--3" />
+                <div className="ce-calc-body">
+                    <Calculator size={32} />
+                </div>
+            </div>
+            <h3 className="ce-empty-title">Your Estimate Will Appear Here</h3>
+            <p className="ce-empty-sub">
+                Fill in your project details on the left and click{' '}
+                <strong>Get Cost Estimate</strong> to see a market-accurate breakdown.
+            </p>
+        </div>
+    );
+}
+
+/* ── Result stage ── */
+function ResultStage({ estimate, formData, navigate }) {
+    const midValue = estimate.min != null && estimate.max != null
+        ? Math.round((Number(estimate.min) + Number(estimate.max)) / 2)
+        : null;
+    const countedMid = useCountUp(midValue, 1400);
+
+    // Range bar %: marker sits at 50% always (estimate is midpoint)
+    const total = Number(estimate.max) - Number(estimate.min);
+
+    return (
+        <div className="ce-result" id="estimate-result" aria-live="polite">
+            {/* Hero cost block */}
+            <div className="ce-result-hero">
+                <div className="ce-result-label">Estimated Market Value</div>
+                <div className="ce-result-amount">
+                    {midValue != null
+                        ? `${countedMid.toLocaleString()} ${estimate.currency}`
+                        : `${formatMoney(estimate.min, estimate.currency)} – ${formatMoney(estimate.max, estimate.currency)}`}
+                </div>
+                {/* Range band */}
+                <div className="ce-range-band" aria-label={`Range: ${formatMoney(estimate.min, estimate.currency)} to ${formatMoney(estimate.max, estimate.currency)}`}>
+                    <div className="ce-range-track">
+                        <div className="ce-range-fill" />
+                        <div className="ce-range-marker" title={`Estimate: ${formatMoney(midValue, estimate.currency)}`} />
+                    </div>
+                    <div className="ce-range-labels">
+                        <span>{formatMoney(estimate.min, estimate.currency)}</span>
+                        <span>{formatMoney(estimate.max, estimate.currency)}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Stat cards */}
+            <div className="ce-result-stats">
+                <div className="ce-stat-card">
+                    <div className="ce-stat-label">Currency</div>
+                    <div className="ce-stat-value">{estimate.currency}</div>
+                </div>
+                <div className="ce-stat-card">
+                    <div className="ce-stat-label">Timeline</div>
+                    <div className="ce-stat-value">{formData.duration}</div>
+                </div>
+                <div className="ce-stat-card">
+                    <div className="ce-stat-label">Expertise</div>
+                    <div className="ce-stat-value">{formData.level}</div>
+                </div>
+            </div>
+
+            {/* AI Rationale */}
+            {estimate.rationale && (
+                <div className="ce-rationale">
+                    <div className="ce-rationale__label"><Sparkles size={15} /> AI Rationale</div>
+                    <p>{estimate.rationale}</p>
+                </div>
+            )}
+
+            {/* Breakdown */}
+            {estimate.breakdown.length > 0 && (
+                <div className="ce-breakdown">
+                    <h4 className="ce-breakdown__title">Project Cost Breakdown</h4>
+                    <table className="breakdown-table" aria-label="Project cost breakdown">
+                        <thead>
+                            <tr>
+                                <th>Project Phase</th>
+                                <th style={{ textAlign: 'right' }}>Estimated Cost Allocation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {estimate.breakdown.map((row, i) => (
+                                <tr key={i}>
+                                    <td>{row.label}</td>
+                                    <td style={{ textAlign: 'right' }}>{formatMoney(row.amount, estimate.currency)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* Actions */}
+            <div className="ai-result-actions">
+                <button
+                    className="ai-btn-primary"
+                    onClick={() => navigate('/post-project', {
+                        state: { estimate, type: formData.type, skills: formData.skills }
+                    })}
+                >
+                    <Rocket size={17} /> Create Project with this Estimate
+                </button>
+                <button className="ai-btn-secondary" onClick={() => window.print()}>
+                    <FileText size={17} /> Save Estimate as PDF
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export default function CostEstimator() {
     const [formData, setFormData] = useState({
@@ -36,6 +214,7 @@ export default function CostEstimator() {
     const [estimateMeta, setEstimateMeta] = useState(null); // { ref, date } — frozen at generation time for the print doc
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [openFaq, setOpenFaq] = useState(null);
     const pageRef = useRef(null);
     const navigate = useNavigate();
 
@@ -45,25 +224,33 @@ export default function CostEstimator() {
 
         const ctx = gsap.context(() => {
             const tl = gsap.timeline();
-            tl.from(".ai-hero__badge", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" })
-              .from(".ai-hero__title", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, "-=0.3")
-              .from(".ai-hero__sub", { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" }, "-=0.5")
-              .from(".ai-hero-stat", { opacity: 0, y: 15, stagger: 0.08, duration: 0.4, ease: "power3.out" }, "-=0.3")
-              .from(".ai-hero .ai-btn-primary", { opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.7)" }, "-=0.4");
+            tl.from(".ce-badge", { opacity: 0, y: -16, duration: 0.5, ease: "power3.out" })
+              .from(".ce-title", { opacity: 0, y: 24, duration: 0.7, ease: "power3.out" }, "-=0.25")
+              .from(".ce-sub", { opacity: 0, y: 18, duration: 0.6, ease: "power3.out" }, "-=0.4")
+              .from(".ce-inputs-panel", { opacity: 0, y: 36, duration: 0.9, ease: "power3.out" }, "-=0.5")
+              .from(".ce-stage-panel", { opacity: 0, duration: 0.7, ease: "power3.out" }, "-=0.7");
 
-            gsap.fromTo(".ai-card", 
-                { opacity: 0, y: 40 },
-                { 
-                    opacity: 1, y: 0, duration: 1, ease: "power3.out",
-                    scrollTrigger: { trigger: ".ai-tool-section", start: "top 85%" }
+            gsap.fromTo(".ce-feature-card",
+                { opacity: 0, y: 24 },
+                {
+                    opacity: 1, y: 0, stagger: 0.1, duration: 0.7, ease: "power3.out",
+                    scrollTrigger: { trigger: ".ce-features", start: "top 88%" }
                 }
             );
 
-            gsap.fromTo(".ai-feature-card", 
-                { opacity: 0, y: 30 },
-                { 
-                    opacity: 1, y: 0, stagger: 0.15, duration: 0.8, ease: "power3.out",
-                    scrollTrigger: { trigger: ".ai-features", start: "top 85%" }
+            gsap.fromTo(".ce-tip-card",
+                { opacity: 0, y: 24 },
+                {
+                    opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: "power3.out",
+                    scrollTrigger: { trigger: ".ce-tips", start: "top 88%" }
+                }
+            );
+
+            gsap.fromTo(".ce-faq-item",
+                { opacity: 0, y: 20 },
+                {
+                    opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: "power3.out",
+                    scrollTrigger: { trigger: ".ce-faq", start: "top 88%" }
                 }
             );
 
@@ -134,47 +321,52 @@ export default function CostEstimator() {
     };
 
     return (
-        <div className="ai-page" ref={pageRef}>
+        <div className="ce-page" ref={pageRef}>
+            {/* Ambient background blobs */}
+            <div className="bai-bg" aria-hidden="true">
+                <div className="bai-blob bai-blob--1" />
+                <div className="bai-blob bai-blob--2" />
+                <div className="bai-blob bai-blob--3" />
+            </div>
+
             <Navbar />
 
-            {/* ══ HERO ══ */}
-            <header className="ai-hero">
-                <div className="ai-hero__bg">
-                    <div className="ai-hero__orb ai-hero__orb--1" />
-                    <div className="ai-hero__orb ai-hero__orb--2" />
-                    <div className="ai-hero__grid" />
-                </div>
-                <div className="container ai-hero__inner">
-                    <span className="ai-hero__badge">AI Market Analytics</span>
-                    <h1 className="ai-hero__title">
-                        Smart Project <span className="ai-hero__accent">Cost</span><br />
-                        Estimation Tool
+            {/* ══ COMPACT HERO ══ */}
+            <section className="ce-hero">
+                <div className="container ce-hero__inner">
+                    <span className="ce-badge">
+                        <TrendingUp size={14} /> AI Market Analytics
+                    </span>
+                    <h1 className="ce-title">
+                        Smart Project <span className="bai-accent">Cost</span> Estimation Tool
                     </h1>
-                    <p className="ai-hero__sub">
-                        Estimate your project's market value based on complexity, skill demand, 
+                    <p className="ce-sub">
+                        Estimate your project's market value based on complexity, skill demand,
                         and duration. Don't underprice your hard-earned expertise.
                     </p>
-                    <div className="ai-hero-stats" style={{ marginBottom: '2.5rem' }}>
-                        <span className="ai-hero-stat">💰 Accurate Pricing</span>
-                        <span className="ai-hero-stat">🕒 Timeframe Prediction</span>
-                        <span className="ai-hero-stat">📈 Market Comparables</span>
-                        <span className="ai-hero-stat">📅 Smart Scheduling</span>
+                    <div className="ce-hero-chips">
+                        <span className="bai-chip"><Wallet size={13} /> Accurate Pricing</span>
+                        <span className="bai-chip"><Clock size={13} /> Timeframe Prediction</span>
+                        <span className="bai-chip"><BarChart3 size={13} /> Market Comparables</span>
+                        <span className="bai-chip"><Layers size={13} /> Smart Scheduling</span>
                     </div>
-                    <a href="#estimate-tool" className="ai-btn-primary">Calculate Estimate</a>
                 </div>
-            </header>
+            </section>
 
-            {/* ══ TOOL SECTION ══ */}
-            <section id="estimate-tool" className="ai-tool-section">
-                <div className="container">
-                    <div className="ai-card">
-                        <div className="ai-tool-header" style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#042E4C' }}>Project Parameters</h2>
-                            <p style={{ color: '#4a5568' }}>Define your project requirements for a market-accurate cost estimation.</p>
+            {/* ══ STUDIO — two zones ══ */}
+            <section id="estimate-tool" className="ce-studio-section">
+                <div className="container ce-studio">
+
+                    {/* LEFT — Inputs panel */}
+                    <div className="ce-inputs-panel">
+                        <div className="ce-panel-head">
+                            <h2 className="ce-panel-title">Project Parameters</h2>
+                            <p className="ce-panel-sub">Define your project requirements for a market-accurate cost estimation.</p>
                         </div>
 
-                        <form onSubmit={handleEstimate} className="ai-tool-form">
-                            <div className="ai-form-grid">
+                        <form onSubmit={handleEstimate} className="ce-form">
+                            <div className="ce-form-section">
+                                <div className="ce-form-divider"><Calculator size={13} /> Project Scope</div>
                                 <div className="ai-form-group">
                                     <label>Project Type</label>
                                     <TagInput
@@ -196,6 +388,10 @@ export default function CostEstimator() {
                                         hintText={<span>Type a skill and press <strong>Enter</strong>. AI validates and suggests related skills — no login needed.</span>}
                                     />
                                 </div>
+                            </div>
+
+                            <div className="ce-form-section">
+                                <div className="ce-form-divider"><BarChart3 size={13} /> Expertise &amp; Timeline</div>
                                 <div className="ai-form-group">
                                     <label>Target Expertise Level</label>
                                     <ComboSelect
@@ -215,13 +411,6 @@ export default function CostEstimator() {
                                     />
                                 </div>
                                 <div className="ai-form-group">
-                                    <label>Complexity Level ({formData.complexity}%)</label>
-                                    <input
-                                        type="range" className="ai-input" min="0" max="100" style={{ padding: 0, background: `linear-gradient(to right, var(--color-primary, #042E4C) ${formData.complexity}%, #e2e8f0 ${formData.complexity}%)` }}
-                                        value={formData.complexity} onChange={e => setFormData({...formData, complexity: e.target.value})}
-                                    />
-                                </div>
-                                <div className="ai-form-group">
                                     <label>Budget Preference</label>
                                     <ComboSelect
                                         options={['Fixed Price', 'Hourly Rate']}
@@ -232,7 +421,20 @@ export default function CostEstimator() {
                                 </div>
                             </div>
 
-                            {/* AI suggest — infer project type + skills from what's entered */}
+                            <div className="ce-form-section">
+                                <div className="ce-form-divider"><Layers size={13} /> Complexity</div>
+                                <div className="ai-form-group">
+                                    <label>Complexity Level ({formData.complexity}%)</label>
+                                    <input
+                                        type="range" min="0" max="100"
+                                        style={{ background: `linear-gradient(to right, #10B981 ${formData.complexity}%, #E2E8F0 ${formData.complexity}%)` }}
+                                        value={formData.complexity} onChange={e => setFormData({ ...formData, complexity: e.target.value })}
+                                        aria-valuemin={0} aria-valuemax={100} aria-valuenow={formData.complexity}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* AI suggest */}
                             <AiSuggestFill
                                 label="Suggest type & skills (AI)"
                                 getContext={() => ({
@@ -249,139 +451,76 @@ export default function CostEstimator() {
                                 }))}
                             />
 
-                             <button type="submit" className="ai-btn-primary ai-submit-btn" disabled={loading} style={{ marginTop: '1.5rem', minWidth: '240px' }}>
-                                 {loading ? '📊 Calculating Market Rates...' : 'Get Cost Estimate'}
-                             </button>
+                            <button type="submit" className="ai-btn-primary ce-submit-btn" disabled={loading}>
+                                {loading
+                                    ? <><Loader size="sm" text="" /> Calculating Market Rates…</>
+                                    : <><Calculator size={17} /> Get Cost Estimate</>}
+                            </button>
                         </form>
+                    </div>
 
-                        {/* ERROR STATE */}
-                        {error && (
-                            <div style={{ marginTop: '2rem', padding: '1.25rem 1.5rem', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '12px', color: '#b91c1c', fontWeight: 600 }}>
-                                ⚠️ {error}
-                            </div>
-                        )}
-
-                        {/* RESULT PANEL */}
-                        {estimate && (
-                            <div id="estimate-result" className="ai-result">
-                                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#042E4C', marginBottom: '2rem' }}>
-                                    Estimated Market Value
-                                </h3>
-                                <div className="ai-result-grid" style={{ marginBottom: '2.5rem' }}>
-                                    <div className="ai-stat-card" style={{ borderLeft: '6px solid var(--ai-primary)' }}>
-                                        <h4>Estimated Range</h4>
-                                        <div className="value" style={{ color: '#059669', fontSize: '2.25rem' }}>
-                                            {formatMoney(estimate.min, estimate.currency)} – {formatMoney(estimate.max, estimate.currency)}
-                                        </div>
-                                        <p style={{ fontSize: '0.85rem', color: '#718096', marginTop: '0.5rem' }}>Based on current {formData.type} trends</p>
-                                    </div>
-                                    <div className="ai-stat-card">
-                                        <h4>Currency</h4>
-                                        <div className="value" style={{ fontSize: '1.5rem' }}>{estimate.currency}</div>
-                                    </div>
-                                    <div className="ai-stat-card">
-                                        <h4>Estimated Timeline</h4>
-                                        <div className="value" style={{ fontSize: '1.5rem' }}>{formData.duration}</div>
-                                    </div>
-                                    <div className="ai-stat-card">
-                                        <h4>Target Level</h4>
-                                        <div className="value" style={{ fontSize: '1.5rem' }}>{formData.level}</div>
-                                    </div>
-                                </div>
-
-                                {estimate.rationale && (
-                                    <div style={{ marginBottom: '2.5rem', padding: '1.5rem 1.75rem', background: '#f0f9ff', borderRadius: '16px', border: '1.5px solid #e0f2fe' }}>
-                                        <h4 style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#042E4C' }}>AI Rationale</h4>
-                                        <p style={{ color: '#4a5568', lineHeight: 1.7 }}>{estimate.rationale}</p>
-                                    </div>
-                                )}
-
-                                {estimate.breakdown.length > 0 && (
-                                    <div className="breakdown-table-wrap" style={{ overflowX: 'auto', background: '#fbfcff', padding: '2rem', borderRadius: '16px', border: '1.5px solid #edf2f7' }}>
-                                        <h4 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Project Cost Breakdown</h4>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                                                    <th style={{ padding: '1rem', color: '#718096', fontWeight: 600 }}>Project Phase</th>
-                                                    <th style={{ padding: '1rem', color: '#718096', fontWeight: 600 }}>Estimated Cost Allocation</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {estimate.breakdown.map((row, i) => (
-                                                    <tr key={i} style={{ borderBottom: '1.5px solid #edf2f7' }}>
-                                                        <td style={{ padding: '1rem', fontWeight: 600, color: '#4a5568' }}>{row.label}</td>
-                                                        <td style={{ padding: '1rem', color: '#042E4C', fontWeight: 700 }}>{formatMoney(row.amount, estimate.currency)}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-
-                                <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                    <button
-                                        className="ai-btn-primary"
-                                        style={{ width: 'auto', padding: '1rem 2.5rem' }}
-                                        onClick={() => navigate('/post-project', {
-                                            state: { estimate, type: formData.type, skills: formData.skills }
-                                        })}
-                                    >
-                                        🚀 Create Project with this Estimate
-                                    </button>
-                                    <button
-                                        className="ai-btn-secondary"
-                                        style={{ width: 'auto', padding: '1rem 2.5rem', background: 'transparent', border: '2.5px solid var(--ai-primary)', color: 'var(--ai-primary)' }}
-                                        onClick={() => window.print()}
-                                    >
-                                        📄 Save Estimate as PDF
+                    {/* RIGHT — Estimate stage */}
+                    <div className="ce-stage-panel">
+                        <div className="ce-stage" aria-live="polite" aria-label="Estimate stage">
+                            {loading && <SkeletonStage />}
+                            {!loading && error && (
+                                <div className="ce-error-state">
+                                    <AlertTriangle size={32} className="ce-error-icon" />
+                                    <h3>Couldn't Generate Estimate</h3>
+                                    <p>{error}</p>
+                                    <button className="ai-btn-primary" style={{ width: 'auto', padding: '12px 28px' }} onClick={handleEstimate}>
+                                        ↺ Try Again
                                     </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                            {!loading && !error && estimate && (
+                                <ResultStage estimate={estimate} formData={formData} navigate={navigate} />
+                            )}
+                            {!loading && !error && !estimate && <EmptyStage />}
+                        </div>
                     </div>
                 </div>
             </section>
 
             {/* ══ FEATURES ══ */}
-            <section className="ai-features">
+            <section className="ce-features">
                 <div className="container">
-                    <div className="ai-section-title">
-                        <h2>Accurate Project Valuation</h2>
-                        <p>Our AI combines internal platform data with global market rates to find the perfect pricing sweet spot.</p>
+                    <div className="bai-section-head">
+                        <span className="bai-section-eyebrow"><TrendingUp size={13} /> Why Use the Estimator</span>
+                        <h2 className="bai-section-title">
+                            Accurate Project <span className="bai-accent">Valuation</span>
+                        </h2>
+                        <p className="bai-section-sub">
+                            Our AI combines internal platform data with global market rates to find the perfect pricing sweet spot.
+                        </p>
                     </div>
-                    <div className="ai-features-grid">
-                        {[
-                            { icon: '💰', title: 'Fair Market Pricing', desc: 'Ensure you earn what you deserve based on real-time demand for your specific skill stack.' },
-                            { icon: '📅', title: 'Timeline Prediction', desc: 'Our model analyzes similar project cycles to provide a realistic delivery schedule.' },
-                            { icon: '📉', title: 'Risk Reduction', desc: 'Identify potential overheads and complexities before you even sign the contract.' },
-                            { icon: '📊', title: 'Competitive Bidding', desc: 'Use our data to place the most competitive bids that dont undervalue your skills.' }
-                        ].map((f, i) => (
-                            <div key={i} className="ai-feature-card">
-                                <span className="ai-feature-icon">{f.icon}</span>
-                                <h4 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.75rem' }}>{f.title}</h4>
-                                <p style={{ fontSize: '0.95rem', color: '#4a5568' }}>{f.desc}</p>
+                    <div className="ce-features-grid">
+                        {FEATURES.map((f, i) => (
+                            <div key={i} className="ce-feature-card">
+                                <span className="bai-bento-icon"><f.icon size={20} /></span>
+                                <h4>{f.title}</h4>
+                                <p>{f.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* ══ MARKET TIPS ══ */}
-            <section style={{ padding: '100px 0', background: '#042E4C', color: '#fff' }}>
+            {/* ══ PRICING TIPS — light glass ══ */}
+            <section className="ce-tips">
                 <div className="container">
-                    <div className="ai-section-title" style={{ color: '#fff' }}>
-                        <h2 style={{ color: '#fff' }}>Pricing Strategies That Work</h2>
-                        <p style={{ opacity: 0.8 }}>Expert tips to increase your project value on SkillKart.</p>
+                    <div className="bai-section-head">
+                        <span className="bai-section-eyebrow"><Sparkles size={13} /> Pro Tips</span>
+                        <h2 className="bai-section-title">
+                            Pricing Strategies <span className="bai-accent">That Work</span>
+                        </h2>
+                        <p className="bai-section-sub">Expert tips to increase your project value on SkillKart.</p>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '3rem' }}>
-                        {[
-                            { title: 'The Value-Based Approach', tip: 'Instead of hours, charge for the outcomes you deliver. A Rs. 1,000 solution is more attractive than Rs. 50/hour.' },
-                            { title: 'Bundle Your Services', tip: 'Combine design and development into one package to increase your average project size by 40%.' },
-                            { title: 'Niche Specialization', tip: 'Specializing in specific tools like Webflow or Shopify can increase your market rate by 2.5×.' }
-                        ].map((m, i) => (
-                            <div key={i} style={{ padding: '2rem', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <h4 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--ai-accent)' }}>{m.title}</h4>
-                                <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.95rem', lineHeight: 1.7 }}>{m.tip}</p>
+                    <div className="ce-tips-grid">
+                        {TIPS.map((m, i) => (
+                            <div key={i} className="ce-tip-card">
+                                <h4>{m.title}</h4>
+                                <p>{m.tip}</p>
                             </div>
                         ))}
                     </div>
@@ -389,20 +528,32 @@ export default function CostEstimator() {
             </section>
 
             {/* ══ FAQ ══ */}
-            <section className="ai-faq">
-                <div className="container">
-                    <div className="ai-section-title">
-                        <h2>Pricing Help Center</h2>
+            <section className="ce-faq">
+                <div className="container bai-faq-grid">
+                    <div className="bai-faq-head">
+                        <span className="bai-section-eyebrow">Help</span>
+                        <h2 className="bai-section-title">Pricing Help Center</h2>
+                        <p className="bai-section-sub" style={{ textAlign: 'left', marginLeft: 0, maxWidth: '100%' }}>
+                            Common questions about how the estimator works.
+                        </p>
                     </div>
-                    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        {[
-                            { q: "How accurate are these estimates?", a: "The AI analysis is based on 50,000+ completed projects on SkillKart and global market data, with an average accuracy of +/- 12%." },
-                            { q: "Does complexity really affect my rate?", a: "ABSOLUTELY. Projects with advanced integrations or high risk require specialist oversight, which the market values at a higher premium." },
-                            { q: "Is this tool free for clients too?", a: "Yes, we providing this tool to both clients and freelancers to ensure fair, transparent, and sustainable pricing ecosystem." }
-                        ].map((faq, i) => (
-                            <div key={i} className="ai-faq-item">
-                                <div className="ai-faq-question">{faq.q}</div>
-                                <div className="ai-faq-answer">{faq.a}</div>
+                    <div className="bai-faq-items">
+                        {CE_FAQS.map((faq, i) => (
+                            <div
+                                key={i}
+                                className={`bai-faq-item ce-faq-item${openFaq === i ? ' bai-faq-item--open' : ''}`}
+                            >
+                                <button
+                                    className="bai-faq-question"
+                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                    aria-expanded={openFaq === i}
+                                >
+                                    {faq.q}
+                                    <ChevronDown size={18} className="bai-faq-chevron" />
+                                </button>
+                                <div className="bai-faq-answer">
+                                    <p>{faq.a}</p>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -410,20 +561,31 @@ export default function CostEstimator() {
             </section>
 
             {/* ══ CTA ══ */}
-            <section className="ai-cta">
+            <section className="bai-cta">
                 <div className="container">
-                    <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>Never Underprice Your Projects</h2>
-                    <p style={{ fontSize: '1.1rem', marginBottom: '2rem', opacity: 0.9 }}>Value your time, expertise, and future. Get a market-accurate estimate today.</p>
-                    <button onClick={() => window.scrollTo({ top: 300, behavior: 'smooth' })} className="ai-btn-primary" style={{ background: '#fff', color: '#042E4C' }}>
-                        Estimate Your Project
-                    </button>
+                    <div className="bai-cta-panel">
+                        <div className="bai-cta-circle bai-cta-circle--1" aria-hidden="true" />
+                        <div className="bai-cta-circle bai-cta-circle--2" aria-hidden="true" />
+                        <div className="bai-cta-circle bai-cta-circle--3" aria-hidden="true" />
+                        <div className="bai-cta-orb" aria-hidden="true"><Calculator size={24} /></div>
+                        <h2 className="bai-cta-title">Never Underprice Your Projects</h2>
+                        <p className="bai-cta-sub">
+                            Value your time, expertise, and future. Get a market-accurate estimate today.
+                        </p>
+                        <button
+                            onClick={() => document.getElementById('estimate-tool')?.scrollIntoView({ behavior: 'smooth' })}
+                            className="ai-btn-primary bai-cta-btn"
+                        >
+                            <Calculator size={17} /> Estimate Your Project
+                        </button>
+                    </div>
                 </div>
             </section>
 
             <Footer />
 
             {/* PRINT-ONLY DOCUMENT — rendered by window.print() (the "Save Estimate as
-                PDF" button). Kept as a direct child of .ai-page (a sibling of Navbar/
+                PDF" button). Kept as a direct child of .ce-page (a sibling of Navbar/
                 Footer/every section), so the print stylesheet can hide every OTHER
                 direct child with display:none and collapse the page to just this
                 content — display:none removes hidden siblings from layout entirely,

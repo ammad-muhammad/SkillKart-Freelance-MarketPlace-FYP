@@ -1,7 +1,11 @@
+/* Shared Skeleton placeholder — Phase-1 refresh:
+   replaces the flat pulse with a shimmer sweep whose geometry
+   mirrors final content. Class API unchanged (.skeleton / .circle / .text) */
 .skeleton {
-  background: #e2e8f0;
-  border-radius: 8px;
-  animation: pulse 1.5s infinite ease-in-out;
+  border-radius: var(--ds-r-sm, 8px);
+  background: linear-gradient(90deg, #EDF2F1 25%, #F7FAF9 50%, #EDF2F1 75%);
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
 }
 
 .skeleton.circle {
@@ -13,8 +17,11 @@
   margin-bottom: 0.5rem;
 }
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
-  100% { opacity: 1; }
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation-duration: 2s !important; }
 }

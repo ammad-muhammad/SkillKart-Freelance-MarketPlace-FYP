@@ -1,0 +1,430 @@
+/* ==========================================================================
+   Shared GigCard — Public & Owner Variants (Parts 4 & 5c)
+   ========================================================================== */
+
+.sk-gig-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 18px rgba(11, 41, 66, 0.04);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+  cursor: pointer;
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+}
+
+.sk-gig-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.sk-gig-card:focus-visible {
+  outline: 2px solid #10B981;
+  outline-offset: 2px;
+}
+
+/* ── Image Container (16:10 aspect ratio, 18px radius inside 8px padding) ── */
+.sk-gig-card__image-container {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(135deg, #EAFBF4 0%, #EEF7FF 100%);
+  flex-shrink: 0;
+}
+
+.sk-gig-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sk-gig-card:hover .sk-gig-card__image {
+  transform: scale(1.03);
+}
+
+.sk-gig-card__image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #94A3B8;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ── Bookmark Button (Public variant) ── */
+.sk-gig-card__bookmark-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(11, 41, 66, 0.45);
+  backdrop-filter: blur(8px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.sk-gig-card__bookmark-btn:hover {
+  background: rgba(11, 41, 66, 0.75);
+  transform: scale(1.08);
+}
+
+.sk-gig-card__bookmark-btn--active {
+  background: #FFFFFF;
+}
+
+/* ── Owner Status Overlay & 3-Dot Menu ── */
+.sk-gig-card__status-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+.sk-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.sk-status-pill--active {
+  background: rgba(16, 185, 129, 0.9);
+  color: #FFFFFF;
+}
+
+.sk-status-pill--paused {
+  background: rgba(245, 158, 11, 0.9);
+  color: #FFFFFF;
+}
+
+.sk-status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FFFFFF;
+}
+
+.sk-gig-card__menu-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.sk-gig-menu-trigger {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #0B2942;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sk-gig-menu-trigger:hover {
+  background: #FFFFFF;
+  color: #10B981;
+  transform: scale(1.06);
+}
+
+.sk-gig-menu-dropdown {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  min-width: 170px;
+  background: #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 28px rgba(11, 41, 66, 0.14);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+  animation: sk-menu-pop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sk-menu-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sk-gig-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0B2942;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.sk-gig-menu-item:hover {
+  background: #F8FAFC;
+  color: #10B981;
+}
+
+.sk-gig-menu-item--danger {
+  color: #EF4444;
+}
+
+.sk-gig-menu-item--danger:hover {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.sk-gig-menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Card Body ── */
+.sk-gig-card__body {
+  padding: 12px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+/* Title (16-17px, 700, navy, max 2 lines, hover underline) */
+.sk-gig-card__title {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 16.5px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #0B2942;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.35em * 2);
+}
+
+.sk-gig-card__title-link {
+  color: #0B2942;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.sk-gig-card:hover .sk-gig-card__title-link {
+  color: #059669;
+  text-decoration: underline;
+}
+
+/* ── PUBLIC VARIANT: Seller Row & Bottom Price Row ── */
+.sk-gig-card__seller-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.sk-gig-card__seller-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sk-gig-card__seller-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10B981, #0B2942);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sk-gig-card__seller-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sk-gig-card__seller-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.sk-gig-card__rating-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.sk-gig-card__rating-val {
+  font-weight: 700;
+  color: #0B2942;
+}
+
+.sk-gig-card__rating-cnt {
+  color: #94A3B8;
+  font-size: 11px;
+}
+
+.sk-gig-card__divider {
+  width: 100%;
+  height: 1px;
+  background: #F1F5F9;
+  margin: 2px 0;
+}
+
+.sk-gig-card__bottom-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.sk-gig-card__price-prefix {
+  font-size: 11.5px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.sk-gig-card__price-amount {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0B2942;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── OWNER VARIANT: Info line & Footer Row ── */
+.sk-gig-card__info-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sk-gig-card__owner-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.sk-gig-card__owner-price-val {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #0B2942;
+  font-variant-numeric: tabular-nums;
+}
+
+.sk-gig-card__owner-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.sk-gig-card__owner-stats {
+  font-size: 12px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.sk-gig-edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #0B2942;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sk-gig-edit-pill:hover {
+  background: #F0FDF4;
+  border-color: #10B981;
+  color: #10B981;
+}
+
+/* ── Responsive Grid helper (3 per row at 1280+, 2 tablet, 1 mobile) ── */
+.sk-gigs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(340px, 1fr));
+  gap: 22px;
+  width: 100%;
+}
+
+@media (min-width: 1700px) {
+  .sk-gigs-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1279px) {
+  .sk-gigs-grid {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (max-width: 680px) {
+  .sk-gigs-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

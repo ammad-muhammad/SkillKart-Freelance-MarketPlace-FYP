@@ -7,42 +7,42 @@
 
 /* ─── CSS Variables ─────────────────────────────────────────── */
 .admin-layout {
-  /* Color palette - Modern High-End Light Theme */
-  --ap-bg-primary:    #f8fafc;
+  /* Color palette - SkillKart Approved Light Theme */
+  --ap-bg-primary:    #F3F7F5;
   --ap-bg-secondary:  #ffffff;
   --ap-bg-card:       #ffffff;
-  --ap-bg-elevated:   #f1f5f9;
-  --ap-bg-hover:      #e2e8f0;
+  --ap-bg-elevated:   #EAFBF4;
+  --ap-bg-hover:      #EDF2F7;
   --ap-sidebar-bg:    #ffffff;
   --ap-sidebar-width: 260px;
 
   /* Brand */
-  --ap-blue:          #2563eb;
-  --ap-blue-dark:     #1d4ed8;
-  --ap-blue-light:    #3b82f6;
-  --ap-blue-glow:     rgba(37,99,235,0.08);
-  --ap-purple:        #7c3aed;
+  --ap-blue:          #10B981;
+  --ap-blue-dark:     #059669;
+  --ap-blue-light:    #059669;
+  --ap-blue-glow:     rgba(16, 185, 129, 0.12);
+  --ap-purple:        #0B2942;
   --ap-teal:          #0d9488;
-  --ap-green:         #16a34a;
+  --ap-green:         #10B981;
   --ap-yellow:        #d97706;
   --ap-orange:        #ea580c;
   --ap-red:           #dc2626;
 
   /* Text */
-  --ap-text-primary:  #0f172a;
+  --ap-text-primary:  #0B2942;
   --ap-text-secondary:#334155;
   --ap-text-muted:    #64748b;
-  --ap-text-link:     #2563eb;
+  --ap-text-link:     #059669;
 
   /* Borders */
-  --ap-border:        #e2e8f0;
-  --ap-border-active: #2563eb;
+  --ap-border:        #E2E8F0;
+  --ap-border-active: #10B981;
 
   /* Shadows */
-  --ap-shadow-sm:     0 1px 3px rgba(0,0,0,0.05);
-  --ap-shadow-md:     0 4px 12px rgba(15,23,42,0.06);
-  --ap-shadow-lg:     0 10px 30px rgba(15,23,42,0.1);
-  --ap-shadow-blue:   0 4px 20px rgba(37,99,235,0.15);
+  --ap-shadow-sm:     0 1px 3px rgba(11,41,66,0.04);
+  --ap-shadow-md:     0 4px 12px rgba(11,41,66,0.06);
+  --ap-shadow-lg:     0 10px 30px rgba(11,41,66,0.09);
+  --ap-shadow-blue:   0 4px 20px rgba(16, 185, 129, 0.16);
 
   /* Radii */
   --ap-radius-sm:     6px;
@@ -117,13 +117,13 @@
 .admin-layout .ap-brand-icon {
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, var(--ap-blue), var(--ap-purple));
+  background: linear-gradient(135deg, #0B2942, #10B981);
   border-radius: var(--ap-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  box-shadow: var(--ap-shadow-blue);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
   flex-shrink: 0;
 }
 
@@ -136,8 +136,8 @@
 }
 .admin-layout .ap-brand-text span {
   font-size: 0.7rem;
-  color: var(--ap-text-muted);
-  font-weight: 500;
+  color: #10B981;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -178,12 +178,12 @@
   overflow: hidden;
 }
 .admin-layout .ap-nav-item:hover {
-  background: var(--ap-bg-hover);
-  color: var(--ap-text-primary);
+  background: #EAFBF4;
+  color: #059669;
 }
 .admin-layout .ap-nav-item.active {
-  background: var(--ap-blue-glow);
-  color: var(--ap-blue-light);
+  background: #EAFBF4;
+  color: #059669;
   font-weight: 600;
 }
 .admin-layout .ap-nav-item.active::before {
@@ -193,7 +193,7 @@
   top: 20%;
   height: 60%;
   width: 3px;
-  background: var(--ap-blue);
+  background: #10B981;
   border-radius: 0 2px 2px 0;
 }
 .admin-layout .ap-nav-icon {
@@ -853,14 +853,6 @@
 }
 
 /* ─── Loader / Skeleton ──────────────────────────────────────── */
-.admin-layout .ap-spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--ap-border);
-  border-top-color: var(--ap-blue);
-  border-radius: 50%;
-  animation: apSpin 0.7s linear infinite;
-}
 .admin-layout .ap-loader-center {
   display: flex;
   flex-direction: column;

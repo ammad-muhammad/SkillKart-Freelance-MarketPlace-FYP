@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useClient } from '../../context/ClientContext';
-import { Bookmark, BookmarkMinus, MapPin, Star } from 'lucide-react';
+import { Bookmark, BookmarkMinus, MapPin, Star, UserCheck, Search, ChevronRight } from 'lucide-react';
+import Loader from '../../Components/common/Loader/Loader';
 import './ClientDashboard.css';
 
 const ClientSavedFreelancers = () => {
@@ -8,85 +9,107 @@ const ClientSavedFreelancers = () => {
   const navigate = useNavigate();
 
   const removeSaved = (freelancer) => {
-    // toggleSavedFreelancer persists to the backend and updates context state
     toggleSavedFreelancer(freelancer);
   };
 
   return (
-    <div className="cl-saved-page">
+    <div className="cl-page-root">
       <div className="cl-page-header">
-        <h1 className="cl-page-title">Saved Freelancers</h1>
-        <p className="cl-page-sub">Quickly access the talent you've bookmarked for future projects.</p>
+        <div>
+          <h1 className="cl-page-title">Saved Freelancers</h1>
+          <p className="cl-page-sub">Quickly access and manage the top talent you have bookmarked for projects.</p>
+        </div>
+        <button
+          className="cl-btn cl-btn--outline"
+          onClick={() => navigate('/browse-freelancers')}
+        >
+          <Search size={16} strokeWidth={2.2} /> Browse More Talent
+        </button>
       </div>
 
       {savedLoading ? (
-        <div className="cl-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <div className="cl-spinner" />
-          <p style={{ color: 'var(--color-text-light)', marginTop: '1rem' }}>Loading your saved freelancers…</p>
+        <div className="cl-card" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 320, padding: '4rem 2rem' }}>
+          <Loader size="md" text="Loading saved talent..." />
         </div>
       ) : saved.length === 0 ? (
-        <div className="cl-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <div style={{ marginBottom: '1.5rem', color: 'var(--color-primary)' }}><Bookmark size={64} /></div>
-          <h3 style={{ color: 'var(--color-primary)' }}>Your list is empty</h3>
-          <p style={{ color: 'var(--color-text-light)', marginTop: '0.5rem' }}>
-            Browse freelancers and click the bookmark icon to save them here.
+        <div className="cl-card" style={{ textAlign: 'center', padding: '4.5rem 2rem' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: '#EAFBF4', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+            <Bookmark size={32} strokeWidth={2} />
+          </div>
+          <h3 style={{ color: '#0B2942', fontWeight: 800, fontSize: '1.25rem', margin: '0 0 0.5rem' }}>Your saved talent list is empty</h3>
+          <p style={{ color: '#64748B', maxWidth: 440, margin: '0 auto 1.5rem', fontSize: '0.92rem', lineHeight: 1.55 }}>
+            Browse through verified freelancers, review their portfolios and skill tests, and click the bookmark icon to save them here for quick hiring.
           </p>
           <button
             className="cl-btn cl-btn--primary"
-            style={{ marginTop: '1.5rem' }}
             onClick={() => navigate('/browse-freelancers')}
           >
-            Browse Talent
+            <Search size={16} strokeWidth={2.5} /> Browse Verified Talent
           </button>
         </div>
       ) : (
         <div className="cl-saved-grid">
           {saved.map(f => (
-            <div key={f.id} className="cl-card cl-freelancer-card animate-fade-in">
+            <div key={f.id} className="cl-card cl-freelancer-card">
               <button
                 className="cl-freelancer-card__unsave"
                 onClick={() => removeSaved(f)}
                 title="Remove from saved"
+                aria-label="Remove from saved"
               >
-                <BookmarkMinus size={20} />
+                <BookmarkMinus size={18} />
               </button>
               
               <div className="cl-freelancer-card__header">
                 <div className="cl-freelancer-card__avatar">
-                  {f.avatar ? <img src={f.avatar} alt={f.name} loading="lazy" /> : <span>{f.name.charAt(0)}</span>}
+                  {f.avatar ? <img src={f.avatar} alt={f.name} loading="lazy" /> : <span>{f.name?.charAt(0) || 'U'}</span>}
                 </div>
-                <div>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <h3 className="cl-freelancer-card__name">{f.name}</h3>
                   <p className="cl-freelancer-card__title">{f.title || 'Freelancer'}</p>
                 </div>
               </div>
 
               <div className="cl-freelancer-card__stats">
-                <span><Star size={14} fill="currentColor" style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> {f.rating || 0} ({f.reviews || 0})</span>
-                {f.location && <span><MapPin size={14} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> {f.location}</span>}
+                <span className="cl-freelancer-card__stat-pill">
+                  <Star size={13} fill="#F59E0B" color="#F59E0B" style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {f.rating || 0} ({f.reviews || 0})
+                </span>
+                {f.location && (
+                  <span className="cl-freelancer-card__stat-pill">
+                    <MapPin size={13} color="#10B981" style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {f.location}
+                  </span>
+                )}
               </div>
 
               {f.description && (
-                <p className="cl-freelancer-card__desc" style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginBottom: '1rem', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                <p className="cl-freelancer-card__desc">
                   {f.description}
                 </p>
               )}
 
               <div className="cl-freelancer-card__skills">
                 {f.skills?.length > 0 ? (
-                  f.skills.map(s => <span key={s} className="cl-tag">{s}</span>)
+                  f.skills.slice(0, 5).map(s => <span key={s} className="cl-tag">{s}</span>)
                 ) : (
                   <span className="cl-tag" style={{ opacity: 0.6 }}>No skills listed</span>
+                )}
+                {f.skills?.length > 5 && (
+                  <span className="cl-tag" style={{ background: '#F1F5F9', borderColor: '#E2E8F0', color: '#64748B' }}>
+                    +{f.skills.length - 5} more
+                  </span>
                 )}
               </div>
 
               <div className="cl-freelancer-card__footer">
-                <span className="cl-freelancer-card__rate"><strong>Rs. {f.hourlyRate || 0}</strong> / hr</span>
+                <div className="cl-freelancer-card__rate">
+                  <span style={{ fontSize: 12, color: '#64748B', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Starting Rate</span>
+                  <strong style={{ fontSize: '1.15rem', color: '#0B2942' }}>Rs. {f.hourlyRate || 0}</strong> <span style={{ color: '#64748B', fontSize: 13 }}>/ hr</span>
+                </div>
                 <button
                   className="cl-btn cl-btn--primary cl-btn--sm"
                   onClick={() => navigate(`/freelancers/${f.id}`)}
                 >
-                  View Profile
+                  View Profile <ChevronRight size={14} />
                 </button>
               </div>
             </div>
@@ -97,9 +120,7 @@ const ClientSavedFreelancers = () => {
       <style>{`
         .cl-saved-grid {
           display: grid;
-          /* min(100%, 400px) lets the column shrink below 400px on narrow phones
-             so a 400px card can't push the page wider than the viewport. */
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
           gap: 1.5rem;
         }
         @media (min-width: 1024px) {
@@ -111,47 +132,126 @@ const ClientSavedFreelancers = () => {
           position: relative;
           display: flex;
           flex-direction: column;
-          gap: 1.25rem;
-          padding: 1.5rem;
-          background: var(--color-bg);
-          border: 1px solid var(--color-secondary);
-          border-radius: var(--radius-xl);
-          box-shadow: var(--shadow-sm);
-          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+          gap: 1.15rem;
+          padding: 1.6rem;
+          background: #FFFFFF;
+          border: 1px solid #E2E8F0;
+          border-radius: 20px;
+          box-shadow: 0 4px 20px rgba(11, 41, 66, 0.04);
+          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s, border-color 0.22s;
         }
-        .cl-freelancer-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--color-accent); }
+        .cl-freelancer-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 32px rgba(16, 185, 129, 0.1);
+          border-color: rgba(16, 185, 129, 0.35);
+        }
         .cl-freelancer-card__unsave {
-          position: absolute; top: 1.5rem; right: 1.5rem;
-          background: rgba(4,46,76,0.05); border: none; 
-          width: 36px; height: 36px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; color: var(--color-text-light); transition: all 0.2s;
+          position: absolute;
+          top: 1.4rem;
+          right: 1.4rem;
+          background: #F8FAFC;
+          border: 1px solid #E2E8F0;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #94A3B8;
+          transition: all 0.2s;
         }
-        .cl-freelancer-card__unsave:hover { color: var(--color-error); background: var(--color-error-tint); }
-        .cl-freelancer-card__header { display: flex; align-items: center; gap: 1rem; padding-right: 2.5rem; }
+        .cl-freelancer-card__unsave:hover {
+          color: #EF4444;
+          background: #FEF2F2;
+          border-color: rgba(239, 68, 68, 0.3);
+          transform: scale(1.05);
+        }
+        .cl-freelancer-card__header {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding-right: 2.5rem;
+        }
         .cl-freelancer-card__avatar {
-          width: 64px; height: 64px; border-radius: 50%;
-          background: var(--gradient-primary); color: var(--color-white);
-          display: flex; align-items: center; justify-content: center;
-          font-weight: var(--fw-bold); font-size: 1.5rem; flex-shrink: 0;
+          width: 60px;
+          height: 60px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #10B981, #0B2942);
+          color: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 1.35rem;
+          flex-shrink: 0;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        .cl-freelancer-card__avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .cl-freelancer-card__name {
+          font-size: 1.1rem;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-weight: 700;
+          color: #0B2942;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .cl-freelancer-card__title {
+          font-size: 0.85rem;
+          color: #64748B;
+          margin-top: 0.2rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .cl-freelancer-card__stats {
+          display: flex;
+          gap: 0.75rem;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .cl-freelancer-card__stat-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 9px;
+          background: #F8FAFC;
+          border-radius: 999px;
+          border: 1px solid #E2E8F0;
+          font-size: 12px;
+          font-weight: 600;
+          color: #334155;
+        }
+        .cl-freelancer-card__desc {
+          font-size: 0.88rem;
+          color: #475569;
+          line-height: 1.5;
+          margin: 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .cl-freelancer-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .cl-freelancer-card__name { font-size: var(--fs-md); font-family: var(--font-heading); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
-        .cl-freelancer-card__title { font-size: var(--fs-sm); color: var(--color-text-mid); margin-top: 0.25rem; }
-        .cl-freelancer-card__stats { display: flex; gap: 1.5rem; font-size: var(--fs-sm); color: var(--color-text-mid); font-weight: var(--fw-medium); }
-        .cl-freelancer-card__skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .cl-freelancer-card__skills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.45rem;
+        }
         .cl-freelancer-card__footer {
-          margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(183, 201, 226, 0.35);
-          display: flex; justify-content: space-between; align-items: center;
+          margin-top: auto;
+          padding-top: 1.1rem;
+          border-top: 1px solid #EDF2F7;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
-        .cl-freelancer-card__rate { font-size: 0.875rem; color: var(--color-text-mid); }
-        .cl-spinner {
-          width: 38px; height: 38px; margin: 0 auto;
-          border: 3px solid rgba(183, 201, 226, 0.35); border-top-color: var(--color-primary);
-          border-radius: 50%; animation: cl-spin 0.8s linear infinite;
-        }
-        @keyframes cl-spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

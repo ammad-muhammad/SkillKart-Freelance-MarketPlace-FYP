@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle } from 'lucide-react';
 import { paymentsAPI } from '../../../api/payments';
+import Loader from '../../../Components/common/Loader/Loader';
 import './PaymentConfirm.css';
 
 /**
@@ -46,11 +47,10 @@ export default function PaymentConfirm() {
     <div className="pay-confirm">
       <div className="pay-confirm__card">
         {state === 'confirming' && (
-          <>
-            <Loader2 size={48} className="pay-confirm__spin" />
-            <h1>Confirming your payment…</h1>
-            <p>Please wait while we verify the transaction.</p>
-          </>
+          <div style={{ padding: '24px 0' }}>
+            <Loader size="md" text="Processing" />
+            <p style={{ marginTop: '16px', color: 'var(--color-text-mid)' }}>Please wait while we verify the transaction.</p>
+          </div>
         )}
         {state === 'success' && (
           <>

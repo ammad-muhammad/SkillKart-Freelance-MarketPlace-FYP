@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { Loader2 } from 'lucide-react';
 import { isMobileApp } from '../../../utils/platform';
+import Loader from '../Loader/Loader';
 import './MobileBootScreen.css';
 
 /**
@@ -25,7 +25,7 @@ const MobileBootScreen = () => {
   return (
     <div className="sk-boot-screen">
       <img src="/favicon.svg" alt="" className="sk-boot-screen__logo" />
-      <Loader2 size={32} className="sk-boot-screen__spinner spin" />
+      <Loader size="md" text="Loading" />
     </div>
   );
 };

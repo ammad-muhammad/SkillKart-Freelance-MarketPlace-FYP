@@ -1,78 +1,92 @@
-import Loader from '../../Components/common/Loader/Loader';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, Wallet, UploadCloud, X, Clock, MessageSquare, Play, Square, FileText, Search, AlertTriangle, StopCircle, Circle, CheckCircle2, RefreshCw, Layers, Star, ShoppingBag } from 'lucide-react';
-import PkrIcon from '../../Components/common/PkrIcon';
-import CustomSelect from '../../Components/common/CustomSelect/CustomSelect';
+import {
+  Briefcase, Wallet, UploadCloud, X, Clock, MessageSquare, Play,
+  Square, FileText, Search, AlertTriangle, StopCircle, Circle,
+  CheckCircle2, RefreshCw, Layers, Star, ShoppingBag, ChevronDown,
+  Check, ExternalLink, ShieldCheck, ChevronRight
+} from 'lucide-react';
 import { contractsAPI } from '../../api/contracts';
 import { jobsAPI } from '../../api/jobs';
-import { useAuth } from '../../hooks/useAuth';
-import { useFreelancer } from '../../context/FreelancerContext';
-import Modal from '../../Components/common/Modal/Modal';
-import useFocusTrap from '../../hooks/useFocusTrap';
 import { deliveriesAPI } from '../../api/deliveries';
 import { timeTrackingAPI } from '../../api/timeTracking';
+import { useAuth } from '../../hooks/useAuth';
+import { useFreelancer } from '../../context/FreelancerContext';
+import Loader from '../../Components/common/Loader/Loader';
 import LiveTimer from '../../Components/common/LiveTimer/LiveTimer';
 import ReviewModal from '../../Components/common/ReviewModal/ReviewModal';
-import StatusBadge from '../../Components/common/StatusBadge/StatusBadge';
-import Button from '../../Components/common/Button/Button';
-import EmptyState from '../../Components/common/EmptyState/EmptyState';
+import Modal from '../../Components/common/Modal/Modal';
 import OrderRequirements from '../../Components/common/OrderRequirements/OrderRequirements';
-import './FreelancerDashboard.css';
+import useFocusTrap from '../../hooks/useFocusTrap';
+import './FreelancerWork.css';
 
 const STAGES = {
-  'active': { label: 'In Progress', tone: 'info' },
-  'in-progress': { label: 'In Progress', tone: 'info' },
-  'in_revision': { label: 'In Revision', tone: 'warning' },
-  delivered: { label: 'Delivered — awaiting review', tone: 'warning' },
-  completed: { label: 'Completed', tone: 'success' },
-  cancelled: { label: 'Cancelled', tone: 'neutral' },
+  'active': { label: 'In Progress', tone: 'active' },
+  'in-progress': { label: 'In Progress', tone: 'active' },
+  'in_revision': { label: 'In Revision', tone: 'revision' },
+  delivered: { label: 'Delivered — In Review', tone: 'revision' },
+  completed: { label: 'Completed', tone: 'completed' },
+  cancelled: { label: 'Cancelled', tone: 'disputed' },
 };
 
-// Escrow status → freelancer-facing label.
-const ESCROW = {
-  deposit_pending: { label: 'Awaiting deposit', color: 'var(--color-warning)' },
-  deposit_paid: { label: 'Deposit funded', color: 'var(--color-info)' },
-  released: { label: 'Paid in full', color: 'var(--color-success)' },
-  refunded: { label: 'Refunded', color: 'var(--color-text-mid)' },
+const ESCROW_CONFIG = {
+  deposit_pending: { label: 'Awaiting deposit', color: '#D97706' },
+  deposit_paid: { label: 'Escrow funded', color: '#0284C7' },
+  released: { label: 'Paid in full', color: '#10B981' },
+  refunded: { label: 'Refunded', color: '#64748B' },
 };
 
 export default function FreelancerWork() {
-  const [contracts, setContracts] = useState([]);
-  const [gigOrders, setGigOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [deliverFor, setDeliverFor] = useState(null);
-  const [delivery, setDelivery] = useState({ message: '', links: '' });
-  const [delivering, setDelivering] = useState(false);
-  const [tracking, setTracking] = useState({}); // state for tracking operations
-  const [manualLogFor, setManualLogFor] = useState(null); // contract obj
-  const [manualLog, setManualLog] = useState({ startTime: '', endTime: '', notes: '' });
-  const [loggingManual, setLoggingManual] = useState(false);
-  const deliverModalRef = useRef(null);
-  const closeDeliverModal = useCallback(() => { if (!delivering) setDeliverFor(null); }, [delivering]);
-  useFocusTrap(deliverModalRef, !!deliverFor, closeDeliverModal);
-  const [endRequestModal, setEndRequestModal] = useState(null); // contractId
-  const [endReason, setEndReason] = useState('Work completed');
-  const [endDetails, setEndDetails] = useState('');
-  const [disputeModal, setDisputeModal] = useState(null); // contractId
-  const [disputeReason, setDisputeReason] = useState('');
-  const [disputeDesc, setDisputeDesc] = useState('');
-  const [reviewModal, setReviewModal] = useState(null); // { jobId, targetName }
   const { user } = useAuth();
   const { showToast } = useFreelancer();
 
+  const [contracts, setContracts] = useState([]);
+  const [gigOrders, setGigOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Tabs, Filters, Sort
+  const [tab, setTab] = useState('active'); // 'active' | 'completed' | 'disputed' | 'all'
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'amount'
+  const [viewCompact, setViewCompact] = useState(false);
+  const [expandedCardIds, setExpandedCardIds] = useState(new Set());
+
+  // Modal States
+  const [deliverFor, setDeliverFor] = useState(null);
+  const [delivery, setDelivery] = useState({ message: '', links: '' });
+  const [delivering, setDelivering] = useState(false);
+  const deliverModalRef = useRef(null);
+  const closeDeliverModal = useCallback(() => { if (!delivering) setDeliverFor(null); }, [delivering]);
+  useFocusTrap(deliverModalRef, !!deliverFor, closeDeliverModal);
+
+  const [tracking, setTracking] = useState({});
+  const [manualLogFor, setManualLogFor] = useState(null);
+  const [manualLog, setManualLog] = useState({ startTime: '', endTime: '', notes: '' });
+  const [loggingManual, setLoggingManual] = useState(false);
+
+  const [endRequestModal, setEndRequestModal] = useState(null);
+  const [endReason, setEndReason] = useState('Work completed');
+  const [endDetails, setEndDetails] = useState('');
+
+  const [disputeModal, setDisputeModal] = useState(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeDesc, setDisputeDesc] = useState('');
+
+  const [reviewModal, setReviewModal] = useState(null);
+
+  // Pagination for many contracts
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 10;
+
+  // Load contracts and gig orders
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const [{ data }, gigRes] = await Promise.all([
-        contractsAPI.getMyContracts({ limit: 50 }),
-        // Gig orders have no Contract (legacy 50/50 Stripe flow) — fetched
-        // separately from the Job collection instead.
-        jobsAPI.getMyHiredJobs({ source: 'gig', limit: 50 }).catch(() => null),
+        contractsAPI.getMyContracts({ limit: 100 }),
+        jobsAPI.getMyHiredJobs({ source: 'gig', limit: 100 }).catch(() => null),
       ]);
       setContracts(Array.isArray(data?.data) ? data.data : []);
-      // Only a real submission counts as delivered — older gig orders carry
-      // an empty `{ links: [] }` delivery stub (see Backend Job.js).
       setGigOrders(Array.isArray(gigRes?.data?.data)
         ? gigRes.data.data.map((g) => ({
             ...g,
@@ -81,7 +95,9 @@ export default function FreelancerWork() {
             revisions: g.revisions || []
           }))
         : []);
-    } catch { /* handled by the global error handler */ } finally {
+    } catch {
+      /* handled gracefully */
+    } finally {
       if (!silent) setLoading(false);
     }
   }, []);
@@ -96,29 +112,86 @@ export default function FreelancerWork() {
     return () => clearInterval(interval);
   }, [load, deliverFor, endRequestModal, disputeModal, manualLogFor, reviewModal]);
 
-  // Earnings summary from completed contracts.
-  const totalEarned = contracts
-    .filter((c) => c.status === 'completed' && c.payment?.status === 'released')
-    .reduce((sum, c) => sum + (Number(c.payment?.freelancerPayout) || 0), 0);
-  const activeCount = contracts.filter((c) => ['active', 'in-progress', 'delivered'].includes(c.status)).length;
+  // Financial KPI totals
+  const totalEarned = useMemo(() => {
+    return contracts
+      .filter((c) => c.status === 'completed' && c.payment?.status === 'released')
+      .reduce((sum, c) => sum + (Number(c.payment?.freelancerPayout) || 0), 0);
+  }, [contracts]);
 
+  const activeContractsCount = useMemo(() => {
+    return contracts.filter((c) => ['active', 'in-progress', 'in_revision', 'delivered'].includes(c.status)).length;
+  }, [contracts]);
+
+  const completedContractsCount = useMemo(() => {
+    return contracts.filter((c) => c.status === 'completed').length;
+  }, [contracts]);
+
+  const totalInEscrow = useMemo(() => {
+    return contracts
+      .filter((c) => c.status !== 'completed' && c.status !== 'cancelled')
+      .reduce((sum, c) => {
+        if (c.type === 'hourly') return sum + (Number(c.hourlyEscrow?.lockedBalance) || 0);
+        const fundedMs = (c.milestones || []).filter(m => m.status === 'funded');
+        return sum + fundedMs.reduce((msSum, m) => msSum + (Number(m.amount) || 0), 0);
+      }, 0);
+  }, [contracts]);
+
+  // Combined and filtered work items
+  const filteredWorkItems = useMemo(() => {
+    const combined = [
+      ...contracts.map(c => ({ ...c, isGig: false })),
+      ...gigOrders.map(g => ({ ...g, isGig: true }))
+    ];
+
+    return combined
+      .filter(item => {
+        const status = item.status || '';
+        if (tab === 'active' && !['active', 'in-progress', 'in_revision', 'delivered'].includes(status)) return false;
+        if (tab === 'completed' && status !== 'completed') return false;
+        if (tab === 'disputed' && (status !== 'disputed' && !item.dispute)) return false;
+
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const title = (item.title || item.jobId?.title || '').toLowerCase();
+          const client = item.clientId ? `${item.clientId.firstName || ''} ${item.clientId.lastName || ''}`.toLowerCase() : '';
+          return title.includes(q) || client.includes(q);
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'amount') {
+          const amtA = a.fixedPrice || a.budget?.amount || a.payment?.totalAmount || 0;
+          const amtB = b.fixedPrice || b.budget?.amount || b.payment?.totalAmount || 0;
+          return amtB - amtA;
+        }
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+  }, [contracts, gigOrders, tab, search, sortBy]);
+
+  const totalPages = Math.ceil(filteredWorkItems.length / PER_PAGE) || 1;
+  const paginatedItems = useMemo(() => {
+    return filteredWorkItems.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  }, [filteredWorkItems, page]);
+
+  // Submit delivery
   const submitDelivery = async () => {
     if (!deliverFor) return;
     if (!delivery.message.trim() && !delivery.links.trim()) {
-      showToast('Add a delivery note or at least one link.', 'warning');
+      showToast('Please add a delivery note or at least one link.', 'warning');
       return;
     }
     setDelivering(true);
     try {
       const externalLinks = delivery.links.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
-      // Gig orders have no Contract/Delivery doc (legacy 50/50 Stripe flow) —
-      // delivery lives directly on the Job instead.
       if (deliverFor.isGig) {
         await jobsAPI.submitGigDelivery(deliverFor._id, { message: delivery.message.trim(), links: externalLinks });
       } else {
         await deliveriesAPI.submitDelivery(deliverFor._id, { message: delivery.message.trim(), externalLinks });
       }
-      showToast('Work delivered! The client will review it.');
+      showToast('Work delivered successfully! The client has been notified to review.', 'success');
       setDeliverFor(null);
       setDelivery({ message: '', links: '' });
       load();
@@ -129,29 +202,20 @@ export default function FreelancerWork() {
     }
   };
 
+  // Hourly timer operations
   const toggleTimer = async (contractId, isActive) => {
     try {
       setTracking(prev => ({ ...prev, [contractId]: true }));
       if (isActive) {
         const { data } = await timeTrackingAPI.stopTimer(contractId);
-        if (!data?.data?.log) {
-          // Duration was under a minute — nothing was logged or billed.
-          showToast(data?.message || 'Timer stopped (duration too short to log)', 'info');
-        } else {
-          showToast(
-            data?.data?.needsTopUp
-              ? 'Timer stopped — escrow is low, ask the client to top up so this gets paid.'
-              : 'Timer stopped and paid out from escrow.',
-            data?.data?.needsTopUp ? 'warning' : 'success'
-          );
-        }
+        showToast(data?.data?.needsTopUp ? 'Timer stopped — escrow is running low.' : 'Timer stopped and payout logged.', 'success');
       } else {
         await timeTrackingAPI.startTimer(contractId);
-        showToast('Timer started successfully');
+        showToast('Timer started successfully.');
       }
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to toggle timer', 'error');
+      showToast(err.response?.data?.message || 'Failed to toggle timer.', 'error');
     } finally {
       setTracking(prev => ({ ...prev, [contractId]: false }));
     }
@@ -160,26 +224,22 @@ export default function FreelancerWork() {
   const submitManualLog = async () => {
     if (!manualLogFor) return;
     if (!manualLog.startTime || !manualLog.endTime) {
-      showToast('Set a start and end time.', 'warning');
-      return;
-    }
-    if (new Date(manualLog.endTime) <= new Date(manualLog.startTime)) {
-      showToast('End time must be after start time.', 'warning');
+      showToast('Set both start and end time.', 'warning');
       return;
     }
     setLoggingManual(true);
     try {
-      const { data } = await timeTrackingAPI.addManualLog(manualLogFor._id, {
+      await timeTrackingAPI.addManualLog(manualLogFor._id, {
         startTime: new Date(manualLog.startTime).toISOString(),
         endTime: new Date(manualLog.endTime).toISOString(),
         notes: manualLog.notes.trim(),
       });
-      showToast(data?.message || 'Time logged.', data?.data?.needsTopUp ? 'warning' : 'success');
+      showToast('Manual hours logged successfully.', 'success');
       setManualLogFor(null);
       setManualLog({ startTime: '', endTime: '', notes: '' });
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to log time.', 'error');
+      showToast(err.response?.data?.message || 'Failed to log hours.', 'error');
     } finally {
       setLoggingManual(false);
     }
@@ -187,28 +247,15 @@ export default function FreelancerWork() {
 
   const handleRequestEnd = async (e) => {
     e.preventDefault();
-    if (!endReason || (endReason === 'Other' && !endDetails.trim())) return;
+    if (!endReason) return;
     try {
       setDelivering(true);
       await contractsAPI.requestEnd(endRequestModal.contractId, endReason, endDetails);
-      showToast('End request sent');
+      showToast('End contract request sent to client.');
       setEndRequestModal(null);
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to send request', 'error');
-    } finally {
-      setDelivering(false);
-    }
-  };
-
-  const handleRespondEnd = async (contractId, action) => {
-    try {
-      setDelivering(true);
-      await contractsAPI.respondEnd(contractId, action);
-      showToast(`Request ${action === 'approve' ? 'approved' : 'rejected'}`);
-      load();
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to respond', 'error');
+      showToast(err.response?.data?.message || 'Failed to send request.', 'error');
     } finally {
       setDelivering(false);
     }
@@ -223,563 +270,613 @@ export default function FreelancerWork() {
     try {
       setDelivering(true);
       await contractsAPI.raiseDispute(disputeModal.contractId, disputeReason, disputeDesc);
-      showToast('Dispute raised successfully');
+      showToast('Dispute raised. Admin will review the project details.');
       setDisputeModal(null);
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to raise dispute', 'error');
+      showToast(err.response?.data?.message || 'Failed to raise dispute.', 'error');
     } finally {
       setDelivering(false);
     }
   };
 
-  if (loading) return <Loader text="Loading your work..." fullScreen={true} />;
+  const toggleExpandCard = (id) => {
+    setExpandedCardIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="fl-work-page">
+        <Loader fullScreen text="Loading your contracts and deliverables..." />
+      </div>
+    );
+  }
 
   return (
-    <div className="fl-work">
-      <div className="fl-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="fl-work-page">
+      {/* ─── Header ─── */}
+      <div className="fl-work-header">
         <div>
-          <h1 className="fl-page-title">My Work</h1>
-          <p className="fl-page-sub">Your active contracts, deliveries, and earnings.</p>
+          <nav className="fl-work-breadcrumb" aria-label="Breadcrumb">
+            <Link to="/freelancer/dashboard">Dashboard</Link>
+            <span style={{ color: '#CBD5E1' }}>/</span>
+            <span style={{ color: '#10B981' }}>My Work</span>
+          </nav>
+          <h1 className="fl-work-title">My Work</h1>
+          <p className="fl-work-sub">
+            Track active milestones, time logs, client revisions, and releases in real time.
+          </p>
         </div>
-        <Link to="/browse-projects" className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Search size={14} style={{ marginRight: '4px' }} /> Find Work
+
+        <Link to="/browse-projects" className="fl-gigs-header__cta">
+          <Search size={15} />
+          <span>Find Work</span>
         </Link>
       </div>
 
-      {/* Earnings summary */}
-      <div className="fl-stat-grid" style={{ marginBottom: '2rem' }}>
-        <div className="fl-stat-card" style={{ background: 'var(--gradient-primary)', color: 'var(--color-white)', borderColor: 'transparent' }}>
-          <div className="fl-stat-card__bg" style={{ opacity: 0.1 }}><Wallet size={100} /></div>
-          <div className="fl-stat-card__icon" style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-white)' }}><Wallet size={24} /></div>
-          <div className="fl-stat-card__value" style={{ background: 'var(--color-white)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rs. {totalEarned.toLocaleString()}</div>
-          <div className="fl-stat-card__label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total earned from completed contracts</div>
+      {/* ─── Bento Summary Row ─── */}
+      <section className="fl-work-summary-grid" aria-label="Earnings and Contracts Summary">
+        <div className="fl-work-hero-card">
+          <div>
+            <span className="fl-work-hero-label">Total Earned</span>
+            <div className="fl-work-hero-value">Rs. {totalEarned.toLocaleString()}</div>
+          </div>
+          <span className="fl-work-hero-sub">Released from completed milestone deliverables</span>
         </div>
-        <div className="fl-stat-card">
-          <div className="fl-stat-card__bg"><Briefcase size={100} /></div>
-          <div className="fl-stat-card__icon" style={{ background: 'var(--color-info-tint)', color: 'var(--color-info)' }}><Briefcase size={24} /></div>
-          <div className="fl-stat-card__value">{activeCount}</div>
-          <div className="fl-stat-card__label">Active contracts in progress</div>
+
+        <div className="fl-work-kpi-card">
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Briefcase size={20} />
+          </div>
+          <div>
+            <div className="fl-work-kpi-val">{activeContractsCount}</div>
+            <div className="fl-work-kpi-label">Active Contracts</div>
+          </div>
+        </div>
+
+        <div className="fl-work-kpi-card">
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <div className="fl-work-kpi-val">Rs. {totalInEscrow.toLocaleString()}</div>
+            <div className="fl-work-kpi-label">In Escrow</div>
+          </div>
+        </div>
+
+        <div className="fl-work-kpi-card">
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <div className="fl-work-kpi-val">{completedContractsCount}</div>
+            <div className="fl-work-kpi-label">Completed</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Toolbar ─── */}
+      <div className="fl-gigs-toolbar">
+        <div className="fl-gigs-toolbar__left">
+          {/* Status Tabs */}
+          <div className="fl-status-tabs-pill">
+            {[
+              { key: 'active',    label: 'In Progress', count: activeContractsCount },
+              { key: 'completed', label: 'Completed',   count: completedContractsCount },
+              { key: 'all',       label: 'All Work',    count: contracts.length + gigOrders.length },
+            ].map(t => (
+              <button
+                key={t.key}
+                type="button"
+                className={`fl-status-tab-btn ${tab === t.key ? 'fl-status-tab-btn--active' : ''}`}
+                onClick={() => { setTab(t.key); setPage(1); }}
+              >
+                <span>{t.label}</span>
+                <span className="fl-status-tab-badge">{t.count}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Search Pill */}
+          <div className="fl-search-pill">
+            <Search size={15} color="#94A3B8" />
+            <input
+              type="text"
+              placeholder="Search contracts or clients..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: 0 }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="fl-gigs-toolbar__right">
+          <select
+            className="fl-sort-select"
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            aria-label="Sort contracts"
+          >
+            <option value="newest">Sort: Newest</option>
+            <option value="amount">Sort: Highest Value</option>
+          </select>
         </div>
       </div>
 
-      {contracts.length === 0 && gigOrders.length === 0 ? (
-        <EmptyState
-          icon={Briefcase}
-          title="No contracts yet"
-          message="When a client hires you (via a proposal or a gig order), your work will appear here."
-          actionText="Browse Projects"
-          actionLink="/browse-projects"
-        />
+      {/* ─── Contract Cards List ─── */}
+      {paginatedItems.length === 0 ? (
+        <div className="fl-gigs-empty-card">
+          <div className="fl-gigs-empty-card__icon">
+            <Briefcase size={28} />
+          </div>
+          <h3 className="fl-gigs-empty-card__title">
+            {search ? 'No work matches your search' : 'No contracts in this view'}
+          </h3>
+          <p className="fl-gigs-empty-card__sub">
+            {search
+              ? 'Try searching with a different client name or project keyword.'
+              : 'Submit proposals on open client projects or offer fixed-price gigs to start contracts.'}
+          </p>
+          <Link to="/browse-projects" className="fl-gigs-header__cta">
+            <Search size={15} />
+            <span>Browse Open Projects</span>
+          </Link>
+        </div>
       ) : (
-        <div className="fl-card-list">
-          {contracts.map((c) => {
-            const stage = STAGES[c.status] || { label: c.status, tone: 'neutral' };
-            const escrow = c.payment ? ESCROW[c.payment.status] : null;
-            
-            const isFixed = c.type === 'fixed';
-            const isHourly = c.type === 'hourly';
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {paginatedItems.map(item => {
+            const isGig = item.isGig;
+            const stage = STAGES[item.status] || { label: item.status, tone: 'active' };
+            const isFixed = item.type === 'fixed' || isGig;
+            const isHourly = item.type === 'hourly' && !isGig;
+            const client = item.clientId || item.client || {};
+            const clientName = `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.name || 'Client';
+            const clientInitial = clientName.charAt(0).toUpperCase() || 'C';
+            const contractTitle = item.title || item.jobId?.title || (isGig ? 'Gig Order' : 'Contract');
+            const isCompleted = item.status === 'completed';
+            const isExpanded = expandedCardIds.has(item._id) || !isCompleted;
 
-            const currentMilestone = c.currentMilestone;
-            const statusOk = ['active', 'in-progress', 'in_revision'].includes(c.status);
-            // Fixed-price: the freelancer can only submit once the CURRENT milestone's
-            // escrow is actually funded — mirrors the backend guard in submitDelivery.
-            const canDeliver = isFixed
-              ? statusOk && ['funded', 'in_revision'].includes(currentMilestone?.status)
-              : statusOk;
-            const waitingDeposit = isFixed && statusOk && !['funded', 'in_revision'].includes(currentMilestone?.status) && currentMilestone?.status !== 'disputed';
+            // Escrow info
+            const agreedAmount = item.fixedPrice || item.budget?.amount || item.totalAmount || item.payment?.totalAmount || 0;
+            const payoutAmount = item.payment?.freelancerPayout || (agreedAmount * 0.9);
+            const isPaid = item.payment?.status === 'released';
 
-            const timerActive = isHourly && c.timer?.isActive;
+            // Milestone progress
+            const milestones = Array.isArray(item.milestones) ? item.milestones : [];
+            const releasedCount = milestones.filter(m => m.status === 'released').length;
+            const currentMilestone = item.currentMilestone;
+            const canDeliver = isFixed && (item.status === 'in-progress' || item.status === 'active' || item.status === 'in_revision');
+
+            const isRevision = !item.delivery && !!item.lastRevision?.note && item.status === 'in-progress';
+            const timerActive = isHourly && item.timer?.isActive;
 
             return (
-              <div key={c._id} className="fl-card fl-contract">
-                <div className="fl-contract__top">
-                  <div>
-                    <h3 className="fl-contract__title">{c.jobId?.title || 'Unknown Job'}</h3>
-                    <p className="fl-contract__meta">
-                      {isHourly ? <span style={{ display: 'inline-flex', alignItems: 'center' }}><Clock size={14} style={{ marginRight: '4px' }} /> Hourly Project</span> : <span style={{ display: 'inline-flex', alignItems: 'center' }}><FileText size={14} style={{ marginRight: '4px' }} /> Fixed Price Project</span>} · {c.jobId?.category || 'Unknown'}
-                      {c.clientId && ` · ${c.clientId.firstName || ''} ${c.clientId.lastName || ''}`}
-                    </p>
+              <article key={item._id} className="fl-contract-row-card">
+                {/* 4px Status Accent Bar */}
+                <div className={`fl-contract-status-bar fl-contract-status-bar--${stage.tone}`} />
+
+                {/* Row 1: Client Avatar, Title, Chips, Status Pill */}
+                <div className="fl-contract-head-row">
+                  <div className="fl-contract-head-left">
+                    <div className="fl-client-avatar-circle">
+                      {clientInitial}
+                    </div>
+                    <div className="fl-contract-title-wrap">
+                      <h3 className="fl-contract-title" title={contractTitle}>
+                        {contractTitle}
+                      </h3>
+                      <div className="fl-contract-subline">
+                        <span className="sk-gig-card__skill-chip" style={{ fontSize: 10.5 }}>
+                          {isHourly ? 'Hourly Rate' : 'Fixed Price'}
+                        </span>
+                        {item.jobId?.category && (
+                          <span style={{ color: '#64748B' }}>{item.jobId.category}</span>
+                        )}
+                        <span>•</span>
+                        <span>Client: <strong>{clientName}</strong></span>
+                      </div>
+                    </div>
                   </div>
-                  <StatusBadge tone={stage.tone}>{stage.label}</StatusBadge>
-                </div>
 
-                <div className="fl-contract__money">
-                  {isFixed ? (
-                    <span><PkrIcon size={14} /> Agreed: <strong>Rs. {c.fixedPrice ?? '—'}</strong></span>
-                  ) : (
-                    <span><PkrIcon size={14} /> Rate: <strong>Rs. {c.hourlyRate ?? '—'} / hr</strong> (Max {c.weeklyLimit ?? '—'} hrs/wk)</span>
-                  )}
-                  {isFixed && escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
-                  {isFixed && c.payment?.status === 'released' && (
-                    <span style={{ color: 'var(--color-success)' }}>You received: <strong>Rs. {Number(c.payment.freelancerPayout).toLocaleString()}</strong></span>
-                  )}
-                </div>
-
-                {/* Pending Banners */}
-                {c.dispute && c.dispute.status === 'pending' && (
-                  <div style={{ background: 'var(--color-error-tint)', border: '1px solid rgba(220, 38, 38, 0.25)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <AlertTriangle size={18} style={{ marginRight: '8px' }} /> Contract under Dispute
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-error)' }}>
-                      This contract has been escalated to Admin review. Reason: {c.dispute.reason}.
-                    </p>
-                  </div>
-                )}
-
-                {isHourly && c.endRequest && c.endRequest.status === 'pending' && (
-                  <div style={{ background: 'var(--color-success-tint)', border: '1px solid rgba(5, 150, 105, 0.25)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                    {String(c.endRequest.requestedBy) === String(user?._id) ? (
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center' }}>
-                        <Clock size={14} style={{ marginRight: '4px' }} /> Waiting for the client to approve your request to end this contract.
-                      </p>
-                    ) : (
-                      <>
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-success)', display: 'flex', alignItems: 'center' }}>
-                          <StopCircle size={18} style={{ marginRight: '8px' }} /> Client has requested to end this contract
-                        </h4>
-                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--color-success)' }}>
-                          Reason: {c.endRequest.reason}
-                          {c.endRequest.additionalDetails && <span> - {c.endRequest.additionalDetails}</span>}
-                        </p>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                          <Button variant="success" size="sm" onClick={() => handleRespondEnd(c._id, 'approve')} disabled={delivering}>
-                            Approve & End Contract
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleRespondEnd(c._id, 'reject')} disabled={delivering}>
-                            Reject Request
-                          </Button>
-                        </div>
-                      </>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className={`sk-badge sk-badge--status-${isCompleted ? 'active' : 'paused'}`}>
+                      <span className="sk-badge__status-dot" />
+                      {stage.label}
+                    </span>
+                    {isCompleted && (
+                      <button
+                        type="button"
+                        className="sk-icon-btn"
+                        style={{ width: 30, height: 30 }}
+                        onClick={() => toggleExpandCard(item._id)}
+                        title={isExpanded ? 'Collapse card' : 'Expand card details'}
+                      >
+                        <ChevronDown size={14} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                      </button>
                     )}
                   </div>
-                )}
+                </div>
 
-                {isHourly && (
-                  <div style={{ background: 'var(--color-secondary)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(183, 201, 226, 0.35)', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      {['completed', 'cancelled'].includes(c.status) ? (
-                        <span style={{ color: 'var(--color-text-mid)', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> Contract has ended</span>
-                      ) : timerActive ? (
-                        <span style={{ color: 'var(--color-success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
-                          <CheckCircle2 size={14} style={{ marginRight: '4px' }} /> You are currently working
-                          <LiveTimer startedAt={c.timer?.startedAt} hourlyRate={c.hourlyRate} prefix=" (" suffix=")" />
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--color-text-mid)', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}><Circle size={14} style={{ marginRight: '4px' }} /> You are not tracking time</span>
-                      )}
-                    </div>
-                    <div style={{ color: 'var(--color-text-mid)' }}>
-                      <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Total logged: <strong>{Math.floor((c.totalDuration || 0) / 3600000)}h {Math.floor(((c.totalDuration || 0) % 3600000) / 60000)}m</strong>
-                      {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: 'var(--color-success)', fontSize: '0.9em' }}>(Rs. {(((c.totalDuration || 0) / 3600000) * c.hourlyRate).toFixed(2)})</span>}
-                      {c.lastTimeLog && (
-                        <span style={{ marginLeft: '0.5rem', paddingLeft: '0.5rem', borderLeft: '1px solid rgba(183, 201, 226, 0.5)' }}>
-                          Last session: <strong>{Math.floor(c.lastTimeLog.duration / 3600000)}h {Math.floor((c.lastTimeLog.duration % 3600000) / 60000)}m</strong>
-                          {c.hourlyRate > 0 && <span style={{ marginLeft: '0.4rem', color: 'var(--color-success)', fontSize: '0.9em' }}>(Rs. {((c.lastTimeLog.duration / 3600000) * c.hourlyRate).toFixed(2)})</span>}
-                          {' '}({new Date(c.lastTimeLog.endTime).toLocaleDateString()})
-                        </span>
-                      )}
-                    </div>
-                    {!['completed', 'cancelled'].includes(c.status) && (
-                      <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(183, 201, 226, 0.35)' }}>
-                        <Wallet size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-success)' }} />
-                        <span style={{ color: (c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 ? 'var(--color-error)' : 'var(--color-text-mid)' }}>
-                          Client's escrow lock: <strong>Rs. {(c.hourlyEscrow?.lockedBalance || 0).toFixed(2)}</strong>
-                          {(c.hourlyEscrow?.lockedBalance || 0) < (c.hourlyRate || 0) * 2 && ' — running low, ask the client to top up so new time logs get paid'}
+                {isExpanded && (
+                  <>
+                    {/* Row 2: Financials Strip (4 plain columns with dividers) */}
+                    <div className="fl-contract-fin-strip">
+                      <div className="fl-contract-fin-col">
+                        <span className="fl-contract-fin-label">AGREED BUDGET</span>
+                        <span className="fl-contract-fin-val">Rs. {Number(agreedAmount).toLocaleString()}</span>
+                      </div>
+
+                      <div className="fl-contract-fin-col">
+                        <span className="fl-contract-fin-label">{isHourly ? 'RATE' : 'FUNDED IN ESCROW'}</span>
+                        <span className="fl-contract-fin-val">
+                          {isHourly ? `Rs. ${item.hourlyRate}/hr` : (item.payment?.status === 'deposit_paid' ? '100% Funded' : 'Active')}
                         </span>
                       </div>
-                    )}
-                  </div>
-                )}
 
-                {isFixed && Array.isArray(c.milestones) && c.milestones.length > 0 && (
-                  <div style={{ background: 'var(--color-secondary)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(183, 201, 226, 0.35)', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--color-text-mid)' }}>
-                      <Layers size={14} /> Escrow Milestones ({c.milestones.filter(m => m.status === 'released').length}/{c.milestones.length} released)
+                      <div className="fl-contract-fin-col">
+                        <span className="fl-contract-fin-label">RELEASED TO YOU</span>
+                        <span className="fl-contract-fin-val" style={{ color: isPaid ? '#10B981' : '#64748B' }}>
+                          {isPaid ? `Rs. ${Number(payoutAmount).toLocaleString()}` : 'Pending Delivery'}
+                        </span>
+                      </div>
+
+                      <div className="fl-contract-fin-col">
+                        <span className="fl-contract-fin-label">{isHourly ? 'WEEKLY LIMIT' : 'YOU RECEIVE'}</span>
+                        <span className="fl-contract-fin-val">
+                          {isHourly ? `${item.weeklyLimit || 40} hrs/wk` : `Rs. ${Number(payoutAmount).toLocaleString()}`}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                      {c.milestones.map((m) => {
-                        const bg = m.status === 'released' ? 'var(--color-success-tint)'
-                          : m.status === 'disputed' ? 'var(--color-error-tint)'
-                          : m._id === currentMilestone?._id ? 'var(--color-info-tint)'
-                          : 'var(--color-secondary)';
-                        const fg = m.status === 'released' ? 'var(--color-success)'
-                          : m.status === 'disputed' ? 'var(--color-error)'
-                          : m._id === currentMilestone?._id ? 'var(--color-info)'
-                          : 'var(--color-text-mid)';
-                        return (
-                          <span key={m._id} style={{ background: bg, color: fg, padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.78rem' }}>
-                            {m.order}. {m.title} — Rs. {m.amount} ({m.status.replace('_', ' ')})
+
+                    {/* Prominent revision banner if client requested changes */}
+                    {isRevision && (
+                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 14, padding: 14, color: '#78350F' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                          <RefreshCw size={15} color="#D97706" /> Client Requested Revision:
+                        </div>
+                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                          {item.lastRevision?.note}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Order Requirements drawer if gig order */}
+                    {isGig && item.requirements && (
+                      <OrderRequirements
+                        requirements={item.requirements}
+                        scope={item.customOfferId ? item.description : undefined}
+                        title={item.customOfferId ? 'Offer scope & client notes' : 'Client requirements'}
+                        defaultOpen={!isCompleted}
+                      />
+                    )}
+
+                    {/* Row 3: Milestone Timeline Stepper (if fixed price with milestones) */}
+                    {isFixed && milestones.length > 0 && (
+                      <div className="fl-milestones-row">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+                            Milestone Deliverables ({releasedCount}/{milestones.length} released)
                           </span>
-                        );
-                      })}
-                    </div>
-                    {currentMilestone?.status === 'funded' && (
-                      <p style={{ margin: '0.5rem 0 0', color: 'var(--color-success)', fontWeight: 600 }}>
-                        <CheckCircle2 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Escrow Funded 100% — safe to work on Milestone {currentMilestone.order}!
-                      </p>
+                        </div>
+
+                        <div className="fl-milestones-track">
+                          {milestones.map((m, mIdx) => {
+                            const isReleased = m.status === 'released';
+                            const isFunded = m.status === 'funded';
+                            return (
+                              <div key={m._id || mIdx} className="fl-milestone-node-item">
+                                <div className={`fl-milestone-dot ${isReleased ? 'fl-milestone-dot--released' : isFunded ? 'fl-milestone-dot--funded' : 'fl-milestone-dot--pending'}`}>
+                                  {isReleased ? <Check size={13} /> : m.order || mIdx + 1}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0B2942' }}>{m.title}</span>
+                                  <span style={{ fontSize: 11, color: '#64748B' }}>Rs. {Number(m.amount).toLocaleString()}</span>
+                                </div>
+                                {mIdx < milestones.length - 1 && (
+                                  <div className={`fl-milestone-line ${isReleased ? 'fl-milestone-line--active' : ''}`} />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {currentMilestone?.status === 'funded' && (
+                          <div className="fl-escrow-banner">
+                            <CheckCircle2 size={15} color="#10B981" />
+                            <span>Escrow Funded 100% — safe to work on Milestone {currentMilestone.order}!</span>
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </div>
+
+                    {/* Hourly Timer Bar */}
+                    {isHourly && (
+                      <div style={{ background: '#F8FAFC', borderRadius: 14, padding: 14, border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: timerActive ? '#059669' : '#0B2942' }}>
+                            <Circle size={10} fill={timerActive ? '#10B981' : '#CBD5E1'} color="none" />
+                            <span>{timerActive ? 'Timer running:' : 'Timer idle'}</span>
+                            {timerActive && (
+                              <LiveTimer startedAt={item.timer?.startedAt} hourlyRate={item.hourlyRate} />
+                            )}
+                          </div>
+                          <span style={{ fontSize: 11.5, color: '#64748B' }}>
+                            Total logged: {Math.floor((item.totalDuration || 0) / 3600000)}h {Math.floor(((item.totalDuration || 0) % 3600000) / 60000)}m
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          {timerActive ? (
+                            <button
+                              type="button"
+                              className="sk-pill-action-btn"
+                              style={{ background: '#EF4444', color: '#FFF', borderColor: '#EF4444' }}
+                              onClick={() => toggleTimer(item._id, true)}
+                              disabled={tracking[item._id]}
+                            >
+                              <Square size={13} /> Stop Timer
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="fl-gigs-header__cta"
+                              style={{ height: 36, padding: '0 16px', fontSize: 12.5 }}
+                              onClick={() => toggleTimer(item._id, false)}
+                              disabled={tracking[item._id]}
+                            >
+                              <Play size={13} /> Start Timer
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="sk-pill-action-btn"
+                            style={{ height: 36, padding: '0 14px', fontSize: 12.5 }}
+                            onClick={() => { setManualLogFor(item); setManualLog({ startTime: '', endTime: '', notes: '' }); }}
+                          >
+                            <Clock size={13} /> Log Hours
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Row 4: Actions Bar */}
+                    <div className="fl-contract-actions-row">
+                      <div className="fl-contract-actions-left">
+                        {item.jobId?._id && (
+                          <Link to={`/jobs/${item.jobId._id}`} className="sk-pill-action-btn">
+                            View Details
+                          </Link>
+                        )}
+                        <Link to="/freelancer/messages" className="sk-pill-action-btn">
+                          <MessageSquare size={13} /> Contact Client
+                        </Link>
+                        {canDeliver && (
+                          <button
+                            type="button"
+                            className="fl-gigs-header__cta"
+                            style={{ height: 36, padding: '0 18px', fontSize: 12.5 }}
+                            onClick={() => {
+                              setDeliverFor(item);
+                              setDelivery({ message: '', links: '' });
+                            }}
+                          >
+                            <UploadCloud size={14} />
+                            <span>{isRevision ? 'Submit Revised Work' : 'Submit Work'}</span>
+                          </button>
+                        )}
+                        {isCompleted && !item.hasReviewed && (
+                          <button
+                            type="button"
+                            className="sk-pill-action-btn"
+                            onClick={() => setReviewModal({ jobId: item.jobId?._id, targetName: clientName })}
+                          >
+                            <Star size={13} color="#F59E0B" /> Leave Review
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dispute / End button far right */}
+                      <div>
+                        {!isCompleted && (
+                          <button
+                            type="button"
+                            className="sk-icon-btn sk-icon-btn--danger"
+                            onClick={() => setDisputeModal({ contractId: item._id })}
+                            title="Raise contract dispute"
+                          >
+                            <AlertTriangle size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
-
-                {c.revisionNote && c.status === 'in_revision' && (
-                  <div className="fl-contract__revision"><RefreshCw size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Revision requested: {c.revisionNote}</div>
-                )}
-
-                <div className="fl-contract__footer">
-                  <Link to={`/jobs/${c.jobId?._id}`} className="fl-btn fl-btn--ghost fl-btn--sm">View details</Link>
-                  {c.clientId && (
-                    <Link to="/freelancer/messages" className="fl-btn fl-btn--outline fl-btn--sm">
-                      <MessageSquare size={14} /> Contact Client
-                    </Link>
-                  )}
-                  {waitingDeposit && (
-                    <span className="fl-contract__hint">
-                      <Clock size={14} /> {currentMilestone?.status === 'disputed'
-                        ? 'This milestone is under dispute'
-                        : `Waiting for client to fund ${isFixed && c.milestones?.length > 1 ? `Milestone ${currentMilestone?.order || ''}` : 'the escrow'}`}
-                    </span>
-                  )}
-                  {canDeliver && (
-                    <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => { setDeliverFor(c); setDelivery({ message: '', links: '' }); }}>
-                      <UploadCloud size={14} /> Submit Work
-                    </button>
-                  )}
-                  {c.status === 'completed' && !c.hasReviewed && (
-                    <button
-                      className="fl-btn fl-btn--outline fl-btn--sm"
-                      onClick={() => setReviewModal({ jobId: c.jobId?._id, targetName: `${c.clientId?.firstName || ''} ${c.clientId?.lastName || ''}`.trim() || 'Client' })}
-                    >
-                      <Star size={14} /> Leave Review
-                    </button>
-                  )}
-                  {isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status) && (
-                    <>
-                      {timerActive ? (
-                        <Button variant="danger" size="sm" icon={<Square size={14} />} onClick={() => toggleTimer(c._id, true)} disabled={tracking[c._id]}>
-                          Stop Timer
-                        </Button>
-                      ) : (
-                        <button
-                          className="fl-btn fl-btn--primary fl-btn--sm"
-                          onClick={() => toggleTimer(c._id, false)}
-                          disabled={tracking[c._id] || c.hasPendingTimeLog}
-                          title={c.hasPendingTimeLog ? 'Escrow is exhausted — ask the client to top up before logging more time' : undefined}
-                        >
-                          <Play size={14} /> Start Timer
-                        </button>
-                      )}
-                      {!timerActive && (
-                        <button
-                          className="fl-btn fl-btn--outline fl-btn--sm"
-                          onClick={() => { setManualLogFor(c); setManualLog({ startTime: '', endTime: '', notes: '' }); }}
-                          title="Log time you already worked, e.g. if you forgot to start the timer"
-                        >
-                          <Clock size={14} /> Log Time
-                        </button>
-                      )}
-
-                      {c.endRequest?.status !== 'pending' && c.dispute?.status !== 'pending' && (
-                        <button
-                          className="fl-btn fl-btn--sm fl-btn--ghost"
-                          style={{ color: 'var(--color-error)', borderColor: 'rgba(220, 38, 38, 0.35)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => setEndRequestModal({ contractId: c._id })}
-                        >
-                          <StopCircle size={14} /> End Contract
-                        </button>
-                      )}
-                    </>
-                  )}
-                  {c.dispute?.status !== 'pending' && (
-                    (isHourly && !['completed', 'cancelled', 'pending_cancellation', 'under_review'].includes(c.status)) ||
-                    // Fixed-price: disputable any time the project isn't fully done yet —
-                    // including while still waiting on the client to fund the next/last
-                    // milestone, so a stalling client can't leave this with no recourse.
-                    (isFixed && !['completed', 'cancelled'].includes(c.status) && !!c.currentMilestone)
-                  ) && (
-                    <button
-                      className="fl-btn fl-btn--sm fl-btn--ghost"
-                      style={{ color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      onClick={() => setDisputeModal({ contractId: c._id })}
-                    >
-                      <AlertTriangle size={14} /> Dispute
-                    </button>
-                  )}
-                </div>
-              </div>
+              </article>
             );
           })}
         </div>
       )}
 
-      {gigOrders.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
-          <h3 style={{ marginBottom: '1rem' }}>Gig Orders</h3>
-          <div className="fl-card-list">
-            {gigOrders.map((g) => {
-              const escrow = g.payment ? ESCROW[g.payment.status] : null;
-              const canDeliver = g.status === 'in-progress' && g.payment?.status === 'deposit_paid';
-              const isRevision = !g.delivery && !!g.lastRevision?.note && g.status === 'in-progress';
-              return (
-                <div key={g._id} className="fl-card fl-contract" style={isRevision ? { borderColor: '#f59e0b', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.25)' } : undefined}>
-                  <div className="fl-contract__top">
-                    <div>
-                      <h3 className="fl-contract__title">{g.title || 'Unknown Gig Order'}</h3>
-                      <p className="fl-contract__meta">
-                        <ShoppingBag size={14} style={{ marginRight: '4px' }} /> {g.customOfferId ? 'Custom Offer' : `Gig Order (${g.gigTier || 'basic'})`}{g.category ? ` · ${g.category}` : ''}
-                        {g.clientId && ` · ${g.clientId.firstName || ''} ${g.clientId.lastName || ''}`}
-                      </p>
-                    </div>
-                    <StatusBadge tone={isRevision ? 'warning' : ((g.delivery && g.status !== 'completed' ? 'warning' : (STAGES[g.status] || {}).tone) || 'neutral')}>
-                      {g.delivery && g.status !== 'completed'
-                        ? 'Delivered — awaiting review'
-                        : isRevision
-                          ? 'Revision Requested'
-                          : (STAGES[g.status]?.label || g.status)}
-                    </StatusBadge>
-                  </div>
-
-                  {/* Prominent revision banner if client requested changes */}
-                  {isRevision && (
-                    <div style={{
-                      background: '#fffbeb',
-                      border: '1px solid #fde68a',
-                      borderRadius: '0.65rem',
-                      padding: '0.85rem 1rem',
-                      marginBottom: '1rem',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem', color: '#b45309', fontWeight: 600, fontSize: '0.88rem' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <RefreshCw size={15} style={{ color: '#d97706' }} /> Client Requested Changes:
-                        </span>
-                        {g.lastRevision.requestedAt && (
-                          <span style={{ fontSize: '0.78rem', color: '#92400e', fontWeight: 400 }}>
-                            {new Date(g.lastRevision.requestedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#78350f', whiteSpace: 'pre-wrap', lineHeight: 1.5, background: 'rgba(255, 255, 255, 0.7)', padding: '0.6rem 0.75rem', borderRadius: '0.375rem', border: '1px solid rgba(253, 230, 138, 0.8)' }}>
-                        {g.lastRevision.note}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Open by default while there's work to do — this is the brief. */}
-                  <OrderRequirements
-                    requirements={g.requirements}
-                    scope={g.customOfferId ? g.description : undefined}
-                    title={g.customOfferId ? 'Offer scope & client notes' : 'Client requirements'}
-                    defaultOpen={g.status === 'in-progress' && !g.delivery && !isRevision}
-                    emptyText={g.customOfferId ? 'No extra notes — work to the scope in your offer.' : undefined}
-                  />
-                  <div className="fl-contract__money">
-                    <span><PkrIcon size={14} /> Total: <strong>Rs. {g.payment?.totalAmount ?? g.budget?.min ?? '—'}</strong></span>
-                    {escrow && <span className="fl-contract__escrow" style={{ color: escrow.color }}>● {escrow.label}</span>}
-                    {g.payment?.status === 'released' && (
-                      <span style={{ color: 'var(--color-success)' }}>You received: <strong>Rs. {Number(g.payment.freelancerPayout).toLocaleString()}</strong></span>
-                    )}
-                  </div>
-                  {g.delivery && g.status !== 'completed' && (
-                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-mid)', marginBottom: '0.75rem' }}>
-                      Delivered {new Date(g.delivery.submittedAt).toLocaleString()} — waiting for the client to review.
-                    </p>
-                  )}
-                  <div className="fl-contract__actions">
-                    {canDeliver && !g.delivery && (
-                      <button className="fl-btn fl-btn--primary fl-btn--sm" onClick={() => { setDeliverFor({ ...g, isGig: true }); setDelivery({ message: '', links: '' }); }}>
-                        {isRevision ? <><RefreshCw size={14} /> Submit Revised Work</> : <><UploadCloud size={14} /> Submit Delivery</>}
-                      </button>
-                    )}
-                    {canDeliver && g.delivery && (
-                      <button className="fl-btn fl-btn--outline fl-btn--sm" onClick={() => { setDeliverFor({ ...g, isGig: true }); setDelivery({ message: g.delivery.message || '', links: (g.delivery.links || []).join('\n') }); }}>
-                        <RefreshCw size={14} /> Resubmit Delivery
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* ─── Pagination ─── */}
+      {totalPages > 1 && (
+        <div className="bg-pagination">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`fl-status-tab-btn ${page === i + 1 ? 'fl-status-tab-btn--active' : ''}`}
+              style={{ width: 38, height: 38, padding: 0, justifyContent: 'center' }}
+              onClick={() => {
+                setPage(i + 1);
+                window.scrollTo({ top: 300, behavior: 'smooth' });
+              }}
+            >
+              {i + 1}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Delivery modal */}
+      {/* ─── Submit Work Modal ─── */}
       {deliverFor && (
-        <div className="fl-deliver-overlay" onClick={closeDeliverModal}>
+        <div className="fl-edit-sheet-overlay" onClick={closeDeliverModal}>
           <div
             ref={deliverModalRef}
-            className="fl-deliver-modal"
-            onClick={(e) => e.stopPropagation()}
+            className="fl-form-card"
+            style={{ maxWidth: 540, width: '100%', margin: 'auto' }}
+            onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label={`Submit Work — ${deliverFor.title}`}
-            tabIndex={-1}
+            aria-label="Submit Work Delivery"
           >
-            <div className="fl-deliver-modal__head">
-              <div style={{ minWidth: 0, paddingRight: '0.75rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                  {(deliverFor.lastRevision?.note || deliverFor.revisionNote) ? 'Submit Revised Work' : 'Submit Work'}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: 14 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0B2942' }}>
+                  {deliverFor.lastRevision?.note ? 'Submit Revised Work' : 'Submit Milestone Delivery'}
                 </h3>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.84rem', color: 'var(--color-text-mid)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={deliverFor.title}>
-                  {deliverFor.title}
-                </p>
+                <span style={{ fontSize: 12, color: '#64748B' }}>
+                  {deliverFor.title || deliverFor.jobId?.title}
+                </span>
               </div>
-              <button onClick={closeDeliverModal} disabled={delivering} aria-label="Close" style={{ flexShrink: 0 }}>
-                <X size={18} />
+              <button type="button" className="sk-icon-btn" onClick={closeDeliverModal}>
+                <X size={16} />
               </button>
             </div>
-            <div className="fl-deliver-modal__body">
-              {(deliverFor.lastRevision?.note || deliverFor.revisionNote) && (
-                <div style={{
-                  background: '#fffbeb',
-                  border: '1px solid #fde68a',
-                  borderRadius: '0.5rem',
-                  padding: '0.65rem 0.85rem',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: '#78350f'
-                }}>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#b45309', marginBottom: '0.25rem', fontSize: '0.82rem' }}>
-                    <RefreshCw size={13} /> Client's requested changes:
-                  </strong>
-                  <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.4, maxHeight: '90px', overflowY: 'auto' }}>
-                    {deliverFor.lastRevision?.note || deliverFor.revisionNote}
-                  </p>
-                </div>
-              )}
-              <label className="fl-label">Delivery note</label>
-              <textarea className="fl-textarea" rows={3} placeholder="Describe what you delivered…"
-                value={delivery.message} onChange={(e) => setDelivery((d) => ({ ...d, message: e.target.value }))} />
-              <label className="fl-label" style={{ marginTop: '0.4rem' }}>Links (one per line or comma-separated)</label>
-              <textarea className="fl-textarea" rows={2} placeholder={"https://github.com/...\nhttps://drive.google.com/..."}
-                value={delivery.links} onChange={(e) => setDelivery(d => ({ ...d, links: e.target.value }))}></textarea>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 10 }}>
+              <div className="fl-field">
+                <label className="fl-field__label fl-field__label--required">Delivery Note</label>
+                <textarea
+                  className="fl-field__textarea"
+                  style={{ minHeight: 90 }}
+                  placeholder="Describe your deliverables, completed features, or deployment instructions..."
+                  value={delivery.message}
+                  onChange={e => setDelivery(d => ({ ...d, message: e.target.value }))}
+                />
+              </div>
+
+              <div className="fl-field">
+                <label className="fl-field__label">Project Links</label>
+                <textarea
+                  className="fl-field__textarea"
+                  style={{ minHeight: 70 }}
+                  placeholder="https://github.com/... or Google Drive links (one per line)"
+                  value={delivery.links}
+                  onChange={e => setDelivery(d => ({ ...d, links: e.target.value }))}
+                />
+              </div>
             </div>
-            <div className="fl-deliver-modal__foot">
-              <button className="fl-btn fl-btn--ghost" onClick={closeDeliverModal} disabled={delivering}>Cancel</button>
-              <button className="fl-btn fl-btn--primary" onClick={submitDelivery} disabled={delivering}>
-                {delivering ? 'Submitting…' : 'Deliver Work'}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 14, borderTop: '1px solid #E2E8F0' }}>
+              <button type="button" className="sk-pill-action-btn" onClick={closeDeliverModal} disabled={delivering}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="fl-gigs-header__cta"
+                style={{ height: 40, padding: '0 20px', fontSize: 13 }}
+                onClick={submitDelivery}
+                disabled={delivering}
+              >
+                {delivering ? 'Submitting...' : 'Deliver to Client'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* End Request Modal */}
-      <Modal open={!!endRequestModal} title="End Hourly Contract" onClose={() => setEndRequestModal(null)}>
-        <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
-          This will send a request to the client to mutually end this hourly contract.
+      {/* ─── Raise Dispute Modal ─── */}
+      <Modal open={!!disputeModal} title="Raise Dispute" onClose={() => setDisputeModal(null)}>
+        <p style={{ margin: '0 0 14px 0', fontSize: 13.5, color: '#64748B' }}>
+          If you and the client cannot resolve milestone requirements or funding, you can escalate this contract to Admin arbitration.
         </p>
-        <form onSubmit={handleRequestEnd}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label" htmlFor="fw-end-reason">Reason for ending</label>
-            <CustomSelect
-              id="fw-end-reason"
-              value={endReason}
-              onChange={setEndReason}
-              options={['Work completed', 'Mutual agreement', 'Client no longer requires work', 'Freelancer unavailable', 'Communication issues', 'Other']}
-            />
-          </div>
-          {endReason === 'Other' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label className="fl-label">Additional Details</label>
-              <textarea 
-                className="fl-input" 
-                rows="3" 
-                value={endDetails} 
-                onChange={e => setEndDetails(e.target.value)}
-                placeholder="Please explain..."
-                required
-              />
-            </div>
-          )}
-          <div className="fl-actions">
-            <button type="submit" className="fl-btn fl-btn--primary" disabled={delivering}>Send Request</button>
-            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setEndRequestModal(null)} disabled={delivering}>Cancel</button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Dispute Modal */}
-      <Modal open={!!disputeModal} title="Raise Dispute (Force End)" onClose={() => setDisputeModal(null)}>
-        <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
-          If you and the client cannot agree, you can raise a dispute. The contract will be locked, and our Admin will review the case.
-        </p>
-        <form onSubmit={handleRaiseDispute}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label">Dispute Reason</label>
-            <input 
-              className="fl-input" 
-              type="text" 
-              value={disputeReason} 
-              onChange={e => setDisputeReason(e.target.value)} 
-              placeholder="e.g. Client is unresponsive"
-              required 
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label">Description (Optional)</label>
-            <textarea 
-              className="fl-input" 
-              rows="3" 
-              value={disputeDesc} 
-              onChange={e => setDisputeDesc(e.target.value)}
-              placeholder="Provide more details for the admin..."
-            />
-          </div>
-          <div className="fl-actions">
-            <button type="submit" className="fl-btn fl-btn--danger" disabled={delivering}>Raise Dispute</button>
-            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setDisputeModal(null)} disabled={delivering}>Cancel</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal open={!!manualLogFor} title={`Log Time — ${manualLogFor?.title || ''}`} onClose={() => { if (!loggingManual) setManualLogFor(null); }}>
-        <p style={{ marginBottom: '1rem', color: 'var(--color-text-mid)' }}>
-          Use this if you forgot to start the timer, or worked offline. It's billed from escrow immediately, same as timer-tracked time.
-        </p>
-        <form onSubmit={(e) => { e.preventDefault(); submitManualLog(); }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label">Start Time</label>
+        <form onSubmit={handleRaiseDispute} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="fl-field">
+            <label className="fl-field__label fl-field__label--required">Reason for Dispute</label>
             <input
-              className="fl-input"
-              type="datetime-local"
-              value={manualLog.startTime}
-              max={manualLog.endTime || undefined}
-              onChange={(e) => setManualLog((p) => ({ ...p, startTime: e.target.value }))}
+              type="text"
+              className="fl-field__input"
+              value={disputeReason}
+              onChange={e => setDisputeReason(e.target.value)}
+              placeholder="e.g. Client is unresponsive or requesting out-of-scope work"
               required
             />
           </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label">End Time</label>
-            <input
-              className="fl-input"
-              type="datetime-local"
-              value={manualLog.endTime}
-              min={manualLog.startTime || undefined}
-              onChange={(e) => setManualLog((p) => ({ ...p, endTime: e.target.value }))}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label className="fl-label">Notes (Optional)</label>
+          <div className="fl-field">
+            <label className="fl-field__label">Additional Details</label>
             <textarea
-              className="fl-input"
-              rows="3"
-              value={manualLog.notes}
-              onChange={(e) => setManualLog((p) => ({ ...p, notes: e.target.value }))}
-              placeholder="What did you work on?"
+              className="fl-field__textarea"
+              style={{ minHeight: 80 }}
+              value={disputeDesc}
+              onChange={e => setDisputeDesc(e.target.value)}
+              placeholder="Provide context for admin review..."
             />
           </div>
-          <div className="fl-actions">
-            <button type="submit" className="fl-btn fl-btn--primary" disabled={loggingManual}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+            <button type="button" className="sk-pill-action-btn" onClick={() => setDisputeModal(null)} disabled={delivering}>Cancel</button>
+            <button type="submit" className="sk-pill-action-btn" style={{ background: '#EF4444', color: '#FFF', borderColor: '#EF4444' }} disabled={delivering}>
+              Raise Dispute
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ─── Manual Log Modal ─── */}
+      <Modal open={!!manualLogFor} title={`Log Hours — ${manualLogFor?.title || ''}`} onClose={() => { if (!loggingManual) setManualLogFor(null); }}>
+        <form onSubmit={e => { e.preventDefault(); submitManualLog(); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="fl-field">
+            <label className="fl-field__label fl-field__label--required">Start Time</label>
+            <input
+              type="datetime-local"
+              className="fl-field__input"
+              value={manualLog.startTime}
+              onChange={e => setManualLog(p => ({ ...p, startTime: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="fl-field">
+            <label className="fl-field__label fl-field__label--required">End Time</label>
+            <input
+              type="datetime-local"
+              className="fl-field__input"
+              value={manualLog.endTime}
+              onChange={e => setManualLog(p => ({ ...p, endTime: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="fl-field">
+            <label className="fl-field__label">Notes</label>
+            <textarea
+              className="fl-field__textarea"
+              style={{ minHeight: 60 }}
+              value={manualLog.notes}
+              onChange={e => setManualLog(p => ({ ...p, notes: e.target.value }))}
+              placeholder="What tasks were completed?"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+            <button type="button" className="sk-pill-action-btn" onClick={() => setManualLogFor(null)} disabled={loggingManual}>Cancel</button>
+            <button type="submit" className="fl-gigs-header__cta" style={{ height: 40, padding: '0 20px', fontSize: 13 }} disabled={loggingManual}>
               {loggingManual ? 'Logging...' : 'Log Time'}
             </button>
-            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setManualLogFor(null)} disabled={loggingManual}>Cancel</button>
           </div>
         </form>
       </Modal>
 
+      {/* Review Modal */}
       {reviewModal && (
         <ReviewModal
           jobId={reviewModal.jobId}
@@ -788,96 +885,6 @@ export default function FreelancerWork() {
           onSuccess={() => { setReviewModal(null); load(); }}
         />
       )}
-
-      <style>{`
-        .fl-contract { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 1rem; padding: var(--space-5); }
-        .fl-contract__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
-        .fl-contract__title { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-primary-dark); }
-        .fl-contract__meta { font-size: var(--fs-sm); color: var(--color-text-mid); margin-top: var(--space-1); }
-        .fl-contract__money { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--color-text-mid); align-items: center; background: var(--color-secondary); padding: 0.8rem 1rem; border-radius: var(--radius-md); }
-        .fl-contract__money span { display: inline-flex; align-items: center; gap: 0.4rem; }
-        .fl-contract__escrow { font-weight: var(--fw-bold); }
-        .fl-contract__revision { font-size: var(--fs-sm); color: var(--color-warning); background: var(--color-warning-tint); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: var(--radius-md); padding: 0.75rem 1rem; }
-        .fl-contract__footer { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--color-secondary); padding-top: 1rem; }
-        .fl-contract__hint { font-size: var(--fs-sm); color: var(--color-warning); display: inline-flex; align-items: center; gap: 0.4rem; font-weight: var(--fw-medium); }
-
-        /* Above .fl-toast-stack (--z-toast: 4000) previously shared the same
-           value — a toast could render behind this modal. Route through the
-           shared --z-modal token like every other full-screen overlay. */
-        .fl-deliver-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.55);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: var(--z-modal, 3000);
-          padding: 1.25rem 1rem;
-          overflow-y: auto;
-        }
-        .fl-deliver-modal {
-          background: var(--color-bg, #ffffff);
-          width: 100%;
-          max-width: 560px;
-          max-height: calc(100vh - 3rem);
-          display: flex;
-          flex-direction: column;
-          border-radius: var(--radius-xl, 16px);
-          overflow: hidden;
-          box-shadow: 0 20px 50px rgba(4, 46, 76, 0.25);
-          margin: auto;
-          animation: sk-modal-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-        }
-        .fl-deliver-modal__head {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1rem 1.4rem;
-          border-bottom: 1px solid var(--color-secondary, #e2e8f0);
-          flex-shrink: 0;
-        }
-        .fl-deliver-modal__head h3 {
-          font-size: 1.1rem;
-          font-weight: var(--fw-bold, 700);
-          color: var(--color-primary-dark, #0f172a);
-          line-height: 1.3;
-        }
-        .fl-deliver-modal__head button {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: var(--color-text-light, #64748b);
-          padding: 0.35rem;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background 0.2s, color 0.2s;
-        }
-        .fl-deliver-modal__head button:hover {
-          background: rgba(0, 0, 0, 0.05);
-          color: var(--color-primary, #0284c7);
-        }
-        .fl-deliver-modal__body {
-          padding: 1.1rem 1.4rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.35rem;
-          overflow-y: auto;
-          flex: 1 1 auto;
-        }
-        .fl-deliver-modal__foot {
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.9rem 1.4rem;
-          border-top: 1px solid var(--color-secondary, #e2e8f0);
-          background: var(--color-secondary, #f8fafc);
-          flex-shrink: 0;
-        }
-      `}</style>
     </div>
   );
 }

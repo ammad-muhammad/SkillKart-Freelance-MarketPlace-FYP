@@ -47,17 +47,31 @@ const USER_RIGHTS = [
 
 export default function PrivacyPolicy() {
     const [activeSection, setActiveSection] = useState('pp-summary');
+    const [progress, setProgress] = useState(0);
+    const [showTop, setShowTop] = useState(false);
     const heroRef = useRef(null);
 
     useEffect(() => {
         document.title = `Privacy Policy | ${companyName}`;
+        window.scrollTo(0, 0);
+
+        /* Reading progress + back-to-top */
+        const onScroll = () => {
+            const el = document.documentElement;
+            const scrolled = el.scrollTop;
+            const total = el.scrollHeight - el.clientHeight;
+            setProgress(total > 0 ? (scrolled / total) * 100 : 0);
+            setShowTop(scrolled > 400);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
 
         /* Hero entrance */
         const tl = gsap.timeline({ delay: 0.15 });
         tl.fromTo('.legal-hero__badge', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' })
             .fromTo('.legal-hero__heading', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power4.out' }, '-=0.2')
             .fromTo('.legal-hero__sub', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.3')
-            .fromTo('.legal-hero__meta', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.2');
+            .fromTo('.legal-hero__meta', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.2')
+            .fromTo('.legal-switcher', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2');
 
         /* Scroll-spy */
         const observers = TOC_ITEMS.map(({ id }) => {
@@ -81,14 +95,22 @@ export default function PrivacyPolicy() {
         );
 
         return () => {
+            window.removeEventListener('scroll', onScroll);
             observers.forEach(o => o?.disconnect());
             ScrollTrigger.getAll().forEach(t => t.kill());
         };
     }, []);
 
+    const scrollTo = (id) => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    };
+
     return (
         <>
             <Navbar />
+
+            {/* Reading progress bar */}
+            <div className="legal-progress" style={{ width: `${progress}%` }} aria-hidden="true" />
 
             {/* ══════════ HERO ══════════ */}
             <section ref={heroRef} className="legal-hero">
@@ -96,7 +118,6 @@ export default function PrivacyPolicy() {
                     <div className="legal-hero__orb legal-hero__orb--1" />
                     <div className="legal-hero__orb legal-hero__orb--2" />
                     <div className="legal-hero__orb legal-hero__orb--3" />
-                    <div className="legal-hero__grid" />
                 </div>
                 <div className="container legal-hero__inner">
                     <div className="legal-hero__badge">🔒 Privacy Policy</div>
@@ -121,11 +142,13 @@ export default function PrivacyPolicy() {
                             {contactEmail}
                         </div>
                     </div>
-                </div>
-                <div className="legal-hero__wave">
-                    <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                        <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
-                    </svg>
+
+                    {/* Policy switcher */}
+                    <nav className="legal-switcher" aria-label="Policy pages">
+                        <Link to="/privacy" className="legal-switcher__link legal-switcher__link--active">🔒 Privacy</Link>
+                        <Link to="/terms" className="legal-switcher__link">📄 Terms</Link>
+                        <Link to="/cookies" className="legal-switcher__link">🍪 Cookies</Link>
+                    </nav>
                 </div>
             </section>
 
@@ -135,10 +158,28 @@ export default function PrivacyPolicy() {
                     <div className="container">
                         <Link to="/" className="legal-back">← Back to Home</Link>
 
+                        {/* Mobile TOC dropdown */}
+                        <details className="legal-toc--mobile">
+                            <summary>On this page <span>▾</span></summary>
+                            <ul className="legal-toc__list">
+                                {TOC_ITEMS.map(item => (
+                                    <li key={item.id}>
+                                        <a
+                                            href={`#${item.id}`}
+                                            className={`legal-toc__link${activeSection === item.id ? ' active' : ''}`}
+                                            onClick={e => { e.preventDefault(); scrollTo(item.id); }}
+                                        >
+                                            {item.label}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+
                         <div className="legal-layout">
                             {/* ── TOC Sidebar ── */}
                             <aside className="legal-toc" aria-label="Table of contents">
-                                <div className="legal-toc__title">Contents</div>
+                                <div className="legal-toc__title">On this page</div>
                                 <ul className="legal-toc__list">
                                     {TOC_ITEMS.map(item => (
                                         <li key={item.id}>
@@ -147,7 +188,7 @@ export default function PrivacyPolicy() {
                                                 className={`legal-toc__link${activeSection === item.id ? ' active' : ''}`}
                                                 onClick={e => {
                                                     e.preventDefault();
-                                                    document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
+                                                    scrollTo(item.id);
                                                 }}
                                             >
                                                 {item.label}
@@ -205,14 +246,16 @@ export default function PrivacyPolicy() {
                                         </ul>
                                         <div className="legal-info-card">
                                             <div className="legal-info-card__icon">💡</div>
-                                            <div className="legal-info-card__title">Lawful Basis for Processing</div>
-                                            <p className="legal-info-card__text">
-                                                We process your data on the basis of <strong>contract performance</strong> (to provide
-                                                the SkillKart service), <strong>legitimate interests</strong> (platform security and
-                                                improvement), and your explicit <strong>consent</strong> for optional features like
-                                                marketing communications. You may withdraw consent for optional processing at any time
-                                                via your account settings.
-                                            </p>
+                                            <div>
+                                                <div className="legal-info-card__title">Lawful Basis for Processing</div>
+                                                <p className="legal-info-card__text">
+                                                    We process your data on the basis of <strong>contract performance</strong> (to provide
+                                                    the SkillKart service), <strong>legitimate interests</strong> (platform security and
+                                                    improvement), and your explicit <strong>consent</strong> for optional features like
+                                                    marketing communications. You may withdraw consent for optional processing at any time
+                                                    via your account settings.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
@@ -321,7 +364,7 @@ export default function PrivacyPolicy() {
                                             {Object.entries(retentionPeriods).map(([key, val]) => (
                                                 <div key={key} className="retention-row">
                                                     <div className="retention-row__label">
-                                                        {key.replace(/([A-Z])/g, ' Rs. 1').replace(/^./, s => s.toUpperCase())}
+                                                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
                                                     </div>
                                                     <div className="retention-row__period">{val}</div>
                                                 </div>
@@ -355,12 +398,14 @@ export default function PrivacyPolicy() {
                                         </ul>
                                         <div className="legal-info-card legal-info-card--warn">
                                             <div className="legal-info-card__icon">⚠️</div>
-                                            <div className="legal-info-card__title">No system is 100% secure</div>
-                                            <p className="legal-info-card__text">
-                                                While we implement strong safeguards, no internet transmission is perfectly secure.
-                                                We encourage you to use a strong, unique password and enable two-factor authentication
-                                                once available. Report suspected security issues to {contactEmail}.
-                                            </p>
+                                            <div>
+                                                <div className="legal-info-card__title">No system is 100% secure</div>
+                                                <p className="legal-info-card__text">
+                                                    While we implement strong safeguards, no internet transmission is perfectly secure.
+                                                    We encourage you to use a strong, unique password and enable two-factor authentication
+                                                    once available. Report suspected security issues to {contactEmail}.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
@@ -400,14 +445,16 @@ export default function PrivacyPolicy() {
                                     <div className="legal-section__body">
                                         <div className="legal-info-card legal-info-card--danger">
                                             <div className="legal-info-card__icon">🚸</div>
-                                            <div className="legal-info-card__title">18+ Platform</div>
-                                            <p className="legal-info-card__text">
-                                                {companyName} is designed for university students and professionals. We do
-                                                not knowingly collect data from individuals under 18 years of age. If we
-                                                discover an account belonging to a minor, it will be immediately suspended
-                                                and all associated data will be deleted. If you believe a minor has signed
-                                                up, contact us immediately at <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
-                                            </p>
+                                            <div>
+                                                <div className="legal-info-card__title">18+ Platform</div>
+                                                <p className="legal-info-card__text">
+                                                    {companyName} is designed for university students and professionals. We do
+                                                    not knowingly collect data from individuals under 18 years of age. If we
+                                                    discover an account belonging to a minor, it will be immediately suspended
+                                                    and all associated data will be deleted. If you believe a minor has signed
+                                                    up, contact us immediately at <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
+                                                </p>
+                                            </div>
                                         </div>
                                         <p>
                                             University email verification and age confirmation during registration help
@@ -488,6 +535,15 @@ export default function PrivacyPolicy() {
             </div>
 
             <Footer />
+
+            {/* Back to top */}
+            <button
+                className={`legal-back-top${showTop ? ' legal-back-top--visible' : ''}`}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                aria-label="Back to top"
+            >
+                ↑
+            </button>
         </>
     );
 }

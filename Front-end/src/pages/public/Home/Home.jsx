@@ -6,6 +6,7 @@ import Hero from '../../../Components/common/Hero/Hero';
 import SkillsSlider from '../../../Components/common/SkillsSlider/SkillsSlider';
 import AboutSection from '../../../Components/common/AboutSection/AboutSection';
 import TrendingSkills from '../../../Components/common/TrendingSkills/TrendingSkills';
+import AppDownload from '../../../Components/common/AppDownload/AppDownload';
 import Testimonials from '../../../Components/common/Testimonials/Testimonials';
 import Footer from '../../../Components/common/Footer/Footer';
 import SectionBoundary from '../../../Components/common/ErrorBoundary/SectionBoundary';
@@ -34,7 +35,10 @@ const Home = () => {
         {/* 4. Trending Skills */}
         <div className="home-slot"><SectionBoundary name="TrendingSkills"><TrendingSkills /></SectionBoundary></div>
 
-        {/* 5. Testimonials / Success Stories */}
+        {/* 5. Mobile App Download Banner */}
+        <div className="home-slot"><SectionBoundary name="AppDownload"><AppDownload /></SectionBoundary></div>
+
+        {/* 6. Testimonials / Success Stories */}
         <div className="home-slot"><SectionBoundary name="Testimonials"><Testimonials /></SectionBoundary></div>
       </main>
 

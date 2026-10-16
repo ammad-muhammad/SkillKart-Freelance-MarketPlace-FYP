@@ -3,13 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { CATEGORIES, ALL_SKILLS } from '../../../utils/mockData';
 import CustomSelect from '../../../Components/common/CustomSelect/CustomSelect';
 import ComboSelect from '../../../Components/common/ComboSelect/ComboSelect';
 import AiSuggestFill from '../../../Components/common/AiSuggest/AiSuggestFill';
 import AiGenerateText from '../../../Components/common/AiSuggest/AiGenerateText';
 import ImageSourcePicker from '../../../Components/common/ImageSourcePicker/ImageSourcePicker';
+import Loader from '../../../Components/common/Loader/Loader';
 import { useAuth } from '../../../hooks/useAuth';
 import './PostProject.css';
 
@@ -78,6 +78,43 @@ function qualityScore(form) {
     return score;
 }
 
+/* ─── Stepper ─── */
+function GlassStepper({ steps, step }) {
+    return (
+        <div className="pp-stepper" role="list">
+            {steps.map((label, i) => {
+                const done   = i < step;
+                const active = i === step;
+                return (
+                    <>
+                        <div
+                            key={i}
+                            className={`pp-stepper__item${active ? ' pp-stepper__item--active' : done ? ' pp-stepper__item--done' : ''}`}
+                            role="listitem"
+                            aria-current={active ? 'step' : undefined}
+                        >
+                            <div className="pp-stepper__dot">
+                                {done ? '✓' : i + 1}
+                            </div>
+                            <span className="pp-stepper__label">{label}</span>
+                        </div>
+                        {i < steps.length - 1 && (
+                            <div key={`line-${i}`} className={`pp-stepper__line${done ? ' pp-stepper__line--done' : ''}`} />
+                        )}
+                    </>
+                );
+            })}
+        </div>
+    );
+}
+
+/* ─── STEP HEADER icons ─── */
+const STEP_META = [
+    { icon: '📄', title: 'Project Details',      sub: 'Tell us what you need built.' },
+    { icon: '💰', title: 'Budget & Timeline',    sub: 'Set your budget and deadline.' },
+    { icon: '🛠',  title: 'Skills & Attachments', sub: 'Required skills and reference files.' },
+];
+
 /* ─────────────── MAIN PAGE ─────────────── */
 export default function PostProject() {
     const navigate = useNavigate();
@@ -110,10 +147,12 @@ export default function PostProject() {
         document.title = 'Post a Project — SkillKart';
 
         const tl = gsap.timeline({ delay: 0.1 });
-        tl.fromTo('.pp-hero__tag', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
-          .fromTo('.pp-hero h1', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
-          .fromTo('.pp-hero p', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
-          .fromTo('.pp-step', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.1, duration: 0.4, ease: 'back.out(1.7)' }, '-=0.1');
+        tl.fromTo('.pp-hero__tag',  { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
+          .fromTo('.pp-hero h1',    { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+          .fromTo('.pp-hero p',     { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+          .fromTo('.pp-stepper',    { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4,  ease: 'back.out(1.4)' }, '-=0.15')
+          .fromTo('.pp-form-card',  { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4,  ease: 'power3.out' }, '-=0.1')
+          .fromTo('.pp-sidebar-card', { y: 18, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.35, ease: 'power3.out' }, '-=0.15');
 
     }, []);
 
@@ -214,18 +253,27 @@ export default function PostProject() {
             <>
                 <Navbar />
                 <div className="pp-page">
-                    <section className="pp-hero" style={{ padding: '2rem 0' }}>
-                        <div className="container pp-hero__inner">
+                    {/* Ambient bg */}
+                    <div className="pp-bg" aria-hidden="true">
+                        <div className="pp-blob pp-blob--mint" />
+                        <div className="pp-blob pp-blob--cyan" />
+                        <div className="pp-blob pp-blob--blue" />
+                        <div className="pp-bg-grid" />
+                    </div>
+
+                    <section className="pp-hero" style={{ paddingBottom: '1.5rem' }}>
+                        <div className="pp-hero__inner">
                             <div className="pp-hero__tag">📝 Brief Saved</div>
-                            <h1>You're One Step <span>Away!</span></h1>
+                            <h1>You're One Step <span className="pp-hero__accent">Away!</span></h1>
                         </div>
                     </section>
-                    <div className="container">
-                        <div style={{ maxWidth: 600, margin: '3rem auto' }}>
+
+                    <div className="pp-body">
+                        <div className="container" style={{ maxWidth: 600, padding: '0 1.5rem 4rem' }}>
                             <div className="pp-form-card">
                                 {user?.role === 'freelancer' ? (
                                     <div className="pp-success">
-                                        <div className="pp-success__icon">👋</div>
+                                        <span className="pp-success__icon">👋</span>
                                         <div className="pp-success__title">Switch to a client account to post</div>
                                         <div className="pp-success__sub">
                                             You're signed in as a freelancer. Projects are posted by clients —
@@ -243,7 +291,7 @@ export default function PostProject() {
                                     </div>
                                 ) : (
                                     <div className="pp-success">
-                                        <div className="pp-success__icon">🎉</div>
+                                        <span className="pp-success__icon">🎉</span>
                                         <div className="pp-success__title">Your project brief is ready</div>
                                         <div className="pp-success__sub">
                                             We've saved your details. Sign in or create a free client account to
@@ -252,7 +300,7 @@ export default function PostProject() {
                                         <div className="pp-success__id">Reference: <strong>{projectId}</strong></div>
                                         <div className="pp-success__btns">
                                             <Link to="/registration" className="pp-success__btn-main">
-                                                Create account & publish
+                                                Create account &amp; publish
                                             </Link>
                                             <Link to="/login" className="pp-success__btn-sec">
                                                 Sign in
@@ -275,383 +323,410 @@ export default function PostProject() {
             <Navbar />
             <div className="pp-page">
 
-                {/* Hero */}
+                {/* Ambient background */}
+                <div className="pp-bg" aria-hidden="true">
+                    <div className="pp-blob pp-blob--mint" />
+                    <div className="pp-blob pp-blob--cyan" />
+                    <div className="pp-blob pp-blob--blue" />
+                    <div className="pp-bg-grid" />
+                </div>
+
+                {/* ── HERO ── */}
                 <section className="pp-hero">
-                    <div className="pp-hero__orb pp-hero__orb--1" />
-                    <div className="pp-hero__orb pp-hero__orb--2" />
-                    <div className="pp-hero__grid" />
-                    <div className="container pp-hero__inner">
+                    <div className="pp-hero__inner">
                         <div className="pp-hero__tag">💼 Post a Project</div>
-                        <h1>Hire <span>Top Student Talent</span></h1>
+                        <h1>Hire <span className="pp-hero__accent">Top Student Talent</span></h1>
                         <p>Describe your project and our AI will match you with verified freelancers in minutes.</p>
 
-                        {/* Step progress */}
-                        <div className="pp-steps">
-                            {STEPS.map((label, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <div className={`pp-step ${i < step ? 'pp-step--done' : i === step ? 'pp-step--active' : ''}`}>
-                                        <div className="pp-step__dot">{i < step ? '✓' : i + 1}</div>
-                                        <span>{label}</span>
-                                    </div>
-                                    {i < STEPS.length - 1 && <span className="pp-step__arrow">›</span>}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="pp-hero__wave">
-                        <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                            <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
-                        </svg>
+                        {/* Glass stepper */}
+                        <GlassStepper steps={STEPS} step={step} />
                     </div>
                 </section>
 
-                {/* Layout */}
-                <div className="container">
-                    <div className="pp-layout">
+                {/* ── LAYOUT ── */}
+                <div className="pp-body">
+                    <div className="container">
+                        <div className="pp-layout">
 
-                        {/* ── Form ── */}
-                        <div>
-
-                            {/* ── STEP 0: Project Details ── */}
-                            {step === 0 && (
-                                <div className="pp-form-card">
-                                    <div className="pp-form-section">
-                                        <div className="pp-form-section__title">📄 Project Details</div>
-
-                                        {/* Title */}
-                                        <div className="pp-field" style={{ marginBottom: '1rem' }}>
-                                            <label className="pp-label" htmlFor="pp-title">Project Title <span>*</span></label>
-                                            <input
-                                                id="pp-title"
-                                                className={`pp-input${errors.title ? ' pp-input--error' : ''}`}
-                                                placeholder="e.g. Build a responsive e-commerce website with React"
-                                                value={form.title}
-                                                onChange={e => set('title', e.target.value)}
-                                                maxLength={120}
-                                            />
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                {errors.title ? <span className="pp-err-msg">{errors.title}</span> : <span />}
-                                                <span className="pp-char-count">{form.title.length}/120</span>
+                            {/* ── FORM COLUMN ── */}
+                            <div>
+                                {/* ── STEP 0: Project Details ── */}
+                                {step === 0 && (
+                                    <div className="pp-form-card">
+                                        <div className="pp-card-header">
+                                            <div className="pp-card-header__icon">{STEP_META[0].icon}</div>
+                                            <div>
+                                                <div className="pp-card-header__title">{STEP_META[0].title}</div>
+                                                <div className="pp-card-header__sub">{STEP_META[0].sub}</div>
                                             </div>
                                         </div>
 
-                                        {/* Category */}
-                                        <div className="pp-field" style={{ marginBottom: '1rem' }}>
-                                            <label className="pp-label" htmlFor="pp-category">Category <span>*</span></label>
-                                            <ComboSelect
-                                                id="pp-category"
-                                                value={form.category}
-                                                onChange={val => set('category', val)}
-                                                placeholder="Type to search categories…"
-                                                options={CATEGORIES.map(c => ({ value: c, label: c }))}
-                                                className={errors.category ? 'csel--error' : ''}
-                                            />
-                                            {errors.category && <span className="pp-err-msg">{errors.category}</span>}
-                                        </div>
+                                        <div className="pp-card-body pp-step-content">
+                                            <div className="pp-form-section">
+                                                <div className="pp-form-section__title">📝 Basic Information</div>
 
-                                        {/* Description */}
-                                        <div className="pp-field">
-                                            <label className="pp-label" htmlFor="pp-description">Project Description <span>*</span></label>
-                                            <textarea
-                                                id="pp-description"
-                                                className={`pp-textarea${errors.description ? ' pp-textarea--error' : ''}`}
-                                                placeholder="Describe your project in detail — what needs to be built, what the goals are, and what deliverables you expect…"
-                                                value={form.description}
-                                                onChange={e => set('description', e.target.value)}
-                                                rows={6}
-                                            />
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                {errors.description ? <span className="pp-err-msg">{errors.description}</span> : <span className="pp-hint">Min 50 characters. More detail = better AI matches.</span>}
-                                                <span className="pp-char-count">{form.description.length}</span>
-                                            </div>
-                                            <AiGenerateText
-                                                className="pp-ai-generate"
-                                                fieldLabel="a client's project description for a freelance job posting"
-                                                getContext={() => ({ title: form.title, category: form.category, skills: form.skills, budget: form.budgetType === 'fixed' ? `${form.budgetMin}-${form.budgetMax} PKR fixed` : `${form.budgetMin} PKR/hr`, timeline: form.timeline })}
-                                                getExistingText={() => form.description}
-                                                onGenerated={(text) => set('description', text)}
-                                            />
-                                        </div>
-
-                                        {/* AI suggest & fill — category + skills from the title/description */}
-                                        <AiSuggestFill
-                                            label="Suggest category & skills (AI)"
-                                            getContext={() => ({ title: form.title, description: form.description, skills: form.skills })}
-                                            allowedCategories={CATEGORIES}
-                                            existingSkills={form.skills}
-                                            onCategory={(cat) => set('category', cat)}
-                                            onSkills={(newSkills) => set('skills', Array.from(new Set([...form.skills, ...newSkills])))}
-                                        />
-                                    </div>
-
-                                    {/* Visibility */}
-                                    <div className="pp-form-section">
-                                        <div className="pp-form-section__title">🔒 Visibility</div>
-                                        <div className="pp-budget-type">
-                                            {['public', 'invite-only'].map(v => (
-                                                <button
-                                                    key={v}
-                                                    type="button"
-                                                    className={`pp-budget-pill${form.visibility === v ? ' pp-budget-pill--active' : ''}`}
-                                                    onClick={() => set('visibility', v)}
-                                                >
-                                                    {v === 'public' ? '🌐 Public' : '🔑 Invite-only'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <p className="pp-hint">
-                                            {form.visibility === 'public'
-                                                ? 'All verified freelancers can see and submit proposals.'
-                                                : 'Only freelancers you invite can see this project.'}
-                                        </p>
-                                    </div>
-
-                                    <div className="pp-submit-wrap">
-                                        <p className="pp-submit-note">Step 1 of 3 — Project summary</p>
-                                        <div className="pp-submit-btns">
-                                            <button className="pp-btn-primary" onClick={next}>Next: Budget &amp; Timeline →</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ── STEP 1: Budget & Timeline ── */}
-                            {step === 1 && (
-                                <div className="pp-form-card">
-                                    <div className="pp-form-section">
-                                        <div className="pp-form-section__title">💰 Budget</div>
-                                        <div className="pp-budget-type">
-                                            {['fixed', 'hourly'].map(t => (
-                                                <button
-                                                    key={t}
-                                                    type="button"
-                                                    className={`pp-budget-pill${form.budgetType === t ? ' pp-budget-pill--active' : ''}`}
-                                                    onClick={() => set('budgetType', t)}
-                                                >
-                                                    {t === 'fixed' ? '📦 Fixed Price' : '⏱ Hourly Rate'}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <div className="pp-row" style={{ marginTop: '1rem' }}>
-                                            <div className="pp-field">
-                                                <label className="pp-label" htmlFor="pp-bmin">
-                                                    {form.budgetType === 'fixed' ? 'Minimum Budget (PKR)' : 'Min Rate (PKR/hr)'} <span>*</span>
-                                                </label>
-                                                <input
-                                                    id="pp-bmin"
-                                                    type="number"
-                                                    min={1}
-                                                    className={`pp-input${errors.budgetMin ? ' pp-input--error' : ''}`}
-                                                    placeholder="e.g. 200"
-                                                    value={form.budgetMin}
-                                                    onChange={e => set('budgetMin', e.target.value)}
-                                                />
-                                                {errors.budgetMin && <span className="pp-err-msg">{errors.budgetMin}</span>}
-                                            </div>
-                                            {form.budgetType === 'fixed' && (
-                                                <div className="pp-field">
-                                                    <label className="pp-label" htmlFor="pp-bmax">Maximum Budget (PKR) <span>*</span></label>
+                                                {/* Title */}
+                                                <div className="pp-field" style={{ marginBottom: '1.1rem' }}>
+                                                    <label className="pp-label" htmlFor="pp-title">Project Title <span>*</span></label>
                                                     <input
-                                                        id="pp-bmax"
-                                                        type="number"
-                                                        min={1}
-                                                        className={`pp-input${errors.budgetMax ? ' pp-input--error' : ''}`}
-                                                        placeholder="e.g. 500"
-                                                        value={form.budgetMax}
-                                                        onChange={e => set('budgetMax', e.target.value)}
+                                                        id="pp-title"
+                                                        className={`pp-input${errors.title ? ' pp-input--error' : ''}`}
+                                                        placeholder="e.g. Build a responsive e-commerce website with React"
+                                                        value={form.title}
+                                                        onChange={e => set('title', e.target.value)}
+                                                        maxLength={120}
                                                     />
-                                                    {errors.budgetMax && <span className="pp-err-msg">{errors.budgetMax}</span>}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p className="pp-hint" style={{ marginTop: '0.5rem' }}>
-                                            Projects with a clear budget receive 3× more proposals on average.
-                                        </p>
-                                    </div>
-
-                                    <div className="pp-form-section">
-                                        <div className="pp-form-section__title">📅 Timeline</div>
-                                        <div className="pp-field">
-                                            <label className="pp-label" htmlFor="pp-timeline">Expected Duration <span>*</span></label>
-                                            <CustomSelect
-                                                id="pp-timeline"
-                                                value={form.timeline}
-                                                onChange={val => set('timeline', val)}
-                                                placeholder="Select duration…"
-                                                options={TIMELINE_OPTIONS.map(t => ({ value: t, label: t }))}
-                                                className={errors.timeline ? 'csel--error' : ''}
-                                            />
-                                            {errors.timeline && <span className="pp-err-msg">{errors.timeline}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className="pp-submit-wrap">
-                                        <p className="pp-submit-note">Step 2 of 3 — Budget & timeline</p>
-                                        <div className="pp-submit-btns">
-                                            <button className="pp-btn-secondary" onClick={back}>← Back</button>
-                                            <button className="pp-btn-primary" onClick={next}>Next: Skills &amp; Files →</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ── STEP 2: Skills & Attachments ── */}
-                            {step === 2 && (
-                                <div className="pp-form-card">
-                                    <div className="pp-form-section">
-                                        <div className="pp-form-section__title">🛠 Required Skills <span style={{ color: '#ef4444' }}>*</span></div>
-
-                                        <div className="pp-skill-input-wrap">
-                                            <input
-                                                id="pp-skill-input"
-                                                aria-label="Add a required skill"
-                                                className={`pp-input${errors.skills ? ' pp-input--error' : ''}`}
-                                                placeholder="e.g. React, Figma, Python…"
-                                                value={skillInput}
-                                                onChange={e => setSkillInput(e.target.value)}
-                                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                                            />
-                                            <button type="button" className="pp-add-btn" onClick={addSkill}>Add</button>
-                                        </div>
-
-                                        {errors.skills && <span className="pp-err-msg" style={{ marginTop: 4 }}>{errors.skills}</span>}
-
-                                        {/* Tags */}
-                                        {form.skills.length > 0 && (
-                                            <div className="pp-tags">
-                                                {form.skills.map(sk => (
-                                                    <span key={sk} className="pp-tag">
-                                                        {sk}
-                                                        <button className="pp-tag__remove" onClick={() => removeSkill(sk)} aria-label={`Remove skill: ${sk}`}>✕</button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Suggestions */}
-                                        <div style={{ marginTop: '0.75rem' }}>
-                                            <span className="pp-hint">Suggestions:</span>
-                                            <div className="pp-suggested">
-                                                {SUGGEST_SKILLS.filter(s => !form.skills.includes(s)).map(s => (
-                                                    <button
-                                                        key={s}
-                                                        type="button"
-                                                        className="pp-sug-pill"
-                                                        onClick={() => set('skills', [...form.skills, s])}
-                                                    >+ {s}</button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Attachments */}
-                                    <div className="pp-form-section">
-                                        <div className="pp-form-section__title">📎 Attachments <span style={{ color: 'var(--color-text-light)', fontSize: '0.78rem', fontWeight: 400 }}>Optional</span></div>
-
-                                        <div
-                                            className={`pp-dropzone${dragOver ? ' pp-dropzone--active' : ''}`}
-                                            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                                            onDragLeave={() => setDragOver(false)}
-                                            onDrop={handleDrop}
-                                            onClick={() => fileRef.current?.click()}
-                                        >
-                                            <div className="pp-dropzone__icon">📁</div>
-                                            <p className="pp-dropzone__text">
-                                                <strong>Click to browse</strong> or drag & drop files here<br />
-                                                <span style={{ fontSize: '0.75rem' }}>PDF, DOC, PNG, JPG — max 10 MB each</span>
-                                            </p>
-                                            <ImageSourcePicker
-                                                ref={fileRef}
-                                                multiple
-                                                accept=""
-                                                onChange={e => handleFiles(e.target.files)}
-                                            />
-                                        </div>
-
-                                        {form.files.length > 0 && (
-                                            <div className="pp-file-list">
-                                                {form.files.map((f, i) => (
-                                                    <div key={i} className="pp-file-item">
-                                                        <span>📄 {f.name} <span style={{ color: 'var(--color-text-light)', fontWeight: 400, fontSize: '0.75rem' }}>({(f.size / 1024).toFixed(0)} KB)</span></span>
-                                                        <button className="pp-file-remove" onClick={() => set('files', form.files.filter((_, j) => j !== i))} aria-label={`Remove file: ${f.name}`}>✕</button>
+                                                    <div className="pp-field-meta">
+                                                        {errors.title
+                                                            ? <span className="pp-err-msg">{errors.title}</span>
+                                                            : <span />}
+                                                        <span className="pp-char-count">{form.title.length}/120</span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                                                </div>
 
-                                    <div className="pp-submit-wrap">
-                                        <p className="pp-submit-note">
-                                            By posting you agree to SkillKart's <Link to="/terms" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Terms of Service</Link>.
-                                        </p>
-                                        <div className="pp-submit-btns">
-                                            <button className="pp-btn-secondary" onClick={back}>← Back</button>
-                                            <button
-                                                className="pp-btn-primary"
-                                                onClick={submit}
-                                                disabled={submitting}
-                                            >
-                                                {submitting
-                                                    ? <><div className="pp-spinner" /> Posting…</>
-                                                    : '🚀 Post Project'}
-                                            </button>
+                                                {/* Category */}
+                                                <div className="pp-field" style={{ marginBottom: '1.1rem' }}>
+                                                    <label className="pp-label" htmlFor="pp-category">Category <span>*</span></label>
+                                                    <ComboSelect
+                                                        id="pp-category"
+                                                        value={form.category}
+                                                        onChange={val => set('category', val)}
+                                                        placeholder="Type to search categories…"
+                                                        options={CATEGORIES.map(c => ({ value: c, label: c }))}
+                                                        className={errors.category ? 'csel--error' : ''}
+                                                    />
+                                                    {errors.category && <span className="pp-err-msg">{errors.category}</span>}
+                                                </div>
+
+                                                {/* Description */}
+                                                <div className="pp-field">
+                                                    <label className="pp-label" htmlFor="pp-description">Project Description <span>*</span></label>
+                                                    <textarea
+                                                        id="pp-description"
+                                                        className={`pp-textarea${errors.description ? ' pp-textarea--error' : ''}`}
+                                                        placeholder="Describe your project in detail — what needs to be built, what the goals are, and what deliverables you expect…"
+                                                        value={form.description}
+                                                        onChange={e => set('description', e.target.value)}
+                                                        rows={6}
+                                                    />
+                                                    <div className="pp-field-meta">
+                                                        {errors.description
+                                                            ? <span className="pp-err-msg">{errors.description}</span>
+                                                            : <span className="pp-hint">Min 50 characters. More detail = better AI matches.</span>}
+                                                        <span className="pp-char-count">{form.description.length}</span>
+                                                    </div>
+                                                    <AiGenerateText
+                                                        className="pp-ai-generate"
+                                                        fieldLabel="a client's project description for a freelance job posting"
+                                                        getContext={() => ({ title: form.title, category: form.category, skills: form.skills, budget: form.budgetType === 'fixed' ? `${form.budgetMin}-${form.budgetMax} PKR fixed` : `${form.budgetMin} PKR/hr`, timeline: form.timeline })}
+                                                        getExistingText={() => form.description}
+                                                        onGenerated={(text) => set('description', text)}
+                                                    />
+                                                </div>
+
+                                                {/* AI suggest & fill */}
+                                                <AiSuggestFill
+                                                    label="Suggest category & skills (AI)"
+                                                    getContext={() => ({ title: form.title, description: form.description, skills: form.skills })}
+                                                    allowedCategories={CATEGORIES}
+                                                    existingSkills={form.skills}
+                                                    onCategory={(cat) => set('category', cat)}
+                                                    onSkills={(newSkills) => set('skills', Array.from(new Set([...form.skills, ...newSkills])))}
+                                                />
+                                            </div>
+
+                                            {/* Visibility */}
+                                            <div className="pp-form-section">
+                                                <div className="pp-form-section__title">🔒 Visibility</div>
+                                                <div className="pp-budget-type">
+                                                    {['public', 'invite-only'].map(v => (
+                                                        <button
+                                                            key={v}
+                                                            type="button"
+                                                            className={`pp-budget-pill${form.visibility === v ? ' pp-budget-pill--active' : ''}`}
+                                                            onClick={() => set('visibility', v)}
+                                                        >
+                                                            {v === 'public' ? '🌐 Public' : '🔑 Invite-only'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <p className="pp-hint">
+                                                    {form.visibility === 'public'
+                                                        ? 'All verified freelancers can see and submit proposals.'
+                                                        : 'Only freelancers you invite can see this project.'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="pp-card-footer">
+                                            <p className="pp-submit-note">Step 1 of 3 — Project summary</p>
+                                            <div className="pp-submit-btns">
+                                                <button className="pp-btn-primary" onClick={next}>
+                                                    Next: Budget &amp; Timeline →
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
 
-                        {/* ── Sidebar ── */}
-                        <aside className="pp-sidebar">
-                            {/* Quality score */}
-                            <div className="pp-sidebar-card">
-                                <div className="pp-sidebar-card__title">📊 Project Quality Score</div>
-                                <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                                    <div style={{
-                                        width: 80, height: 80, borderRadius: '50%',
-                                        background: `conic-gradient(var(--color-primary) ${score * 3.6}deg, #eef1f5 0deg)`,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        margin: '0 auto 0.75rem',
-                                        position: 'relative',
-                                    }}>
-                                        <div style={{
-                                            width: 62, height: 62, borderRadius: '50%', background: '#fff',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 800,
-                                            color: 'var(--color-primary)',
-                                        }}>{score}%</div>
+                                {/* ── STEP 1: Budget & Timeline ── */}
+                                {step === 1 && (
+                                    <div className="pp-form-card">
+                                        <div className="pp-card-header">
+                                            <div className="pp-card-header__icon">{STEP_META[1].icon}</div>
+                                            <div>
+                                                <div className="pp-card-header__title">{STEP_META[1].title}</div>
+                                                <div className="pp-card-header__sub">{STEP_META[1].sub}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pp-card-body pp-step-content">
+                                            <div className="pp-form-section">
+                                                <div className="pp-form-section__title">💰 Budget Type</div>
+                                                <div className="pp-budget-type">
+                                                    {['fixed', 'hourly'].map(t => (
+                                                        <button
+                                                            key={t}
+                                                            type="button"
+                                                            className={`pp-budget-pill${form.budgetType === t ? ' pp-budget-pill--active' : ''}`}
+                                                            onClick={() => set('budgetType', t)}
+                                                        >
+                                                            {t === 'fixed' ? '📦 Fixed Price' : '⏱ Hourly Rate'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <div className="pp-row" style={{ marginTop: '0.8rem' }}>
+                                                    <div className="pp-field">
+                                                        <label className="pp-label" htmlFor="pp-bmin">
+                                                            {form.budgetType === 'fixed' ? 'Minimum Budget (PKR)' : 'Min Rate (PKR/hr)'} <span>*</span>
+                                                        </label>
+                                                        <input
+                                                            id="pp-bmin"
+                                                            type="number"
+                                                            min={1}
+                                                            className={`pp-input${errors.budgetMin ? ' pp-input--error' : ''}`}
+                                                            placeholder="e.g. 200"
+                                                            value={form.budgetMin}
+                                                            onChange={e => set('budgetMin', e.target.value)}
+                                                        />
+                                                        {errors.budgetMin && <span className="pp-err-msg">{errors.budgetMin}</span>}
+                                                    </div>
+                                                    {form.budgetType === 'fixed' && (
+                                                        <div className="pp-field">
+                                                            <label className="pp-label" htmlFor="pp-bmax">Maximum Budget (PKR) <span>*</span></label>
+                                                            <input
+                                                                id="pp-bmax"
+                                                                type="number"
+                                                                min={1}
+                                                                className={`pp-input${errors.budgetMax ? ' pp-input--error' : ''}`}
+                                                                placeholder="e.g. 500"
+                                                                value={form.budgetMax}
+                                                                onChange={e => set('budgetMax', e.target.value)}
+                                                            />
+                                                            {errors.budgetMax && <span className="pp-err-msg">{errors.budgetMax}</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="pp-hint" style={{ marginTop: '0.5rem' }}>
+                                                    Projects with a clear budget receive 3× more proposals on average.
+                                                </p>
+                                            </div>
+
+                                            <div className="pp-form-section">
+                                                <div className="pp-form-section__title">📅 Timeline</div>
+                                                <div className="pp-field">
+                                                    <label className="pp-label" htmlFor="pp-timeline">Expected Duration <span>*</span></label>
+                                                    <CustomSelect
+                                                        id="pp-timeline"
+                                                        value={form.timeline}
+                                                        onChange={val => set('timeline', val)}
+                                                        placeholder="Select duration…"
+                                                        options={TIMELINE_OPTIONS.map(t => ({ value: t, label: t }))}
+                                                        className={errors.timeline ? 'csel--error' : ''}
+                                                    />
+                                                    {errors.timeline && <span className="pp-err-msg">{errors.timeline}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pp-card-footer">
+                                            <p className="pp-submit-note">Step 2 of 3 — Budget &amp; timeline</p>
+                                            <div className="pp-submit-btns">
+                                                <button className="pp-btn-secondary" onClick={back}>← Back</button>
+                                                <button className="pp-btn-primary" onClick={next}>Next: Skills &amp; Files →</button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-mid)' }}>
-                                        {score < 50 ? 'Add more details to attract better proposals.' :
-                                            score < 80 ? 'Good! A few more fields will maximise matches.' :
-                                                'Excellent! Your project is well-described.'}
-                                    </p>
+                                )}
+
+                                {/* ── STEP 2: Skills & Attachments ── */}
+                                {step === 2 && (
+                                    <div className="pp-form-card">
+                                        <div className="pp-card-header">
+                                            <div className="pp-card-header__icon">{STEP_META[2].icon}</div>
+                                            <div>
+                                                <div className="pp-card-header__title">{STEP_META[2].title}</div>
+                                                <div className="pp-card-header__sub">{STEP_META[2].sub}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pp-card-body pp-step-content">
+                                            <div className="pp-form-section">
+                                                <div className="pp-form-section__title">
+                                                    🛠 Required Skills <span style={{ color: '#ef4444' }}>*</span>
+                                                </div>
+
+                                                <div className="pp-skill-input-wrap">
+                                                    <input
+                                                        id="pp-skill-input"
+                                                        aria-label="Add a required skill"
+                                                        className={`pp-input${errors.skills ? ' pp-input--error' : ''}`}
+                                                        placeholder="e.g. React, Figma, Python…"
+                                                        value={skillInput}
+                                                        onChange={e => setSkillInput(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                                                    />
+                                                    <button type="button" className="pp-add-btn" onClick={addSkill}>Add</button>
+                                                </div>
+
+                                                {errors.skills && <span className="pp-err-msg" style={{ marginTop: 4, display: 'block' }}>{errors.skills}</span>}
+
+                                                {form.skills.length > 0 && (
+                                                    <div className="pp-tags">
+                                                        {form.skills.map(sk => (
+                                                            <span key={sk} className="pp-tag">
+                                                                {sk}
+                                                                <button className="pp-tag__remove" onClick={() => removeSkill(sk)} aria-label={`Remove skill: ${sk}`}>✕</button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                <div style={{ marginTop: '0.8rem' }}>
+                                                    <span className="pp-hint">Suggestions:</span>
+                                                    <div className="pp-suggested">
+                                                        {SUGGEST_SKILLS.filter(s => !form.skills.includes(s)).map(s => (
+                                                            <button
+                                                                key={s}
+                                                                type="button"
+                                                                className="pp-sug-pill"
+                                                                onClick={() => set('skills', [...form.skills, s])}
+                                                            >+ {s}</button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Attachments */}
+                                            <div className="pp-form-section">
+                                                <div className="pp-form-section__title">
+                                                    📎 Attachments <span style={{ color: '#94A3B8', fontSize: '0.75rem', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>Optional</span>
+                                                </div>
+
+                                                <div
+                                                    className={`pp-dropzone${dragOver ? ' pp-dropzone--active' : ''}`}
+                                                    onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                                                    onDragLeave={() => setDragOver(false)}
+                                                    onDrop={handleDrop}
+                                                    onClick={() => fileRef.current?.click()}
+                                                >
+                                                    <div className="pp-dropzone__icon">📁</div>
+                                                    <p className="pp-dropzone__text">
+                                                        <strong>Click to browse</strong> or drag &amp; drop files here<br />
+                                                        <span style={{ fontSize: '0.75rem' }}>PDF, DOC, PNG, JPG — max 10 MB each</span>
+                                                    </p>
+                                                    <ImageSourcePicker
+                                                        ref={fileRef}
+                                                        multiple
+                                                        accept=""
+                                                        onChange={e => handleFiles(e.target.files)}
+                                                    />
+                                                </div>
+
+                                                {form.files.length > 0 && (
+                                                    <div className="pp-file-list">
+                                                        {form.files.map((f, i) => (
+                                                            <div key={i} className="pp-file-item">
+                                                                <span>📄 {f.name} <span style={{ color: '#94A3B8', fontWeight: 400, fontSize: '0.75rem' }}>({(f.size / 1024).toFixed(0)} KB)</span></span>
+                                                                <button className="pp-file-remove" onClick={() => set('files', form.files.filter((_, j) => j !== i))} aria-label={`Remove file: ${f.name}`}>✕</button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pp-card-footer">
+                                            <p className="pp-submit-note">
+                                                By posting you agree to SkillKart's <Link to="/terms" style={{ color: '#10B981', fontWeight: 600 }}>Terms of Service</Link>.
+                                            </p>
+                                            <div className="pp-submit-btns">
+                                                <button className="pp-btn-secondary" onClick={back}>← Back</button>
+                                                <button
+                                                    className="pp-btn-primary"
+                                                    onClick={submit}
+                                                    disabled={submitting}
+                                                >
+                                                    {submitting
+                                                        ? <><Loader size="sm" text="" /> Posting…</>
+                                                        : '🚀 Post Project'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ── SIDEBAR ── */}
+                            <aside className="pp-sidebar">
+
+                                {/* (a) Quality Score */}
+                                <div className="pp-sidebar-card">
+                                    <div className="pp-sidebar-card__title">📊 Project Quality Score</div>
+                                    <div className="pp-quality-wrap">
+                                        <div className="pp-quality-ring-wrap">
+                                            <div
+                                                className="pp-quality-ring"
+                                                style={{
+                                                    background: `conic-gradient(#10B981 ${score * 3.6}deg, #E2E8F0 0deg)`,
+                                                }}
+                                            >
+                                                <div className="pp-quality-inner">{score}%</div>
+                                            </div>
+                                        </div>
+                                        <p className="pp-quality-label">
+                                            {score < 50
+                                                ? 'Add more details to attract better proposals.'
+                                                : score < 80
+                                                    ? 'Good! A few more fields will maximise matches.'
+                                                    : 'Excellent! Your project is well-described.'}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Tips */}
-                            <div className="pp-sidebar-card">
-                                <div className="pp-sidebar-card__title">💡 Tips for Great Results</div>
-                                <ul className="pp-tip-list">
-                                    {[
-                                        'Be specific about deliverables and acceptance criteria.',
-                                        'Set a realistic budget — it filters out mismatched freelancers.',
-                                        'List required skills so AI can find the best match.',
-                                        'Attach mockups or references to speed up proposals.',
-                                        'Respond to proposals within 24 hrs to keep freelancers engaged.',
-                                    ].map(tip => (
-                                        <li key={tip} className="pp-tip">
-                                            <span className="pp-tip__dot" />
-                                            {tip}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                                {/* (b) Tips */}
+                                <div className="pp-sidebar-card">
+                                    <div className="pp-sidebar-card__title">💡 Tips for Great Results</div>
+                                    <ul className="pp-tip-list">
+                                        {[
+                                            'Be specific about deliverables and acceptance criteria.',
+                                            'Set a realistic budget — it filters out mismatched freelancers.',
+                                            'List required skills so AI can find the best match.',
+                                            'Attach mockups or references to speed up proposals.',
+                                            'Respond to proposals within 24 hrs to keep freelancers engaged.',
+                                        ].map(tip => (
+                                            <li key={tip} className="pp-tip">
+                                                <span className="pp-tip__dot" />
+                                                {tip}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
 
-                            {/* AI preview */}
-                            <div className="pp-sidebar-card" style={{ background: 'linear-gradient(135deg, #042E4C, #0a4a73)', color: '#fff' }}>
-                                <div className="pp-ai-preview">
+                                {/* (c) Buddy AI — green gradient card */}
+                                <div className="pp-sidebar-card pp-sidebar-card--buddy">
+                                    <span className="pp-buddy-sparkles" aria-hidden="true">✨</span>
                                     <div className="pp-ai-preview__tag">🤖 Buddy AI</div>
                                     <div className="pp-ai-preview__title">Smart Freelancer Matching</div>
                                     <div className="pp-ai-preview__sub">
@@ -662,9 +737,9 @@ export default function PostProject() {
                                         <span className="pp-ai-score__val">{Math.max(3, Math.round(score / 10))}+</span>
                                     </div>
                                 </div>
-                            </div>
-                        </aside>
 
+                            </aside>
+                        </div>
                     </div>
                 </div>
             </div>

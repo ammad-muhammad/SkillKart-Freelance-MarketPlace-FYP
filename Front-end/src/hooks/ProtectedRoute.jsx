@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const location = useLocation();
 
   if (loading) {
-    return <Loader text="Loading..." fullScreen={true} />;
+    return <Loader text="Loading" fullScreen={true} />;
   }
 
   if (!user) {

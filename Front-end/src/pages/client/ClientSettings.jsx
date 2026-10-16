@@ -1,63 +1,99 @@
-import { Tag, AlertCircle, RefreshCw, Bell, AlertTriangle, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Tag, Mail, Shield, AlertTriangle, Bell, RefreshCw, AlertCircle, Trash2, Check } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useClient } from '../../context/ClientContext';
 import { authAPI } from '../../api/auth';
 import Modal from '../../Components/common/Modal/Modal';
 import { clientsAPI } from '../../api/clients';
+import Reveal from '../freelancer/components/Reveal';
+import '../freelancer/FreelancerSettings.css';
 
-const ClientSettings = () => {
+export default function ClientSettings() {
   const { user, logout } = useAuth();
   const { profile, updateProfile, updateMultipleSections, showToast } = useClient();
   const isEmailUser = user?.authProvider === 'email';
   const isSupabaseUser = !!user?.supabaseId || (user?.authProvider && user?.authProvider !== 'email');
-  const [account, setAccount] = useState({
-    newUsername: profile?.personalInfo?.username || "",
-    newEmail: profile?.personalInfo?.email || "",
+
+  const [activeSection, setActiveSection] = useState('sec-username');
+  const [form, setForm] = useState({
+    username: profile?.personalInfo?.username || "",
+    email: profile?.personalInfo?.email || "",
     recoveryEmail: profile?.securitySettings?.recoveryEmail || "",
     recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
   });
+  const [initialForm, setInitialForm] = useState({
+    username: profile?.personalInfo?.username || "",
+    email: profile?.personalInfo?.email || "",
+    recoveryEmail: profile?.securitySettings?.recoveryEmail || "",
+    recoveryPhone: profile?.securitySettings?.recoveryPhone || "",
+  });
+
   const [notifications, setNotifications] = useState({ ...(profile?.notificationSettings || {}) });
+  const [notifSavedMsg, setNotifSavedMsg] = useState({});
   const [errors, setErrors] = useState({});
+  const [savingSection, setSavingSection] = useState(null);
 
   // Sync state when profile is loaded/updated
   useEffect(() => {
     if (profile) {
-      setAccount({
-        newUsername: profile.personalInfo?.username || "",
-        newEmail: profile.personalInfo?.email || "",
+      const data = {
+        username: profile.personalInfo?.username || "",
+        email: profile.personalInfo?.email || "",
         recoveryEmail: profile.securitySettings?.recoveryEmail || "",
         recoveryPhone: profile.securitySettings?.recoveryPhone || "",
-      });
+      };
+      setForm(data);
+      setInitialForm(data);
       setNotifications({ ...(profile.notificationSettings || {}) });
     }
   }, [profile]);
 
+  // Modals state
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteStep, setDeleteStep] = useState('confirm'); // 'confirm' | 'otp'
   const [deleteOtp, setDeleteOtp] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+
   const [emailModal, setEmailModal] = useState(false);
   const [emailOtp, setEmailOtp] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
 
-  // Recovery Email Change State
   const [recoveryEmailModal, setRecoveryEmailModal] = useState(false);
   const [recoveryEmailOtp, setRecoveryEmailOtp] = useState('');
   const [recoveryEmailLoading, setRecoveryEmailLoading] = useState(false);
 
+  // Dirty check
+  const isDirty = form.username !== initialForm.username ||
+    form.recoveryPhone !== initialForm.recoveryPhone;
+
+  const handleDiscard = () => {
+    setForm(initialForm);
+    setErrors({});
+  };
+
+  const scrollTo = (secId) => {
+    setActiveSection(secId);
+    const el = document.getElementById(secId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const handleRequestEmailChange = async () => {
-    if (!account.newEmail || account.newEmail === profile?.personalInfo?.email) return;
-    
+    if (!form.email || form.email === profile?.personalInfo?.email) return;
+
     setEmailLoading(true);
+    setSavingSection('Email');
     try {
-      await authAPI.requestEmailChange(account.newEmail);
+      await authAPI.requestEmailChange(form.email);
       setEmailModal(true);
       showToast('OTP sent to new email address.');
     } catch (error) {
       showToast(error.response?.data?.message || 'Cannot change email.', 'error');
     } finally {
       setEmailLoading(false);
+      setSavingSection(null);
     }
   };
 
@@ -69,8 +105,8 @@ const ClientSettings = () => {
       showToast('Email updated successfully.', 'success');
       setEmailModal(false);
       setEmailOtp('');
-      // update context locally
-      updateProfile('personalInfo', { email: account.newEmail }, false, false);
+      updateProfile('personalInfo', { email: form.email }, false, false);
+      setInitialForm(prev => ({ ...prev, email: form.email }));
     } catch (error) {
       showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
     } finally {
@@ -79,17 +115,19 @@ const ClientSettings = () => {
   };
 
   const handleRequestRecoveryEmailChange = async () => {
-    if (!account.recoveryEmail || account.recoveryEmail === profile?.securitySettings?.recoveryEmail) return;
-    
+    if (!form.recoveryEmail || form.recoveryEmail === profile?.securitySettings?.recoveryEmail) return;
+
     setRecoveryEmailLoading(true);
+    setSavingSection('RecoveryEmail');
     try {
-      await authAPI.requestRecoveryEmailChange(account.recoveryEmail);
+      await authAPI.requestRecoveryEmailChange(form.recoveryEmail);
       setRecoveryEmailModal(true);
       showToast('OTP sent to new recovery email.');
     } catch (error) {
       showToast(error.response?.data?.message || 'Cannot change recovery email.', 'error');
     } finally {
       setRecoveryEmailLoading(false);
+      setSavingSection(null);
     }
   };
 
@@ -101,8 +139,8 @@ const ClientSettings = () => {
       showToast('Recovery email updated successfully.', 'success');
       setRecoveryEmailModal(false);
       setRecoveryEmailOtp('');
-      // update context locally
-      updateProfile('securitySettings', { ...profile.securitySettings, recoveryEmail: account.recoveryEmail }, false, false);
+      updateProfile('securitySettings', { ...profile.securitySettings, recoveryEmail: form.recoveryEmail }, false, false);
+      setInitialForm(prev => ({ ...prev, recoveryEmail: form.recoveryEmail }));
     } catch (error) {
       showToast(error.response?.data?.message || 'Invalid OTP.', 'error');
     } finally {
@@ -110,42 +148,68 @@ const ClientSettings = () => {
     }
   };
 
-  const saveAccount = async () => {
-    setErrors({});
-    // Validate username uniqueness if changed
-    if (account.newUsername?.trim() && account.newUsername?.trim() !== profile?.personalInfo?.username) {
+  const handleSaveUsername = async () => {
+    setErrors(prev => ({ ...prev, username: null }));
+    if (!form.username?.trim()) return;
+
+    if (form.username.trim() !== profile?.personalInfo?.username) {
+      setSavingSection('Username');
       try {
-        const res = await clientsAPI.checkUsername(account.newUsername.trim());
+        const res = await clientsAPI.checkUsername(form.username.trim());
         if (res.data?.data?.exists) {
-          setErrors(prev => ({ ...prev, newUsername: 'Username is already taken' }));
+          setErrors(prev => ({ ...prev, username: 'Username is already taken' }));
+          setSavingSection(null);
           return;
         }
       } catch (err) {
-        console.error('Username check failed', err);
-        setErrors(prev => ({ ...prev, newUsername: 'Unable to verify username' }));
+        setErrors(prev => ({ ...prev, username: 'Unable to verify username' }));
+        setSavingSection(null);
         return;
       }
     }
 
-    const updates = {
-      personalInfo: { username: account.newUsername?.trim() || profile?.personalInfo?.username },
-      securitySettings: { recoveryPhone: account.recoveryPhone }
-    };
-    // Persist changes and refresh profile to reflect updated username
-    await updateMultipleSections(updates, false, true);
-    // Errors are handled via updateMultipleSections/showToast
+    setSavingSection('Username');
+    try {
+      await updateMultipleSections({
+        personalInfo: { username: form.username.trim() }
+      }, false, true);
+      setInitialForm(prev => ({ ...prev, username: form.username.trim() }));
+      showToast('Username updated successfully', 'success');
+    } catch {
+      // Handled via context
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveRecoveryPhone = async () => {
+    setSavingSection('Phone');
+    try {
+      await updateMultipleSections({
+        securitySettings: { recoveryPhone: form.recoveryPhone }
+      }, false, true);
+      setInitialForm(prev => ({ ...prev, recoveryPhone: form.recoveryPhone }));
+      showToast('Recovery phone updated successfully', 'success');
+    } finally {
+      setSavingSection(null);
+    }
   };
 
   const toggleNotif = async (key) => {
-    setNotifications(prev => {
-      const updated = { ...prev, [key]: !prev[key] };
-      // Call updateProfile with the newly calculated state and skip redundant re-fetch
-      updateProfile('notificationSettings', updated, false, true, { skipFetch: true });
-      return updated;
-    });
+    const updatedVal = !notifications[key];
+    setNotifications(prev => ({ ...prev, [key]: updatedVal }));
+    try {
+      await updateProfile('notificationSettings', { [key]: updatedVal }, false, true, { skipFetch: true });
+      setNotifSavedMsg(prev => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setNotifSavedMsg(prev => ({ ...prev, [key]: false }));
+      }, 2000);
+    } catch {
+      setNotifications(prev => ({ ...prev, [key]: !updatedVal }));
+      showToast('Could not update notification setting', 'error');
+    }
   };
 
-  // Step 1: request a deletion OTP to the account email.
   const requestDelete = async () => {
     setDeleteLoading(true);
     try {
@@ -159,7 +223,6 @@ const ClientSettings = () => {
     }
   };
 
-  // Step 2: confirm with OTP → permanent delete → log out.
   const confirmDelete = async () => {
     if (!deleteOtp.trim()) { showToast('Enter the confirmation code.', 'error'); return; }
     setDeleteLoading(true);
@@ -181,202 +244,503 @@ const ClientSettings = () => {
   };
 
   return (
-    <div>
-      <div className="cl-page-header">
-        <h1 className="cl-page-title">Account Settings</h1>
-        <p className="cl-page-sub">Manage your account preferences and notification settings.</p>
-      </div>
+    <div className="fs-page-root">
+      <div className="fs-container">
 
-      {/* Account Settings */}
-      <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title"><Tag size={18} style={{ marginRight: '8px' }} /> Account Information</h3>
-        <div className="cl-form-grid">
-          <div className="cl-form-group">
-            <label className="cl-label" htmlFor="cs-current-username">Current Username</label>
-            <input id="cs-current-username" className="cl-input" value={profile?.personalInfo?.username || ""} disabled />
+        {/* ─── SHARED PAGE HEADER ─── */}
+        <header className="fs-shared-header">
+          <div className="fs-header-left">
+            <nav className="fs-breadcrumbs" aria-label="Breadcrumb">
+              <Link to="/client/dashboard" className="fs-bc-link">Dashboard</Link>
+              <span className="fs-bc-sep">/</span>
+              <span className="fs-bc-curr">Settings</span>
+            </nav>
+            <h1 className="fs-page-title">Account Settings</h1>
+            <p className="fs-page-subtitle">
+              Manage your personal identifier, primary communication email, recovery credentials, and alert options.
+            </p>
           </div>
-          <div className="cl-form-group">
-            <label className="cl-label" htmlFor="cs-new-username">New Username</label>
-            <input id="cs-new-username" className={`cl-input${errors.newUsername ? ' cl-input--error' : ''}`} value={account.newUsername}
-              onChange={(e) => setAccount((p) => ({ ...p, newUsername: e.target.value }))} />
-            {errors.newUsername && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.newUsername}</span>}
-          </div>
-        </div>
-        <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={saveAccount}>
-          Update Username
-        </button>
+        </header>
 
-        <div className="cl-divider" />
+        {/* ─── 2-ZONE LAYOUT (Sub-nav + Cards Stack) ─── */}
+        <div className="fs-layout-grid">
 
-        <div className="cl-form-grid">
-          <div className="cl-form-group">
-            <label className="cl-label" htmlFor="cs-current-email">Current Email</label>
-            <input id="cs-current-email" className="cl-input" value={profile?.personalInfo?.email || ""} disabled />
-          </div>
-          {!isSupabaseUser && (
-            <div className="cl-form-group">
-              <label className="cl-label" htmlFor="cs-new-email">New Email</label>
-              <input id="cs-new-email" type="email" className={`cl-input${errors.newEmail ? ' cl-input--error' : ''}`} value={account.newEmail}
-                onChange={(e) => setAccount((p) => ({ ...p, newEmail: e.target.value }))} />
-              {errors.newEmail && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.newEmail}</span>}
+          {/* LEFT: Sticky Sub-nav Card */}
+          <aside className="fs-subnav-col" aria-label="Settings Navigation">
+            <div className="fs-subnav-card">
+              <span className="fs-subnav-heading">SECTIONS</span>
+
+              <button
+                type="button"
+                className={`fs-subnav-pill ${activeSection === 'sec-username' ? 'fs-subnav-pill--active' : ''}`}
+                onClick={() => scrollTo('sec-username')}
+              >
+                <Tag size={15} />
+                <span>Username</span>
+              </button>
+
+              <button
+                type="button"
+                className={`fs-subnav-pill ${activeSection === 'sec-email' ? 'fs-subnav-pill--active' : ''}`}
+                onClick={() => scrollTo('sec-email')}
+              >
+                <Mail size={15} />
+                <span>Email Address</span>
+              </button>
+
+              {isEmailUser && (
+                <button
+                  type="button"
+                  className={`fs-subnav-pill ${activeSection === 'sec-recovery' ? 'fs-subnav-pill--active' : ''}`}
+                  onClick={() => scrollTo('sec-recovery')}
+                >
+                  <Shield size={15} />
+                  <span>Recovery Info</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                className={`fs-subnav-pill ${activeSection === 'sec-notifications' ? 'fs-subnav-pill--active' : ''}`}
+                onClick={() => scrollTo('sec-notifications')}
+              >
+                <Bell size={15} />
+                <span>Notifications</span>
+              </button>
+
+              <button
+                type="button"
+                className={`fs-subnav-pill fs-subnav-pill--danger ${activeSection === 'sec-danger' ? 'fs-subnav-pill--active' : ''}`}
+                onClick={() => scrollTo('sec-danger')}
+              >
+                <AlertTriangle size={15} />
+                <span>Danger Zone</span>
+              </button>
             </div>
-          )}
+          </aside>
+
+          {/* RIGHT: Stacked Section Cards */}
+          <main className="fs-content-col">
+
+            {/* SECTION 1: USERNAME */}
+            <Reveal delay={0}>
+              <section id="sec-username" className="fs-section-card">
+                <div className="fs-section-hd">
+                  <div className="fs-section-icon-box">
+                    <Tag size={18} />
+                  </div>
+                  <div>
+                    <h2 className="fs-section-title">Change Username</h2>
+                    <p className="fs-section-desc">Your public handle across proposals, project chats, and hiring listings.</p>
+                  </div>
+                </div>
+
+                <div className="fs-fields-2col">
+                  <div className="fs-field">
+                    <label className="fs-field-label" htmlFor="fs-current-user">Current Username</label>
+                    <input
+                      id="fs-current-user"
+                      className="fs-field-input fs-field-input--disabled"
+                      value={profile?.personalInfo?.username || '—'}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+
+                  <div className="fs-field">
+                    <label className="fs-field-label" htmlFor="fs-new-user">New Username</label>
+                    <input
+                      id="fs-new-user"
+                      className={`fs-field-input ${errors.username ? 'fs-field-input--error' : ''}`}
+                      value={form.username}
+                      onChange={(e) => {
+                        setForm((p) => ({ ...p, username: e.target.value }));
+                        setErrors(prev => ({ ...prev, username: null }));
+                      }}
+                      placeholder="Enter new username"
+                    />
+                    {errors.username && <span className="fs-field-error-text">{errors.username}</span>}
+                  </div>
+                </div>
+
+                <div className="fs-card-footer-row">
+                  <button
+                    type="button"
+                    className="fs-btn-primary"
+                    disabled={savingSection === 'Username' || form.username === profile?.personalInfo?.username || !form.username?.trim()}
+                    onClick={handleSaveUsername}
+                  >
+                    {savingSection === 'Username' ? 'Saving...' : 'Update Username'}
+                  </button>
+                </div>
+              </section>
+            </Reveal>
+
+            {/* SECTION 2: EMAIL ADDRESS */}
+            <Reveal delay={50}>
+              <section id="sec-email" className="fs-section-card">
+                <div className="fs-section-hd">
+                  <div className="fs-section-icon-box">
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <h2 className="fs-section-title">
+                      {isSupabaseUser ? 'Email Address' : 'Change Email Address'}
+                    </h2>
+                    <p className="fs-section-desc">Primary address for login alerts, project contracts, and invoice receipts.</p>
+                  </div>
+                </div>
+
+                <div className="fs-fields-2col">
+                  <div className="fs-field">
+                    <label className="fs-field-label" htmlFor="fs-current-em">Current Email</label>
+                    <input
+                      id="fs-current-em"
+                      className="fs-field-input fs-field-input--disabled"
+                      value={profile?.personalInfo?.email || user?.email || '—'}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+
+                  {!isSupabaseUser && (
+                    <div className="fs-field">
+                      <label className="fs-field-label" htmlFor="fs-new-em">New Email</label>
+                      <input
+                        id="fs-new-em"
+                        type="email"
+                        className={`fs-field-input ${errors.email ? 'fs-field-input--error' : ''}`}
+                        value={form.email}
+                        onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                        placeholder="new.email@example.com"
+                      />
+                      {errors.email && <span className="fs-field-error-text">{errors.email}</span>}
+                    </div>
+                  )}
+                </div>
+
+                {!isSupabaseUser ? (
+                  <div className="fs-card-footer-row">
+                    <button
+                      type="button"
+                      className="fs-btn-primary"
+                      disabled={savingSection === 'Email' || form.email === profile?.personalInfo?.email || !form.email?.trim()}
+                      onClick={handleRequestEmailChange}
+                    >
+                      {savingSection === 'Email' ? 'Sending Code...' : 'Update Email'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="fs-notice-box">
+                    <span>You signed in via an external OAuth provider. Email modifications must be managed through that provider.</span>
+                  </div>
+                )}
+              </section>
+            </Reveal>
+
+            {/* SECTION 3: RECOVERY INFORMATION */}
+            {isEmailUser && (
+              <Reveal delay={100}>
+                <section id="sec-recovery" className="fs-section-card">
+                  <div className="fs-section-hd">
+                    <div className="fs-section-icon-box">
+                      <Shield size={18} />
+                    </div>
+                    <div>
+                      <h2 className="fs-section-title">Recovery Information</h2>
+                      <p className="fs-section-desc">Alternative backup channels to regain account access if primary credentials are lost.</p>
+                    </div>
+                  </div>
+
+                  <div className="fs-fields-2col">
+                    <div className="fs-field">
+                      <label className="fs-field-label" htmlFor="fs-recov-em">Backup Recovery Email</label>
+                      <input
+                        id="fs-recov-em"
+                        type="email"
+                        className={`fs-field-input ${errors.recoveryEmail ? 'fs-field-input--error' : ''}`}
+                        value={form.recoveryEmail}
+                        onChange={(e) => setForm((p) => ({ ...p, recoveryEmail: e.target.value }))}
+                        placeholder="backup@example.com"
+                      />
+                      {errors.recoveryEmail && <span className="fs-field-error-text">{errors.recoveryEmail}</span>}
+                    </div>
+
+                    <div className="fs-field">
+                      <label className="fs-field-label" htmlFor="fs-recov-ph">Recovery Phone Number</label>
+                      <input
+                        id="fs-recov-ph"
+                        type="tel"
+                        className={`fs-field-input ${errors.recoveryPhone ? 'fs-field-input--error' : ''}`}
+                        value={form.recoveryPhone}
+                        onChange={(e) => setForm((p) => ({ ...p, recoveryPhone: e.target.value }))}
+                        placeholder="+92 300 1234567"
+                      />
+                      {errors.recoveryPhone && <span className="fs-field-error-text">{errors.recoveryPhone}</span>}
+                    </div>
+                  </div>
+
+                  <div className="fs-card-footer-row" style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      type="button"
+                      className="fs-btn-primary"
+                      disabled={savingSection === 'RecoveryEmail' || form.recoveryEmail === profile?.securitySettings?.recoveryEmail || !form.recoveryEmail?.trim()}
+                      onClick={handleRequestRecoveryEmailChange}
+                    >
+                      {savingSection === 'RecoveryEmail' ? 'Sending Code...' : 'Update Recovery Email'}
+                    </button>
+                    <button
+                      type="button"
+                      className="fs-btn-secondary"
+                      disabled={savingSection === 'Phone' || form.recoveryPhone === profile?.securitySettings?.recoveryPhone}
+                      onClick={handleSaveRecoveryPhone}
+                    >
+                      {savingSection === 'Phone' ? 'Saving...' : 'Save Recovery Phone'}
+                    </button>
+                  </div>
+                </section>
+              </Reveal>
+            )}
+
+            {/* SECTION 4: NOTIFICATION PREFERENCES */}
+            <Reveal delay={150}>
+              <section id="sec-notifications" className="fs-section-card">
+                <div className="fs-section-hd">
+                  <div className="fs-section-icon-box">
+                    <Bell size={18} />
+                  </div>
+                  <div>
+                    <h2 className="fs-section-title">Notification Preferences</h2>
+                    <p className="fs-section-desc">Select which alerts and delivery channels you want to receive in real-time.</p>
+                  </div>
+                </div>
+
+                <div className="fs-toggles-list">
+                  <div className="fs-toggle-row">
+                    <div className="fs-toggle-info">
+                      <span className="fs-toggle-label">Email Notifications</span>
+                      <span className="fs-toggle-sub">Receive daily project digests, system announcements, and service notifications.</span>
+                    </div>
+                    <div className="fs-toggle-ctrl-col">
+                      {notifSavedMsg.emailNotifications && <span className="fs-saved-badge">Saved ✓</span>}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={notifications.emailNotifications}
+                        className={`fs-switch ${notifications.emailNotifications ? 'fs-switch--on' : ''}`}
+                        onClick={() => toggleNotif('emailNotifications')}
+                      >
+                        <span className="fs-switch-thumb" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="fs-toggle-row">
+                    <div className="fs-toggle-info">
+                      <span className="fs-toggle-label">Proposal Alerts</span>
+                      <span className="fs-toggle-sub">Immediate alerts whenever a top freelancer applies to your job post.</span>
+                    </div>
+                    <div className="fs-toggle-ctrl-col">
+                      {notifSavedMsg.proposalAlerts && <span className="fs-saved-badge">Saved ✓</span>}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={notifications.proposalAlerts}
+                        className={`fs-switch ${notifications.proposalAlerts ? 'fs-switch--on' : ''}`}
+                        onClick={() => toggleNotif('proposalAlerts')}
+                      >
+                        <span className="fs-switch-thumb" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="fs-toggle-row">
+                    <div className="fs-toggle-info">
+                      <span className="fs-toggle-label">Freelancer Message Alerts</span>
+                      <span className="fs-toggle-sub">Instant ping when a prospective freelancer sends a message or submits work.</span>
+                    </div>
+                    <div className="fs-toggle-ctrl-col">
+                      {notifSavedMsg.messageAlerts && <span className="fs-saved-badge">Saved ✓</span>}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={notifications.messageAlerts}
+                        className={`fs-switch ${notifications.messageAlerts ? 'fs-switch--on' : ''}`}
+                        onClick={() => toggleNotif('messageAlerts')}
+                      >
+                        <span className="fs-switch-thumb" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </Reveal>
+
+            {/* SECTION 5: DANGER ZONE */}
+            <Reveal delay={200}>
+              <section id="sec-danger" className="fs-section-card fs-section-card--danger">
+                <div className="fs-section-hd">
+                  <div className="fs-section-icon-box fs-section-icon-box--danger">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <h2 className="fs-section-title fs-section-title--danger">Danger Zone</h2>
+                    <p className="fs-section-desc">Irreversible or restrictive account actions.</p>
+                  </div>
+                </div>
+
+                <div className="fs-danger-row">
+                  <div className="fs-danger-info">
+                    <span className="fs-danger-title">Delete Client Account</span>
+                    <span className="fs-danger-desc">
+                      Closing your account will remove all your posted jobs, hiring history, invoices, and active contracts.
+                      This action is permanent and cannot be undone.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="fs-btn-danger"
+                    onClick={() => setDeleteModal(true)}
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              </section>
+            </Reveal>
+
+          </main>
         </div>
-        {!isSupabaseUser && (
-          <button className="cl-btn cl-btn--primary cl-btn--sm" style={{ marginTop: '1rem' }} onClick={handleRequestEmailChange} disabled={emailLoading || account.newEmail === profile?.personalInfo?.email}>
-            {emailLoading ? 'Sending OTP...' : 'Update Email'}
-          </button>
+
+        {/* ─── STICKY CARD-FOOTER FOR UNSAVED CHANGES ─── */}
+        {isDirty && (
+          <div className="fs-dirty-sticky-bar" role="region" aria-label="Unsaved Changes Notification">
+            <div className="fs-dirty-bar-content">
+              <div className="fs-dirty-label-row">
+                <AlertCircle size={16} className="fs-dirty-icon" />
+                <span>You have unsaved changes in your settings</span>
+              </div>
+              <div className="fs-dirty-actions-row">
+                <button
+                  type="button"
+                  className="fs-dirty-discard-btn"
+                  onClick={handleDiscard}
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  className="fs-btn-primary fs-btn-primary--sm"
+                  disabled={savingSection != null}
+                  onClick={() => {
+                    if (form.username !== initialForm.username) {
+                      handleSaveUsername();
+                    }
+                    if (form.recoveryPhone !== initialForm.recoveryPhone) {
+                      handleSaveRecoveryPhone();
+                    }
+                  }}
+                >
+                  {savingSection ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
-        {isEmailUser && (
-          <>
-            <div className="cl-divider" />
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-primary)' }}><RefreshCw size={16} style={{ marginRight: '6px' }} /> Recovery Options</h4>
-            <div className="cl-form-grid">
-              <div className="cl-form-group">
-                <label className="cl-label" htmlFor="cs-recovery-email">Recovery Email</label>
-                <input id="cs-recovery-email" type="email" className={`cl-input${errors.recoveryEmail ? ' cl-input--error' : ''}`} value={account.recoveryEmail}
-                  onChange={(e) => setAccount((p) => ({ ...p, recoveryEmail: e.target.value }))} />
-                {errors.recoveryEmail && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.recoveryEmail}</span>}
-              </div>
-              <div className="cl-form-group">
-                <label className="cl-label" htmlFor="cs-recovery-phone">Recovery Phone</label>
-                <input id="cs-recovery-phone" className={`cl-input${errors.recoveryPhone ? ' cl-input--error' : ''}`} value={account.recoveryPhone}
-                  onChange={(e) => setAccount((p) => ({ ...p, recoveryPhone: e.target.value }))} />
-                {errors.recoveryPhone && <span className="cl-error"><AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> {errors.recoveryPhone}</span>}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-              <button className="cl-btn cl-btn--primary cl-btn--sm" onClick={handleRequestRecoveryEmailChange} disabled={recoveryEmailLoading || account.recoveryEmail === profile?.securitySettings?.recoveryEmail}>
-                {recoveryEmailLoading ? 'Sending OTP...' : 'Update Recovery Email'}
-              </button>
-              <button className="cl-btn cl-btn--secondary cl-btn--sm" onClick={saveAccount}>
-                Save Recovery Phone
-              </button>
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Notification Settings */}
-      <div className="cl-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="cl-section-title"><Bell size={18} style={{ marginRight: '8px' }} /> Notification Settings</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {[
-            { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive project and platform updates via email' },
-            { key: 'proposalAlerts', label: 'Proposal Alerts', desc: 'Get notified when a freelancer submits a proposal' },
-            { key: 'messageAlerts', label: 'Message Alerts', desc: 'Get notified when you receive a new message' },
-          ].map(({ key, label, desc }) => (
-            <div key={key} className="cl-toggle">
-              <div className="cl-toggle__info">
-                <span className="cl-toggle__label">{label}</span>
-                <span className="cl-toggle__desc">{desc}</span>
-              </div>
-              <div
-                className={`cl-toggle__switch${notifications[key] ? ' cl-toggle__switch--on' : ''}`}
-                onClick={() => toggleNotif(key)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="cl-card">
-        <h3 className="cl-section-title" style={{ color: 'var(--color-error)' }}><AlertTriangle size={18} style={{ marginRight: '8px' }} /> Danger Zone</h3>
-        <div className="cl-danger-zone">
-          <div className="cl-danger-zone__title">Delete Account</div>
-          <div className="cl-danger-zone__desc">
-            Permanently delete your account and all associated projects. This action cannot be undone.
-          </div>
-          <button className="cl-btn cl-btn--danger cl-btn--sm" onClick={() => setDeleteModal(true)}>
-            <Trash2 size={16} style={{ marginRight: '8px' }} /> Delete My Account
-          </button>
-        </div>
-      </div>
-
+      {/* Delete Account Modal */}
       <Modal open={deleteModal} title="Delete Account" onClose={closeDeleteModal} danger>
         {deleteStep === 'confirm' ? (
           <>
-            <p>This will <strong>permanently delete</strong> your account, profile, and all your projects. This cannot be undone. We'll email you a confirmation code to proceed.</p>
-            <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
-              <button className="cl-btn cl-btn--danger" onClick={requestDelete} disabled={deleteLoading}>
+            <p style={{ color: '#475569', fontSize: 14, lineHeight: 1.6 }}>
+              This will <strong>permanently delete</strong> your account, profile, and all your job postings and contracts. This action cannot be reversed. We will email you a 6-digit confirmation code.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="fs-btn-outline" onClick={closeDeleteModal} disabled={deleteLoading}>Cancel</button>
+              <button className="fs-btn-danger" onClick={requestDelete} disabled={deleteLoading}>
                 {deleteLoading ? 'Sending code…' : 'Send confirmation code'}
               </button>
-              <button className="cl-btn cl-btn--ghost" onClick={closeDeleteModal} disabled={deleteLoading}>Cancel</button>
             </div>
           </>
         ) : (
           <>
-            <p style={{ marginBottom: '1rem' }}>Enter the confirmation code sent to <strong>{account.newEmail}</strong> to permanently delete your account.</p>
-            <div className="cl-form-group">
+            <p style={{ color: '#475569', fontSize: 14, marginBottom: 16 }}>
+              Enter the 6-digit confirmation code sent to <strong>{profile?.personalInfo?.email || user?.email}</strong>.
+            </p>
+            <div className="fs-field">
               <input
-                className="cl-input"
+                className="fs-field-input"
                 aria-label="6-digit confirmation code"
-                placeholder="6-digit code"
+                placeholder="Enter 6-digit code"
                 value={deleteOtp}
                 onChange={e => setDeleteOtp(e.target.value)}
+                style={{ textAlign: 'center', letterSpacing: '4px', fontSize: 18, fontWeight: 700 }}
               />
             </div>
-            <div className="cl-actions" style={{ marginTop: '1.25rem' }}>
-              <button className="cl-btn cl-btn--danger" onClick={confirmDelete} disabled={deleteLoading}>
-                {deleteLoading ? 'Deleting…' : 'Permanently delete my account'}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="fs-btn-outline" onClick={closeDeleteModal} disabled={deleteLoading}>Cancel</button>
+              <button className="fs-btn-danger" onClick={confirmDelete} disabled={deleteLoading}>
+                {deleteLoading ? 'Deleting…' : 'Permanently delete account'}
               </button>
-              <button className="cl-btn cl-btn--ghost" onClick={closeDeleteModal} disabled={deleteLoading}>Cancel</button>
             </div>
           </>
         )}
       </Modal>
+
+      {/* Email Change Modal */}
       <Modal open={emailModal} title="Verify Email Change" onClose={() => setEmailModal(false)}>
-        <p style={{ marginBottom: '1rem' }}>
-          Please enter the OTP sent to <strong>{account.newEmail}</strong> to confirm your new email address.
+        <p style={{ color: '#475569', fontSize: 14, marginBottom: 16 }}>
+          Please enter the OTP sent to <strong>{form.email}</strong> to confirm your new email address.
         </p>
-        <div className="cl-form-group">
+        <div className="fs-field">
           <input
-            className="cl-input"
+            className="fs-field-input"
             aria-label="Enter OTP"
-            placeholder="Enter OTP"
+            placeholder="6-digit code"
             value={emailOtp}
             onChange={(e) => setEmailOtp(e.target.value)}
+            style={{ textAlign: 'center', letterSpacing: '4px', fontSize: 18, fontWeight: 700 }}
           />
         </div>
-        <div className="cl-actions" style={{ marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
+          <button className="fs-btn-outline" onClick={() => setEmailModal(false)}>Cancel</button>
           <button
-            className={`cl-btn cl-btn--primary${emailLoading ? ' cl-btn--loading' : ''}`}
+            className="fs-btn-primary"
             onClick={handleConfirmEmailChange}
             disabled={emailLoading || !emailOtp}
           >
             {emailLoading ? 'Verifying...' : 'Verify and Update'}
           </button>
-          <button className="cl-btn cl-btn--ghost" onClick={() => setEmailModal(false)}>Cancel</button>
         </div>
       </Modal>
+
+      {/* Recovery Email Modal */}
       <Modal open={recoveryEmailModal} title="Verify Recovery Email" onClose={() => setRecoveryEmailModal(false)}>
-        <p style={{ marginBottom: '1rem' }}>
-          Please enter the OTP sent to <strong>{account.recoveryEmail}</strong> to confirm your new recovery email address.
+        <p style={{ color: '#475569', fontSize: 14, marginBottom: 16 }}>
+          Please enter the OTP sent to <strong>{form.recoveryEmail}</strong> to confirm your new recovery email address.
         </p>
-        <div className="cl-form-group">
+        <div className="fs-field">
           <input
-            className="cl-input"
+            className="fs-field-input"
             aria-label="Enter OTP"
-            placeholder="Enter OTP"
+            placeholder="6-digit code"
             value={recoveryEmailOtp}
             onChange={(e) => setRecoveryEmailOtp(e.target.value)}
+            style={{ textAlign: 'center', letterSpacing: '4px', fontSize: 18, fontWeight: 700 }}
           />
         </div>
-        <div className="cl-actions" style={{ marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
+          <button className="fs-btn-outline" onClick={() => setRecoveryEmailModal(false)}>Cancel</button>
           <button
-            className={`cl-btn cl-btn--primary${recoveryEmailLoading ? ' cl-btn--loading' : ''}`}
+            className="fs-btn-primary"
             onClick={handleConfirmRecoveryEmailChange}
             disabled={recoveryEmailLoading || !recoveryEmailOtp}
           >
             {recoveryEmailLoading ? 'Verifying...' : 'Verify and Update'}
           </button>
-          <button className="cl-btn cl-btn--ghost" onClick={() => setRecoveryEmailModal(false)}>Cancel</button>
         </div>
       </Modal>
     </div>
   );
-};
-
-export default ClientSettings;
+}

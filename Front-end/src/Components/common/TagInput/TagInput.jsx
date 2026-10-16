@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { AlertCircle, Globe, Loader2, Plus, Sparkles, X } from 'lucide-react';
+import { AlertCircle, Globe, Plus, Sparkles, X } from 'lucide-react';
+import Loader from '../Loader/Loader';
 import { skillsAPI } from '../../../api/skills';
 import './TagInput.css';
 
@@ -204,7 +205,7 @@ const TagInput = ({
               disabled={loading}
               autoComplete="off"
             />
-            {loading && <Loader2 size={16} className="fl-tag-spinner animate-spin" />}
+            {loading && <Loader size="sm" text="" />}
           </div>
         </div>
 
@@ -212,8 +213,12 @@ const TagInput = ({
         {showSuggestions && suggestions.length > 0 && (
           <div className="fl-tag-dropdown" ref={dropdownRef}>
             <div className="fl-tag-dropdown__header">
-              {isStatic ? <Globe size={14} /> : <Sparkles size={14} />} 
-              {isStatic ? ' Select from list' : ' AI Suggestions'}
+              <span className="fl-tag-header-icon">
+                {isStatic ? <Globe size={14} /> : <Sparkles size={14} />}
+              </span>
+              <span className="fl-tag-header-title">
+                {isStatic ? 'Select from list' : 'AI Suggestions'}
+              </span>
             </div>
             <div className="fl-tag-dropdown__list">
               {suggestions.map((s, i) => (
@@ -223,7 +228,10 @@ const TagInput = ({
                   className="fl-tag-suggestion"
                   onClick={() => addTag(s)}
                 >
-                  <Plus size={14} /> {s}
+                  <span className="fl-tag-suggestion-icon">
+                    <Plus size={13} strokeWidth={2.5} />
+                  </span>
+                  <span className="fl-tag-suggestion-label">{s}</span>
                 </button>
               ))}
             </div>

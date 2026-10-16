@@ -50,20 +50,43 @@ You are an expert technical recruiter and resume analyzer.
 I will provide you with the raw text extracted from a freelancer's CV/Resume.
 
 Your task is to:
-1. Extract relevant information (Full name, job title, skills, work experience, education, and a short bio/summary).
+1. Extract relevant information:
+   - Full name: firstName, lastName
+   - Job title: professional title or current role
+   - Short bio/summary: concise professional summary
+   - Skills: list of technical and professional skills
+   - Social & Portfolio Links: GitHub profile URL, LinkedIn profile URL, personal website or portfolio URL (search the text for github.com, linkedin.com, or personal website links)
+   - Education: list of all education entries with institution name, degree earned, field of study, start date (YYYY-MM), and end date (YYYY-MM, or empty string if currently studying/present)
+   - Work experience: work history
+   - Portfolio: projects mentioned
 2. Analyze the CV to identify missing or weak sections, paying special attention to real-world experience, projects, or a portfolio. If there is no evidence of projects or a portfolio, flag it as a missing section.
 3. Provide actionable suggestions to improve the CV based on your analysis.
 4. Assign a quality score to the CV from 0 to 100 based on completeness, clarity, and relevance.
 5. Classify the profile as "Strong", "Average", or "Weak". A profile missing a portfolio or significant real-world experience should be classified as "Weak" or "Average" at best.
 
-You must output ONLY valid JSON in the following structure. Do not include markdown code blocks like \`\`\`json. Just output the raw JSON object.
+You must output ONLY valid JSON in the following structure. Do not include markdown code blocks or formatting. Just output the raw JSON object.
 
 {
   "parsedData": {
+    "firstName": "Extracted first name",
+    "lastName": "Extracted last name",
     "title": "Extracted professional title or current role",
     "bio": "Extracted summary or bio. Keep it concise.",
     "skills": ["skill1", "skill2"],
-    "education": ["edu1", "edu2"],
+    "socialLinks": {
+      "github": "https://github.com/...",
+      "linkedin": "https://linkedin.com/in/...",
+      "website": "https://..."
+    },
+    "education": [
+      {
+        "institution": "Full university or college name",
+        "degree": "Degree (e.g. Bachelor of Science, BS, MS)",
+        "fieldOfStudy": "Field of study (e.g. Computer Science)",
+        "startDate": "YYYY-MM format (e.g. 2022-01 or 2022-09)",
+        "endDate": "YYYY-MM format, or empty string if currently studying/present"
+      }
+    ],
     "experience": ["exp1", "exp2"],
     "portfolio": ["proj1", "proj2"]
   },

@@ -1,0 +1,378 @@
+/* ==========================================================================
+   SkillKart Freelancer My Work Styles
+   Theme: Fresh Mint Gradient + Emerald (#10B981) + Deep Navy (#0B2942)
+   ========================================================================== */
+
+.fl-work-page {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: flWorkFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes flWorkFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Header ─── */
+.fl-work-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.fl-work-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.fl-work-breadcrumb a {
+  color: #64748B;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.fl-work-breadcrumb a:hover {
+  color: #10B981;
+}
+
+.fl-work-title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.fl-work-sub {
+  font-size: 15px;
+  color: #64748B;
+  margin: 4px 0 0 0;
+}
+
+/* ─── Bento Summary Row ─── */
+.fl-work-summary-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.fl-work-hero-card {
+  background: linear-gradient(135deg, #10B981 0%, #065F46 100%);
+  border-radius: 24px;
+  padding: 24px 28px;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 10px 28px rgba(16, 185, 129, 0.25);
+}
+
+.fl-work-hero-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #A7F3D0;
+}
+
+.fl-work-hero-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 4px 0;
+}
+
+.fl-work-hero-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.fl-work-kpi-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #DDEFE6;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.04);
+}
+
+.fl-work-kpi-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 4px 0;
+}
+
+.fl-work-kpi-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Contract Card (Wide Row with left 4px status bar) ─── */
+.fl-contract-row-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid #DDEFE6;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.05);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fl-contract-row-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.1);
+  border-color: #A7F3D0;
+}
+
+.fl-contract-status-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+}
+
+.fl-contract-status-bar--active { background: #0284C7; }
+.fl-contract-status-bar--completed { background: #10B981; }
+.fl-contract-status-bar--disputed { background: #EF4444; }
+.fl-contract-status-bar--revision { background: #F59E0B; }
+
+/* Row 1: Client Avatar, Title, Chips, Status Pill */
+.fl-contract-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fl-contract-head-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.fl-client-avatar-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #EAFBF4;
+  border: 2px solid #A7F3D0;
+  color: #065F46;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fl-contract-title-wrap {
+  min-width: 0;
+}
+
+.fl-contract-title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0B2942;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl-contract-subline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #64748B;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+/* Row 2: Financials Strip (3-4 plain columns with dividers) */
+.fl-contract-fin-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: #F8FAFC;
+  border-radius: 14px;
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  gap: 12px;
+}
+
+.fl-contract-fin-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+}
+
+.fl-contract-fin-col:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 15%;
+  height: 70%;
+  width: 1px;
+  background: #E2E8F0;
+}
+
+.fl-contract-fin-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fl-contract-fin-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0B2942;
+}
+
+/* Row 3: Milestone Timeline Stepper */
+.fl-milestones-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fl-milestones-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px 0;
+  scrollbar-width: thin;
+}
+
+.fl-milestone-node-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fl-milestone-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.fl-milestone-dot--released {
+  background: #10B981;
+  color: #FFFFFF;
+}
+
+.fl-milestone-dot--funded {
+  background: #0284C7;
+  color: #FFFFFF;
+}
+
+.fl-milestone-dot--pending {
+  background: #E2E8F0;
+  color: #94A3B8;
+}
+
+.fl-milestone-line {
+  width: 32px;
+  height: 2px;
+  background: #E2E8F0;
+}
+
+.fl-milestone-line--active {
+  background: #10B981;
+}
+
+.fl-escrow-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #EAFBF4;
+  border: 1px solid #A7F3D0;
+  color: #065F46;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Row 4: Actions */
+.fl-contract-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+  flex-wrap: wrap;
+}
+
+.fl-contract-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Responsive queries */
+@media (max-width: 1023px) {
+  .fl-work-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .fl-contract-fin-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .fl-work-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .fl-contract-fin-strip {
+    grid-template-columns: 1fr;
+  }
+  .fl-contract-row-card {
+    padding: 18px 16px;
+  }
+}

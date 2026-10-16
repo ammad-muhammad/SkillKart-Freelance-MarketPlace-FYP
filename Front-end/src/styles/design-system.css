@@ -1,0 +1,551 @@
+/* ============================================================
+   SKILLKART — PHASE 1 DESIGN SYSTEM (additive)
+   ------------------------------------------------------------
+   Rules of this file (do not violate):
+   1. ADDITIVE ONLY. Never redefine a token or class that exists
+      in variables.css — the Home / Navbar / Footer / AboutSection
+      render from those and their look is FINAL.
+   2. Everything here is namespaced: tokens `--ds-*`, classes `ds-*`.
+   3. Internal pages (auth, dashboards, listings, forms, profiles)
+      opt in by using these classes.
+   Reference design researched: Linear / Stripe / Vercel Geist /
+   Upwork / Fiverr / Notion patterns (2025-26 SaaS conventions).
+   ============================================================ */
+
+:root {
+  /* ── Surfaces ───────────────────────────────────────────── */
+  --ds-surface: #FFFFFF;
+  --ds-surface-sunken: #F4F8F6;      /* page background behind cards */
+  --ds-surface-raised: #FFFFFF;
+  --ds-surface-hover: #F8FBFA;
+  --ds-surface-inverse: #0B2942;     /* navy panels */
+
+  /* ── Lines ──────────────────────────────────────────────── */
+  --ds-line: #E4EAE8;                /* default border */
+  --ds-line-strong: #D3DCD9;         /* input borders */
+  --ds-line-subtle: #EEF3F1;         /* row separators */
+
+  /* ── Text ───────────────────────────────────────────────── */
+  --ds-ink: #0B2942;                 /* headings (brand navy) */
+  --ds-ink-soft: #334155;            /* body on cards */
+  --ds-ink-muted: #64748B;           /* secondary */
+  --ds-ink-faint: #94A3B8;           /* meta / timestamps */
+  --ds-ink-inverse: #FFFFFF;
+
+  /* ── Brand accents (reuse of the approved palette) ──────── */
+  --ds-accent: #10B981;
+  --ds-accent-strong: #059669;
+  --ds-accent-soft: #EAFBF4;
+  --ds-accent-line: #A7F3D0;
+  --ds-navy: #0B2942;
+  --ds-navy-light: #163E63;
+
+  /* ── Elevation (borders first; shadows stay subtle) ─────── */
+  --ds-shadow-xs: 0 1px 2px rgba(11, 41, 66, 0.05);
+  --ds-shadow-sm: 0 1px 2px rgba(11, 41, 66, 0.05), 0 4px 12px rgba(11, 41, 66, 0.04);
+  --ds-shadow-md: 0 2px 4px rgba(11, 41, 66, 0.05), 0 8px 24px rgba(11, 41, 66, 0.07);
+  --ds-shadow-lg: 0 4px 8px rgba(11, 41, 66, 0.06), 0 16px 40px rgba(11, 41, 66, 0.10);
+  --ds-shadow-popover: 0 8px 24px rgba(11, 41, 66, 0.14);
+  --ds-focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.28);
+  --ds-focus-ring-navy: 0 0 0 3px rgba(11, 41, 66, 0.18);
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --ds-r-sm: 8px;                    /* inputs, compact controls */
+  --ds-r-md: 12px;                   /* listing cards, buttons */
+  --ds-r-lg: 16px;                   /* panels */
+  --ds-r-xl: 20px;                   /* feature cards */
+  --ds-r-pill: 999px;
+
+  /* ── Typography scale (internal pages) ──────────────────── */
+  /* Body family stays Lato (brand). Display headings may use Outfit
+     where a page wants a punchier feel — same fonts as Home. */
+  --ds-font-body: 'Lato', sans-serif;
+  --ds-font-display: 'Outfit', 'Lato', sans-serif;
+  --ds-font-slab: 'Roboto Slab', serif;
+
+  --ds-fs-page-title: 1.75rem;       /* 28px */
+  --ds-fs-section: 1.25rem;          /* 20px */
+  --ds-fs-card-title: 1rem;          /* 16px */
+  --ds-fs-body: 0.9375rem;           /* 15px */
+  --ds-fs-sm: 0.875rem;              /* 14px */
+  --ds-fs-xs: 0.8125rem;             /* 13px */
+  --ds-fs-meta: 0.75rem;             /* 12px */
+  --ds-fs-kpi: 1.75rem;              /* 28px */
+
+  /* ── Spacing (4px rhythm; denser than marketing pages) ──── */
+  --ds-gap-1: 4px;
+  --ds-gap-2: 8px;
+  --ds-gap-3: 12px;
+  --ds-gap-4: 16px;
+  --ds-gap-5: 20px;
+  --ds-gap-6: 24px;
+  --ds-gap-8: 32px;
+  --ds-gap-10: 40px;
+  --ds-gap-12: 48px;
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  --ds-content-max: 1240px;
+  --ds-content-narrow: 760px;        /* long-form / auth / wizard */
+  --ds-topbar-h: 64px;
+  --ds-sidebar-w: 248px;
+
+  /* ── Motion (160ms hovers / 220ms panels / stagger) ─────── */
+  --ds-dur-hover: 160ms;
+  --ds-dur-press: 120ms;
+  --ds-dur-panel: 220ms;
+  --ds-dur-enter: 260ms;
+  --ds-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* ── Semantic (page-level; mirrors variables.css names) ─── */
+  --ds-success: #059669;
+  --ds-warning: #d97706;
+  --ds-danger: #dc2626;
+  --ds-info: #2563eb;
+}
+
+/* ============================================================
+   PAGE SHELL
+   ============================================================ */
+
+.ds-page {
+  width: 100%;
+  max-width: var(--ds-content-max);
+  margin: 0 auto;
+  padding: var(--ds-gap-8) var(--container-pad, 1.5rem) var(--ds-gap-12);
+}
+
+.ds-page--narrow { max-width: var(--ds-content-narrow); }
+.ds-page--flush  { padding-top: var(--ds-gap-4); }
+
+/* Page header: title + subtitle + one primary action */
+.ds-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-gap-4);
+  margin-bottom: var(--ds-gap-6);
+  flex-wrap: wrap;
+}
+
+.ds-page-header__text { min-width: 0; }
+
+.ds-page-title {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-fs-page-title);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ds-ink);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.ds-page-subtitle {
+  margin-top: var(--ds-gap-2);
+  font-size: var(--ds-fs-sm);
+  color: var(--ds-ink-muted);
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.ds-page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-3);
+  flex-shrink: 0;
+}
+
+.ds-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ds-fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-accent-strong);
+  margin-bottom: var(--ds-gap-2);
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+
+.ds-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-r-lg);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.ds-card--pad { padding: var(--ds-gap-6); }
+.ds-card--pad-sm { padding: var(--ds-gap-4); }
+
+.ds-card--interactive {
+  transition:
+    transform var(--ds-dur-hover) var(--ds-ease),
+    box-shadow var(--ds-dur-hover) var(--ds-ease),
+    border-color var(--ds-dur-hover) var(--ds-ease);
+}
+.ds-card--interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--ds-accent-line);
+  box-shadow: var(--ds-shadow-md);
+}
+
+.ds-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-gap-3);
+  margin-bottom: var(--ds-gap-4);
+}
+
+.ds-card__title {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-fs-section);
+  font-weight: 700;
+  color: var(--ds-ink);
+  margin: 0;
+}
+
+.ds-card__meta {
+  font-size: var(--ds-fs-xs);
+  color: var(--ds-ink-muted);
+}
+
+/* KPI tile (dashboard stat) */
+.ds-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-gap-1);
+  padding: var(--ds-gap-5);
+}
+.ds-kpi__value {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-fs-kpi);
+  font-weight: 800;
+  color: var(--ds-ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ds-kpi__label {
+  font-size: var(--ds-fs-xs);
+  font-weight: 600;
+  color: var(--ds-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ds-kpi__delta {
+  font-size: var(--ds-fs-xs);
+  font-weight: 700;
+}
+.ds-kpi__delta--up   { color: var(--ds-success); }
+.ds-kpi__delta--down { color: var(--ds-danger); }
+
+/* ============================================================
+   GRIDS & LAYOUT HELPERS
+   ============================================================ */
+
+.ds-grid {
+  display: grid;
+  gap: var(--ds-gap-5);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.ds-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.ds-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.ds-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+.ds-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-3);
+  flex-wrap: wrap;
+}
+.ds-row--between { justify-content: space-between; }
+.ds-row--end { justify-content: flex-end; }
+.ds-row--top { align-items: flex-start; }
+
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-gap-5);
+}
+.ds-stack--sm { gap: var(--ds-gap-3); }
+
+.ds-main-sidebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--ds-gap-6);
+  align-items: start;
+}
+
+@media (max-width: 1023px) {
+  .ds-grid--3, .ds-grid--4 { grid-template-columns: repeat(2, 1fr); }
+  .ds-main-sidebar { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .ds-page { padding-top: var(--ds-gap-5); padding-bottom: var(--ds-gap-8); }
+  .ds-grid, .ds-grid--2, .ds-grid--3, .ds-grid--4 { grid-template-columns: 1fr; }
+  .ds-page-title { font-size: 1.4rem; }
+  .ds-page-header__actions { width: 100%; }
+  .ds-page-header__actions > * { flex: 1; }
+}
+
+/* ============================================================
+   FORMS
+   ============================================================ */
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-gap-2);
+  margin-bottom: var(--ds-gap-5);
+}
+
+.ds-label {
+  font-size: var(--ds-fs-sm);
+  font-weight: 700;
+  color: var(--ds-ink);
+}
+.ds-label__optional {
+  font-weight: 400;
+  color: var(--ds-ink-faint);
+  margin-left: 4px;
+}
+
+.ds-input,
+.ds-select,
+.ds-textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 14px;
+  font-family: var(--ds-font-body);
+  font-size: var(--ds-fs-body);
+  color: var(--ds-ink);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line-strong);
+  border-radius: var(--ds-r-sm);
+  transition:
+    border-color var(--ds-dur-hover) var(--ds-ease),
+    box-shadow var(--ds-dur-hover) var(--ds-ease),
+    background-color var(--ds-dur-hover) var(--ds-ease);
+}
+.ds-textarea { min-height: 120px; resize: vertical; line-height: 1.55; }
+
+.ds-input::placeholder, .ds-textarea::placeholder { color: var(--ds-ink-faint); }
+
+.ds-input:hover, .ds-select:hover, .ds-textarea:hover { border-color: #B9C4C1; }
+
+.ds-input:focus, .ds-select:focus, .ds-textarea:focus {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: var(--ds-focus-ring);
+  background: var(--ds-surface);
+}
+
+.ds-input[aria-invalid="true"],
+.ds-textarea[aria-invalid="true"] {
+  border-color: var(--ds-danger);
+}
+.ds-input[aria-invalid="true"]:focus,
+.ds-textarea[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.ds-hint  { font-size: var(--ds-fs-xs); color: var(--ds-ink-muted); }
+.ds-error { font-size: var(--ds-fs-xs); color: var(--ds-danger); font-weight: 600; }
+
+/* ============================================================
+   TOOLBAR / FILTERS / CHIPS
+   ============================================================ */
+
+.ds-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-3);
+  flex-wrap: wrap;
+  padding: var(--ds-gap-3) var(--ds-gap-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-r-md);
+  margin-bottom: var(--ds-gap-5);
+}
+
+.ds-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+.ds-search .ds-input { padding-left: 40px; min-height: 42px; }
+.ds-search__icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ds-ink-faint);
+  pointer-events: none;
+  display: flex;
+}
+
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: var(--ds-fs-xs);
+  font-weight: 700;
+  color: var(--ds-ink-soft);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line-strong);
+  border-radius: var(--ds-r-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--ds-dur-hover) var(--ds-ease),
+    border-color var(--ds-dur-hover) var(--ds-ease),
+    color var(--ds-dur-hover) var(--ds-ease),
+    transform var(--ds-dur-press) var(--ds-ease);
+}
+.ds-chip:hover {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent-strong);
+  background: var(--ds-accent-soft);
+}
+.ds-chip:active { transform: scale(0.97); }
+.ds-chip.is-active {
+  background: var(--ds-navy);
+  border-color: var(--ds-navy);
+  color: var(--ds-ink-inverse);
+}
+.ds-chip.is-active:hover { background: var(--ds-navy-light); border-color: var(--ds-navy-light); color: #fff; }
+
+.ds-chip--removable { padding-right: 8px; }
+.ds-chip__x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(11, 41, 66, 0.08);
+  font-size: 11px;
+  line-height: 1;
+}
+.ds-chip__x:hover { background: rgba(220, 38, 38, 0.15); color: var(--ds-danger); }
+
+/* ============================================================
+   TABLE (dense, comparable data)
+   ============================================================ */
+
+.ds-table-wrap {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-r-lg);
+  overflow-x: auto;
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-fs-sm);
+}
+.ds-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: var(--ds-fs-meta);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-ink-muted);
+  background: var(--ds-surface-sunken);
+  border-bottom: 1px solid var(--ds-line);
+  white-space: nowrap;
+}
+.ds-table td {
+  padding: 14px 16px;
+  color: var(--ds-ink-soft);
+  border-bottom: 1px solid var(--ds-line-subtle);
+  vertical-align: middle;
+}
+.ds-table tbody tr { transition: background-color var(--ds-dur-hover) var(--ds-ease); }
+.ds-table tbody tr:hover { background: var(--ds-surface-hover); }
+.ds-table tbody tr:last-child td { border-bottom: none; }
+.ds-table .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ds-ink); }
+
+/* ============================================================
+   TEXT HELPERS (internal pages only)
+   ============================================================ */
+
+.ds-h1 { font-family: var(--ds-font-display); font-size: var(--ds-fs-page-title); font-weight: 800; color: var(--ds-ink); letter-spacing: -0.01em; margin: 0; }
+.ds-h2 { font-family: var(--ds-font-display); font-size: var(--ds-fs-section); font-weight: 700; color: var(--ds-ink); margin: 0; }
+.ds-body   { font-size: var(--ds-fs-body); color: var(--ds-ink-soft); line-height: 1.55; }
+.ds-muted  { font-size: var(--ds-fs-sm); color: var(--ds-ink-muted); }
+.ds-meta   { font-size: var(--ds-fs-meta); color: var(--ds-ink-faint); }
+.ds-num    { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   MOTION — entrance, stagger, skeletons
+   ============================================================ */
+
+@keyframes ds-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ds-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ds-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes ds-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* Opt-in entrance animations */
+.ds-anim-fade { animation: ds-fade-in var(--ds-dur-enter) var(--ds-ease-out) both; }
+.ds-anim-rise { animation: ds-rise var(--ds-dur-enter) var(--ds-ease-out) both; }
+.ds-anim-pop  { animation: ds-pop var(--ds-dur-panel) var(--ds-ease-spring) both; }
+
+/* Stagger children: <div class="ds-stagger">…items…</div> */
+.ds-stagger > * { animation: ds-rise var(--ds-dur-enter) var(--ds-ease-out) both; }
+.ds-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.ds-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.ds-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.ds-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.ds-stagger > *:nth-child(5) { animation-delay: 160ms; }
+.ds-stagger > *:nth-child(6) { animation-delay: 200ms; }
+.ds-stagger > *:nth-child(7) { animation-delay: 240ms; }
+.ds-stagger > *:nth-child(8) { animation-delay: 280ms; }
+.ds-stagger > *:nth-child(n+9) { animation-delay: 320ms; }
+
+/* Skeleton placeholder — geometry should match final content */
+.ds-skeleton {
+  display: block;
+  border-radius: var(--ds-r-sm);
+  background: linear-gradient(90deg, #EDF2F1 25%, #F7FAF9 50%, #EDF2F1 75%);
+  background-size: 800px 100%;
+  animation: ds-shimmer 1.4s linear infinite;
+}
+.ds-skeleton--text { height: 12px; margin-bottom: 10px; border-radius: 6px; }
+.ds-skeleton--title { height: 20px; width: 45%; margin-bottom: 14px; border-radius: 8px; }
+.ds-skeleton--circle { border-radius: 50%; }
+
+/* Reduced motion: keep state feedback, drop decoration.
+   Scoped to ds-* so Home/Navbar/Footer GSAP + CSS motion is untouched. */
+@media (prefers-reduced-motion: reduce) {
+  .ds-anim-fade, .ds-anim-rise, .ds-anim-pop,
+  .ds-stagger > *, .ds-skeleton {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .ds-card--interactive, .ds-chip, .ds-input, .ds-select, .ds-textarea {
+    transition-duration: 0.01ms !important;
+  }
+  .ds-card--interactive:hover { transform: none; }
+}

@@ -57,10 +57,25 @@ Your task is to:
 You must output ONLY valid JSON in the following structure. Do not output anything else.
 {
   "parsedData": {
+    "firstName": "Extracted first name",
+    "lastName": "Extracted last name",
     "title": "Extracted professional title or current role",
     "bio": "Extracted summary or bio. Keep it concise.",
     "skills": ["skill1", "skill2"],
-    "education": ["edu1", "edu2"],
+    "socialLinks": {
+      "github": "https://github.com/...",
+      "linkedin": "https://linkedin.com/in/...",
+      "website": "https://..."
+    },
+    "education": [
+      {
+        "institution": "Full university or college name",
+        "degree": "Degree (e.g. Bachelor of Science, BS, MS)",
+        "fieldOfStudy": "Field of study (e.g. Computer Science)",
+        "startDate": "YYYY-MM format (e.g. 2022-01 or 2022-09)",
+        "endDate": "YYYY-MM format, or empty string if currently studying/present"
+      }
+    ],
     "experience": ["exp1", "exp2"],
     "portfolio": ["proj1", "proj2"]
   },

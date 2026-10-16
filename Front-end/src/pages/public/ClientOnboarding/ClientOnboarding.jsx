@@ -23,6 +23,7 @@ import { openExternal } from "../../../utils/externalLink";
 import AiGenerateText from "../../../Components/common/AiSuggest/AiGenerateText";
 import ImageCropModal from "../../../Components/common/ImageCropModal/ImageCropModal";
 import ImageSourcePicker from "../../../Components/common/ImageSourcePicker/ImageSourcePicker";
+import Loader from "../../../Components/common/Loader/Loader";
 import "./ClientOnboarding.css";
 
 
@@ -709,7 +710,7 @@ const ClientOnboarding = () => {
                                     <button 
                                         type="button" 
                                         onClick={fetchAISuggestions}
-                                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
+                                        style={{ background: 'none', border: 'none', color: '#10B981', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
                                     >
                                         re-analyze
                                     </button>
@@ -1211,7 +1212,7 @@ const ClientOnboarding = () => {
                                     className="onboarding__btn-next"
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? <div className="onboarding__loader" /> : (
+                                    {isLoading ? <Loader size="sm" text="" /> : (
                                         <>
                                             {step === 5 ? "Deploy Profile" : "Continue"} {step !== 5 && <ChevronRight size={20} />}
                                         </>

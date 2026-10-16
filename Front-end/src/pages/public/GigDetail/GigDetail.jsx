@@ -1,284 +1,228 @@
-import Loader from '../../../Components/common/Loader/Loader';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { gigsAPI } from '../../../api/gigs';
 import { messagesAPI } from '../../../api/messages';
 import { useAuth } from '../../../hooks/useAuth';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import Loader from '../../../Components/common/Loader/Loader';
+import Skeleton from '../../../Components/common/Skeleton/Skeleton';
+import GigOrderModal from '../../../Components/common/GigOrderModal/GigOrderModal';
+import BackButton from '../../../Components/common/BackButton/BackButton';
+import Reveal from '../../freelancer/components/Reveal';
+import { payGigOrderDeposit, apiErrorMessage, formatDeliveryTime } from '../../../utils/gigOrderCheckout';
+import { safeToast as toast } from '../../../utils/safeToast';
+import { isMobileApp } from '../../../utils/platform';
 import {
   ChevronLeft, ChevronRight, Star, ShoppingBag, Clock, RefreshCw,
-  CheckCircle2, Tag, MessageCircle, User, Maximize2, X, ExternalLink
+  CheckCircle2, Tag, MessageCircle, Maximize2, X, ExternalLink,
+  ShieldCheck, ArrowRight, Share2, Bookmark, Check, ChevronDown,
+  Sparkles, FileCode, CheckSquare, Calendar, AlertCircle, Layers,
+  RotateCcw, Image as ImageIcon, Award, Zap, HelpCircle
 } from 'lucide-react';
-import { safeToast as toast } from '../../../utils/safeToast';
-import GigOrderModal from '../../../Components/common/GigOrderModal/GigOrderModal';
-import { payGigOrderDeposit, apiErrorMessage, formatDeliveryTime } from '../../../utils/gigOrderCheckout';
-import BackButton from '../../../Components/common/BackButton/BackButton';
-import { isMobileApp } from '../../../utils/platform';
 import './GigDetail.css';
 
 const TIER_ORDER = ['basic', 'standard', 'premium'];
 const TIER_LABELS = { basic: 'Basic', standard: 'Standard', premium: 'Premium' };
 
-function GigGallery({ title, media }) {
-  const slides = useMemo(() => {
-    const list = [];
-    if (media?.banner) list.push(media.banner);
-    if (Array.isArray(media?.images)) {
-      media.images.forEach((img) => {
-        if (img && typeof img === 'string' && !list.includes(img)) {
-          list.push(img);
-        }
-      });
-    }
-    return list;
-  }, [media]);
-
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
-  useEffect(() => {
-    if (activeIdx >= slides.length) {
-      setActiveIdx(0);
-    }
-  }, [slides.length, activeIdx]);
-
-  const prevSlide = useCallback(() => {
-    setActiveIdx((i) => (i - 1 + slides.length) % slides.length);
-  }, [slides.length]);
-
-  const nextSlide = useCallback(() => {
-    setActiveIdx((i) => (i + 1) % slides.length);
-  }, [slides.length]);
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setLightboxOpen(false);
-      else if (e.key === 'ArrowLeft') prevSlide();
-      else if (e.key === 'ArrowRight') nextSlide();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [lightboxOpen, prevSlide, nextSlide]);
-
-  if (slides.length === 0) {
-    return (
-      <div className="gd-card gd-banner">
-        <div className="gd-banner__fallback">
-          <Tag size={40} />
-          <span>No preview available</span>
-        </div>
-      </div>
-    );
-  }
-
-  const currentImage = slides[activeIdx] || slides[0];
-
-  return (
-    <div className="gd-card gd-gallery">
-      <div className="gd-gallery__main">
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={currentImage}
-            src={currentImage}
-            alt={`${title} - Preview ${activeIdx + 1}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: 'easeInOut' }}
-            className="gd-gallery__main-img"
-            onClick={() => setLightboxOpen(true)}
-          />
-        </AnimatePresence>
-
-        <div className="gd-gallery__top-bar">
-          <span className="gd-gallery__counter">
-            {activeIdx === 0 && media?.banner === currentImage ? 'Cover Banner' : `Portfolio Sample ${activeIdx + 1} of ${slides.length}`}
-          </span>
-          <button
-            type="button"
-            className="gd-gallery__zoom-btn"
-            onClick={() => setLightboxOpen(true)}
-            title="View Fullscreen"
-          >
-            <Maximize2 size={14} />
-            <span>Expand</span>
-          </button>
-        </div>
-
-        {slides.length > 1 && (
-          <>
-            <button
-              type="button"
-              className="gd-gallery__nav-btn gd-gallery__nav-btn--prev"
-              onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-              aria-label="Previous sample"
-            >
-              <ChevronLeft size={22} />
-            </button>
-            <button
-              type="button"
-              className="gd-gallery__nav-btn gd-gallery__nav-btn--next"
-              onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-              aria-label="Next sample"
-            >
-              <ChevronRight size={22} />
-            </button>
-          </>
-        )}
-      </div>
-
-      {slides.length > 1 && (
-        <div className="gd-gallery__thumbs-wrap">
-          <div className="gd-gallery__thumbs">
-            {slides.map((img, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`gd-gallery__thumb ${idx === activeIdx ? 'gd-gallery__thumb--active' : ''}`}
-                onClick={() => setActiveIdx(idx)}
-                aria-label={`View sample ${idx + 1}`}
-              >
-                <img src={img} alt={`Thumbnail ${idx + 1}`} loading="lazy" />
-                {idx === 0 && media?.banner === img && (
-                  <span className="gd-gallery__thumb-tag">Cover</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {lightboxOpen && (
-        <div className="gd-lightbox" onClick={() => setLightboxOpen(false)}>
-          <button
-            type="button"
-            className="gd-lightbox__close"
-            onClick={() => setLightboxOpen(false)}
-            aria-label="Close fullscreen preview"
-          >
-            <X size={24} />
-          </button>
-
-          {slides.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="gd-lightbox__nav gd-lightbox__nav--prev"
-                onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-                aria-label="Previous image"
-              >
-                <ChevronLeft size={32} />
-              </button>
-              <button
-                type="button"
-                className="gd-lightbox__nav gd-lightbox__nav--next"
-                onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-                aria-label="Next image"
-              >
-                <ChevronRight size={32} />
-              </button>
-            </>
-          )}
-
-          <div className="gd-lightbox__content" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={currentImage}
-              alt={`${title} - Fullscreen preview`}
-              className="gd-lightbox__img"
-            />
-
-            <div className="gd-lightbox__caption">
-              {title} • Sample {activeIdx + 1} of {slides.length}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function GigDetail() {
   const { id } = useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [ordering, setOrdering] = useState(null); // tier key being ordered
-  const [orderConfirmTier, setOrderConfirmTier] = useState(null); // tier key whose requirements modal is open
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  // Selected pricing tier
   const [activeTierKey, setActiveTierKey] = useState('basic');
 
-  const tiers = useMemo(() => {
-    if (!gig?.pricing) return [];
-    return TIER_ORDER
-      .map((key) => ({ key, ...(gig.pricing[key] || {}) }))
-      .filter((tier) => tier.price != null && tier.price !== '');
-  }, [gig?.pricing]);
+  // Accordion & Collapse States
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [matrixExpanded, setMatrixExpanded] = useState(false);
+  const [activeFaq, setActiveFaq] = useState(0); // First FAQ open by default
+  const [reviewsExpanded, setReviewsExpanded] = useState(false);
+  const [reviewRatingFilter, setReviewRatingFilter] = useState('all'); // 'all' | 5 | 4 | 3 | 2 | 1
 
-  useEffect(() => {
-    if (tiers.length > 0 && !tiers.some((t) => t.key === activeTierKey)) {
-      setActiveTierKey(tiers[0].key);
-    }
-  }, [tiers, activeTierKey]);
+  // Gallery slider & Lightbox state
+  const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
-  const selectedTier = useMemo(() => {
-    return tiers.find((t) => t.key === activeTierKey) || tiers[0] || null;
-  }, [tiers, activeTierKey]);
+  // Portfolio state (if seller portfolio exists)
+  const [featuredProjectIdx, setFeaturedProjectIdx] = useState(0);
 
-  const compareFeatures = useMemo(() => {
-    const list = [];
-    tiers.forEach((t) => {
-      if (Array.isArray(t.features)) {
-        t.features.forEach((f) => {
-          if (f && typeof f === 'string' && !list.includes(f.trim())) {
-            list.push(f.trim());
-          }
-        });
-      }
-    });
-    if (list.length === 0) {
-      return ['Responsive Design', 'Source Code', 'Design Customization', 'Content Upload'];
-    }
-    return list;
-  }, [tiers]);
+  // Order & Bookmark state
+  const [orderConfirmTier, setOrderConfirmTier] = useState(null);
+  const [ordering, setOrdering] = useState(null);
+  const [bookmarked, setBookmarked] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-
-    const fetchGig = async () => {
-      setLoading(true);
-      setNotFound(false);
-      try {
-        const res = await gigsAPI.getGig(id);
-        if (active) setGig(res.data.data.gig);
-      } catch (error) {
-        console.error('Failed to fetch gig:', error);
-        if (active) {
-          setNotFound(true);
-          toast.error('Gig not found or error loading details.');
+  const loadGig = useCallback(async () => {
+    setLoading(true);
+    setNotFound(false);
+    setErrorMsg(null);
+    try {
+      const res = await gigsAPI.getGig(id);
+      const g = res.data?.data?.gig;
+      if (!g) {
+        setNotFound(true);
+      } else {
+        setGig(g);
+        if (g?.pricing) {
+          const firstAvailable = TIER_ORDER.find(t => g.pricing[t]?.price != null) || 'basic';
+          setActiveTierKey(firstAvailable);
         }
-      } finally {
-        if (active) setLoading(false);
       }
-    };
-
-    fetchGig();
-    return () => { active = false; };
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 404) {
+        setNotFound(true);
+      } else {
+        setErrorMsg('Failed to load this service gig. Please try again.');
+        toast.error('Could not load service gig.');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
-    document.title = gig?.title ? `${gig.title} – SkillKart` : 'Gig Details – SkillKart';
+    loadGig();
+  }, [loadGig]);
+
+  useEffect(() => {
+    if (gig?.title) {
+      document.title = `${gig.title} – SkillKart`;
+    }
   }, [gig?.title]);
 
+  // Gallery slides collection
+  const slides = useMemo(() => {
+    const list = [];
+    if (gig?.media?.banner) list.push(gig.media.banner);
+    if (Array.isArray(gig?.media?.images)) {
+      gig.media.images.forEach(img => {
+        if (img && typeof img === 'string' && !list.includes(img)) list.push(img);
+      });
+    }
+    return list;
+  }, [gig]);
+
+  const currentSlide = slides[activeImgIdx] || slides[0] || null;
+
+  // Preload next image in gallery
+  useEffect(() => {
+    if (slides.length > 1) {
+      const nextIdx = (activeImgIdx + 1) % slides.length;
+      if (slides[nextIdx]) {
+        const pre = new Image();
+        pre.src = slides[nextIdx];
+      }
+    }
+  }, [activeImgIdx, slides]);
+
+  // Keyboard navigation for Lightbox and Gallery (Esc, Arrow keys)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (lightboxOpen) {
+        if (e.key === 'Escape') setLightboxOpen(false);
+        if (e.key === 'ArrowRight') setActiveImgIdx(prev => (prev + 1) % (slides.length || 1));
+        if (e.key === 'ArrowLeft') setActiveImgIdx(prev => (prev - 1 + (slides.length || 1)) % (slides.length || 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxOpen, slides.length]);
+
+  // Touch swipe support for gallery slider
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX.current;
+    if (diff > 45 && slides.length > 1) {
+      setActiveImgIdx(prev => (prev + 1) % slides.length);
+    } else if (diff < -45 && slides.length > 1) {
+      setActiveImgIdx(prev => (prev - 1 + slides.length) % slides.length);
+    }
+  };
+
+  // Tiers normalized
+  const tiers = useMemo(() => {
+    if (!gig?.pricing) return [];
+    return TIER_ORDER
+      .filter(key => gig.pricing[key] && gig.pricing[key].price != null)
+      .map(key => ({
+        key,
+        label: TIER_LABELS[key],
+        ...gig.pricing[key]
+      }));
+  }, [gig]);
+
+  const selectedTier = useMemo(() => {
+    return tiers.find(t => t.key === activeTierKey) || tiers[0] || null;
+  }, [tiers, activeTierKey]);
+
+  // Distinct features for compare matrix
+  const compareFeatures = useMemo(() => {
+    const set = new Set();
+    tiers.forEach(t => {
+      (t.features || []).forEach(f => {
+        const text = typeof f === 'string' ? f : f?.text;
+        if (text) set.add(text);
+      });
+    });
+    return Array.from(set);
+  }, [tiers]);
+
+  // Star rating distribution (5, 4, 3, 2, 1)
+  const ratingDistribution = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const revs = Array.isArray(gig?.reviews) ? gig.reviews : [];
+    revs.forEach(r => {
+      const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+      counts[star] = (counts[star] || 0) + 1;
+    });
+    const total = revs.length;
+    return [5, 4, 3, 2, 1].map(star => ({
+      star,
+      count: counts[star] || 0,
+      pct: total > 0 ? Math.round(((counts[star] || 0) / total) * 100) : 0
+    }));
+  }, [gig?.reviews]);
+
+  // Filtered reviews
+  const filteredReviews = useMemo(() => {
+    const all = Array.isArray(gig?.reviews) ? gig.reviews : [];
+    if (reviewRatingFilter === 'all') return all;
+    const target = Number(reviewRatingFilter);
+    return all.filter(r => Math.round(Number(r.rating) || 5) === target);
+  }, [gig?.reviews, reviewRatingFilter]);
+
+  const visibleReviews = useMemo(() => {
+    return reviewsExpanded ? filteredReviews : filteredReviews.slice(0, 5);
+  }, [filteredReviews, reviewsExpanded]);
+
+  // Portfolio items (only rendered if portfolio data exists on current payload)
+  const portfolioItems = useMemo(() => {
+    if (Array.isArray(gig?.portfolio) && gig.portfolio.length > 0) return gig.portfolio;
+    if (Array.isArray(gig?.freelancerId?.portfolio) && gig.freelancerId.portfolio.length > 0) {
+      return gig.freelancerId.portfolio;
+    }
+    return [];
+  }, [gig]);
+
+  // Deliverables (images beyond the cover image)
+  const deliverableImages = useMemo(() => {
+    if (slides.length <= 1) return [];
+    return slides.slice(1, 5); // Take up to 4 images for the 2x2 grid
+  }, [slides]);
+
+  // Contact seller
   const handleContact = async () => {
     if (!user) {
       toast.info('Please log in to contact this freelancer.');
@@ -286,20 +230,21 @@ export default function GigDetail() {
       return;
     }
     const freelancerId = gig?.freelancerId?._id;
-    // Actually start a conversation with the gig owner (not just navigate).
     if (user.role === 'client' && freelancerId) {
       try {
         await messagesAPI.startConversation(freelancerId, `Hi! I'm interested in your gig "${gig?.title || ''}".`);
         navigate('/client/messages');
         return;
       } catch {
-        /* fall through to the messages page */
+        navigate('/client/messages');
+        return;
       }
     }
     navigate(user.role === 'freelancer' ? '/freelancer/messages' : '/client/messages');
   };
 
-  const handleOrder = (tier) => {
+  // Order trigger
+  const handleOrder = (tierKey) => {
     if (!user) {
       toast.info('Please log in as a client to order this gig.');
       try { sessionStorage.setItem('postLoginRedirect', `/gigs/${id}`); } catch { /* non-fatal */ }
@@ -310,13 +255,10 @@ export default function GigDetail() {
       toast.warning('Only clients can order gigs. Switch to a client account to purchase.');
       return;
     }
-    setOrderConfirmTier(tier);
+    setOrderConfirmTier(tierKey);
   };
 
-  // Requirements are collected by GigOrderModal first (mandatory) — the order
-  // is created in 'pending_payment' carrying them, then we go straight to the
-  // 50% deposit (wallet, or Stripe checkout). It only reaches the freelancer
-  // once that deposit is paid.
+  // Submit order through checkout
   const proceedWithOrder = async (requirements) => {
     const tier = orderConfirmTier;
     setOrdering(tier);
@@ -330,44 +272,123 @@ export default function GigDetail() {
       return;
     }
     if (!jobId) {
-      toast.error('Could not create the order. Please try again.');
+      toast.error('Could not create order. Please try again.');
       setOrdering(null);
       return;
     }
 
     const pay = await payGigOrderDeposit(jobId);
-    if (pay.outcome === 'redirect') return; // navigating to checkout
+    if (pay.outcome === 'redirect') return;
     setOrderConfirmTier(null);
     setOrdering(null);
     if (pay.outcome === 'wallet') {
-      toast.success('Order placed and 50% deposit paid from your wallet! The freelancer has your requirements. 🚀');
+      toast.success('Order placed and 50% escrow deposit paid from your wallet! 🚀');
     } else {
-      toast.warning(`Your order is saved, but the deposit wasn't paid: ${pay.message} You can pay or cancel it from My Projects.`);
+      toast.warning(`Order created, but deposit wasn't paid: ${pay.message}`);
     }
     navigate('/client/projects');
   };
 
+  /* ── SKELETON / LOADING STATE ── */
   if (loading) {
     return (
       <>
         <Navbar />
-        <Loader text="Loading gig details..." fullScreen={true} />
+        <div className="gd-page-wrapper gd-skeleton-page">
+          <div className="gd-container">
+            <div className="gd-skeleton-breadcrumbs">
+              <Skeleton width="220px" height="18px" />
+            </div>
+
+            <Skeleton width="130px" height="26px" style={{ borderRadius: 9999, marginBottom: 16 }} />
+            <Skeleton width="90%" height="48px" style={{ borderRadius: 12, marginBottom: 12 }} />
+            <Skeleton width="65%" height="48px" style={{ borderRadius: 12, marginBottom: 24 }} />
+
+            <div className="gd-skeleton-seller-row">
+              <Skeleton width="44px" height="44px" variant="circle" />
+              <div style={{ flex: 1 }}>
+                <Skeleton width="180px" height="18px" style={{ marginBottom: 6 }} />
+                <Skeleton width="280px" height="14px" />
+              </div>
+            </div>
+
+            {/* Full-width Gallery Skeleton */}
+            <div className="gd-skeleton-gallery">
+              <Skeleton width="100%" height="440px" style={{ borderRadius: 24, marginBottom: 16 }} />
+              <div style={{ display: 'flex', gap: 12 }}>
+                {[1, 2, 3, 4].map(n => (
+                  <Skeleton key={n} width="120px" height="72px" style={{ borderRadius: 12 }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Two Column Grid Skeleton */}
+            <div className="gd-main-grid" style={{ marginTop: 40 }}>
+              <div className="gd-left-col">
+                <Skeleton width="240px" height="28px" style={{ marginBottom: 16 }} />
+                <Skeleton width="100%" height="16px" style={{ marginBottom: 8 }} />
+                <Skeleton width="95%" height="16px" style={{ marginBottom: 8 }} />
+                <Skeleton width="90%" height="16px" style={{ marginBottom: 24 }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <Skeleton width="100%" height="90px" style={{ borderRadius: 16 }} />
+                  <Skeleton width="100%" height="90px" style={{ borderRadius: 16 }} />
+                </div>
+              </div>
+
+              <aside className="gd-right-col">
+                <Skeleton width="100%" height="420px" style={{ borderRadius: 24 }} />
+              </aside>
+            </div>
+          </div>
+        </div>
         <Footer />
       </>
     );
   }
 
-  if (notFound || !gig) {
+  /* ── 404 / NOT FOUND STATE ── */
+  if (notFound) {
     return (
       <>
         <Navbar />
-        <div className="gd-state">
-          <p>This gig could not be found.</p>
-          {/* /categories isn't registered at all on the mobile build (see
-              AppRoutes.jsx) — hidden there rather than left as a dead link. */}
-          {!isMobileApp() && (
-            <Link to="/categories" className="gd-state__link">Browse categories</Link>
-          )}
+        <div className="gd-page-wrapper">
+          <div className="gd-container" style={{ textAlign: 'center', padding: '120px 24px' }}>
+            <div className="gd-not-found-icon-box">
+              <Tag size={44} color="#10B981" />
+            </div>
+            <h2 className="gd-not-found-title">Service Gig Not Found</h2>
+            <p className="gd-not-found-text">
+              The service package you requested may have been archived, paused, or the link is incorrect.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+              <Link to="/browse-gigs" className="gd-primary-pill-btn">
+                Browse Marketplace Gigs →
+              </Link>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  /* ── GENERAL ERROR STATE WITH RETRY ── */
+  if (errorMsg || !gig) {
+    return (
+      <>
+        <Navbar />
+        <div className="gd-page-wrapper">
+          <div className="gd-container" style={{ textAlign: 'center', padding: '120px 24px' }}>
+            <div className="gd-not-found-icon-box">
+              <AlertCircle size={44} color="#EF4444" />
+            </div>
+            <h2 className="gd-not-found-title">Could Not Load Service Gig</h2>
+            <p className="gd-not-found-text">{errorMsg || 'An unexpected error occurred while fetching the gig details.'}</p>
+            <button type="button" onClick={loadGig} className="gd-primary-pill-btn">
+              <RotateCcw size={16} />
+              <span>Retry Loading</span>
+            </button>
+          </div>
         </div>
         <Footer />
       </>
@@ -375,403 +396,1115 @@ export default function GigDetail() {
   }
 
   const freelancer = gig.freelancerId || {};
-  const freelancerName = `${freelancer.firstName || ''} ${freelancer.lastName || ''}`.trim() || 'Freelancer';
-  const freelancerInitial = (freelancer.firstName || freelancer.lastName || 'F').charAt(0).toUpperCase();
-  const bannerSrc = gig.media?.banner || gig.media?.images?.[0] || null;
-  // Hide ordering when the logged-in freelancer is viewing their OWN gig.
-  const isOwnGig = user && freelancer._id && String(user._id || user.id) === String(freelancer._id);
-
+  const freelancerName = freelancer.userId?.fullName || freelancer.personalInfo?.fullName || (freelancer.firstName ? `${freelancer.firstName || ''} ${freelancer.lastName || ''}`.trim() : 'Verified Freelancer');
+  const freelancerAvatar = freelancer.userId?.profilePicture || freelancer.profilePicture || null;
+  const freelancerInitial = freelancerName.charAt(0).toUpperCase();
+  const isOwnGig = user && String(user._id || user.id) === String(freelancer._id || freelancer.userId?._id);
   const stats = gig.stats || {};
+  const rating = Number(stats.rating || freelancer.rating || 0);
+  const reviewsCount = Number(stats.reviewsCount || (Array.isArray(gig.reviews) ? gig.reviews.length : 0));
+  const ordersCount = Number(freelancer.completedProjects || stats.orders || 0);
+  const sellerTitle = freelancer.title || (rating >= 4.8 ? 'Top Rated Seller' : rating >= 4.5 ? 'Level 2 Seller' : 'Specialized Pro');
+
+  // Badge Row checks
+  const isTopRated = rating >= 4.8;
+  const isVerifiedSeller = Boolean(freelancer.isVerified || freelancer.userId?.isVerified || (freelancer.verifiedSkills && freelancer.verifiedSkills.length > 0));
+  const isFastDelivery = tiers.some(t => Number(t.deliveryTime) > 0 && Number(t.deliveryTime) <= 3);
+  const hasBadges = Boolean(gig.category || isTopRated || isVerifiedSeller || isFastDelivery);
 
   return (
     <>
       <Navbar />
-      <div className="gd-page">
-        <div className="container">
-          {isMobileApp() ? (
-            <BackButton className="gd-back-btn" />
-          ) : (
-            <Link to="/browse-projects" className="gd-back">
-              <ChevronLeft size={18} /> Back to Marketplace
-            </Link>
-          )}
 
-          <div className="gd-layout">
-            <main className="gd-main">
-              <div className="gd-card gd-header">
-                <div className="gd-header__top">
-                  {gig.category && <span className="gd-category">{gig.category}</span>}
-                  {gig.subcategory && <span className="gd-subcategory">{gig.subcategory}</span>}
-                </div>
-                <h1 className="gd-title">{gig.title}</h1>
+      <div className="gd-page-wrapper">
+        <div className="gd-container">
 
-                <div className="gd-header-meta">
-                  {freelancer._id ? (
-                    <div className="gd-seller-meta-group">
-                      <Link to={`/freelancers/${freelancer._id}`} className="gd-seller" title={`View ${freelancerName}'s profile`}>
-                        <div className="gd-seller__avatar">
-                          {freelancer.profilePicture ? (
-                            <img src={freelancer.profilePicture} alt={freelancerName} />
-                          ) : (
-                            <span>{freelancerInitial}</span>
-                          )}
-                        </div>
-                        <span className="gd-seller__name">{freelancerName}</span>
-                      </Link>
-                      <Link to={`/freelancers/${freelancer._id}`} className="gd-seller-view-link">
-                        View Profile <ExternalLink size={12} />
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="gd-seller">
-                      <div className="gd-seller__avatar"><User size={18} /></div>
-                      <span className="gd-seller__name">{freelancerName}</span>
+          {/* ══════════════════════════════════════════════════════════
+              A) TOP AREA: FULL CONTAINER WIDTH (Above Two Columns)
+              ══════════════════════════════════════════════════════════ */}
+          <header className="gd-top-area" aria-label="Gig Header & Gallery">
+            {/* 1. Breadcrumb small muted */}
+            <div className="gd-breadcrumb-bar">
+              <nav className="gd-breadcrumb" aria-label="Breadcrumb">
+                <Link to="/browse-gigs">Marketplace</Link>
+                <span className="gd-breadcrumb__sep">/</span>
+                {gig.category && (
+                  <>
+                    <Link to={`/browse-gigs?category=${encodeURIComponent(gig.category)}`}>
+                      {gig.category}
+                    </Link>
+                    <span className="gd-breadcrumb__sep">/</span>
+                  </>
+                )}
+                {gig.subcategory && (
+                  <>
+                    <span className="gd-breadcrumb__muted">{gig.subcategory}</span>
+                    <span className="gd-breadcrumb__sep">/</span>
+                  </>
+                )}
+                <span className="gd-breadcrumb__curr" title={gig.title}>{gig.title}</span>
+              </nav>
+
+              {isMobileApp() ? (
+                <BackButton />
+              ) : (
+                <Link to="/browse-gigs" className="gd-back-text-link">
+                  <ChevronLeft size={14} />
+                  <span>All Gigs</span>
+                </Link>
+              )}
+            </div>
+
+            {/* UNIFIED HERO CARD: IMAGE ON LEFT + DETAILS ON RIGHT */}
+            <div className="gd-hero-unified-card">
+              {/* Left Column: Gallery Media Showcase Slider + Thumbnails */}
+              <div className="gd-hero-unified-media">
+                <div className="gd-gallery-slider-wrap">
+                  <div
+                    className="gd-slider-viewport"
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={() => { if (currentSlide) setLightboxOpen(true); }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Click to enlarge showcase image"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        if (currentSlide) setLightboxOpen(true);
+                      }
+                    }}
+                  >
+                    {currentSlide ? (
+                      <img
+                        src={currentSlide}
+                        alt={`${gig.title} - Showcase ${activeImgIdx + 1}`}
+                        className="gd-slider-main-img"
+                      />
+                    ) : (
+                      <div className="gd-slider-empty-fallback">
+                        <ImageIcon size={44} color="#10B981" />
+                        <span>SkillKart Verified Service Gig</span>
+                      </div>
+                    )}
+
+                    {/* Counter Pill bottom-right */}
+                    {slides.length > 1 && (
+                      <div className="gd-slider-counter-pill" onClick={e => e.stopPropagation()}>
+                        Preview {activeImgIdx + 1} of {slides.length}
+                      </div>
+                    )}
+
+                    {/* Navigation Arrows */}
+                    {slides.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          className="gd-slider-arrow gd-slider-arrow--prev"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImgIdx(prev => (prev - 1 + slides.length) % slides.length);
+                          }}
+                          aria-label="Previous preview"
+                        >
+                          <ChevronLeft size={22} />
+                        </button>
+                        <button
+                          type="button"
+                          className="gd-slider-arrow gd-slider-arrow--next"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImgIdx(prev => (prev + 1) % slides.length);
+                          }}
+                          aria-label="Next preview"
+                        >
+                          <ChevronRight size={22} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Strip directly under slider */}
+                  {slides.length > 1 && (
+                    <div className="gd-thumbnail-strip-row" aria-label="Gallery thumbnails">
+                      {slides.map((img, idx) => {
+                        const isActive = idx === activeImgIdx;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            className={`gd-thumbnail-tile ${isActive ? 'gd-thumbnail-tile--active' : ''}`}
+                            onClick={() => setActiveImgIdx(idx)}
+                            aria-label={`Show preview image ${idx + 1}`}
+                          >
+                            <img src={img} alt={`Thumbnail ${idx + 1}`} />
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
-
-                  <span className="gd-meta-divider">•</span>
-
-                  <div className="gd-header-stat">
-                    <Star size={15} className="gd-star-icon" />
-                    <strong>{Number(stats.rating || freelancer.rating || 0).toFixed(1)}</strong>
-                    <span className="gd-meta-sub">({stats.reviewsCount || 0} reviews)</span>
-                  </div>
-
-                  <span className="gd-meta-divider">•</span>
-
-                  <div className="gd-header-stat">
-                    <ShoppingBag size={15} className="gd-orders-icon" />
-                    <span className="gd-meta-sub"><strong>{stats.orders || 0}</strong> orders completed</span>
-                  </div>
                 </div>
               </div>
 
-              <GigGallery title={gig.title} media={gig.media} />
-
-              <div className="gd-card gd-body">
-                {gig.shortDescription && (
-                  <p className="gd-short">{gig.shortDescription}</p>
-                )}
-
-                {gig.fullDescription && (
-                  <>
-                    <h2 className="gd-section-title">About This Gig</h2>
-                    <div className="gd-description">{gig.fullDescription}</div>
-                  </>
-                )}
-
-                {gig.skills?.length > 0 && (
-                  <>
-                    <h2 className="gd-section-title">Skills</h2>
-                    <div className="gd-tags">
-                      {gig.skills.map((skill) => (
-                        <span key={skill} className="gd-tag">{skill}</span>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Compare Packages Table (Fiverr Style) */}
-                {tiers.length > 0 && (
-                  <div className="gd-compare-section">
-                    <h2 className="gd-section-title">Compare packages</h2>
-                    <div className="gd-compare-table-wrap">
-                      <table className="gd-compare-table">
-                        <thead>
-                          <tr>
-                            <th className="gd-col-label">Package</th>
-                            {tiers.map((t) => (
-                              <th key={t.key} className="gd-col-tier">
-                                <div className="gd-th-price">Rs. {t.price}</div>
-                                <div className="gd-th-tier-name">{TIER_LABELS[t.key]}</div>
-                                <div className="gd-th-title">{t.title || `${TIER_LABELS[t.key]} Tier`}</div>
-                                <div className="gd-th-desc">{t.description || gig.shortDescription || 'Standard package delivery'}</div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {compareFeatures.map((feat, i) => (
-                            <tr key={i}>
-                              <td className="gd-td-label">{feat}</td>
-                              {tiers.map((t) => {
-                                const has = Array.isArray(t.features) && t.features.length > 0
-                                  ? t.features.some((f) => f.toLowerCase() === feat.toLowerCase())
-                                  : true;
-                                return (
-                                  <td key={t.key} className="gd-td-val">
-                                    {has ? (
-                                      <CheckCircle2 size={18} className="gd-check-active" />
-                                    ) : (
-                                      <span className="gd-dash-inactive">—</span>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-
-                          {/* Delivery Row */}
-                          <tr>
-                            <td className="gd-td-label">Delivery Time</td>
-                            {tiers.map((t) => (
-                              <td key={t.key} className="gd-td-val gd-meta-text">
-                                <Clock size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                                {formatDeliveryTime(t.deliveryTime) || '—'}
-                              </td>
-                            ))}
-                          </tr>
-
-                          {/* Revisions Row */}
-                          <tr>
-                            <td className="gd-td-label">Revisions</td>
-                            {tiers.map((t) => (
-                              <td key={t.key} className="gd-td-val gd-meta-text">
-                                <RefreshCw size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                                {t.revisions ? `${t.revisions}` : 'Unlimited'}
-                              </td>
-                            ))}
-                          </tr>
-
-                          {/* Order Action Row */}
-                          <tr className="gd-tr-action">
-                            <td className="gd-td-label">Total</td>
-                            {tiers.map((t) => (
-                              <td key={t.key} className="gd-td-val">
-                                <div className="gd-td-total-price">Rs. {t.price}</div>
-                                {!isOwnGig && gig.status === 'active' && (
-                                  <button
-                                    className="gd-compare-btn"
-                                    onClick={() => handleOrder(t.key)}
-                                    disabled={!!ordering}
-                                  >
-                                    {ordering === t.key ? 'Starting…' : 'Select'}
-                                  </button>
-                                )}
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {gig.faqs?.length > 0 && (
-                  <>
-                    <h2 className="gd-section-title">Frequently Asked Questions</h2>
-                    <div className="gd-faqs">
-                      {gig.faqs.map((faq, i) => (
-                        <div key={i} className="gd-faq">
-                          <div className="gd-faq__q">{faq.question}</div>
-                          <div className="gd-faq__a">{faq.answer}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {/* About the Seller Section */}
-                {freelancer._id && (
-                  <div className="gd-about-seller">
-                    <h2 className="gd-section-title">About the Seller</h2>
-                    <div className="gd-about-seller__card">
-                      <div className="gd-about-seller__top">
-                        <Link to={`/freelancers/${freelancer._id}`} className="gd-about-seller__avatar">
-                          {freelancer.profilePicture ? (
-                            <img src={freelancer.profilePicture} alt={freelancerName} />
-                          ) : (
-                            <span>{freelancerInitial}</span>
-                          )}
-                        </Link>
-                        <div className="gd-about-seller__info">
-                          <div className="gd-about-seller__name-row">
-                            <Link to={`/freelancers/${freelancer._id}`} className="gd-about-seller__name">
-                              {freelancerName}
-                            </Link>
-                            <Link to={`/freelancers/${freelancer._id}`} className="gd-about-seller__link-btn">
-                              <User size={14} /> View Profile
-                            </Link>
-                          </div>
-                          {freelancer.title && (
-                            <p className="gd-about-seller__title">{freelancer.title}</p>
-                          )}
-                          <div className="gd-about-seller__rating-row">
-                            <div className="gd-about-seller__stars">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  size={14}
-                                  fill={s <= Math.round(Number(freelancer.rating || stats.rating || 0)) ? '#f59e0b' : '#e2e8f0'}
-                                  color={s <= Math.round(Number(freelancer.rating || stats.rating || 0)) ? '#f59e0b' : '#cbd5e1'}
-                                />
-                              ))}
-                            </div>
-                            <strong>{Number(freelancer.rating || stats.rating || 0).toFixed(1)}</strong>
-                            <span className="gd-meta-sub">({stats.reviewsCount || 0} reviews)</span>
-                            {freelancer.completedProjects > 0 && (
-                              <>
-                                <span className="gd-meta-divider">|</span>
-                                <span className="gd-meta-sub">
-                                  <strong>{freelancer.completedProjects}</strong> projects completed
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {freelancer.bio && (
-                        <div className="gd-about-seller__bio">
-                          <p>{freelancer.bio}</p>
-                        </div>
-                      )}
-
-                      <div className="gd-about-seller__actions">
-                        <Link to={`/freelancers/${freelancer._id}`} className="gd-about-seller__profile-btn">
-                          <User size={15} /> Visit {freelancerName}&apos;s Profile & Portfolio
-                        </Link>
-                        <button type="button" className="gd-about-seller__contact-btn" onClick={handleContact}>
-                          <MessageCircle size={15} /> Contact Seller
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </main>
-
-            <aside className="gd-sidebar">
-              {tiers.length > 0 && selectedTier && (
-                <div className="gd-sidebar__card gd-pkg-card">
-                  {/* Fiverr-style Tabs */}
-                  <div className="gd-pkg-tabs">
-                    {tiers.map((t) => (
-                      <button
-                        key={t.key}
-                        type="button"
-                        className={`gd-pkg-tab ${t.key === selectedTier.key ? 'active' : ''}`}
-                        onClick={() => setActiveTierKey(t.key)}
-                      >
-                        {TIER_LABELS[t.key]}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="gd-pkg-content">
-                    {/* Price */}
-                    <div className="gd-pkg-price-row">
-                      <span className="gd-pkg-price">Rs. {selectedTier.price}</span>
-                    </div>
-
-                    {/* Title & Description */}
-                    <div className="gd-pkg-desc-block">
-                      <strong className="gd-pkg-title">
-                        {selectedTier.title || `${TIER_LABELS[selectedTier.key]} Package`}
-                      </strong>
-                      <span className="gd-pkg-desc">
-                        {' '}{selectedTier.description || gig.shortDescription || 'Includes delivery as described in gig.'}
+              {/* Right Column: Badges, Title, Seller Profile, and Action Buttons */}
+              <div className="gd-hero-unified-details">
+                {/* 1. Badge row */}
+                {hasBadges && (
+                  <div className="gd-badge-row">
+                    {gig.category && (
+                      <span className="gd-badge-chip gd-badge-chip--category">
+                        <Sparkles size={12} color="#10B981" />
+                        <span>{gig.category}</span>
                       </span>
-                    </div>
-
-                    {/* Delivery & Revisions pills */}
-                    <div className="gd-pkg-meta">
-                      {selectedTier.deliveryTime != null && (
-                        <span className="gd-pkg-meta-item">
-                          <Clock size={15} /> {formatDeliveryTime(selectedTier.deliveryTime)}
-                        </span>
-                      )}
-                      {selectedTier.revisions != null && (
-                        <span className="gd-pkg-meta-item">
-                          <RefreshCw size={15} /> {selectedTier.revisions ? `${selectedTier.revisions} Revision${Number(selectedTier.revisions) === 1 ? '' : 's'}` : 'Unlimited'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Checklist of features */}
-                    <ul className="gd-pkg-features">
-                      {selectedTier.features?.length > 0 ? (
-                        selectedTier.features.map((feat, i) => (
-                          <li key={i}>
-                            <CheckCircle2 size={16} className="gd-pkg-check" />
-                            <span>{feat}</span>
-                          </li>
-                        ))
-                      ) : (
-                        <>
-                          <li><CheckCircle2 size={16} className="gd-pkg-check" /> <span>Quality Delivery</span></li>
-                          <li><CheckCircle2 size={16} className="gd-pkg-check" /> <span>Source Files Included</span></li>
-                          <li><CheckCircle2 size={16} className="gd-pkg-check" /> <span>Responsive Design</span></li>
-                        </>
-                      )}
-                    </ul>
-
-                    {/* Primary Order Action */}
-                    {!isOwnGig && gig.status === 'active' && (
-                      <button
-                        className="gd-pkg-order-btn"
-                        onClick={() => handleOrder(selectedTier.key)}
-                        disabled={!!ordering}
-                      >
-                        {ordering === selectedTier.key ? 'Starting…' : 'Request to order'}
-                      </button>
                     )}
-
-                    {!isOwnGig && gig.status !== 'active' && (
-                      <p className="gd-pricing__note" style={{ margin: '0 0 1rem 0', color: '#b45309' }}>
-                        This gig is currently paused and not accepting orders.
-                      </p>
+                    {isTopRated && (
+                      <span className="gd-badge-chip gd-badge-chip--top">
+                        <Award size={12} color="#F59E0B" />
+                        <span>Top Rated</span>
+                      </span>
                     )}
-
-                    {/* Secondary Contact button */}
-                    <button className="gd-pkg-contact-btn" onClick={handleContact}>
-                      <MessageCircle size={16} /> Contact me
-                    </button>
-
-                    <p className="gd-pkg-deposit-note">
-                      You’ll pay 50% now to start; the rest is released when you accept the delivery.
-                    </p>
+                    {isVerifiedSeller && (
+                      <span className="gd-badge-chip gd-badge-chip--verified">
+                        <CheckCircle2 size={12} color="#10B981" />
+                        <span>Verified Seller</span>
+                      </span>
+                    )}
+                    {isFastDelivery && (
+                      <span className="gd-badge-chip gd-badge-chip--speed">
+                        <Zap size={12} color="#3B82F6" />
+                        <span>Fast Delivery (≤3 Days)</span>
+                      </span>
+                    )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {freelancer._id && (
-                <div className="gd-sidebar-seller-card">
-                  <div className="gd-sidebar-seller-card__header">
-                    <span className="gd-sidebar-seller-card__eyebrow">Gig Creator</span>
-                  </div>
-                  <div className="gd-sidebar-seller-card__profile">
-                    <Link to={`/freelancers/${freelancer._id}`} className="gd-sidebar-seller-card__avatar">
-                      {freelancer.profilePicture ? (
-                        <img src={freelancer.profilePicture} alt={freelancerName} />
+                {/* 2. Gig Title */}
+                <h1 className="gd-h1-title">{gig.title}</h1>
+
+                {/* 3. Seller Identity & Performance Card */}
+                <div className="gd-hero-seller-card">
+                  <div className="gd-hero-seller-top">
+                    <Link
+                      to={`/freelancers/${freelancer._id || freelancer.userId?._id || ''}`}
+                      className="gd-seller-avatar-44"
+                      aria-label={`View ${freelancerName}'s profile`}
+                    >
+                      {freelancerAvatar ? (
+                        <img src={freelancerAvatar} alt={freelancerName} />
                       ) : (
                         <span>{freelancerInitial}</span>
                       )}
                     </Link>
-                    <div className="gd-sidebar-seller-card__info">
-                      <Link to={`/freelancers/${freelancer._id}`} className="gd-sidebar-seller-card__name">
-                        {freelancerName}
-                      </Link>
-                      {freelancer.title && (
-                        <span className="gd-sidebar-seller-card__title">{freelancer.title}</span>
-                      )}
-                      <div className="gd-sidebar-seller-card__rating">
-                        <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                        <strong>{Number(freelancer.rating || stats.rating || 0).toFixed(1)}</strong>
-                        <span>({stats.reviewsCount || 0} reviews)</span>
+
+                    <div className="gd-hero-seller-info">
+                      <div className="gd-seller-name-row">
+                        <Link
+                          to={`/freelancers/${freelancer._id || freelancer.userId?._id || ''}`}
+                          className="gd-seller-name-link"
+                        >
+                          {freelancerName}
+                        </Link>
+                        {isVerifiedSeller && (
+                          <CheckCircle2 size={15} color="#10B981" className="gd-verified-icon" />
+                        )}
                       </div>
+                      {sellerTitle && (
+                        <span className="gd-seller-title-muted">{sellerTitle}</span>
+                      )}
                     </div>
                   </div>
-                  <Link to={`/freelancers/${freelancer._id}`} className="gd-sidebar-seller-card__btn">
-                    <User size={15} /> View Seller Profile
-                  </Link>
+
+                  <div className="gd-hero-seller-meta">
+                    <div className="gd-seller-rating-inline">
+                      <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                      <strong>{rating > 0 ? rating.toFixed(1) : '5.0'}</strong>
+                      <span className="gd-rating-count-muted">({reviewsCount} reviews)</span>
+                    </div>
+
+                    {ordersCount > 0 && (
+                      <>
+                        <span className="gd-meta-dot">•</span>
+                        <div className="gd-seller-orders-inline">
+                          <ShoppingBag size={13} color="#10B981" />
+                          <span>{ordersCount} orders completed</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
+
+                {/* 4. Action Buttons (Save, Share, Expand) */}
+                <div className="gd-hero-actions-row">
+                  <button
+                    type="button"
+                    className={`gd-action-icon-pill ${bookmarked ? 'gd-action-icon-pill--active' : ''}`}
+                    onClick={() => {
+                      setBookmarked(!bookmarked);
+                      toast.success(bookmarked ? 'Bookmark removed' : 'Gig saved to bookmarks!');
+                    }}
+                    title="Save gig"
+                    aria-label="Save gig"
+                  >
+                    <Bookmark size={15} fill={bookmarked ? '#10B981' : 'none'} color={bookmarked ? '#10B981' : '#0B2942'} />
+                    <span className="gd-action-pill-text">{bookmarked ? 'Saved' : 'Save'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="gd-action-icon-pill"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({ title: gig.title, url: window.location.href });
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        toast.success('Gig link copied to clipboard!');
+                      }
+                    }}
+                    title="Share gig"
+                    aria-label="Share gig"
+                  >
+                    <Share2 size={15} color="#0B2942" />
+                    <span className="gd-action-pill-text">Share</span>
+                  </button>
+
+                  {currentSlide && (
+                    <button
+                      type="button"
+                      className="gd-action-icon-pill gd-action-icon-pill--expand"
+                      onClick={() => setLightboxOpen(true)}
+                      title="Expand gallery view"
+                      aria-label="Expand gallery view"
+                    >
+                      <Maximize2 size={15} color="#0B2942" />
+                      <span className="gd-action-pill-text">Expand view</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* ══════════════════════════════════════════════════════════
+              B) TWO-COLUMN BODY (12-col grid, gap 32px)
+                 LEFT: Col 8 Content
+                 RIGHT: Col 4 Sticky Order Panel
+              ══════════════════════════════════════════════════════════ */}
+          <div className="gd-main-grid">
+
+            {/* ─── LEFT COLUMN (8 Columns) ─── */}
+            <main className="gd-left-col">
+
+              {/* 1) ABOUT THIS GIG */}
+              <Reveal>
+                <section className="gd-section-block" aria-label="About this service">
+                  <div className="gd-section-eyebrow">ABOUT THIS SERVICE</div>
+                  <h2 className="gd-section-h2">About this gig</h2>
+
+                  {/* Description Text */}
+                  <div className="gd-desc-container">
+                    <div className={`gd-desc-body ${!descExpanded && (gig.fullDescription?.length > 450) ? 'gd-desc-body--collapsed' : ''}`}>
+                      {gig.fullDescription || gig.shortDescription || 'No detailed description provided.'}
+                    </div>
+
+                    {gig.fullDescription && gig.fullDescription.length > 450 && (
+                      <button
+                        type="button"
+                        className="gd-read-more-pill"
+                        onClick={() => setDescExpanded(!descExpanded)}
+                      >
+                        <span>{descExpanded ? 'Show less' : 'Read full description'}</span>
+                        <ChevronDown size={14} className={`gd-read-more-icon ${descExpanded ? 'gd-read-more-icon--rotated' : ''}`} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 2x2 Grid of small feature tiles built ONLY from real data */}
+                  <div className="gd-features-tiles-grid">
+                    {/* Delivery Time */}
+                    {selectedTier?.deliveryTime && (
+                      <div className="gd-feature-tile">
+                        <div className="gd-feature-tile__icon-circle">
+                          <Clock size={16} color="#10B981" />
+                        </div>
+                        <div className="gd-feature-tile__content">
+                          <strong className="gd-feature-tile__title">
+                            {formatDeliveryTime(selectedTier?.deliveryTime)} Turnaround
+                          </strong>
+                          <span className="gd-feature-tile__desc">
+                            Direct milestone delivery schedule
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Revisions */}
+                    <div className="gd-feature-tile">
+                      <div className="gd-feature-tile__icon-circle">
+                        <RefreshCw size={16} color="#10B981" />
+                      </div>
+                      <div className="gd-feature-tile__content">
+                        <strong className="gd-feature-tile__title">
+                          {selectedTier?.revisions ? `${selectedTier.revisions} Rounds Revisions` : 'Unlimited Revisions'}
+                        </strong>
+                        <span className="gd-feature-tile__desc">
+                          Quality guarantee until accepted
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Deliverables / Source Files */}
+                    <div className="gd-feature-tile">
+                      <div className="gd-feature-tile__icon-circle">
+                        <FileCode size={16} color="#10B981" />
+                      </div>
+                      <div className="gd-feature-tile__content">
+                        <strong className="gd-feature-tile__title">
+                          Source Files Included
+                        </strong>
+                        <span className="gd-feature-tile__desc">
+                          Production deliverables & assets
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Verified Skills */}
+                    {Array.isArray(gig.skills) && gig.skills.length > 0 && (
+                      <div className="gd-feature-tile">
+                        <div className="gd-feature-tile__icon-circle">
+                          <ShieldCheck size={16} color="#10B981" />
+                        </div>
+                        <div className="gd-feature-tile__content">
+                          <strong className="gd-feature-tile__title">
+                            {gig.skills.length} Verified Stack Skills
+                          </strong>
+                          <span className="gd-feature-tile__desc">
+                            Proctored SkillKart assessment
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Skill Chips Row below */}
+                  {Array.isArray(gig.skills) && gig.skills.length > 0 && (
+                    <div className="gd-skills-chips-wrap">
+                      <span className="gd-skills-label">Skills & Tools:</span>
+                      <div className="gd-skills-chips-row">
+                        {gig.skills.map((skill, idx) => (
+                          <span key={idx} className="gd-skill-chip">
+                            {typeof skill === 'string' ? skill : skill?.name || ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </Reveal>
+
+              {/* MOBILE INLINE PACKAGES PANEL (Appears after About section on mobile < 1024px) */}
+              <div className="gd-mobile-packages-slot">
+                <PackagesPanel
+                  tiers={tiers}
+                  activeTierKey={activeTierKey}
+                  setActiveTierKey={setActiveTierKey}
+                  selectedTier={selectedTier}
+                  gig={gig}
+                  isOwnGig={isOwnGig}
+                  ordering={ordering}
+                  handleOrder={handleOrder}
+                  handleContact={handleContact}
+                />
+              </div>
+
+              {/* 2) WHAT YOU WILL RECEIVE (Only if gig has 2+ gallery images/deliverables) */}
+              {deliverableImages.length > 0 && (
+                <Reveal>
+                  <section className="gd-section-block" aria-label="What you will receive">
+                    <div className="gd-section-eyebrow">DELIVERABLES</div>
+                    <h2 className="gd-section-h2">What you will receive</h2>
+
+                    <div className="gd-deliverables-grid">
+                      {deliverableImages.map((imgUrl, dIdx) => (
+                        <div
+                          key={dIdx}
+                          className="gd-deliverable-card"
+                          onClick={() => {
+                            setActiveImgIdx(dIdx + 1);
+                            setLightboxOpen(true);
+                          }}
+                        >
+                          <div className="gd-deliverable-img-wrap">
+                            <img src={imgUrl} alt={`Deliverable showcase ${dIdx + 1}`} />
+                            <div className="gd-deliverable-overlay-hint">
+                              <Maximize2 size={14} />
+                              <span>View preview</span>
+                            </div>
+                          </div>
+                          <div className="gd-deliverable-info">
+                            <h4 className="gd-deliverable-title">
+                              Deliverable Asset #{dIdx + 1}
+                            </h4>
+                            <p className="gd-deliverable-desc">
+                              Full resolution preview & deliverable export built for {gig.category || 'project'}.
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </Reveal>
               )}
+
+              {/* 3) SELLER PORTFOLIO (Only if portfolio data exists on current payload) */}
+              {portfolioItems.length > 0 && (
+                <Reveal>
+                  <section className="gd-section-block" aria-label="Seller portfolio">
+                    <div className="gd-section-eyebrow">PORTFOLIO</div>
+                    <h2 className="gd-section-h2">Seller's featured projects</h2>
+
+                    {portfolioItems[featuredProjectIdx] && (
+                      <div className="gd-portfolio-featured-card">
+                        <div className="gd-portfolio-featured-img-col">
+                          <img
+                            src={portfolioItems[featuredProjectIdx].coverImage || portfolioItems[featuredProjectIdx].image || slides[0]}
+                            alt={portfolioItems[featuredProjectIdx].title || 'Portfolio project'}
+                            className="gd-portfolio-featured-img"
+                          />
+                          <div className="gd-portfolio-img-badge">
+                            <ImageIcon size={13} />
+                            <span>{portfolioItems.length} projects</span>
+                          </div>
+                        </div>
+
+                        <div className="gd-portfolio-featured-info-col">
+                          {portfolioItems[featuredProjectIdx].completedAt && (
+                            <span className="gd-portfolio-date">
+                              Completed: {new Date(portfolioItems[featuredProjectIdx].completedAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                          <h3 className="gd-portfolio-title">
+                            {portfolioItems[featuredProjectIdx].title || 'Client Deliverable Showcase'}
+                          </h3>
+                          <p className="gd-portfolio-desc">
+                            {portfolioItems[featuredProjectIdx].description || 'Custom professional deliverable built under milestone contract.'}
+                          </p>
+
+                          {/* Category chips */}
+                          {Array.isArray(portfolioItems[featuredProjectIdx].skills) && (
+                            <div className="gd-portfolio-chips-row">
+                              {portfolioItems[featuredProjectIdx].skills.slice(0, 3).map((sk, sIdx) => (
+                                <span key={sIdx} className="gd-portfolio-chip">{sk}</span>
+                              ))}
+                              {portfolioItems[featuredProjectIdx].skills.length > 3 && (
+                                <span className="gd-portfolio-chip gd-portfolio-chip--more">
+                                  +{portfolioItems[featuredProjectIdx].skills.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Plain stats */}
+                          <div className="gd-portfolio-stats-row">
+                            {portfolioItems[featuredProjectIdx].cost && (
+                              <div className="gd-portfolio-stat">
+                                <span className="gd-portfolio-stat__lbl">Project cost</span>
+                                <strong className="gd-portfolio-stat__val">
+                                  Rs. {Number(portfolioItems[featuredProjectIdx].cost).toLocaleString()}
+                                </strong>
+                              </div>
+                            )}
+                            {portfolioItems[featuredProjectIdx].duration && (
+                              <div className="gd-portfolio-stat">
+                                <span className="gd-portfolio-stat__lbl">Duration</span>
+                                <strong className="gd-portfolio-stat__val">
+                                  {portfolioItems[featuredProjectIdx].duration}
+                                </strong>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Thumbnail strip with "+N" tile */}
+                    {portfolioItems.length > 1 && (
+                      <div className="gd-portfolio-thumbs-row">
+                        {portfolioItems.slice(0, 5).map((proj, pIdx) => (
+                          <button
+                            key={pIdx}
+                            type="button"
+                            className={`gd-portfolio-thumb-tile ${pIdx === featuredProjectIdx ? 'gd-portfolio-thumb-tile--active' : ''}`}
+                            onClick={() => setFeaturedProjectIdx(pIdx)}
+                          >
+                            <img
+                              src={proj.coverImage || proj.image || slides[0]}
+                              alt={proj.title || `Project ${pIdx + 1}`}
+                            />
+                          </button>
+                        ))}
+                        {portfolioItems.length > 5 && (
+                          <Link
+                            to={`/freelancers/${freelancer._id || freelancer.userId?._id || ''}`}
+                            className="gd-portfolio-thumb-more-tile"
+                          >
+                            <span>+{portfolioItems.length - 5}</span>
+                            <small>More</small>
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                </Reveal>
+              )}
+
+              {/* 4) PROCESS / DELIVERY STEPS: SKIPPED (No steps data in gig model) */}
+
+              {/* 5) PACKAGE COMPARISON */}
+              <Reveal>
+                <section className="gd-section-block" aria-label="Package comparison">
+                  <div className="gd-section-eyebrow">PACKAGE COMPARISON</div>
+                  <h2 className="gd-section-h2">Compare packages</h2>
+                  <p className="gd-section-subtext">Select the plan that matches your project scope</p>
+
+                  {/* 3 Tier Cards Side by Side (equal height, stacks under 900px) */}
+                  <div className="gd-tier-cards-grid">
+                    {tiers.map((t, idx) => {
+                      const isSelected = t.key === activeTierKey;
+                      const isPopular = tiers.length === 3 && idx === 1;
+
+                      return (
+                        <div
+                          key={t.key}
+                          className={`gd-tier-card ${isSelected ? 'gd-tier-card--selected' : ''}`}
+                          onClick={() => setActiveTierKey(t.key)}
+                        >
+                          {isPopular && (
+                            <div className="gd-tier-popular-ribbon">
+                              Most Popular
+                            </div>
+                          )}
+
+                          <div className="gd-tier-card-header">
+                            <span className="gd-tier-card-eyebrow">{t.label}</span>
+                            <div className="gd-tier-card-price">
+                              Rs. {Number(t.price).toLocaleString()}
+                            </div>
+                            <h4 className="gd-tier-card-title">{t.title || `${t.label} Package`}</h4>
+                            <p className="gd-tier-card-desc">{t.description || gig.shortDescription}</p>
+                          </div>
+
+                          <div className="gd-tier-card-meta">
+                            <div className="gd-tier-meta-line">
+                              <Clock size={14} color="#10B981" />
+                              <span>{formatDeliveryTime(t.deliveryTime)}</span>
+                            </div>
+                            <div className="gd-tier-meta-line">
+                              <RefreshCw size={14} color="#10B981" />
+                              <span>{t.revisions ? `${t.revisions} Revisions` : 'Unlimited Revisions'}</span>
+                            </div>
+                          </div>
+
+                          {/* Features list */}
+                          <ul className="gd-tier-card-features">
+                            {compareFeatures.map((feat, fIdx) => {
+                              const included = (t.features || []).some(f => (typeof f === 'string' ? f : f?.text) === feat);
+                              return (
+                                <li key={fIdx} className={`gd-tier-feature-row ${!included ? 'gd-tier-feature-row--disabled' : ''}`}>
+                                  {included ? (
+                                    <CheckCircle2 size={15} color="#10B981" className="gd-tier-feat-check" />
+                                  ) : (
+                                    <span className="gd-tier-feat-dash">—</span>
+                                  )}
+                                  <span>{feat}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+
+                          {/* Full-width Select Tier button */}
+                          <button
+                            type="button"
+                            className={`gd-tier-select-btn ${isSelected ? 'gd-tier-select-btn--active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveTierKey(t.key);
+                            }}
+                          >
+                            {isSelected ? (
+                              <>
+                                <Check size={14} />
+                                <span>Selected</span>
+                              </>
+                            ) : (
+                              <span>Select {t.label}</span>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Collapsible "Compare all features" Matrix Table */}
+                  <div className="gd-matrix-collapse-wrap">
+                    <button
+                      type="button"
+                      className="gd-matrix-toggle-btn"
+                      onClick={() => setMatrixExpanded(!matrixExpanded)}
+                    >
+                      <span>{matrixExpanded ? 'Hide feature comparison matrix' : 'Compare all package features'}</span>
+                      <ChevronDown size={15} className={`gd-matrix-toggle-arrow ${matrixExpanded ? 'gd-matrix-toggle-arrow--rotated' : ''}`} />
+                    </button>
+
+                    {matrixExpanded && (
+                      <div className="gd-compare-table-container">
+                        <table className="gd-compare-table">
+                          <thead>
+                            <tr>
+                              <th className="gd-compare-th-fixed">Feature / Scope</th>
+                              {tiers.map(t => {
+                                const isSelected = t.key === activeTierKey;
+                                return (
+                                  <th
+                                    key={t.key}
+                                    className={`gd-compare-th-tier ${isSelected ? 'gd-compare-th-tier--active' : ''}`}
+                                    onClick={() => setActiveTierKey(t.key)}
+                                  >
+                                    <div className="gd-compare-th-inner">
+                                      <span className="gd-compare-tier-name">{t.label}</span>
+                                      <strong className="gd-compare-tier-price">
+                                        Rs. {Number(t.price).toLocaleString()}
+                                      </strong>
+                                      <span className="gd-compare-tier-select-indicator">
+                                        {isSelected ? '✓ Selected' : 'Click to select'}
+                                      </span>
+                                    </div>
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="gd-compare-td-fixed">Delivery Time</td>
+                              {tiers.map(t => (
+                                <td
+                                  key={t.key}
+                                  className={t.key === activeTierKey ? 'gd-compare-td--selected' : ''}
+                                  onClick={() => setActiveTierKey(t.key)}
+                                >
+                                  <div className="gd-compare-cell-center">
+                                    <Clock size={14} color="#10B981" />
+                                    <span>{formatDeliveryTime(t.deliveryTime)}</span>
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+
+                            <tr>
+                              <td className="gd-compare-td-fixed">Revisions</td>
+                              {tiers.map(t => (
+                                <td
+                                  key={t.key}
+                                  className={t.key === activeTierKey ? 'gd-compare-td--selected' : ''}
+                                  onClick={() => setActiveTierKey(t.key)}
+                                >
+                                  <div className="gd-compare-cell-center">
+                                    <RefreshCw size={14} color="#10B981" />
+                                    <span>{t.revisions ? `${t.revisions} rounds` : 'Unlimited'}</span>
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+
+                            {compareFeatures.map((feat, idx) => (
+                              <tr key={idx}>
+                                <td className="gd-compare-td-fixed">{feat}</td>
+                                {tiers.map(t => {
+                                  const included = (t.features || []).some(f => (typeof f === 'string' ? f : f?.text) === feat);
+                                  return (
+                                    <td
+                                      key={t.key}
+                                      className={t.key === activeTierKey ? 'gd-compare-td--selected' : ''}
+                                      onClick={() => setActiveTierKey(t.key)}
+                                    >
+                                      {included ? (
+                                        <div className="gd-compare-check-box">
+                                          <Check size={16} color="#10B981" />
+                                        </div>
+                                      ) : (
+                                        <span className="gd-compare-dash">—</span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </Reveal>
+
+              {/* 6) FREQUENTLY ASKED QUESTIONS (Accordion inside ONE white card) */}
+              {Array.isArray(gig.faqs) && gig.faqs.length > 0 && (
+                <Reveal>
+                  <section className="gd-section-block" aria-label="Frequently asked questions">
+                    <div className="gd-section-eyebrow">FAQ</div>
+                    <h2 className="gd-section-h2">Frequently asked questions</h2>
+
+                    <div className="gd-faqs-card">
+                      {gig.faqs.map((faq, idx) => {
+                        const isOpen = activeFaq === idx;
+                        return (
+                          <div key={idx} className="gd-faq-item">
+                            <button
+                              type="button"
+                              className="gd-faq-header-btn"
+                              onClick={() => setActiveFaq(isOpen ? null : idx)}
+                              aria-expanded={isOpen}
+                            >
+                              <span className="gd-faq-question">{faq.question}</span>
+                              <ChevronDown
+                                size={18}
+                                className={`gd-faq-chevron ${isOpen ? 'gd-faq-chevron--rotated' : ''}`}
+                              />
+                            </button>
+                            {isOpen && (
+                              <div className="gd-faq-answer-panel">
+                                {faq.answer}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                </Reveal>
+              )}
+
+              {/* 7) CLIENT RATINGS & REVIEWS */}
+              <Reveal>
+                <section className="gd-section-block" aria-label="Client ratings and reviews">
+                  <div className="gd-section-eyebrow">REVIEWS</div>
+                  <h2 className="gd-section-h2">Client ratings & reviews</h2>
+
+                  {/* Header Row: Big Average Number + Stars on Left, 5 Distribution Bars on Right */}
+                  <div className="gd-reviews-header-card">
+                    <div className="gd-reviews-score-col">
+                      <div className="gd-reviews-big-num">
+                        {rating > 0 ? rating.toFixed(1) : '5.0'}
+                      </div>
+                      <div className="gd-reviews-stars-wrap">
+                        {[...Array(5)].map((_, s) => (
+                          <Star
+                            key={s}
+                            size={16}
+                            fill={s < Math.round(rating || 5) ? '#F59E0B' : '#E2E8F0'}
+                            color="none"
+                          />
+                        ))}
+                      </div>
+                      <span className="gd-reviews-total-lbl">
+                        Based on {reviewsCount} verified {reviewsCount === 1 ? 'review' : 'reviews'}
+                      </span>
+                    </div>
+
+                    <div className="gd-reviews-bars-col">
+                      {ratingDistribution.map(({ star, count, pct }) => (
+                        <div key={star} className="gd-dist-row">
+                          <span className="gd-dist-star-lbl">{star} Stars</span>
+                          <div className="gd-dist-bar-track">
+                            <div className="gd-dist-bar-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="gd-dist-count-lbl">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Filter Chips Row */}
+                  {reviewsCount > 0 && (
+                    <div className="gd-review-filter-chips">
+                      <button
+                        type="button"
+                        className={`gd-rf-chip ${reviewRatingFilter === 'all' ? 'gd-rf-chip--active' : ''}`}
+                        onClick={() => setReviewRatingFilter('all')}
+                      >
+                        All ({reviewsCount})
+                      </button>
+                      {[5, 4, 3, 2, 1].map(star => {
+                        const dist = ratingDistribution.find(d => d.star === star);
+                        if (!dist || dist.count === 0) return null;
+                        return (
+                          <button
+                            key={star}
+                            type="button"
+                            className={`gd-rf-chip ${reviewRatingFilter === star ? 'gd-rf-chip--active' : ''}`}
+                            onClick={() => setReviewRatingFilter(star)}
+                          >
+                            <Star size={12} fill="#F59E0B" color="#F59E0B" />
+                            <span>{star} Stars ({dist.count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Review Cards (white, radius 18px) */}
+                  {visibleReviews.length > 0 ? (
+                    <div className="gd-reviews-cards-stack">
+                      {visibleReviews.map((rev, rIdx) => {
+                        const clientInitial = (rev.clientName || 'C').charAt(0).toUpperCase();
+                        return (
+                          <div key={rIdx} className="gd-review-card">
+                            <div className="gd-review-card-top">
+                              <div className="gd-review-author-wrap">
+                                <div className="gd-review-avatar-circle">
+                                  {rev.clientAvatar ? (
+                                    <img src={rev.clientAvatar} alt={rev.clientName || 'Client'} />
+                                  ) : (
+                                    <span>{clientInitial}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <strong className="gd-review-client-name">
+                                    {rev.clientName || 'Verified Buyer'}
+                                  </strong>
+                                  <div className="gd-review-stars-row">
+                                    {[...Array(5)].map((_, s) => (
+                                      <Star
+                                        key={s}
+                                        size={13}
+                                        fill={s < (rev.rating || 5) ? '#F59E0B' : '#E2E8F0'}
+                                        color="none"
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <span className="gd-review-date">
+                                {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Verified Order'}
+                              </span>
+                            </div>
+
+                            <p className="gd-review-comment-text">
+                              {rev.comment || 'Outstanding service and communication. Highly recommended for future projects!'}
+                            </p>
+
+                            {/* Seller reply if exists */}
+                            {rev.reply && (
+                              <div className="gd-review-seller-reply">
+                                <div className="gd-review-reply-header">
+                                  <span className="gd-reply-author">Response from {freelancerName}:</span>
+                                </div>
+                                <p className="gd-reply-text">{rev.reply}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {filteredReviews.length > 5 && (
+                        <div style={{ marginTop: 16, textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="gd-show-more-reviews-pill"
+                            onClick={() => setReviewsExpanded(!reviewsExpanded)}
+                          >
+                            <span>{reviewsExpanded ? 'Show fewer reviews' : `Show all ${filteredReviews.length} reviews`}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="gd-reviews-clean-empty">
+                      No reviews found matching this filter.
+                    </p>
+                  )}
+                </section>
+              </Reveal>
+
+              {/* 8) SELLER CARD (Last item in left column, white card radius 24px) */}
+              <Reveal>
+                <section className="gd-seller-bio-card" aria-label="About the seller">
+                  <div className="gd-seller-card-top">
+                    <div className="gd-seller-card-avatar-wrap">
+                      <Link
+                        to={`/freelancers/${freelancer._id || freelancer.userId?._id || ''}`}
+                        className="gd-seller-avatar-64"
+                      >
+                        {freelancerAvatar ? (
+                          <img src={freelancerAvatar} alt={freelancerName} />
+                        ) : (
+                          <span>{freelancerInitial}</span>
+                        )}
+                      </Link>
+                    </div>
+
+                    <div className="gd-seller-card-info">
+                      <div className="gd-seller-card-name-row">
+                        <Link
+                          to={`/freelancers/${freelancer._id || freelancer.userId?._id || ''}`}
+                          className="gd-seller-card-name"
+                        >
+                          {freelancerName}
+                        </Link>
+                        {isVerifiedSeller && (
+                          <CheckCircle2 size={16} color="#10B981" />
+                        )}
+                      </div>
+                      <span className="gd-seller-card-title">{sellerTitle}</span>
+                    </div>
+                  </div>
+
+                  {/* Short Bio (3 lines clamped) */}
+                  <p className="gd-seller-card-bio">
+                    {freelancer.personalInfo?.bio || freelancer.bio || `${freelancerName} is a verified SkillKart creator providing milestone-backed digital deliverables with milestone escrow protection.`}
+                  </p>
+
+                  {/* 4 Plain Stat Columns with Dividers */}
+                  <div className="gd-seller-card-stats-grid">
+                    <div className="gd-seller-card-stat">
+                      <span className="gd-sc-lbl">Location</span>
+                      <strong className="gd-sc-val">{freelancer.location || freelancer.personalInfo?.location || 'Pakistan'}</strong>
+                    </div>
+
+                    <div className="gd-sc-sep" />
+
+                    <div className="gd-seller-card-stat">
+                      <span className="gd-sc-lbl">Member Since</span>
+                      <strong className="gd-sc-val">
+                        {freelancer.memberSince ? new Date(freelancer.memberSince).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '2024'}
+                      </strong>
+                    </div>
+
+                    <div className="gd-sc-sep" />
+
+                    <div className="gd-seller-card-stat">
+                      <span className="gd-sc-lbl">Orders Completed</span>
+                      <strong className="gd-sc-val">{ordersCount} orders</strong>
+                    </div>
+
+                    <div className="gd-sc-sep" />
+
+                    <div className="gd-seller-card-stat">
+                      <span className="gd-sc-lbl">Rating</span>
+                      <strong className="gd-sc-val">{rating > 0 ? `${rating.toFixed(1)} ★` : '5.0 ★'}</strong>
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions Row */}
+                  <div className="gd-seller-card-actions">
+                    <Link
+                      to={`/freelancers/${freelancer._id || freelancer.userId?._id || ''}`}
+                      className="gd-sc-profile-link"
+                    >
+                      <span>View full profile & verification</span>
+                      <ArrowRight size={14} />
+                    </Link>
+
+                    <button
+                      type="button"
+                      className="gd-sc-contact-btn"
+                      onClick={handleContact}
+                    >
+                      <MessageCircle size={15} />
+                      <span>Contact me</span>
+                    </button>
+                  </div>
+                </section>
+              </Reveal>
+            </main>
+
+            {/* ─── RIGHT COLUMN (4 Columns): STICKY ORDER PANEL ─── */}
+            <aside className="gd-right-col" aria-label="Packages Order Panel">
+              <PackagesPanel
+                tiers={tiers}
+                activeTierKey={activeTierKey}
+                setActiveTierKey={setActiveTierKey}
+                selectedTier={selectedTier}
+                gig={gig}
+                isOwnGig={isOwnGig}
+                ordering={ordering}
+                handleOrder={handleOrder}
+                handleContact={handleContact}
+              />
             </aside>
           </div>
         </div>
       </div>
 
+      {/* ── MOBILE FIXED BOTTOM BAR (Never Overlaps Buddy AI, 80px right offset) ── */}
+      {!isOwnGig && gig.status === 'active' && (
+        <div className="gd-mobile-fixed-bottom-bar">
+          <div className="gd-mobile-bottom-inner">
+            <div className="gd-mobile-bottom-info">
+              <span className="gd-mobile-bottom-tier-name">{selectedTier?.label} Tier</span>
+              <strong className="gd-mobile-bottom-price">
+                Rs. {Number(selectedTier?.price || 0).toLocaleString()}
+              </strong>
+            </div>
+            <button
+              type="button"
+              className="gd-mobile-order-btn"
+              onClick={() => handleOrder(selectedTier?.key)}
+              disabled={!!ordering}
+            >
+              {ordering === selectedTier?.key ? 'Ordering...' : 'Request to order →'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX OVERLAY MODAL (Accessible, Focus Trapped, Esc to Close) ── */}
+      {lightboxOpen && currentSlide && (
+        <div className="gd-lightbox-backdrop" onClick={() => setLightboxOpen(false)}>
+          <div className="gd-lightbox-modal" onClick={e => e.stopPropagation()}>
+            <img src={currentSlide} alt="Expanded showcase" className="gd-lightbox-img" />
+
+            {/* Counter pill */}
+            <div className="gd-lightbox-counter-pill">
+              {activeImgIdx + 1} / {slides.length}
+            </div>
+
+            {/* Prev / Next buttons */}
+            {slides.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="gd-lightbox-btn gd-lightbox-btn--prev"
+                  onClick={() => setActiveImgIdx(prev => (prev - 1 + slides.length) % slides.length)}
+                  aria-label="Previous photo"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  type="button"
+                  className="gd-lightbox-btn gd-lightbox-btn--next"
+                  onClick={() => setActiveImgIdx(prev => (prev + 1) % slides.length)}
+                  aria-label="Next photo"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </>
+            )}
+
+            {/* Close button */}
+            <button
+              type="button"
+              className="gd-lightbox-close-btn"
+              onClick={() => setLightboxOpen(false)}
+              aria-label="Close photo overlay"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── GIG ORDER CHECKOUT MODAL ── */}
       <GigOrderModal
         open={!!orderConfirmTier}
         mode="package"
@@ -793,5 +1526,158 @@ export default function GigDetail() {
 
       <Footer />
     </>
+  );
+}
+
+/**
+ * PackagesPanel Component — Sticky in desktop right column, inline on mobile
+ */
+function PackagesPanel({
+  tiers,
+  activeTierKey,
+  setActiveTierKey,
+  selectedTier,
+  gig,
+  isOwnGig,
+  ordering,
+  handleOrder,
+  handleContact,
+}) {
+  const [featuresExpanded, setFeaturesExpanded] = useState(false);
+  const allFeatures = selectedTier?.features || [];
+  const visibleFeatures = featuresExpanded ? allFeatures : allFeatures.slice(0, 6);
+
+  return (
+    <div className="gd-sticky-panel-container">
+      <div className="gd-packages-sticky-card">
+        {/* Segmented Pill Tabs: Basic / Standard / Premium */}
+        {tiers.length > 1 && (
+          <div className="gd-tier-segmented-track">
+            {tiers.map(t => {
+              const isSelected = t.key === activeTierKey;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`gd-tier-seg-tab ${isSelected ? 'gd-tier-seg-tab--active' : ''}`}
+                  onClick={() => setActiveTierKey(t.key)}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Selected Tier Body */}
+        <div className="gd-packages-card-body">
+          {/* Price Row: 36px, 800 navy + small "Fixed price" chip */}
+          <div className="gd-tier-price-row">
+            <div className="gd-tier-price-number">
+              Rs. {Number(selectedTier?.price || 0).toLocaleString()}
+            </div>
+            <span className="gd-tier-milestone-chip">
+              Fixed Price
+            </span>
+          </div>
+
+          {/* Tier Title & Description */}
+          <div className="gd-tier-title-desc">
+            <h3 className="gd-tier-heading">
+              {selectedTier?.title || `${selectedTier?.label || ''} Plan`}
+            </h3>
+            <p className="gd-tier-paragraph">
+              {selectedTier?.description || gig.shortDescription || 'Complete deliverables package.'}
+            </p>
+          </div>
+
+          {/* Delivery & Revisions Chips with Icons */}
+          <div className="gd-tier-chips-row">
+            <span className="gd-tier-meta-chip">
+              <Clock size={13} color="#10B981" />
+              <span><strong>{formatDeliveryTime(selectedTier?.deliveryTime)}</strong> delivery</span>
+            </span>
+            <span className="gd-tier-meta-chip">
+              <RefreshCw size={13} color="#10B981" />
+              <span><strong>{selectedTier?.revisions ? `${selectedTier.revisions}` : 'Unlimited'}</strong> revisions</span>
+            </span>
+          </div>
+
+          {/* Included Features Checklist (green checks, max 6, "+N more") */}
+          <ul className="gd-tier-features-list">
+            {visibleFeatures.map((f, idx) => (
+              <li key={idx} className="gd-tier-feature-item">
+                <CheckCircle2 size={15} color="#10B981" className="gd-tier-check-icon" />
+                <span>{typeof f === 'string' ? f : f?.text || ''}</span>
+              </li>
+            ))}
+            {allFeatures.length > 6 && (
+              <li className="gd-tier-feature-toggle-item">
+                <button
+                  type="button"
+                  className="gd-tier-more-features-btn"
+                  onClick={() => setFeaturesExpanded(!featuresExpanded)}
+                >
+                  {featuresExpanded ? 'Show fewer features' : `+${allFeatures.length - 6} more included features`}
+                </button>
+              </li>
+            )}
+            {allFeatures.length === 0 && (
+              <>
+                <li className="gd-tier-feature-item">
+                  <CheckCircle2 size={15} color="#10B981" className="gd-tier-check-icon" />
+                  <span>Complete Deliverables Package</span>
+                </li>
+                <li className="gd-tier-feature-item">
+                  <CheckCircle2 size={15} color="#10B981" className="gd-tier-check-icon" />
+                  <span>Full Commercial License</span>
+                </li>
+              </>
+            )}
+          </ul>
+
+          {/* Primary Action Button: "Request to order" */}
+          {!isOwnGig && gig.status === 'active' && (
+            <button
+              type="button"
+              className="gd-request-order-cta-btn"
+              onClick={() => handleOrder(selectedTier?.key)}
+              disabled={!!ordering}
+            >
+              {ordering === selectedTier?.key ? 'Processing Order...' : 'Request to order'}
+            </button>
+          )}
+
+          {!isOwnGig && gig.status !== 'active' && (
+            <div className="gd-gig-paused-callout">
+              This service gig is currently not accepting new orders.
+            </div>
+          )}
+
+          {/* Escrow Trust Box */}
+          <div className="gd-escrow-trust-note">
+            <ShieldCheck size={18} color="#10B981" className="gd-escrow-shield" />
+            <span>
+              You'll pay 50% now to start; the rest is released when you accept the delivery.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Slim card below panel: "Need something custom?" with "Send a message" link */}
+      <div className="gd-custom-order-card">
+        <div className="gd-custom-order-left">
+          <MessageCircle size={16} color="#10B981" />
+          <span>Need something custom?</span>
+        </div>
+        <button
+          type="button"
+          className="gd-custom-order-link"
+          onClick={handleContact}
+        >
+          Send a message →
+        </button>
+      </div>
+    </div>
   );
 }

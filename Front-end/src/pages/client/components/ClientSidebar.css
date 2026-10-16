@@ -8,19 +8,14 @@
   top: 0; left: 0;
   width: 265px;
   height: 100vh;
-  background: linear-gradient(180deg, var(--color-primary) 0%, #063d5c 60%, var(--color-primary-light) 100%);
+  background: linear-gradient(180deg, #0B2942 0%, #082136 60%, #061A2B 100%);
   display: flex;
   flex-direction: column;
-  /* Above .cl-mobile-header (1300) so the in-panel close button is reachable
-     on mobile — otherwise the fixed top bar physically covers it. */
   z-index: 1400;
-  /* The whole sidebar used to scroll as one block, so on a short screen with
-     many nav links the brand header and Logout footer would scroll out of
-     view along with them. Only .cl-sidebar__nav (below) scrolls now — brand/
-     avatar/badge stay pinned at top, Logout stays pinned at bottom. */
   overflow: hidden;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 4px 0 24px rgba(4, 46, 76, 0.25);
+  box-shadow: 4px 0 24px rgba(11, 41, 66, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ── Custom Scrollbar (on the scrolling nav list itself) ── */
@@ -135,14 +130,15 @@
   letter-spacing: 0.01em;
 }
 .cl-sidebar__link:hover {
-  background: rgba(183,201,226,0.12);
-  color: var(--color-white);
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
   transform: translateX(3px);
 }
 .cl-sidebar__link--active {
-  background: rgba(183,201,226,0.2);
-  color: var(--color-white); font-weight: 700;
-  border-left: 3px solid var(--color-accent);
+  background: rgba(16, 185, 129, 0.16);
+  color: #FFFFFF;
+  font-weight: 700;
+  border-left: 3px solid #10B981;
 }
 .cl-sidebar__icon {
   font-size: 1rem; flex-shrink: 0;

@@ -1,21 +1,54 @@
-/* Shared dashboard StatusBadge — see UI_UX_AUDIT_PLAN.md §4.7 */
+/* Shared dashboard StatusBadge — see UI_UX_AUDIT_PLAN.md §4.7
+   Phase-1 refresh: dot indicator, softer uppercase tracking,
+   border tint for legibility on tinted rows. API unchanged. */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.22rem 0.65rem;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
   border-radius: var(--radius-full, 9999px);
   font-family: var(--font-dashboard, var(--font-body));
   font-size: var(--fs-xs, 0.75rem);
   font-weight: var(--fw-bold, 700);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
   white-space: nowrap;
   line-height: 1.4;
+  border: 1px solid transparent;
 }
 
-.status-badge--success { background: var(--color-success-tint); color: var(--color-success); }
-.status-badge--warning { background: var(--color-warning-tint); color: var(--color-warning); }
-.status-badge--error   { background: var(--color-error-tint);   color: var(--color-error); }
-.status-badge--info    { background: var(--color-info-tint);    color: var(--color-info); }
-.status-badge--neutral { background: var(--color-secondary);    color: var(--color-text-mid); }
+/* Leading status dot */
+.status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status-badge--success {
+  background: var(--color-success-tint);
+  color: var(--color-success);
+  border-color: rgba(5, 150, 105, 0.22);
+}
+.status-badge--warning {
+  background: var(--color-warning-tint);
+  color: var(--color-warning);
+  border-color: rgba(217, 119, 6, 0.22);
+}
+.status-badge--error {
+  background: var(--color-error-tint);
+  color: var(--color-error);
+  border-color: rgba(220, 38, 38, 0.22);
+}
+.status-badge--info {
+  background: var(--color-info-tint);
+  color: var(--color-info);
+  border-color: rgba(37, 99, 235, 0.22);
+}
+.status-badge--neutral {
+  background: var(--color-secondary);
+  color: var(--color-text-mid);
+  border-color: rgba(100, 116, 139, 0.18);
+}

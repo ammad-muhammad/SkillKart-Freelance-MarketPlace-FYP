@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import Loader from '../common/Loader/Loader';
 
 // ─── AdminBadge ────────────────────────────────────────────────
 export const AdminBadge = ({ children, variant = 'blue' }) => (
@@ -39,10 +40,9 @@ export const StatusBadge = ({ status }) => {
 };
 
 // ─── AdminLoader ───────────────────────────────────────────────
-export const AdminLoader = ({ message = 'Loading…' }) => (
+export const AdminLoader = ({ message = 'Loading' }) => (
   <div className="ap-loader-center">
-    <div className="ap-spinner" />
-    <span>{message}</span>
+    <Loader size="md" text={message?.replace(/…|\./g, '') || 'Loading'} />
   </div>
 );
 
@@ -122,7 +122,7 @@ export const ConfirmDialog = ({
         <div className="ap-modal-footer">
           <button className="ap-btn ap-btn-secondary" onClick={handleClose} disabled={loading}>Cancel</button>
           <button className={`ap-btn ${confirmClass}`} onClick={onConfirm} disabled={loading}>
-            {loading ? <><span className="ap-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Working…</> : confirmLabel}
+            {loading ? <><Loader size="sm" text="" /> Working…</> : confirmLabel}
           </button>
         </div>
       </div>

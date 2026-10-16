@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link } from 'react-router-dom';
+import { Sparkles, Paperclip, MessageSquare, Send, Search, Edit3, Briefcase, Zap } from 'lucide-react';
 import './AboutSection.css';
 import AnimatedCounter from '../AnimatedCounter/AnimatedCounter';
 import { publicAPI } from '../../../api/publicData';
@@ -129,86 +130,194 @@ export default function AboutSection() {
 
   return (
     <section ref={sectionRef} className="about">
-      {/* ── Header ── */}
       <div className="container">
-        <div ref={headerRef} className="about__header-row">
-          <div className="about__header-content">
-            <div className="section-tag">
-              <span>✨</span> What Makes Us Different
+        {/* ── Split Layout: Editorial Narrative + Layered AI Preview ── */}
+        <div ref={headerRef} className="about__split">
+          <div className="about__content">
+            <div className="section-tag about__tag">
+              <span className="about__tag-spark">✨</span>
+              <span>Intelligent Freelance Architecture</span>
             </div>
-            <h2 className="section-title">
+
+            <h2 className="section-title about__title">
               Built for Students. <br />
               Powered by <span className="about__highlight">Artificial Intelligence.</span>
             </h2>
-            <p className="section-subtitle">
-              SkillKart isn't just another freelancing platform. We've engineered a full
-              AI ecosystem that verifies your potential, guides your career, and connects
-              you with opportunities perfectly suited for your skillset.
+
+            <p className="section-subtitle about__desc">
+              SkillKart isn't a traditional bidding platform. We have built a specialized
+              AI ecosystem that authenticates your real talent, guides your proposals, and connects
+              you directly with clients seeking verified micro-deliverables.
             </p>
-            <div className="about__header-btns">
-              <Link to="/registration" className="btn-primary">Get Started</Link>
-              <Link to="/about" className="btn-secondary">Learn More</Link>
+
+            <div className="about__btns">
+              <Link to="/registration" className="about__btn-primary">
+                <span>Start Freelancing</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+              <Link to="/about" className="about__btn-secondary">
+                Learn Architecture
+              </Link>
             </div>
+
+            {/* Compact Platform Metrics Strip */}
+            {numbers.length > 0 && (
+              <div ref={numbersRef} className="about__metrics-strip">
+                {numbers.map((n) => (
+                  <div key={n.label} className="about__metric-col">
+                    <span className="about__metric-val">
+                      <AnimatedCounter value={n.value} />
+                    </span>
+                    <span className="about__metric-lbl">{n.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="about__header-visual">
-            <div className="about__visual-box">
-              <img
-                src="https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=800"
-                alt="AI Ecosystem"
-                className="about__visual-img"
-              />
-              <div className="about__floating-badge about__floating-badge--1">
-                <div className="badge-icon">🤖</div>
-                <div className="badge-text">
-                  <span>Buddy AI</span>
-                  <p>Always Active</p>
+          {/* Right Side: Exact Image 3 Composition (3D Robot Avatar + Buddy AI Assistant) */}
+          <div className="about__preview-wrapper">
+            <div className="about__buddy-stage">
+              {/* Left Circular Mascot Badge matching Image 3 */}
+              <div className="about__buddy-avatar-badge">
+                <div className="about__buddy-avatar-ring">
+                  <div className="about__buddy-avatar-status">
+                    <span className="about__buddy-status-dot" />
+                    <span>AI ACTIVE</span>
+                    <Zap size={10} className="about__buddy-zap" />
+                  </div>
+                  <img
+                    src="/assets/buddy-robot.png"
+                    alt="Buddy AI Mascot"
+                    className="about__buddy-robot-img"
+                  />
                 </div>
               </div>
-              <div className="about__floating-badge about__floating-badge--2">
-                <div className="badge-icon">✅</div>
-                <div className="badge-text">
-                  <span>Verified</span>
-                  <p>Profiles Only</p>
+
+              {/* Right Interactive Chatbot Card matching Image 3 */}
+              <div className="about__buddy-chat-card">
+                {/* Dark teal header */}
+                <div className="about__buddy-head">
+                  <div className="about__buddy-brand">
+                    <div className="about__buddy-head-avatar">
+                      <img src="/assets/buddy-robot.png" alt="Buddy" />
+                    </div>
+                    <div>
+                      <h4 className="about__buddy-head-title">Buddy AI</h4>
+                      <div className="about__buddy-head-status">
+                        <span className="about__buddy-head-dot" />
+                        <span>Online / Smart assistant</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="about__buddy-head-right">
+                    <span className="about__buddy-quick-pill">
+                      <Sparkles size={11} /> Quick Actions
+                    </span>
+                    <span className="about__buddy-close-x">✕</span>
+                  </div>
+                </div>
+
+                {/* 98% Match Ready meter */}
+                <div className="about__buddy-meter">
+                  <div className="about__buddy-meter-track">
+                    <div className="about__buddy-meter-fill" style={{ width: '98%' }} />
+                  </div>
+                  <span className="about__buddy-meter-text">98% Match Ready</span>
+                </div>
+
+                {/* Chat feed */}
+                <div className="about__buddy-feed">
+                  <div className="about__buddy-bubble">
+                    Hi! I'm Buddy 👋, your SkillKart AI assistant.
+                  </div>
+
+                  <div className="about__buddy-highlight-box">
+                    🚀 AI Matching, Project Estimator & Proposals ready.
+                  </div>
+
+                  <div className="about__buddy-bubble">
+                    Ask me about finding work, hiring, writing proposals, or pricing a project.
+                  </div>
+
+                  <div className="about__buddy-action-pill">
+                    <span>Analyzing available gigs...</span>
+                    <span className="about__buddy-dots">
+                      <span /> <span /> <span />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick prompt chips */}
+                <div className="about__buddy-chips">
+                  <span className="about__buddy-chip">
+                    <Search size={11} /> How do I find work?
+                  </span>
+                  <span className="about__buddy-chip">
+                    <Edit3 size={11} /> Help me write a proposal
+                  </span>
+                  <span className="about__buddy-chip">
+                    <Briefcase size={11} /> How does hiring work?
+                  </span>
+                </div>
+
+                {/* Input bar */}
+                <div className="about__buddy-input-wrap">
+                  <div className="about__buddy-input-bar">
+                    <Paperclip size={15} className="about__buddy-input-icon" />
+                    <MessageSquare size={15} className="about__buddy-input-icon" />
+                    <input
+                      type="text"
+                      readOnly
+                      placeholder="Ask Buddy anything... (try 'estimate my project')"
+                      className="about__buddy-input"
+                    />
+                    <div className="about__buddy-send-btn">
+                      <Send size={13} />
+                    </div>
+                  </div>
+
+                  <div className="about__buddy-powered">
+                    <Zap size={10} color="#F59E0B" />
+                    <span>Powered by SkillKart AI</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Feature Cards ── */}
-        <div ref={cardsRef} className="about__cards">
-          {FEATURES.map(f => (
-            <div key={f.id} className={`about__card about__card--${f.color}`}>
-              <div className="about__card-top">
-                <div className="about__card-icon">{f.icon}</div>
-                <span className="about__card-tag">{f.tag}</span>
+        {/* ── 3 Layered Asymmetric Modules ── */}
+        <div ref={cardsRef} className="about__modules-grid">
+          {FEATURES.map((f) => (
+            <div key={f.id} className={`about__module-card about__module-card--${f.color}`}>
+              <div className="about__module-top">
+                <div className="about__module-icon">{f.icon}</div>
+                <span className="about__module-tag">{f.tag}</span>
               </div>
-              <h3 className="about__card-title">{f.title}</h3>
-              <p className="about__card-desc">{f.desc}</p>
-              <ul className="about__card-bullets">
-                {f.bullets.map(b => (
-                  <li key={b}>
-                    <span className="about__bullet-check">✓</span> {b}
+              <h3 className="about__module-title">{f.title}</h3>
+              <p className="about__module-desc">{f.desc}</p>
+
+              <ul className="about__module-bullets">
+                {f.bullets.map((b) => (
+                  <li key={b} className="about__module-bullet">
+                    <span className="about__bullet-check">✓</span>
+                    <span>{b}</span>
                   </li>
                 ))}
               </ul>
-              <Link to="/about" className="about__card-link">
-                Learn more
+
+              <Link to="/about" className="about__module-link">
+                <span>Explore capability</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor"
                     strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </Link>
-            </div>
-          ))}
-        </div>
-
-        <div ref={numbersRef} className="about__numbers" style={numbers.length ? undefined : { display: 'none' }}>
-          {numbers.map(n => (
-            <div key={n.label} className="about__number-item">
-              <AnimatedCounter value={n.value} />
-              <span className="about__number-lbl">{n.label}</span>
             </div>
           ))}
         </div>

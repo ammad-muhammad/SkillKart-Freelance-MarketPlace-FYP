@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, AlignLeft, Tag, Clock, ChevronDown, Check,
   Zap, Moon, FileText, XCircle, Globe, Github, Linkedin, Award, Link,
-  User, Upload, Globe2
+  User, Upload, Camera, Sparkles
 } from "lucide-react";
 import { timezones, getCurrentTimezone } from "../../utils/timezones";
 import ComboSelect from "../common/ComboSelect/ComboSelect";
@@ -66,9 +66,9 @@ const CustomDropdown = ({ value, onChange, placeholder = "Select an option", opt
           <motion.ul
             role="listbox"
             className="fob-dropdown-menu"
-            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             {options.map((opt) => {
@@ -86,7 +86,7 @@ const CustomDropdown = ({ value, onChange, placeholder = "Select an option", opt
                     <span className="fob-dropdown-option-label">{opt.label}</span>
                     <span className="fob-dropdown-option-desc">{opt.desc}</span>
                   </span>
-                  {isActive && <Check size={15} className="fob-dropdown-option-check" />}
+                  {isActive && <Check size={16} className="fob-dropdown-option-check" />}
                 </li>
               );
             })}
@@ -115,13 +115,69 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
     }
   }, [formData.timezone, setFormData]);
 
+  // Auto-fill social links from CV parsedData if present and fields are empty
+  useEffect(() => {
+    if (formData.parsedData?.socialLinks) {
+      const pSocial = formData.parsedData.socialLinks;
+      const current = formData.socialLinks || {};
+      if (!current.github && !current.linkedin && !current.website) {
+        if (pSocial.github || pSocial.linkedin || pSocial.website) {
+          setFormData(prev => ({
+            ...prev,
+            socialLinks: {
+              github: current.github || pSocial.github || "",
+              linkedin: current.linkedin || pSocial.linkedin || "",
+              website: current.website || pSocial.website || ""
+            }
+          }));
+        }
+      }
+    }
+  }, [formData.parsedData, setFormData]);
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: 30 }}
+      initial={{ opacity: 0, x: 25 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      exit={{ opacity: 0, x: -25 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
     >
+      {/* Profile Picture Upload Hero Area */}
+      <div className="fob-profile-pic-section">
+        <div className="fob-avatar-container">
+          {formData.profilePicUrl ? (
+            <img
+              src={formData.profilePicUrl}
+              alt="Profile Avatar"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <User size={46} color="#059669" />
+          )}
+          <div
+            className="fob-avatar-overlay"
+            onClick={() => avatarPickerRef.current?.click()}
+          >
+            <Camera size={22} />
+            <span style={{ fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>Change</span>
+            <ImageSourcePicker
+              ref={avatarPickerRef}
+              accept="image/*"
+              facing="user"
+              onChange={handleImageUpload}
+            />
+          </div>
+        </div>
+        <div style={{ textAlign: "center", marginTop: "10px" }}>
+          <span className="fob-label" style={{ justifyContent: "center", margin: "0 0 2px" }}>
+            Profile Picture
+          </span>
+          <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>
+            Upload a clear professional photo (WEBP, PNG, JPG max 5MB)
+          </p>
+        </div>
+      </div>
+
       {/* Name Section */}
       <div className="fob-form-row">
         <div className="fob-form-group">
@@ -135,7 +191,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             value={formData.firstName}
             onChange={handleChange}
             className={`fob-input ${errors?.firstName ? "fob-input--error" : ""}`}
-            placeholder="John"
+            placeholder="e.g. Alex"
           />
           {errors?.firstName && <p className="fob-error">{errors.firstName}</p>}
         </div>
@@ -150,34 +206,12 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             value={formData.lastName}
             onChange={handleChange}
             className={`fob-input ${errors?.lastName ? "fob-input--error" : ""}`}
-            placeholder="Doe"
+            placeholder="e.g. Morgan"
           />
           {errors?.lastName && <p className="fob-error">{errors.lastName}</p>}
         </div>
       </div>
 
-      {/* Profile Picture Upload */}
-      <div className="fob-profile-pic-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
-        <div className="fob-avatar-container" style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
-          {formData.profilePicUrl ? (
-            <img src={formData.profilePicUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <User size={40} color="#94a3b8" />
-          )}
-          <div
-            style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, cursor: 'pointer', transition: 'opacity 0.2s' }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
-            onClick={() => avatarPickerRef.current?.click()}
-          >
-            <Upload size={24} />
-            <span style={{ fontSize: '12px', fontWeight: '600', marginTop: '4px' }}>Upload</span>
-            <ImageSourcePicker ref={avatarPickerRef} accept="image/*" facing="user" onChange={handleImageUpload} />
-          </div>
-        </div>
-        <span className="fob-label" style={{ marginTop: '12px', marginBottom: '4px' }}>Profile Picture</span>
-        <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>WEBP, PNG or JPG, max 5MB</p>
-      </div>
       {/* Professional Title */}
       <div className="fob-form-group">
         <label className="fob-label">
@@ -190,7 +224,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
           value={formData.title}
           onChange={handleChange}
           className={`fob-input ${errors?.title ? "fob-input--error" : ""}`}
-          placeholder="e.g. Senior React Developer"
+          placeholder="e.g. Senior Full-Stack Engineer & Cloud Architect"
         />
         {errors?.title && <p className="fob-error">{errors.title}</p>}
       </div>
@@ -206,17 +240,27 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
           value={formData.bio}
           onChange={handleChange}
           className={`fob-textarea ${errors?.bio ? "fob-input--error" : ""}`}
-          placeholder="Tell clients about your experience, expertise, and what makes you stand out..."
+          placeholder="Share your experience, technical strengths, client achievements, and what sets you apart..."
           rows={4}
         />
-        <p className="fob-hint">{formData.bio?.length || 0}/500 characters</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+          <p className="fob-hint" style={{ margin: 0 }}>
+            {formData.bio?.length || 0}/500 characters
+          </p>
+        </div>
         {errors?.bio && <p className="fob-error">{errors.bio}</p>}
-        <AiGenerateText
-          fieldLabel="a freelancer's professional bio for their marketplace profile"
-          getContext={() => ({ title: formData.title, experienceLevel: formData.experienceLevel, availability: formData.availability })}
-          getExistingText={() => formData.bio}
-          onGenerated={(text) => setFormData((p) => ({ ...p, bio: text.slice(0, 500) }))}
-        />
+        <div style={{ marginTop: "10px" }}>
+          <AiGenerateText
+            fieldLabel="a freelancer's professional bio for their marketplace profile"
+            getContext={() => ({
+              title: formData.title,
+              experienceLevel: formData.experienceLevel,
+              availability: formData.availability
+            })}
+            getExistingText={() => formData.bio}
+            onGenerated={(text) => setFormData((p) => ({ ...p, bio: text.slice(0, 500) }))}
+          />
+        </div>
       </div>
 
       {/* Hourly Rate + Availability row */}
@@ -227,7 +271,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
             Hourly Rate (PKR)*
           </label>
           <div className="fob-input-prefix-wrapper">
-            <span className="fob-input-prefix">Rs. </span>
+            <span className="fob-input-prefix">Rs.</span>
             <input
               type="number"
               name="hourlyRate"
@@ -236,7 +280,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
               className={`fob-input fob-input--prefixed ${
                 errors?.hourlyRate ? "fob-input--error" : ""
               }`}
-              placeholder="50"
+              placeholder="1500"
               min="1"
             />
             <span className="fob-input-suffix">/hr</span>
@@ -249,7 +293,7 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
         <div className="fob-form-group">
           <label className="fob-label">
             <Clock size={15} className="fob-label-icon" />
-            Availability*
+            Work Availability*
           </label>
           <CustomDropdown
             value={formData.availability}
@@ -324,37 +368,40 @@ const StepBasicInfo = ({ formData, setFormData, errors, handleImageUpload }) => 
       <div className="fob-form-group" style={{ marginTop: '12px' }}>
         <label className="fob-label">
           <Link size={15} className="fob-label-icon" />
-          Social & Portfolio Links
+          Professional & Social Links
         </label>
+        <p className="fob-hint" style={{ marginBottom: "12px" }}>
+          Link your GitHub, LinkedIn, or personal portfolio to build maximum client trust.
+        </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div className="fob-input-prefix-wrapper">
-            <span className="fob-input-prefix"><Github size={16} /></span>
+            <span className="fob-input-prefix"><Github size={17} style={{ color: "#0B2942" }} /></span>
             <input
               type="text"
               value={formData.socialLinks?.github || ""}
               onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, github: e.target.value } }))}
               className="fob-input fob-input--prefixed"
-              placeholder="GitHub Profile URL"
+              placeholder="https://github.com/username"
             />
           </div>
           <div className="fob-input-prefix-wrapper">
-            <span className="fob-input-prefix"><Linkedin size={16} /></span>
+            <span className="fob-input-prefix"><Linkedin size={17} style={{ color: "#0077B5" }} /></span>
             <input
               type="text"
               value={formData.socialLinks?.linkedin || ""}
               onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, linkedin: e.target.value } }))}
               className="fob-input fob-input--prefixed"
-              placeholder="LinkedIn Profile URL"
+              placeholder="https://linkedin.com/in/username"
             />
           </div>
           <div className="fob-input-prefix-wrapper">
-            <span className="fob-input-prefix"><Globe size={16} /></span>
+            <span className="fob-input-prefix"><Globe size={17} style={{ color: "#10B981" }} /></span>
             <input
               type="text"
               value={formData.socialLinks?.website || ""}
               onChange={(e) => setFormData(p => ({ ...p, socialLinks: { ...p.socialLinks, website: e.target.value } }))}
               className="fob-input fob-input--prefixed"
-              placeholder="Personal Portfolio/Website"
+              placeholder="https://yourportfolio.com"
             />
           </div>
         </div>

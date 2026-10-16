@@ -1,43 +1,91 @@
-import Loader from '../../Components/common/Loader/Loader';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  MessageSquare, FileText, Paperclip, Send, Package,
+  Search, X, Check, CheckCheck, ChevronDown, PanelRight,
+  ArrowLeft, Download, ExternalLink, Image as ImageIcon,
+  User, Info
+} from 'lucide-react';
 import { messagesAPI } from '../../api/messages';
 import { useAuth } from '../../hooks/useAuth';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { uploadMessageAttachment, validateFile } from '../../utils/uploadHelper';
-import { MessageSquare, FileText, Loader2, Paperclip, Send, Package } from 'lucide-react';
 import CustomOfferCard from '../../Components/common/CustomOffer/CustomOfferCard';
 import SendOfferModal from '../../Components/common/CustomOffer/SendOfferModal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
-import Button from '../../Components/common/Button/Button';
 import { offersAPI } from '../../api/offers';
 import { apiErrorMessage } from '../../utils/gigOrderCheckout';
-import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
 import { openExternal } from '../../utils/externalLink';
-import '../client/ClientDashboard.css';
+import Loader from '../../Components/common/Loader/Loader';
+import './FreelancerMessages.css';
+
+// ── Date Formatting Helpers ─────────────────────────────────────────
+const formatMessageDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  return d.toLocaleDateString([], {
+    day: 'numeric',
+    month: 'short',
+    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  });
+};
+
+const formatChatTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  if (isToday) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  if (isYesterday) return 'Yesterday';
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
 
 const FreelancerMessages = () => {
   const { user } = useAuth();
   const { showToast } = useFreelancer();
+
+  // Core Data States
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [msgInput, setMsgInput] = useState('');
   const [search, setSearch] = useState('');
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'unread'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // Custom Offer Modal States
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [withdrawTarget, setWithdrawTarget] = useState(null); // offer
+  const [withdrawTarget, setWithdrawTarget] = useState(null);
   const [offerBusy, setOfferBusy] = useState(false);
+
+  // UI States
+  const [showDetails, setShowDetails] = useState(false);
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [chatSearch, setChatSearch] = useState('');
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [lightboxImg, setLightboxImg] = useState(null);
+
+  // Refs
   const chatFeedRef = useRef(null);
   const fileRef = useRef(null);
-  // Tracks whether the user is currently pinned to the bottom of the feed.
-  // The poll below refreshes `messages` every 3s even when nothing changed,
-  // so auto-scrolling unconditionally would yank the user back down every
-  // time they scroll up to read older messages.
+  const textareaRef = useRef(null);
   const isNearBottomRef = useRef(true);
 
+  // Initial Fetch & Polling
   useEffect(() => {
     fetchConversations();
     const interval = setInterval(fetchConversations, 10000);
@@ -47,23 +95,56 @@ const FreelancerMessages = () => {
 
   useEffect(() => {
     if (activeChat) {
-      isNearBottomRef.current = true; // opening a chat always starts pinned to the latest message
+      isNearBottomRef.current = true;
       fetchMessages(activeChat._id);
       const interval = setInterval(() => fetchMessages(activeChat._id), 3000);
       return () => clearInterval(interval);
     }
   }, [activeChat]);
 
+  // Feed Scroll Tracking
   useEffect(() => {
     if (chatFeedRef.current && isNearBottomRef.current) {
       chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
     }
   }, [messages]);
 
+  // Textarea auto-grow
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [msgInput]);
+
+  // Esc key for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setLightboxImg(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleFeedScroll = () => {
     const el = chatFeedRef.current;
     if (!el) return;
-    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    const isNear = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    isNearBottomRef.current = isNear;
+    setShowScrollBottom(!isNear);
+  };
+
+  const scrollToBottom = () => {
+    if (chatFeedRef.current) {
+      chatFeedRef.current.scrollTo({
+        top: chatFeedRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+      isNearBottomRef.current = true;
+      setShowScrollBottom(false);
+    }
   };
 
   const fetchConversations = async () => {
@@ -71,8 +152,7 @@ const FreelancerMessages = () => {
       const res = await messagesAPI.getConversations();
       setError(null);
       setConversations(res.data.data);
-      // Auto-open the first conversation on desktop only. On mobile the layout is
-      // single-pane, so we leave the user on the conversation LIST until they tap one.
+      // Auto-open first conversation on desktop
       if (!activeChat && res.data.data.length > 0 && window.innerWidth > 768) {
         setActiveChat(res.data.data[0]);
       }
@@ -94,16 +174,25 @@ const FreelancerMessages = () => {
   };
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!msgInput.trim() || !activeChat) return;
 
     const recipient = activeChat.participants.find(p => p._id !== user._id);
+    const content = msgInput.trim();
+    setMsgInput('');
+
     try {
-      await messagesAPI.sendMessage(recipient._id, msgInput);
-      setMsgInput('');
+      await messagesAPI.sendMessage(recipient._id, content);
       fetchMessages(activeChat._id);
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to send message', 'error');
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -114,10 +203,16 @@ const FreelancerMessages = () => {
 
     const check = validateFile(file, {
       maxSizeMB: 10,
-      allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf',
-        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+      allowedTypes: [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+        'application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ]
     });
-    if (!check.valid) { showToast(check.error, 'error'); return; }
+    if (!check.valid) {
+      showToast(check.error, 'error');
+      return;
+    }
 
     const recipient = activeChat.participants.find(p => p._id !== user._id);
     setUploading(true);
@@ -147,201 +242,644 @@ const FreelancerMessages = () => {
     }
   };
 
-  const filteredConversations = conversations.filter(c => {
-    if (!search.trim()) return true;
-    const other = c.participants.find(p => p._id !== user._id);
-    return `${other?.firstName || ''} ${other?.lastName || ''}`.toLowerCase().includes(search.toLowerCase());
-  });
+  // Filtered Conversations List
+  const totalUnreadCount = useMemo(() => {
+    return conversations.reduce((acc, c) => acc + (c.unreadCount?.[user._id] || 0), 0);
+  }, [conversations, user._id]);
 
-  if (loading) return <Loader text="Loading chats..." fullScreen={true} />;
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(c => {
+      const other = c.participants.find(p => p._id !== user._id);
+      const fullName = `${other?.firstName || ''} ${other?.lastName || ''}`.toLowerCase();
+      const matchesSearch = !search.trim() || fullName.includes(search.toLowerCase());
+      const unread = c.unreadCount?.[user._id] || 0;
+      const matchesTab = filterTab === 'all' || (filterTab === 'unread' && unread > 0);
+      return matchesSearch && matchesTab;
+    });
+  }, [conversations, user._id, search, filterTab]);
+
+  // Active Chat Participant
+  const otherUser = useMemo(() => {
+    if (!activeChat) return null;
+    return activeChat.participants.find(p => p._id !== user._id);
+  }, [activeChat, user._id]);
+
+  const isOnline = useMemo(() => {
+    if (!otherUser?.lastActive) return false;
+    return new Date() - new Date(otherUser.lastActive) < 5 * 60 * 1000;
+  }, [otherUser]);
+
+  // Shared Attachments & Offers in Current Chat
+  const sharedMedia = useMemo(() => {
+    const list = [];
+    messages.forEach(msg => {
+      if (Array.isArray(msg.attachments)) {
+        msg.attachments.forEach(att => {
+          const a = typeof att === 'string' ? { url: att, name: 'Attachment' } : att;
+          const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
+          list.push({ ...a, isImg });
+        });
+      }
+    });
+    return list;
+  }, [messages]);
+
+  // Filter messages by chat search if active
+  const displayedMessages = useMemo(() => {
+    if (!chatSearch.trim()) return messages;
+    return messages.filter(m => (m.content || '').toLowerCase().includes(chatSearch.toLowerCase()));
+  }, [messages, chatSearch]);
+
+  if (loading) {
+    return <Loader text="Loading conversations..." fullScreen={true} />;
+  }
 
   return (
-    <div className="fl-messages-page">
-      <div className="fl-page-header">
-        <h1 className="fl-page-title">Direct Messages</h1>
-        <p className="fl-page-sub">Communicate with your clients and agencies.</p>
-      </div>
+    <div className="flm-page">
+      {/* Fullscreen Edge-to-Edge Workspace */}
+      <div className={`flm-workspace ${activeChat ? 'flm-workspace--chat-active' : ''}`}>
+        
+        {/* ============================================================
+            PANE 1: CONVERSATIONS LIST
+            ============================================================ */}
+        <aside className="flm-pane-convos" aria-label="Conversations List">
+          <div className="flm-convos-header">
+            <div className="flm-convos-title-row">
+              <h1 className="flm-convos-title">
+                Messages
+                {totalUnreadCount > 0 && (
+                  <span className="flm-total-unread-badge" title={`${totalUnreadCount} unread message${totalUnreadCount > 1 ? 's' : ''}`}>
+                    {totalUnreadCount}
+                  </span>
+                )}
+              </h1>
+            </div>
 
-      <div className={`fl-messages-layout animate-fade-in${activeChat ? ' fl-messages-layout--chat-open' : ''}`}>
-        {/* Chat List */}
-        <aside className="fl-chat-list">
-          <div className="fl-chat-list__search">
-            <input
-              type="text"
-              placeholder="Search chats..."
-              className="fl-input fl-input--sm"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="fl-chat-list__items">
-            {error && (
-              <div style={{ padding: '1rem', fontSize: '0.8rem', color: 'var(--color-error)', textAlign: 'center' }}>
-                {error} <button onClick={fetchConversations} style={{ display: 'block', margin: '0.5rem auto 0', textDecoration: 'underline' }}>Retry</button>
-              </div>
-            )}
-            {!error && filteredConversations.length === 0 && (
-              <div style={{ padding: '2rem 1rem', fontSize: '0.82rem', color: 'var(--color-text-light)', textAlign: 'center' }}>
-                {search ? 'No chats match your search.' : 'No conversations yet.'}
-              </div>
-            )}
-            {filteredConversations.map(chat => {
-              const otherUser = chat.participants.find(p => p._id !== user._id);
-              const unread = chat.unreadCount?.[user._id] || 0;
-              return (
-                <div 
-                  key={chat._id} 
-                  className={`fl-chat-item${activeChat?._id === chat._id ? ' fl-chat-item--active' : ''}`}
-                  onClick={() => setActiveChat(chat)}
+            {/* Search Input */}
+            <div className="flm-search-wrap">
+              <Search size={15} className="flm-search-icon" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                className="flm-search-input"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                aria-label="Search conversations"
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="flm-search-clear"
+                  onClick={() => setSearch('')}
+                  aria-label="Clear search"
                 >
-                  <div className="fl-chat-item__avatar">
-                    {otherUser?.profilePicture ? (
-                      <img src={otherUser.profilePicture} alt="" loading="lazy" />
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Tabs (All / Unread) */}
+            <div className="flm-filter-tabs">
+              <button
+                type="button"
+                className={`flm-filter-tab ${filterTab === 'all' ? 'flm-filter-tab--active' : ''}`}
+                onClick={() => setFilterTab('all')}
+              >
+                All <span className="flm-tab-count">({conversations.length})</span>
+              </button>
+              <button
+                type="button"
+                className={`flm-filter-tab ${filterTab === 'unread' ? 'flm-filter-tab--active' : ''}`}
+                onClick={() => setFilterTab('unread')}
+              >
+                Unread {totalUnreadCount > 0 && <span className="flm-tab-count">({totalUnreadCount})</span>}
+              </button>
+            </div>
+          </div>
+
+          {/* Conversations Scroll List */}
+          <div className="flm-convos-list" role="list">
+            {error && (
+              <div className="flm-list-error">
+                {error}
+                <button type="button" className="flm-retry-btn" onClick={fetchConversations}>
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!error && filteredConversations.length === 0 && (
+              <div className="flm-list-empty">
+                <MessageSquare size={24} style={{ opacity: 0.4 }} />
+                <span>{search ? 'No conversations match your search.' : 'No conversations yet.'}</span>
+              </div>
+            )}
+
+            {filteredConversations.map(chat => {
+              const chatOther = chat.participants.find(p => p._id !== user._id);
+              const unread = chat.unreadCount?.[user._id] || 0;
+              const isActive = activeChat?._id === chat._id;
+              const online = chatOther?.lastActive && (new Date() - new Date(chatOther.lastActive) < 5 * 60 * 1000);
+
+              return (
+                <div
+                  key={chat._id}
+                  role="listitem"
+                  tabIndex={0}
+                  className={`flm-convo-row ${isActive ? 'flm-convo-row--active' : ''} ${unread > 0 ? 'flm-convo-row--unread' : ''}`}
+                  onClick={() => setActiveChat(chat)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveChat(chat);
+                    }
+                  }}
+                >
+                  <div className="flm-avatar-wrap">
+                    {chatOther?.profilePicture ? (
+                      <img src={chatOther.profilePicture} alt="" className="flm-avatar-img" loading="lazy" />
                     ) : (
-                      <span>{otherUser?.firstName?.charAt(0)}</span>
+                      <div className="flm-avatar-fallback">
+                        {chatOther?.firstName?.charAt(0) || '?'}
+                      </div>
                     )}
+                    {online && <span className="flm-online-dot" title="Active now" />}
                   </div>
-                  <div className="fl-chat-item__info">
-                    <div className="fl-chat-item__top">
-                      <h4 className="fl-chat-item__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
-                      <span className="fl-chat-item__time">
-                        {chat.lastMessage ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+
+                  <div className="flm-convo-content">
+                    <div className="flm-convo-top">
+                      <h4 className="flm-convo-name">
+                        {chatOther?.firstName} {chatOther?.lastName}
+                      </h4>
+                      <span className="flm-convo-time">
+                        {formatChatTime(chat.lastMessage?.createdAt || chat.updatedAt)}
                       </span>
                     </div>
-                    <p className="fl-chat-item__last-msg">{chat.lastMessage?.content || 'No messages yet'}</p>
+
+                    <div className="flm-convo-bottom">
+                      <p className="flm-convo-last-msg">
+                        {chat.lastMessage?.content || 'No messages yet'}
+                      </p>
+                      {unread > 0 && (
+                        <span className="flm-unread-pill" aria-label={`${unread} unread`}>
+                          {unread}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {unread > 0 && <span className="fl-chat-item__unread">{unread}</span>}
                 </div>
               );
             })}
           </div>
         </aside>
 
-        {/* Chat window */}
-        <main className="fl-chat-window">
+        {/* ============================================================
+            PANE 2: ACTIVE CHAT WINDOW
+            ============================================================ */}
+        <main className="flm-pane-chat" aria-label="Chat Conversation">
           {activeChat ? (
             <>
-              {/* Chat Header */}
-              <header className="fl-chat-window__header">
-                {(() => {
-                  const otherUser = activeChat.participants.find(p => p._id !== user._id);
-                  const isOnline = otherUser?.lastActive && (new Date() - new Date(otherUser.lastActive) < 5 * 60 * 1000);
-                  
-                  return (
-                    <>
-                      <button className="fl-chat-back" onClick={() => setActiveChat(null)} aria-label="Back to conversations">‹</button>
-                      <div className="fl-chat-window__avatar">
-                        {otherUser?.profilePicture ? (
-                          <img src={otherUser.profilePicture} alt="" />
-                        ) : (
-                          <span>{otherUser?.firstName?.charAt(0)}</span>
-                        )}
-                        {isOnline && <div className="fl-chat-status-dot active"></div>}
-                      </div>
-                      <div>
-                        <h4 className="fl-chat-window__name">{otherUser?.firstName} {otherUser?.lastName}</h4>
-                        <span className="fl-chat-window__status">
-                          {isOnline ? 'Active' : 'Offline'}
-                        </span>
-                      </div>
-                      {otherUser?.role === 'client' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="co-header-btn"
-                          icon={<Package size={14} />}
-                          onClick={() => setShowOfferModal(true)}
-                          title="Send a custom offer"
-                        >
-                          Send Custom Offer
-                        </Button>
-                      )}
-                    </>
-                  );
-                })()}
-              </header>
+              {/* Header */}
+              <header className="flm-chat-header">
+                <div className="flm-chat-header-left">
+                  <button
+                    type="button"
+                    className="flm-back-btn"
+                    onClick={() => setActiveChat(null)}
+                    aria-label="Back to conversations list"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
 
-              {/* Messages Feed */}
-              <div className="fl-chat-feed" ref={chatFeedRef} onScroll={handleFeedScroll}>
-                {messages.map(msg => msg.type === 'custom_offer' ? (
-                  <div key={msg._id} className={`fl-msg co-msg${msg.sender._id === user._id ? ' fl-msg--own co-msg--own' : ''}`}>
-                    <CustomOfferCard
-                      offer={msg.customOfferId}
-                      viewerRole="freelancer"
-                      busy={offerBusy}
-                      onWithdraw={setWithdrawTarget}
-                    />
-                    <span className="co-msg__time">
-                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flm-avatar-wrap" style={{ width: 40, height: 40 }}>
+                    {otherUser?.profilePicture ? (
+                      <img src={otherUser.profilePicture} alt="" className="flm-avatar-img" />
+                    ) : (
+                      <div className="flm-avatar-fallback" style={{ fontSize: 14 }}>
+                        {otherUser?.firstName?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    {isOnline && <span className="flm-online-dot" />}
+                  </div>
+
+                  <div className="flm-header-user-info">
+                    <div className="flm-header-name-row">
+                      <h2 className="flm-header-name">
+                        {otherUser?.firstName} {otherUser?.lastName}
+                      </h2>
+                      {otherUser?.role && (
+                        <span className={`flm-role-pill flm-role-pill--${otherUser.role}`}>
+                          {otherUser.role}
+                        </span>
+                      )}
+                    </div>
+                    <span className="flm-header-status">
+                      <span className={`flm-status-dot-inline ${isOnline ? 'flm-status-dot-inline--active' : ''}`} />
+                      {isOnline ? 'Active now' : 'Offline'}
                     </span>
                   </div>
-                ) : (
-                  <div key={msg._id} className={`fl-msg${msg.sender._id === user._id ? ' fl-msg--own' : ''}`}>
-                    <div className="fl-msg__bubble">
-                      {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-                        <div className="fl-msg__attachments">
-                          {msg.attachments.map((att, i) => {
-                            const a = typeof att === 'string' ? { url: att, name: 'Attachment' } : att;
-                            const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
-                            return isImg ? (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
-                                <img src={a.url} alt={a.name} className="fl-msg__att-img" loading="lazy" />
-                              </a>
-                            ) : (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="fl-msg__att-file" onClick={(e) => { e.preventDefault(); openExternal(a.url); }}>
-                                <FileText size={14} style={{ marginRight: '4px' }} /> {a.name || 'Document'}
-                              </a>
-                            );
-                          })}
+                </div>
+
+                {/* Header Actions */}
+                <div className="flm-chat-header-actions">
+                  {otherUser?.role === 'client' && (
+                    <button
+                      type="button"
+                      className="flm-send-offer-btn"
+                      onClick={() => setShowOfferModal(true)}
+                      title="Send a custom offer"
+                    >
+                      <Package size={14} />
+                      <span>Send Offer</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`flm-header-icon-btn ${showChatSearch ? 'flm-header-icon-btn--active' : ''}`}
+                    onClick={() => {
+                      setShowChatSearch(prev => !prev);
+                      if (showChatSearch) setChatSearch('');
+                    }}
+                    title="Search messages in this chat"
+                    aria-label="Search messages"
+                  >
+                    <Search size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`flm-header-icon-btn ${showDetails ? 'flm-header-icon-btn--active' : ''}`}
+                    onClick={() => setShowDetails(prev => !prev)}
+                    title={showDetails ? 'Hide conversation details' : 'View conversation details'}
+                    aria-label="Toggle details pane"
+                  >
+                    <PanelRight size={17} />
+                  </button>
+                </div>
+              </header>
+
+              {/* In-Chat Search Bar */}
+              {showChatSearch && (
+                <div className="flm-inchat-search">
+                  <Search size={14} style={{ color: '#94A3B8' }} />
+                  <input
+                    type="text"
+                    placeholder="Search messages in this conversation..."
+                    value={chatSearch}
+                    onChange={e => setChatSearch(e.target.value)}
+                    className="flm-inchat-search-input"
+                    autoFocus
+                  />
+                  {chatSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setChatSearch('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
+                      aria-label="Clear chat search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Message Feed Area */}
+              <div
+                className="flm-chat-feed"
+                ref={chatFeedRef}
+                onScroll={handleFeedScroll}
+                role="log"
+                aria-live="polite"
+              >
+                {displayedMessages.map((msg, index) => {
+                  const isSent = msg.sender?._id === user._id;
+                  const prevMsg = displayedMessages[index - 1];
+                  const showDateDivider = !prevMsg || formatMessageDate(msg.createdAt) !== formatMessageDate(prevMsg.createdAt);
+                  const isReadByOther = Array.isArray(msg.readBy) && otherUser && msg.readBy.some(id => String(id) === String(otherUser._id));
+
+                  return (
+                    <div key={msg._id} style={{ display: 'flex', flexDirection: 'column' }}>
+                      {/* Date Divider Pill */}
+                      {showDateDivider && (
+                        <div className="flm-date-divider">
+                          <span className="flm-date-pill">
+                            {formatMessageDate(msg.createdAt)}
+                          </span>
                         </div>
                       )}
-                      {msg.content}
-                      <span className="fl-msg__time">
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+
+                      {/* Custom Offer Card Message */}
+                      {msg.type === 'custom_offer' ? (
+                        <div className={`flm-offer-msg ${isSent ? 'flm-offer-msg--own' : ''}`}>
+                          <CustomOfferCard
+                            offer={msg.customOfferId}
+                            viewerRole="freelancer"
+                            busy={offerBusy}
+                            onWithdraw={setWithdrawTarget}
+                          />
+                          <div className={`flm-msg-meta ${isSent ? 'flm-msg-meta--sent' : 'flm-msg-meta--received'}`}>
+                            <span>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isSent && (
+                              isReadByOther ? (
+                                <CheckCheck size={14} className="flm-tick-read" title="Seen" />
+                              ) : (
+                                <Check size={13} className="flm-tick-sent" title="Sent" />
+                              )
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Standard Message Bubble */
+                        <div className={`flm-msg-row ${isSent ? 'flm-msg-row--sent' : 'flm-msg-row--received'}`}>
+                          {!isSent && (
+                            <div className="flm-msg-sender-avatar">
+                              {otherUser?.profilePicture ? (
+                                <img src={otherUser.profilePicture} alt="" />
+                              ) : (
+                                <div className="flm-msg-sender-avatar-fallback">
+                                  {otherUser?.firstName?.charAt(0) || '?'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flm-msg-bubble-wrap">
+                            <div className={isSent ? 'flm-msg-bubble--sent' : 'flm-msg-bubble--received'}>
+                              {/* Attachments */}
+                              {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                                <div className="flm-attachments-list">
+                                  {msg.attachments.map((att, i) => {
+                                    const a = typeof att === 'string' ? { url: att, name: 'Attachment' } : att;
+                                    const isImg = /\.(png|jpe?g|webp|gif)$/i.test(a.url || '') || (a.mimeType || '').startsWith('image/');
+
+                                    return isImg ? (
+                                      <div
+                                        key={i}
+                                        className="flm-att-img-wrap"
+                                        onClick={() => setLightboxImg(a.url)}
+                                        title="Click to view full image"
+                                      >
+                                        <img src={a.url} alt={a.name} className="flm-att-img" loading="lazy" />
+                                      </div>
+                                    ) : (
+                                      <a
+                                        key={i}
+                                        href={a.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flm-att-file-pill"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          openExternal(a.url);
+                                        }}
+                                      >
+                                        <FileText size={15} style={{ flexShrink: 0 }} />
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {a.name || 'Document'}
+                                        </span>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Message Text Content */}
+                              {msg.content}
+                            </div>
+
+                            {/* Timestamp & Read Tick */}
+                            <div className={`flm-msg-meta ${isSent ? 'flm-msg-meta--sent' : 'flm-msg-meta--received'}`}>
+                              <span>
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {isSent && (
+                                isReadByOther ? (
+                                  <CheckCheck size={14} className="flm-tick-read" title="Seen" />
+                                ) : (
+                                  <Check size={13} className="flm-tick-sent" title="Sent" />
+                                )
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {/* Message Input */}
-              <form className="fl-chat-input" onSubmit={handleSendMessage}>
+              {/* Scroll to bottom button */}
+              {showScrollBottom && (
+                <button
+                  type="button"
+                  className="flm-scroll-bottom-btn"
+                  onClick={scrollToBottom}
+                  aria-label="Scroll to newest messages"
+                  title="Scroll to bottom"
+                >
+                  <ChevronDown size={18} />
+                </button>
+              )}
+
+              {/* Message Composer Bar */}
+              <form className="flm-composer-bar" onSubmit={handleSendMessage}>
                 <ImageSourcePicker
                   ref={fileRef}
                   accept="image/*,.pdf,.doc,.docx"
                   onChange={handleAttach}
                 />
+                
                 <button
                   type="button"
-                  className="fl-chat-input__attach"
+                  className="flm-attach-btn"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  title="Attach a file"
+                  title="Attach file or image"
+                  aria-label="Attach file"
                 >
-                  {uploading ? <Loader2 size={18} className="spin" /> : <Paperclip size={18} />}
+                  {uploading ? <Loader size="sm" text="" /> : <Paperclip size={18} />}
                 </button>
-                <input
-                  type="text"
-                  placeholder="Start typing..."
-                  value={msgInput}
-                  onChange={e => setMsgInput(e.target.value)}
-                  className="fl-input"
-                />
-                <button className="fl-btn fl-btn--primary">Send</button>
+
+                <div className="flm-textarea-wrap">
+                  <textarea
+                    ref={textareaRef}
+                    placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                    value={msgInput}
+                    onChange={e => setMsgInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="flm-textarea"
+                    rows={1}
+                    aria-label="Type message"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="flm-send-btn"
+                  disabled={!msgInput.trim()}
+                  title="Send message"
+                  aria-label="Send message"
+                >
+                  <Send size={16} />
+                </button>
               </form>
             </>
           ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-secondary)' }}>
-              <EmptyState 
-                icon={MessageSquare}
-                title="Your Messages"
-                message="Select a conversation from the sidebar to start chatting."
-              />
+            /* Empty State when no conversation is selected */
+            <div className="flm-chat-empty-center">
+              <div className="flm-empty-card">
+                <div className="flm-empty-icon-wrap">
+                  <MessageSquare size={30} />
+                </div>
+                <h3 className="flm-empty-title">Select a Conversation</h3>
+                <p className="flm-empty-desc">
+                  Choose a chat from the left sidebar to start messaging your clients or review project updates.
+                </p>
+              </div>
             </div>
           )}
         </main>
+
+        {/* ============================================================
+            PANE 3: CONVERSATION DETAILS (Right, Collapsible)
+            ============================================================ */}
+        {showDetails && activeChat && otherUser && (
+          <aside className="flm-pane-details" aria-label="Conversation Details">
+            <div className="flm-details-header">
+              <h3 className="flm-details-title">Details</h3>
+              <button
+                type="button"
+                className="flm-details-close-btn"
+                onClick={() => setShowDetails(false)}
+                aria-label="Close details pane"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flm-details-content">
+              {/* User Profile Card */}
+              <div className="flm-details-user-card">
+                <div className="flm-details-avatar">
+                  {otherUser?.profilePicture ? (
+                    <img src={otherUser.profilePicture} alt="" />
+                  ) : (
+                    <div className="flm-details-avatar-fallback">
+                      {otherUser?.firstName?.charAt(0) || '?'}
+                    </div>
+                  )}
+                  {isOnline && <span className="flm-online-dot" />}
+                </div>
+
+                <h4 className="flm-details-user-name">
+                  {otherUser?.firstName} {otherUser?.lastName}
+                </h4>
+
+                <span className="flm-details-online-status">
+                  <span className={`flm-status-dot-inline ${isOnline ? 'flm-status-dot-inline--active' : ''}`} />
+                  {isOnline ? 'Active now' : 'Offline'}
+                </span>
+
+                <a
+                  href={`/clients/${otherUser._id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flm-details-profile-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openExternal(`/clients/${otherUser._id}`);
+                  }}
+                >
+                  <User size={13} />
+                  <span>View Public Profile</span>
+                </a>
+              </div>
+
+              {/* Shared Files & Media */}
+              <div className="flm-details-section">
+                <h4 className="flm-details-sec-title">
+                  Shared Media ({sharedMedia.filter(m => m.isImg).length})
+                </h4>
+                {sharedMedia.filter(m => m.isImg).length > 0 ? (
+                  <div className="flm-details-media-grid">
+                    {sharedMedia.filter(m => m.isImg).slice(0, 6).map((img, idx) => (
+                      <div
+                        key={idx}
+                        className="flm-details-media-thumb"
+                        onClick={() => setLightboxImg(img.url)}
+                      >
+                        <img src={img.url} alt="" loading="lazy" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
+                    No media shared yet.
+                  </span>
+                )}
+              </div>
+
+              <div className="flm-details-section">
+                <h4 className="flm-details-sec-title">
+                  Shared Files ({sharedMedia.filter(m => !m.isImg).length})
+                </h4>
+                {sharedMedia.filter(m => !m.isImg).length > 0 ? (
+                  <div className="flm-details-files-list">
+                    {sharedMedia.filter(m => !m.isImg).slice(0, 5).map((file, idx) => (
+                      <a
+                        key={idx}
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flm-details-file-item"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openExternal(file.url);
+                        }}
+                      >
+                        <FileText size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+                        <span className="flm-details-file-name">{file.name || 'Document'}</span>
+                        <Download size={12} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
+                    No files shared yet.
+                  </span>
+                )}
+              </div>
+            </div>
+          </aside>
+        )}
       </div>
 
+      {/* Lightbox Modal for Image Attachments */}
+      {lightboxImg && (
+        <div
+          className="flm-lightbox-backdrop"
+          onClick={() => setLightboxImg(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="flm-lightbox-content" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              className="flm-lightbox-close"
+              onClick={() => setLightboxImg(null)}
+              aria-label="Close image lightbox"
+            >
+              <X size={18} />
+            </button>
+            <img src={lightboxImg} alt="Attachment Full View" className="flm-lightbox-img" />
+          </div>
+        </div>
+      )}
+
+      {/* Custom Offer Modal */}
       <SendOfferModal
         open={showOfferModal}
         conversationId={activeChat?._id}
@@ -354,6 +892,7 @@ const FreelancerMessages = () => {
         onClose={() => setShowOfferModal(false)}
       />
 
+      {/* Withdraw Offer Confirmation Modal */}
       <ConfirmDialog
         open={!!withdrawTarget}
         title="Withdraw this offer?"
@@ -364,141 +903,6 @@ const FreelancerMessages = () => {
         onConfirm={confirmWithdraw}
         onClose={() => setWithdrawTarget(null)}
       />
-
-      <style>{`
-        .fl-messages-layout {
-          display: flex;
-          height: calc(100vh - 250px);
-          min-height: 500px;
-          background: var(--color-white);
-          border-radius: 16px;
-          border: 1px solid rgba(183, 201, 226, 0.35);
-          box-shadow: 0 4px 20px rgba(4,46,76,0.06);
-          overflow: hidden;
-        }
-
-        .fl-chat-list {
-          width: 320px; border-right: 1px solid rgba(183, 201, 226, 0.35); background: var(--color-secondary);
-          display: flex; flex-direction: column;
-        }
-        .fl-chat-list__search { padding: 1rem; border-bottom: 1px solid rgba(183, 201, 226, 0.25); }
-        .fl-chat-list__items { flex: 1; overflow-y: auto; }
-        .fl-chat-item {
-          display: flex; align-items: center; gap: 0.75rem; padding: 1rem;
-          cursor: pointer; border-bottom: 1px solid rgba(183, 201, 226, 0.2); position: relative;
-        }
-        .fl-chat-item:hover { background: rgba(183, 201, 226, 0.15); }
-        .fl-chat-item--active { background: var(--color-white) !important; }
-        .fl-chat-item__avatar {
-          width: 42px; height: 42px; border-radius: 50%;
-          background: var(--gradient-primary); color: var(--color-white);
-          display: flex; align-items: center; justify-content: center;
-          font-weight: 700; position: relative; flex-shrink: 0;
-          overflow: hidden;
-        }
-        .fl-chat-item__avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .fl-chat-item__online {
-          position: absolute; bottom: 2px; right: -2px; width: 10px; height: 10px;
-          border-radius: 50%; background: var(--color-success); border: 2px solid var(--color-white);
-        }
-        .fl-chat-item__info { min-width: 0; flex: 1; }
-        .fl-chat-item__top { display: flex; justify-content: space-between; align-items: center; }
-        .fl-chat-item__name { font-size: 0.875rem; font-weight: 700; color: var(--color-primary); }
-        .fl-chat-item__time { font-size: 0.7rem; color: var(--color-text-light); }
-        .fl-chat-item__last-msg {
-          font-size: 0.75rem; color: var(--color-text-mid); font-weight: 500;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
-        }
-        .fl-chat-item__unread {
-          min-width: 18px; padding: 0 5px; height: 18px; background: var(--color-error); color: var(--color-white);
-          font-size: 0.65rem; font-weight: 800; border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-        }
-
-        .fl-chat-window { flex: 1; display: flex; flex-direction: column; background: var(--color-white); }
-        .fl-chat-window__header { padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(183, 201, 226, 0.35); display: flex; align-items: center; gap: 0.85rem; }
-        .fl-chat-window__avatar {
-          width: 45px; height: 45px; border-radius: 50%; background: rgba(183, 201, 226, 0.35);
-          display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary);
-          position: relative;
-        }
-        .fl-chat-window__avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-
-        .fl-chat-status-dot {
-          position: absolute;
-          bottom: 0;
-          right: 0;
-          width: 12px;
-          height: 12px;
-          background-color: var(--color-text-light);
-          border: 2px solid var(--color-white);
-          border-radius: 50%;
-        }
-        .fl-chat-status-dot.active { background-color: var(--color-success); }
-        .fl-chat-window__online {
-          position: absolute; bottom: 0; right: -2px; width: 8px; height: 8px;
-          border-radius: 50%; background: var(--color-success); border: 2px solid var(--color-white);
-        }
-        .fl-chat-window__name { font-size: 0.95rem; font-weight: 700; color: var(--color-primary); }
-        .fl-chat-window__status { font-size: 0.72rem; color: var(--color-text-mid); font-weight: 500; }
-        .fl-chat-window__actions { margin-left: auto; display: flex; gap: 0.5rem; }
-
-        .fl-chat-feed { flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; background: var(--color-secondary); }
-        .fl-msg { display: flex; max-width: 75%; }
-        .fl-msg--own { align-self: flex-end; }
-        .fl-msg__bubble {
-          padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.875rem; background: var(--color-white);
-          color: var(--color-text-dark); border: 1px solid rgba(183, 201, 226, 0.35); position: relative;
-          box-shadow: 0 2px 6px rgba(4, 46, 76, 0.05);
-        }
-        .fl-msg--own .fl-msg__bubble {
-          background: var(--color-primary); color: var(--color-white); border: none;
-        }
-        .fl-msg__time {
-          display: block; font-size: 0.65rem; margin-top: 0.4rem; opacity: 0.7; font-weight: 600;
-        }
-
-        .fl-chat-input { padding: 1rem; border-top: 1px solid rgba(183, 201, 226, 0.35); display: flex; align-items: center; gap: 0.75rem; }
-        .fl-chat-input__attach { background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--color-text-mid); }
-        .fl-chat-input__attach:disabled { cursor: wait; }
-        .fl-msg__attachments { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.4rem; }
-        .fl-msg__att-img { max-width: 200px; max-height: 200px; border-radius: 8px; display: block; }
-        .fl-msg__att-file {
-          display: inline-block; padding: 0.4rem 0.7rem; background: rgba(4, 46, 76, 0.06);
-          border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: inherit;
-        }
-        .fl-msg--own .fl-msg__att-file { background: rgba(255,255,255,0.2); }
-
-        /* Mobile back button — hidden on desktop (two-pane view). */
-        .fl-chat-back {
-          display: none;
-          background: none; border: none; cursor: pointer;
-          font-size: 1.75rem; line-height: 1; color: var(--color-primary);
-          padding: 0 0.25rem; margin-right: 0.25rem;
-        }
-
-        /* ── Mobile: single-pane messenger ──────────────────────────
-           The desktop layout is a fixed 320px list + flexible chat window. On
-           phones that squeezes the chat window off-screen. Instead show ONE pane
-           at a time: the conversation list by default, and the chat window
-           full-width once a chat is open (toggled by --chat-open + a back button). */
-        @media (max-width: 768px) {
-          .fl-messages-layout {
-            height: calc(100vh - 190px);
-            min-height: 420px;
-          }
-          .fl-chat-list {
-            width: 100%;
-            border-right: none;
-          }
-          .fl-chat-window { display: none; }
-          .fl-chat-back { display: block; }
-
-          /* When a chat is open, swap: hide the list, show the window full-width. */
-          .fl-messages-layout--chat-open .fl-chat-list { display: none; }
-          .fl-messages-layout--chat-open .fl-chat-window { display: flex; }
-        }
-      `}</style>
     </div>
   );
 };

@@ -2,11 +2,11 @@ import { useEffect, useRef, lazy, Suspense } from 'react';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import ScrollToTop from "./Components/common/ScrollToTop/ScrollToTop";
 import BuddyWidget from "./Components/common/BuddyWidget/BuddyWidget";
-import NotificationBell from "./Components/common/NotificationBell/NotificationBell";
 import CookieConsent from "./Components/common/CookieConsent/CookieConsent";
 import NetworkGate from "./Components/common/NetworkGate/NetworkGate";
 import MobileBootScreen from "./Components/common/MobileBootScreen/MobileBootScreen";
 import Loader from "./Components/common/Loader/Loader";
+import ToastContainer from "./Components/common/Toast/ToastContainer";
 import { useAuth } from './hooks/useAuth';
 import useAndroidBackButton from './hooks/useAndroidBackButton';
 import usePushNotifications from './hooks/usePushNotifications';
@@ -60,11 +60,11 @@ function App() {
     <NetworkGate>
       {user?.isBlocked && <SuspendedOverlay reason={user.blockedReason} onLogout={() => logout()} />}
       <ScrollToTop />
-      <Suspense fallback={<Loader fullScreen text="Loading..." />}>
+      <ToastContainer />
+      <Suspense fallback={<Loader fullScreen text="Loading" />}>
         {isAdminApp() ? <AdminAppRoutes /> : <AppRoutes />}
       </Suspense>
       <BuddyWidget />
-      <NotificationBell />
       {/* Web-only: cookies/localStorage consent isn't a meaningful concept
           inside the Capacitor WebView the same way, and the mobile build
           already omits the marketing/legal pages this links to. */}

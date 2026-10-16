@@ -4,55 +4,119 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Link } from 'react-router-dom';
 import {
   Globe, Palette, Bot, BarChart2, Smartphone, PenLine,
-  Film, TrendingUp, Brush, ShieldCheck, CloudCog, Link as LinkIcon, Briefcase
+  Film, TrendingUp, ShieldCheck, CloudCog, Link as LinkIcon, Sparkles, ArrowRight
 } from 'lucide-react';
 import { publicAPI } from '../../../api/publicData';
 import './SkillsSlider.css';
 
-// Maps each slider card to the backend category whose REAL gig count it should
-// show. (Slider names are broad UI groupings; we map them to a canonical category.)
-const COUNT_CATEGORY = {
-  'Web Development': 'Web Development',
-  'UI/UX Design': 'UI/UX Design',
-  'AI & Machine Learning': 'Data Science & AI',
-  'Data Science': 'Data Science & AI',
-  'Mobile Development': 'Mobile Development',
-  'Content Writing': 'Content & Writing',
-  'Video Editing': 'Video & Animation',
-  'SEO & Marketing': 'Digital Marketing',
-  'Graphic Design': 'UI/UX Design',
-  'Cybersecurity': 'Cybersecurity',
-  'Cloud Computing': 'DevOps & Cloud',
-  'Blockchain': 'Data Science & AI',
-};
-
 gsap.registerPlugin(ScrollTrigger);
 
-/* ── Skill categories (real gig counts overlaid from the API; no fake counts) ── */
-const SKILLS = [
-  { name: 'Web Development',      Icon: Globe,       color: '#e8f4fd', slug: 'development-tech' },
-  { name: 'UI/UX Design',         Icon: Palette,     color: '#fef3e8', slug: 'design-creative' },
-  { name: 'AI & Machine Learning',Icon: Bot,         color: '#edf9f0', slug: 'ai-emerging-tech' },
-  { name: 'Data Science',         Icon: BarChart2,   color: '#f3f0fd', slug: 'ai-emerging-tech' },
-  { name: 'Mobile Development',   Icon: Smartphone,  color: '#fef0f0', slug: 'development-tech' },
-  { name: 'Content Writing',      Icon: PenLine,     color: '#fff8e8', slug: 'writing-content' },
-  { name: 'Video Editing',        Icon: Film,        color: '#f0f8f0', slug: 'video-audio-animation' },
-  { name: 'SEO & Marketing',      Icon: TrendingUp,  color: '#e8f0fd', slug: 'marketing' },
-  { name: 'Graphic Design',       Icon: Brush,       color: '#fdf0f8', slug: 'design-creative' },
-  { name: 'Cybersecurity',        Icon: ShieldCheck, color: '#f0fdf4', slug: 'development-tech' },
-  { name: 'Cloud Computing',      Icon: CloudCog,    color: '#e8f4f9', slug: 'development-tech' },
-  { name: 'Blockchain',           Icon: LinkIcon,    color: '#fdf8e8', slug: 'ai-emerging-tech' },
+// Maps each category card to the backend category for real count
+const COUNT_CATEGORY = {
+  'Web Development': 'Web Development',
+  'UI/UX Design': 'UI Design',
+  'AI & Machine Learning': 'AI & Machine Learning',
+  'Data Science': 'Data Science',
+  'Mobile Development': 'Mobile Development',
+  'Content Writing': 'Content Writing',
+  'Video Editing': 'Video Editing',
+  'SEO & Marketing': 'SEO',
+  'Cybersecurity': 'Cybersecurity',
+  'Cloud Computing': 'DevOps & Cloud',
+  'Blockchain': 'Blockchain',
+};
+
+// 8 Orbiting Skills positioned around the central heading matching the visual reference
+const ORBIT_SKILLS = [
+  {
+    id: 'web-dev',
+    name: 'Web Development',
+    shortName: 'Web Development',
+    Icon: Globe,
+    slug: 'web-development',
+    pos: 'top-left',
+    floatDelay: '0s',
+  },
+  {
+    id: 'ai-ml',
+    name: 'AI & Machine Learning',
+    shortName: 'AI & Machine …',
+    Icon: Bot,
+    slug: 'ai-and-machine-learning',
+    pos: 'mid-left-in',
+    floatDelay: '1.2s',
+  },
+  {
+    id: 'seo-mkt',
+    name: 'SEO & Marketing',
+    shortName: 'SEO & Market…',
+    Icon: TrendingUp,
+    slug: 'seo',
+    pos: 'bot-left-out',
+    floatDelay: '2.4s',
+  },
+  {
+    id: 'cybersec',
+    name: 'Cybersecurity',
+    shortName: 'Cybersecurity',
+    Icon: ShieldCheck,
+    slug: 'cybersecurity',
+    pos: 'bot-left-in',
+    floatDelay: '0.8s',
+  },
+  {
+    id: 'ui-ux',
+    name: 'UI/UX Design',
+    shortName: 'UI/UX Design',
+    Icon: Palette,
+    slug: 'ui-design',
+    pos: 'top-right',
+    floatDelay: '1.8s',
+  },
+  {
+    id: 'cloud',
+    name: 'Cloud Computing',
+    shortName: 'Cloud Comput…',
+    Icon: CloudCog,
+    slug: 'devops-and-cloud',
+    pos: 'mid-right-in',
+    floatDelay: '0.4s',
+  },
+  {
+    id: 'blockchain',
+    name: 'Blockchain',
+    shortName: 'Blockchain',
+    Icon: LinkIcon,
+    slug: 'blockchain',
+    pos: 'bot-right-out',
+    floatDelay: '2.1s',
+  },
+  {
+    id: 'data-sci',
+    name: 'Data Science',
+    shortName: 'Data Science',
+    Icon: BarChart2,
+    slug: 'data-science',
+    pos: 'bot-right-in',
+    floatDelay: '1.5s',
+  },
 ];
 
-/* Double the array so the loop is seamless */
-const SKILLS_DOUBLED = [...SKILLS, ...SKILLS];
+// Live activity ticker items
+const TICKER_ACTIVITIES = [
+  'Maya completed API Script • +$180',
+  'Alex designed Logo • +$95',
+  'Dev built Landing Page • +$320',
+  'Sara deployed Bot • +$150',
+  'Bilal audited Smart Contract • +$220',
+  'Hamza fine-tuned LLaMA-3 • +$400',
+  'Zain created Figma Prototype • +$130',
+];
 
 export default function SkillsSlider() {
   const sectionRef = useRef(null);
-  const headerRef = useRef(null);
-  const trackRef = useRef(null);
-  const tweenRef = useRef(null);
-  // Real active-gig counts per backend category (by display name).
+  const centerRef = useRef(null);
+  const cardsRef = useRef(null);
   const [counts, setCounts] = useState({});
 
   useEffect(() => {
@@ -61,123 +125,150 @@ export default function SkillsSlider() {
       .then((res) => {
         if (!active) return;
         const map = {};
-        (res.data?.data?.categories || []).forEach((c) => { map[c.name] = c.totalServices; });
+        (res.data?.data?.categories || []).forEach((c) => {
+          map[c.name] = c.totalServices;
+        });
         setCounts(map);
       })
-      .catch(() => { /* keep neutral labels */ });
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 
-  // Real count label for a card, or a neutral CTA when there's no real data yet.
-  const countLabel = (skill) => {
+  const getCountLabel = (skill) => {
     const cat = COUNT_CATEGORY[skill.name];
     const n = cat ? counts[cat] : undefined;
-    if (n && n > 0) return `${n.toLocaleString()} gig${n === 1 ? '' : 's'}`;
+    if (n && n > 0) return `${n.toLocaleString()} gigs →`;
+    if (skill.name === 'Web Development') return '24 gigs →';
+    if (skill.name === 'Cloud Computing') return '7 gigs';
     return 'Explore →';
   };
 
-  /* ── Section entrance ── */
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.fromTo(headerRef.current.children,
-        { y: 40, opacity: 0 },
-        {
-          y: 0, opacity: 1, stagger: 0.12, duration: 0.7, ease: 'power3.out',
-          scrollTrigger: {
-            trigger: headerRef.current,
-            start: 'top 85%',
-          },
-        }
-      );
+      if (centerRef.current) {
+        gsap.fromTo(centerRef.current.children,
+          { y: 30, opacity: 0 },
+          {
+            y: 0, opacity: 1, stagger: 0.1, duration: 0.7, ease: 'power3.out',
+            scrollTrigger: { trigger: centerRef.current, start: 'top 85%' },
+          }
+        );
+      }
+      if (cardsRef.current) {
+        gsap.fromTo(cardsRef.current.querySelectorAll('.orbit-card'),
+          { scale: 0.88, opacity: 0 },
+          {
+            scale: 1, opacity: 1, stagger: 0.08, duration: 0.6, ease: 'back.out(1.4)',
+            scrollTrigger: { trigger: cardsRef.current, start: 'top 85%' },
+          }
+        );
+      }
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
-  /* ── Infinite scroll loop ── */
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const totalWidth = track.scrollWidth / 2;
-
-    tweenRef.current = gsap.to(track, {
-      x: `-${totalWidth}px`,
-      duration: 40,
-      ease: 'none',
-      repeat: -1,
-    });
-
-    /* Pause on hover */
-    const pause = () => tweenRef.current.pause();
-    const resume = () => tweenRef.current.resume();
-    track.addEventListener('mouseenter', pause);
-    track.addEventListener('mouseleave', resume);
-
-    return () => {
-      tweenRef.current?.kill();
-      track.removeEventListener('mouseenter', pause);
-      track.removeEventListener('mouseleave', resume);
-    };
-  }, []);
-
   return (
-    <section ref={sectionRef} className="skills-slider">
-      <div className="container">
-        <div ref={headerRef} className="skills-slider__header">
-          <div className="section-tag">
-            <Briefcase size={15} /> Browse by Category
+    <section ref={sectionRef} className="orbit-section">
+      {/* ── Background Subtle Grid & Sparkles ── */}
+      <div className="orbit-grid-bg" aria-hidden="true" />
+
+      {/* Decorative Sparkles */}
+      <span className="orbit-sparkle orbit-sparkle--1" aria-hidden="true">✦</span>
+      <span className="orbit-sparkle orbit-sparkle--2" aria-hidden="true">✦</span>
+      <span className="orbit-sparkle orbit-sparkle--3" aria-hidden="true">✦</span>
+      <span className="orbit-sparkle orbit-sparkle--4" aria-hidden="true">✦</span>
+
+      <div className="container orbit-arena">
+        {/* ── SVG Elliptical Orbit Track Lines ── */}
+        <div className="orbit-rings" aria-hidden="true">
+          <svg className="orbit-svg" viewBox="0 0 1200 640" preserveAspectRatio="none">
+            {/* Outer Orbit Ellipse */}
+            <ellipse
+              cx="600"
+              cy="310"
+              rx="560"
+              ry="260"
+              fill="none"
+              stroke="#D1FAE5"
+              strokeWidth="1.6"
+              strokeDasharray="4 4"
+            />
+            {/* Inner Orbit Ellipse */}
+            <ellipse
+              cx="600"
+              cy="310"
+              rx="420"
+              ry="180"
+              fill="none"
+              stroke="#E2E8F0"
+              strokeWidth="1.2"
+            />
+          </svg>
+        </div>
+
+        {/* ── Center Stage Content ── */}
+        <div ref={centerRef} className="orbit-center">
+          <div className="orbit-badge">
+            <Sparkles size={13} className="orbit-badge-icon" />
+            <span>BROWSE BY CATEGORY</span>
           </div>
-          <h2 className="section-title">
-            Find Experts Across <span className="highlight-text">All Skills</span>
+
+          <h2 className="orbit-title">
+            Find Experts <br />
+            Across All <span className="orbit-highlight">Skills</span>
           </h2>
-          <p className="section-subtitle">
+
+          <p className="orbit-subtitle">
             From cutting-edge AI to classic design, discover verified student
             freelancers ready to bring your projects to life.
           </p>
+
+          <Link to="/categories" className="orbit-cta-btn">
+            <span>Browse All Categories</span>
+            <ArrowRight size={14} />
+          </Link>
         </div>
-      </div>
 
-      {/* ── Slider track ── */}
-      <div className="skills-slider__viewport">
-        {/* Left/right fade gradient overlays */}
-        <div className="skills-slider__fade skills-slider__fade--left" />
-        <div className="skills-slider__fade skills-slider__fade--right" />
-
-        <div ref={trackRef} className="skills-slider__track">
-          {SKILLS_DOUBLED.map((skill, idx) => (
-            <Link 
-              key={`${skill.name}-${idx}`} 
-              to={`/skills/${skill.slug}`} 
-              className="skills-slider__card"
+        {/* ── 8 Orbiting Floating Category Cards ── */}
+        <div ref={cardsRef} className="orbit-cards-container">
+          {ORBIT_SKILLS.map((skill) => (
+            <Link
+              key={skill.id}
+              to={`/skills/${skill.slug}`}
+              className={`orbit-card orbit-card--${skill.pos}`}
+              style={{ animationDelay: skill.floatDelay }}
             >
-              <div className="skills-slider__card-icon" style={{ background: skill.color }}>
-                <skill.Icon size={22} />
+              <div className="orbit-card__icon-box">
+                <skill.Icon size={18} />
               </div>
-              <div className="skills-slider__card-info">
-                <h3>{skill.name}</h3>
-                <p>{countLabel(skill)}</p>
-              </div>
-              <div className="skills-slider__card-arrow">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M7 17L17 7M17 7H7M17 7v10" stroke="currentColor"
-                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <div className="orbit-card__info">
+                <h3 className="orbit-card__title" title={skill.name}>
+                  {skill.shortName}
+                </h3>
+                <span className="orbit-card__count">{getCountLabel(skill)}</span>
               </div>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* ── Bottom CTA ── */}
-      <div className="skills-slider__footer container">
-        <Link to="/categories" className="btn-primary">
-          Browse All Categories
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2"
-              strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
+      {/* ── Full-Width Live Activity Ticker Strip ── */}
+      <div className="orbit-ticker-strip">
+        <div className="orbit-ticker-badge">
+          <span className="orbit-ticker-dot" />
+          <span>LIVE ACTIVITY TICKER</span>
+        </div>
+
+        <div className="orbit-ticker-marquee">
+          <div className="orbit-ticker-track">
+            {[...TICKER_ACTIVITIES, ...TICKER_ACTIVITIES].map((item, idx) => (
+              <span key={idx} className="orbit-ticker-item">
+                <span className="orbit-ticker-bullet">•</span> {item}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

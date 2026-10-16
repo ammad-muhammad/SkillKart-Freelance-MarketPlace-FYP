@@ -170,7 +170,7 @@ const Unauthorized = () => {
  */
 const MobileRoot = () => {
   const { user, loading } = useAuth();
-  if (loading) return <Loader fullScreen text="Loading..." />;
+  if (loading) return <Loader fullScreen text="Loading" />;
   if (!user) return <Navigate to="/login" replace />;
   // Roles with no mobile-app screens (admin/superadmin/contenteditor/
   // publicviewer — /admin is itself excluded on mobile, see below) can't be
@@ -189,7 +189,7 @@ const AppRoutes = () => {
       <AdminAuthProvider>
       <ClientProvider>
         <FreelancerProvider>
-        <Suspense fallback={<Loader fullScreen text="Loading..." />}>
+        <Suspense fallback={<Loader fullScreen text="Loading" />}>
         <Routes>
 
           {/* ================= ADMIN PANEL ROUTES ================= */}

@@ -1,4 +1,6 @@
-/* Shared dashboard Button — see UI_UX_AUDIT_PLAN.md §4.4 */
+/* Shared dashboard Button — see UI_UX_AUDIT_PLAN.md §4.4
+   Phase-1 refresh: consistent 160ms motion, brand focus ring,
+   subtle elevation on press-ready variants. Class API unchanged. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -10,9 +12,16 @@
   border: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: var(--transition-fast, all 0.15s ease);
   text-decoration: none;
+  transition:
+    background-color var(--ds-dur-hover, 160ms) var(--ds-ease, ease),
+    border-color var(--ds-dur-hover, 160ms) var(--ds-ease, ease),
+    color var(--ds-dur-hover, 160ms) var(--ds-ease, ease),
+    box-shadow var(--ds-dur-hover, 160ms) var(--ds-ease, ease),
+    transform var(--ds-dur-press, 120ms) var(--ds-ease, ease);
 }
+
+.btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 
 .btn--full { width: 100%; }
 
@@ -25,11 +34,12 @@
 .btn--primary {
   background: var(--color-primary);
   color: var(--color-white);
+  box-shadow: var(--ds-shadow-xs, 0 1px 2px rgba(11, 41, 66, 0.05));
 }
 .btn--primary:hover:not(:disabled) {
   background: var(--color-primary-light);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--ds-shadow-md, 0 2px 4px rgba(11, 41, 66, 0.05), 0 8px 24px rgba(11, 41, 66, 0.07));
 }
 
 .btn--outline {
@@ -40,6 +50,8 @@
 .btn--outline:hover:not(:disabled) {
   background: var(--color-primary);
   color: var(--color-white);
+  transform: translateY(-1px);
+  box-shadow: var(--ds-shadow-sm);
 }
 
 .btn--ghost {
@@ -58,7 +70,7 @@
 .btn--danger:hover:not(:disabled) {
   background: #b91c1c;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--ds-shadow-md);
 }
 
 .btn--success {
@@ -68,7 +80,7 @@
 .btn--success:hover:not(:disabled) {
   background: #047857;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--ds-shadow-md);
 }
 
 .btn:disabled {
@@ -80,7 +92,12 @@
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(4, 46, 76, 0.25);
+  box-shadow: var(--ds-focus-ring-navy, 0 0 0 3px rgba(11, 41, 66, 0.18));
+}
+.btn--primary:focus-visible,
+.btn--danger:focus-visible,
+.btn--success:focus-visible {
+  box-shadow: var(--ds-focus-ring, 0 0 0 3px rgba(16, 185, 129, 0.28));
 }
 
 .btn__icon {
@@ -88,23 +105,12 @@
   align-items: center;
 }
 
-/* Loading spinner */
-.btn--loading { color: transparent !important; position: relative; }
-.btn__spinner {
+/* Loading state */
+.btn--loading { position: relative; cursor: wait !important; }
+.btn--loading > .btn__label { visibility: hidden; }
+.btn--loading > .sk-loader-wrap {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: btn-spin 0.6s linear infinite;
-}
-.btn--outline .btn__spinner,
-.btn--ghost .btn__spinner {
-  border: 2px solid rgba(4, 46, 76, 0.25);
-  border-top-color: var(--color-primary);
-}
-
-@keyframes btn-spin {
-  to { transform: rotate(360deg); }
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }

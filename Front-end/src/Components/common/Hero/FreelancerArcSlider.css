@@ -1,0 +1,399 @@
+/* ==========================================================================
+   SkillKart Freelancer Curved Arc Slider — Glassmorphism Portrait Edition
+   Matches Image 2 reference: soft misty gradient cover, overlapping avatar,
+   bookmark pill, 3-column stats with vertical dividers, dark navy CTA.
+   ========================================================================== */
+
+/* ── Row 2: Slider Zone ── */
+.hero2-slider-zone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  overflow: hidden;
+  z-index: 2;
+  cursor: default;
+  /* Horizontal edge fade mask */
+  mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+/* ── Card Position Wrapper (Moved by RAF) ── */
+.arc-card-wrapper {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  pointer-events: auto;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* ── Inner Glass Card Shell ── */
+.arc-card-glass {
+  width: 100%;
+  cursor: pointer;
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.58));
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 18px 36px -18px rgba(15, 60, 45, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+}
+
+/* Hover lift and emerald boundary glow on inner element */
+.arc-card-wrapper:hover .arc-card-glass {
+  transform: translateY(-6px) scale(1.025);
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 24px 44px -14px rgba(16, 185, 129, 0.28),
+              0 0 0 1.5px rgba(16, 185, 129, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* ── Cover (Soft Misty Gradient Landscape Look) ── */
+.arc-card__cover {
+  position: relative;
+  height: 80px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Layered misty gradient palettes */
+.arc-card__cover--mint {
+  background: radial-gradient(circle at 15% 20%, rgba(167, 243, 208, 0.8), transparent 60%),
+              radial-gradient(circle at 85% 30%, rgba(110, 231, 183, 0.7), transparent 65%),
+              linear-gradient(160deg, #D9F3E8 0%, #9FD9C0 100%);
+}
+
+.arc-card__cover--teal {
+  background: radial-gradient(circle at 15% 20%, rgba(153, 246, 228, 0.8), transparent 60%),
+              radial-gradient(circle at 85% 30%, rgba(94, 234, 212, 0.7), transparent 65%),
+              linear-gradient(160deg, #CCFBF1 0%, #99F6E4 100%);
+}
+
+.arc-card__cover--sky {
+  background: radial-gradient(circle at 15% 20%, rgba(186, 230, 253, 0.8), transparent 60%),
+              radial-gradient(circle at 85% 30%, rgba(125, 211, 252, 0.7), transparent 65%),
+              linear-gradient(160deg, #E0F2FE 0%, #BAE6FD 100%);
+}
+
+/* White gradient fade melting into card body */
+.arc-card__cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(255, 255, 255, 0.95) 100%);
+  pointer-events: none;
+}
+
+/* Top-Left Top Rated Star Pill */
+.arc-card__top-badge {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  color: #065F46;
+  font-family: 'Inter', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Top-Right Bookmark Button */
+.arc-card__bookmark-btn {
+  position: relative;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.arc-card__bookmark-btn:hover {
+  color: #10B981;
+  transform: scale(1.08);
+  background: #FFFFFF;
+}
+
+/* ── Avatar: 54px circle overlapping cover bottom-left edge ── */
+.arc-card__avatar-box {
+  position: relative;
+  z-index: 3;
+  width: 54px;
+  height: 54px;
+  margin-top: -27px;
+  margin-left: 14px;
+}
+
+.arc-card__avatar-ring {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 3px solid #FFFFFF;
+  box-shadow: 0 4px 12px rgba(15, 60, 45, 0.12);
+  background: #FFFFFF;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-card__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.arc-card__avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* ── Card Body (Inner padding 0 14px) ── */
+.arc-card__body {
+  padding: 4px 14px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.arc-card__name {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0B2942;
+  margin: 2px 0 1px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.arc-card__tagline {
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  color: #64748B;
+  margin: 0 0 6px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+/* ── Meta Row: Role + Available now ── */
+.arc-card__meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  color: #64748B;
+  margin-bottom: 6px;
+}
+
+.arc-card__meta-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 58%;
+}
+
+.arc-card__meta-icon {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.arc-card__meta-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.arc-card__status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #94A3B8;
+}
+
+.arc-card__status-dot--on {
+  background: #10B981;
+}
+
+/* Thin Divider */
+.arc-card__divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(226, 232, 240, 0.75);
+  margin-bottom: 6px;
+}
+
+/* ── 3-Column Stats Row with 1px Vertical Dividers ── */
+.arc-card__stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 6px;
+}
+
+.arc-card__stat-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.arc-card__stat-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(226, 232, 240, 0.8);
+}
+
+.arc-card__stat-val {
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0B2942;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.arc-card__stat-val--rate {
+  color: #0B2942;
+}
+
+.arc-card__stat-lbl {
+  font-family: 'Inter', sans-serif;
+  font-size: 9.5px;
+  color: #94A3B8;
+  line-height: 1;
+}
+
+/* ── Full-Width Dark Navy Pill CTA: "Get in touch" ── */
+.arc-card__cta {
+  width: 100%;
+  height: 34px;
+  background: #0B2942;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-card-wrapper:hover .arc-card__cta {
+  background: #133959;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(11, 41, 66, 0.25);
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+@media (max-width: 767px) {
+  .hero2-slider-zone {
+    min-height: 240px;
+  }
+
+  .arc-card-glass {
+    border-radius: 18px;
+  }
+
+  .arc-card__cover {
+    height: 60px;
+  }
+
+  .arc-card__avatar-box {
+    width: 42px;
+    height: 42px;
+    margin-top: -21px;
+    margin-left: 10px;
+  }
+
+  .arc-card__avatar-ring {
+    width: 42px;
+    height: 42px;
+  }
+
+  .arc-card__body {
+    padding: 2px 10px 8px;
+  }
+
+  .arc-card__name {
+    font-size: 13px;
+  }
+
+  .arc-card__tagline {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  /* Drop meta row on small screens */
+  .arc-card__meta-row {
+    display: none;
+  }
+
+  .arc-card__stat-val {
+    font-size: 11px;
+  }
+
+  .arc-card__stat-lbl {
+    font-size: 8.5px;
+  }
+
+  .arc-card__cta {
+    height: 30px;
+    font-size: 11px;
+  }
+}

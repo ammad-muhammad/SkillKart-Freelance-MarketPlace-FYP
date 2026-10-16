@@ -1,13 +1,16 @@
+/* EmptyState — Phase-1 refresh:
+   brand-tinted icon well (was off-brand blue/purple),
+   clearer type hierarchy, consistent motion. API unchanged. */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
+  padding: 3.5rem 2rem;
   text-align: center;
-  background-color: var(--color-secondary);
-  border-radius: var(--radius-lg);
-  border: 1px dashed rgba(183, 201, 226, 0.5);
+  background-color: var(--ds-surface-sunken, var(--color-secondary));
+  border-radius: var(--ds-r-lg, 16px);
+  border: 1px dashed var(--ds-accent-line, rgba(183, 201, 226, 0.5));
   margin: 1rem 0;
   width: 100%;
 }
@@ -16,30 +19,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.1));
-  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(16, 185, 129, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  margin-bottom: 1.25rem;
 }
 
 .empty-state__icon {
-  color: var(--color-primary);
+  color: var(--ds-accent-strong, var(--color-primary));
 }
 
 .empty-state__title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text-dark);
+  font-family: var(--ds-font-display, var(--font-heading));
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ds-ink, var(--color-text-dark));
   margin-bottom: 0.5rem;
 }
 
 .empty-state__message {
-  font-size: 0.95rem;
-  color: var(--color-text-light);
-  max-width: 400px;
-  margin-bottom: 2rem;
-  line-height: 1.5;
+  font-size: 0.9375rem;
+  color: var(--ds-ink-muted, var(--color-text-light));
+  max-width: 420px;
+  margin-bottom: 1.75rem;
+  line-height: 1.55;
 }
 
 .empty-state__action {
@@ -51,18 +56,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: var(--gradient-primary);
+  background: var(--color-primary);
   color: white;
-  font-weight: 500;
-  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: var(--fs-sm, 0.875rem);
+  border-radius: var(--ds-r-md, 12px);
   text-decoration: none;
   border: none;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color var(--ds-dur-hover, 160ms) var(--ds-ease, ease),
+    transform var(--ds-dur-press, 120ms) var(--ds-ease, ease),
+    box-shadow var(--ds-dur-hover, 160ms) var(--ds-ease, ease);
 }
 
 .empty-state__btn:hover {
-  opacity: 0.9;
+  background: var(--color-primary-light);
   transform: translateY(-1px);
+  box-shadow: var(--ds-shadow-md);
+}
+.empty-state__btn:active { transform: translateY(0) scale(0.98); }
+.empty-state__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring-navy, 0 0 0 3px rgba(11, 41, 66, 0.18));
 }

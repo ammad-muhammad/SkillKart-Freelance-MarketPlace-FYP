@@ -1,0 +1,1131 @@
+/* ==========================================================================
+   SkillKart Freelancer Wallet & Earnings — Modern Fintech Bento Design
+   Theme: Fresh Mint Gradient + Emerald (#10B981) + Deep Navy (#0B2942)
+   ========================================================================== */
+
+.fl-wallet-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: flWalletFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes flWalletFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Header ─── */
+.fl-wall-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.fl-wall-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fl-wall-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fl-wall-breadcrumb a {
+  color: #64748B;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.fl-wall-breadcrumb a:hover {
+  color: #10B981;
+}
+
+.fl-wall-breadcrumb__sep {
+  color: #CBD5E1;
+  font-size: 12px;
+}
+
+.fl-wall-breadcrumb__curr {
+  color: #10B981;
+}
+
+.fl-wall-header__title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.fl-wall-header__sub {
+  font-size: 15px;
+  color: #64748B;
+  margin: 0;
+}
+
+.fl-wall-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fl-wall-badge-connected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.fl-wall-btn-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 9999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  background: #FFFFFF;
+  color: #0B2942;
+  border: 1px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fl-wall-btn-connect:hover {
+  border-color: #10B981;
+  color: #10B981;
+  background: #F0FDF4;
+}
+
+.fl-wall-btn-withdraw-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  background: #0B2942;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(11, 41, 66, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.fl-wall-btn-withdraw-header:hover:not(:disabled) {
+  background: #163E63;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(11, 41, 66, 0.3);
+}
+
+.fl-wall-btn-withdraw-header:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Balance Bento Grid (12-Col) ─── */
+.fl-wall-bento {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+/* LEFT col-span 5: Column wrapping Hero + Money Split */
+.fl-wall-left-col {
+  grid-column: span 5;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Compact Hero Balance Card (FIX 3a) */
+.fl-wall-hero {
+  width: 100%;
+  background: linear-gradient(135deg, #059669 0%, #10B981 50%, #0D9488 100%);
+  border-radius: 24px;
+  padding: 24px;
+  color: #FFFFFF;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 10px 32px rgba(16, 185, 129, 0.22);
+  height: auto;
+  align-self: start;
+  box-sizing: border-box;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fl-wall-hero:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(16, 185, 129, 0.3);
+}
+
+/* Glass decorative shapes */
+.fl-wall-hero__orb-1 {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.fl-wall-hero__orb-2 {
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.3);
+  filter: blur(25px);
+  pointer-events: none;
+}
+
+.fl-wall-hero__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
+  gap: 10px;
+}
+
+.fl-wall-hero__label {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.fl-wall-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+.fl-wall-hero__amount {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(26px, 3.2vw, 38px);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fl-wall-hero__middle {
+  position: relative;
+  z-index: 2;
+  display: flex;
+}
+
+.fl-wall-hero__btn-withdraw {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+  color: #0B2942;
+  font-size: 13.5px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+  width: auto;
+  align-self: flex-start;
+}
+
+.fl-wall-hero__btn-withdraw:hover:not(:disabled) {
+  background: #F0FDF4;
+  color: #065F46;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.fl-wall-hero__btn-withdraw:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fl-wall-hero__divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 2px 0;
+}
+
+.fl-wall-hero__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.9);
+  position: relative;
+  z-index: 2;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── "Where is my money?" Card (Replaces Portfolio Allocation) ─── */
+.fl-wall-breakdown-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  padding: 18px 20px;
+  box-shadow: 0 4px 18px rgba(11, 41, 66, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.fl-wall-breakdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.fl-wall-breakdown-title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0B2942;
+  margin: 0;
+}
+
+.fl-wall-breakdown-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fl-wall-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #F8FAFC;
+  border: 1px solid #F1F5F9;
+  border-radius: 14px;
+  transition: all 0.15s ease;
+  gap: 10px;
+}
+
+.fl-wall-breakdown-row:hover {
+  background: #F0FDF4;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.fl-wall-breakdown-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fl-wall-breakdown-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fl-wall-breakdown-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fl-wall-breakdown-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0B2942;
+  line-height: 1.25;
+}
+
+.fl-wall-breakdown-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.2;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fl-wall-breakdown-amount {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0B2942;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* RIGHT col-span 7: Escrow, Lifetime, & Overview Chart */
+.fl-wall-right-col {
+  grid-column: span 7;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fl-wall-kpi-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.fl-wall-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 20px rgba(11, 41, 66, 0.04);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fl-wall-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(16, 185, 129, 0.08);
+}
+
+.fl-wall-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.fl-wall-card__icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fl-wall-card__mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fl-wall-card__val {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(20px, 2.4vw, 28px);
+  font-weight: 800;
+  color: #0B2942;
+  margin: 4px 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fl-wall-card__sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* ─── Earnings Overview Area Chart Card ─── */
+.fl-wall-chart-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 20px rgba(11, 41, 66, 0.04);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.fl-wall-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.fl-wall-chart-head__title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0B2942;
+  margin: 0;
+}
+
+.fl-wall-chart-head__sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 2px 0 0;
+}
+
+.fl-wall-chart-head__toggles {
+  display: inline-flex;
+  align-items: center;
+  background: #F1F5F9;
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.fl-wall-toggle-btn {
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: #64748B;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fl-wall-toggle-btn--active {
+  background: #FFFFFF;
+  color: #0B2942;
+  box-shadow: 0 2px 6px rgba(11, 41, 66, 0.1);
+}
+
+.fl-wall-chart-stage {
+  width: 100%;
+  height: auto;
+  min-height: 220px;
+  position: relative;
+}
+
+/* ─── Chart Legend & Optional Escrow Toggle Chip ─── */
+.fl-wall-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fl-wall-chart-legend-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.fl-wall-escrow-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  border: 1px dashed #CBD5E1;
+  background: #FFFFFF;
+  color: #64748B;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fl-wall-escrow-chip:hover {
+  background: #FEF3C7;
+  border-color: #F59E0B;
+  color: #B45309;
+}
+
+.fl-wall-escrow-chip--active {
+  background: #FEF3C7;
+  border-style: solid;
+  border-color: #F59E0B;
+  color: #92400E;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.2);
+}
+
+.fl-wall-escrow-chip__dash {
+  width: 14px;
+  height: 2px;
+  border-top: 2px dashed currentColor;
+}
+
+/* ─── Transaction History Table (Steadi Fintech Style) ─── */
+.fl-wall-table-card {
+  background: #FFFFFF;
+  border-radius: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 20px rgba(11, 41, 66, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-wall-table-toolbar {
+  padding: 18px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fl-wall-table-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fl-wall-table-title-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #EAFBF4;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fl-wall-table-title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 0;
+}
+
+.fl-wall-table-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fl-wall-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  background: transparent;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.fl-wall-tab:hover {
+  color: #0B2942;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.fl-wall-tab--active {
+  background: #0B2942 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 3px 10px rgba(11, 41, 66, 0.2);
+}
+
+.fl-wall-tab__cnt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #F1F5F9;
+  color: #475569;
+  line-height: 1;
+}
+
+.fl-wall-tab--active .fl-wall-tab__cnt {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+.fl-wall-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+}
+
+.fl-wall-search__icon {
+  position: absolute;
+  left: 14px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.fl-wall-search__input {
+  width: 100%;
+  height: 38px;
+  padding: 0 14px 0 38px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  font-size: 13px;
+  color: #0B2942;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.fl-wall-search__input:focus {
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.fl-wall-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fl-wall-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.fl-wall-table thead {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.fl-wall-table th {
+  padding: 14px 22px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.fl-wall-table tbody tr {
+  height: 64px;
+  border-bottom: 1px solid #F1F5F9;
+  transition: background 0.15s ease;
+}
+
+.fl-wall-table tbody tr:hover {
+  background: #F0FDF4; /* Mint hover tint */
+}
+
+.fl-wall-table td {
+  padding: 14px 22px;
+  font-size: 13.5px;
+  color: #0B2942;
+  vertical-align: middle;
+}
+
+.fl-wall-tx-project {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fl-wall-tx-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fl-wall-tx-title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0B2942;
+  display: block;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fl-wall-tx-client {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fl-wall-client-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #0B2942;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fl-wall-amount-credit {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #10B981;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fl-wall-amount-debit {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0B2942;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Status Chips */
+.fl-wall-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fl-wall-status-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fl-wall-status-chip--released,
+.fl-wall-status-chip--completed {
+  background: #ECFDF5;
+  color: #065F46;
+}
+.fl-wall-status-chip--released .fl-wall-status-chip__dot,
+.fl-wall-status-chip--completed .fl-wall-status-chip__dot {
+  background: #10B981;
+}
+
+.fl-wall-status-chip--escrow {
+  background: #FFFBEB;
+  color: #B45309;
+}
+.fl-wall-status-chip--escrow .fl-wall-status-chip__dot {
+  background: #F59E0B;
+}
+
+.fl-wall-status-chip--processing,
+.fl-wall-status-chip--pending {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+.fl-wall-status-chip--processing .fl-wall-status-chip__dot,
+.fl-wall-status-chip--pending .fl-wall-status-chip__dot {
+  background: #3B82F6;
+}
+
+.fl-wall-status-chip--failed {
+  background: #FEF2F2;
+  color: #991B1B;
+}
+.fl-wall-status-chip--failed .fl-wall-status-chip__dot {
+  background: #EF4444;
+}
+
+/* ─── Mobile Transaction Cards (<768px) ─── */
+.fl-wall-mobile-list {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.fl-wall-mobile-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(11, 41, 66, 0.03);
+}
+
+.fl-wall-mobile-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.fl-wall-mobile-card__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+}
+
+/* ─── Modern Glass Withdraw Modal ─── */
+.fl-wall-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(11, 41, 66, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: flModalFadeIn 0.2s ease;
+}
+
+@keyframes flModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fl-wall-modal {
+  width: 100%;
+  max-width: 460px;
+  background: #FFFFFF;
+  border-radius: 28px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 20px 50px rgba(11, 41, 66, 0.16);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: flModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes flModalSlideUp {
+  from { transform: translateY(20px) scale(0.97); }
+  to { transform: translateY(0) scale(1); }
+}
+
+.fl-wall-modal__head {
+  padding: 22px 26px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fl-wall-modal__title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0B2942;
+  margin: 0;
+}
+
+.fl-wall-modal__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  border: none;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fl-wall-modal__close:hover {
+  background: #E2E8F0;
+  color: #0B2942;
+}
+
+.fl-wall-modal__body {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fl-wall-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fl-wall-modal__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0B2942;
+}
+
+.fl-wall-modal__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fl-wall-modal__prefix {
+  position: absolute;
+  left: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #64748B;
+}
+
+.fl-wall-modal__input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px 0 46px;
+  border-radius: 14px;
+  border: 1px solid #CBD5E1;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0B2942;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.fl-wall-modal__input:focus {
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.fl-wall-method-card {
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1.5px solid #10B981;
+  background: #F0FDF4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fl-wall-modal__footer {
+  padding: 18px 26px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #FAFCFD;
+}
+
+/* ─── Responsive Queries ─── */
+@media (max-width: 1024px) {
+  .fl-wall-left-col {
+    grid-column: span 12;
+  }
+  .fl-wall-right-col {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 768px) {
+  .fl-wall-kpi-pair {
+    grid-template-columns: 1fr;
+  }
+  .fl-wall-table-wrap {
+    display: none;
+  }
+  .fl-wall-mobile-list {
+    display: flex;
+  }
+  .fl-wall-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .fl-wall-search {
+    width: 100%;
+  }
+}

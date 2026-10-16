@@ -1,14 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   MapPin, Star, Briefcase, ExternalLink, MessageSquare, 
-  AlertCircle, Search, Loader2, Building2, Globe, FileEdit, Camera, CheckCircle,
+  AlertCircle, Search, Building2, Globe, FileEdit, Camera, CheckCircle,
   Github, Linkedin, Twitter, ChevronRight, Send, Clock, Tag, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import Loader from '../../../Components/common/Loader/Loader';
 import ReviewSection from '../../../Components/common/ReviewSection/ReviewSection';
 import { clientsAPI } from '../../../api/clients';
 import { jobsAPI } from '../../../api/jobs';
@@ -132,18 +133,16 @@ export default function PublicClientProfile() {
     navigate(isFreelancer ? '/freelancer/messages' : '/client/messages');
   };
 
+  const handleRatingUpdated = useCallback((updated) => {
+    setReviews(updated);
+    if (updated.length > 0) {
+      const sum = updated.reduce((acc, r) => acc + (r.rating || 0), 0);
+      setProfile(prev => prev ? ({ ...prev, rating: Number((sum / updated.length).toFixed(1)) }) : prev);
+    }
+  }, []);
+
   if (loading) {
-    return (
-      <>
-        <Navbar />
-        <div className="pub-cl-page pub-cl-page--loading pub-cl-centered">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Loader2 className="pub-cl-spinner" style={{ width: '60px', height: '60px', color: 'white', margin: 0 }} />
-          </motion.div>
-        </div>
-        <Footer />
-      </>
-    );
+    return <Loader fullScreen text="Loading" />;
   }
 
   if (error === 'notfound') {
@@ -484,13 +483,7 @@ export default function PublicClientProfile() {
                 targetName={companyName}
                 initialReviews={reviews}
                 title="Reviews from Freelancers"
-                onRatingUpdated={(updated) => {
-                  setReviews(updated);
-                  if (updated.length > 0) {
-                    const sum = updated.reduce((acc, r) => acc + (r.rating || 0), 0);
-                    setProfile(prev => prev ? ({ ...prev, rating: Number((sum / updated.length).toFixed(1)) }) : prev);
-                  }
-                }}
+                onRatingUpdated={handleRatingUpdated}
               />
             </div>
 

@@ -1,64 +1,85 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen,
+  Package, ExternalLink, Search, LayoutGrid, List, ArrowUpDown,
+  CheckCircle2, Globe, Sparkles, X, UploadCloud, ChevronRight
+} from 'lucide-react';
 import { useFreelancer } from '../../context/FreelancerContext';
 import { useAuth } from '../../hooks/useAuth';
-import { Link } from 'react-router-dom';
-import { Image as ImageIcon, Edit2, Trash2, Eye, Plus, FolderOpen, Package, Loader } from 'lucide-react';
+import Loader from '../../Components/common/Loader/Loader';
 import Modal from '../../Components/common/Modal/Modal';
 import ConfirmDialog from '../../Components/common/ConfirmDialog/ConfirmDialog';
 import AiGenerateText from '../../Components/common/AiSuggest/AiGenerateText';
-import EmptyState from '../../Components/common/EmptyState/EmptyState';
 import ImageSourcePicker from '../../Components/common/ImageSourcePicker/ImageSourcePicker';
+import Reveal from './components/Reveal';
 import { isMobileApp } from '../../utils/platform';
 import { openExternal } from '../../utils/externalLink';
-import './FreelancerDashboard.css';
+import './FreelancerPortfolio.css';
 
-const PortfolioProjectCard = ({ item, onEdit, onDelete }) => (
-  <div className="fl-gig-card fl-portfolio-project-card">
-    <div className="fl-gig-card__banner">
-      {item.images?.[0] ? (
-        <img src={item.images[0]} alt={item.title} className="fl-gig-card__img" loading="lazy" />
-      ) : (
-        <div className="fl-gig-card__placeholder">
-          <ImageIcon size={40} className="fl-placeholder-icon" />
-        </div>
-      )}
-      <div className="fl-gig-card__overlay">
-        <div className="fl-p-card__actions">
-          <button className="fl-action-btn fl-action-btn--edit" onClick={() => onEdit(item)} title="Edit Project"><Edit2 size={14} /></button>
-          <button className="fl-action-btn fl-action-btn--delete" onClick={() => onDelete(item._id)} title="Delete Project"><Trash2 size={14} /></button>
-        </div>
-        {item.url && (
-          <a href={item.url} target="_blank" rel="noopener noreferrer" className="fl-p-card__link-btn" onClick={(e) => { e.preventDefault(); openExternal(item.url); }}>
-            View Live Project ↗
-          </a>
-        )}
-      </div>
-    </div>
-    <div className="fl-gig-card__body">
-      <div className="fl-gig-card__category">Portfolio Project</div>
-      <h3 className="fl-gig-card__title">{item.title}</h3>
-      <p className="fl-gig-card__desc">{item.description}</p>
-    </div>
-  </div>
-);
-
-const FreelancerPortfolio = () => {
-  const { profile, gigs, addPortfolioItem, updatePortfolioItem, deletePortfolioItem, showToast } = useFreelancer();
+export default function FreelancerPortfolio() {
+  const { profile, gigs = [], addPortfolioItem, updatePortfolioItem, deletePortfolioItem, showToast } = useFreelancer();
   const { user } = useAuth();
+
+  // Dialog & Active State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [previewTarget, setPreviewTarget] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
+
+  // Upload & Form State
   const [isUploading, setIsUploading] = useState(false);
-  
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [formData, setFormData] = useState({ title: '', description: '', url: '', images: [] });
 
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    url: '',
-    images: []
-  });
+  // Filtering, Search & View Controls (Client-Side)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all'); // all | live | services
+  const [sortBy, setSortBy] = useState('newest'); // newest | oldest | title
+  const [viewMode, setViewMode] = useState('grid'); // grid | list
 
+  const portfolioList = useMemo(() => {
+    return Array.isArray(profile?.portfolio) ? profile.portfolio : [];
+  }, [profile?.portfolio]);
+
+  // Derived metrics for summary strip
+  const totalProjects = portfolioList.length;
+  const liveProjectsCount = useMemo(() => {
+    return portfolioList.filter(item => Boolean(item.url)).length;
+  }, [portfolioList]);
+  const activeGigsCount = gigs.length;
+
+  // Filtered & sorted projects
+  const processedProjects = useMemo(() => {
+    let list = [...portfolioList];
+
+    // Filter by type
+    if (filterType === 'live') {
+      list = list.filter(item => Boolean(item.url));
+    }
+
+    // Search by title or description
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(item =>
+        (item.title || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    if (sortBy === 'oldest') {
+      list.reverse();
+    } else if (sortBy === 'title') {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    }
+
+    return list;
+  }, [portfolioList, filterType, searchQuery, sortBy]);
+
+  // Modal Open Handlers
   const handleOpenAdd = () => {
     setEditTarget(null);
     setFormData({ title: '', description: '', url: '', images: [] });
@@ -71,28 +92,51 @@ const FreelancerPortfolio = () => {
       title: item.title || '',
       description: item.description || '',
       url: item.url || '',
-      images: item.images || []
+      images: Array.isArray(item.images) ? item.images : []
     });
     setIsModalOpen(true);
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+  // Upload Logic (supports both click and drag & drop)
+  const handleUploadFile = async (file) => {
     if (!file) return;
-
     setIsUploading(true);
     try {
       const { uploadPortfolioImage } = await import('../../utils/uploadHelper');
       const url = await uploadPortfolioImage(file);
       setFormData(prev => ({ ...prev, images: [url] }));
-      showToast('Image uploaded successfully!');
+      showToast('Cover image uploaded successfully!');
     } catch {
-      showToast('Image upload failed', 'error');
+      showToast('Image upload failed. Please try again.', 'error');
     } finally {
       setIsUploading(false);
     }
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleUploadFile(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      handleUploadFile(file);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editTarget) {
@@ -103,459 +147,632 @@ const FreelancerPortfolio = () => {
     setIsModalOpen(false);
   };
 
-  const [deletingBusy, setDeletingBusy] = useState(false);
+  // Delete Handler
   const handleDelete = async () => {
     if (!deletingId) return;
     setDeletingBusy(true);
     const result = await deletePortfolioItem(deletingId);
     setDeletingBusy(false);
-    // deletePortfolioItem returns true on success (legacy boolean) — close then.
     if (result !== false) setDeletingId(null);
   };
 
   return (
-    <div>
-      <div className="fl-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="fl-page-title">Portfolio Projects</h1>
-          <p className="fl-page-sub">Showcase your best professional work and side projects.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {/* Not registered at all on the mobile build (see AppRoutes.jsx). */}
-          {!isMobileApp() && (
-            <Link
-              to={`/freelancers/${user?._id || user?.id}`}
-              className="fl-btn fl-btn--outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-            >
-              <Eye size={14} /> View Public Profile
-            </Link>
-          )}
-          <button className="fl-btn fl-btn--primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={handleOpenAdd}><Plus size={14} /> Add Project</button>
-        </div>
-      </div>
+    <div className="fp-page-root">
+      <div className="fp-container">
 
-      {/* Main Portfolio Grid */}
-      <div className="fl-portfolio-main-grid">
-        {(profile?.portfolio || []).length === 0 ? (
-          <EmptyState
-            icon={FolderOpen}
-            title="Your Portfolio is Empty"
-            message="Adding projects with descriptions and images helps you get noticed by clients."
-            actionText="Add Your First Project"
-            actionClick={handleOpenAdd}
-          />
-        ) : (
-          <div className="fl-gig-grid">
-            {(profile?.portfolio || []).map((item) => (
-              <PortfolioProjectCard 
-                key={item._id} 
-                item={item} 
-                onEdit={handleOpenEdit} 
-                onDelete={setDeletingId} 
-              />
-            ))}
+        {/* ─── 1) PAGE HEADER ─── */}
+        <header className="fp-shared-header">
+          <div className="fp-header-left">
+            <nav className="fp-breadcrumbs" aria-label="Breadcrumb">
+              <Link to="/freelancer/dashboard" className="fp-bc-link">Dashboard</Link>
+              <span className="fp-bc-sep">/</span>
+              <span className="fp-bc-curr">Portfolio</span>
+            </nav>
+            <h1 className="fp-page-title">Portfolio Projects</h1>
+            <p className="fp-page-subtitle">
+              Showcase your best professional deliverables, applications, and verified client outcomes.
+            </p>
           </div>
-        )}
-      </div>
 
-      {/* Service Gigs (Secondary) */}
-      <div className="fl-service-gigs-section" style={{ marginTop: '3rem' }}>
-        <div className="fl-section-header">
-          <h3 className="fl-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Package size={18} /> Service Gigs</h3>
-          <p className="fl-section-sub">Quick view of your active freelance services.</p>
-        </div>
-        {gigs.length === 0 ? (
-          <p className="fl-no-data">No active gigs yet.</p>
-        ) : (
-          <div className="fl-gig-grid">
-            {gigs.map((gig) => (
-              <div key={gig._id} className="fl-gig-card">
-                <div className="fl-gig-card__banner">
-                  {gig.media?.banner ? (
-                    <img src={gig.media.banner} alt={gig.title} className="fl-gig-card__img" loading="lazy" />
-                  ) : (
-                    <div className="fl-gig-card__placeholder">
-                      <Package size={40} className="fl-placeholder-icon" />
-                    </div>
-                  )}
-                </div>
-                <div className="fl-gig-card__body">
-                  <div className="fl-gig-card__category">{gig.category}</div>
-                  <h3 className="fl-gig-card__title">{gig.title}</h3>
-                  <p className="fl-gig-card__desc">{gig.shortDescription}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Add/Edit Modal */}
-      <Modal open={isModalOpen} title={editTarget ? 'Edit Portfolio Project' : 'Add New Project'} onClose={() => setIsModalOpen(false)} size="lg">
-        <form onSubmit={handleSubmit} className="fl-edit-form">
-          <div className="fl-edit-form__scroll" style={{ paddingRight: '0.75rem', marginRight: '-0.75rem' }}>
-            
-            <div className="fl-form-group">
-              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Project Title</label>
-              <input 
-                type="text" 
-                placeholder="e.g. E-Commerce Dashboard Design"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                required 
-                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '1rem', background: 'var(--color-secondary)', transition: 'all 0.2s' }}
-                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = 'var(--color-white)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
-                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = 'var(--color-secondary)'; e.target.style.boxShadow = 'none'; }}
-              />
-            </div>
-
-            <div className="fl-form-group" style={{ marginTop: '1.25rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Description & Technologies</label>
-              <textarea 
-                rows={5}
-                placeholder="What did you build? What technologies did you use?"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                required 
-                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: 'var(--color-secondary)', resize: 'vertical', transition: 'all 0.2s' }}
-                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = 'var(--color-white)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
-                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = 'var(--color-secondary)'; e.target.style.boxShadow = 'none'; }}
-              />
-              <AiGenerateText
-                className="fl-ai-generate"
-                fieldLabel="a portfolio project description on a freelancer's profile — what they built and what technologies they used"
-                getContext={() => ({ title: formData.title, url: formData.url })}
-                getExistingText={() => formData.description}
-                onGenerated={(text) => setFormData({ ...formData, description: text })}
-              />
-            </div>
-
-            <div className="fl-form-group" style={{ marginTop: '1.25rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Project URL (Optional)</label>
-              <input 
-                type="url" 
-                placeholder="https://..."
-                value={formData.url}
-                onChange={(e) => setFormData({...formData, url: e.target.value})}
-                style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--color-secondary)', fontSize: '0.95rem', background: 'var(--color-secondary)', transition: 'all 0.2s' }}
-                onFocus={e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.background = 'var(--color-white)'; e.target.style.boxShadow = '0 0 0 3px rgba(4,46,76,0.05)'; }}
-                onBlur={e => { e.target.style.borderColor = 'var(--color-secondary)'; e.target.style.background = 'var(--color-secondary)'; e.target.style.boxShadow = 'none'; }}
-              />
-            </div>
-            
-            <div className="fl-form-group" style={{ marginTop: '1.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: '0.5rem', display: 'block' }}>Project Cover Image</label>
-              <div 
-                className="fl-p-upload-zone"
-                onClick={() => !isUploading && fileInputRef.current.click()}
-                style={{ 
-                  height: '220px', 
-                  border: '2px dashed var(--color-primary-light)', 
-                  borderRadius: '12px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  cursor: isUploading ? 'not-allowed' : 'pointer',
-                  overflow: 'hidden',
-                  background: 'rgba(4,46,76,0.02)',
-                  opacity: isUploading ? 0.6 : 1,
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={e => !isUploading && (e.currentTarget.style.background = 'rgba(4,46,76,0.05)')}
-                onMouseOut={e => !isUploading && (e.currentTarget.style.background = 'rgba(4,46,76,0.02)')}
+          <div className="fp-header-actions">
+            {!isMobileApp() && (
+              <Link
+                to={`/freelancers/${user?._id || user?.id}`}
+                className="fp-btn-outline"
+                title="View how prospective clients see your public profile"
               >
-                {formData.images?.[0] ? (
-                  <img src={formData.images[0]} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div className="fl-p-upload-zone__content" style={{ textAlign: 'center', color: 'var(--color-primary)' }}>
-                    <div style={{ marginBottom: '0.75rem', opacity: 0.8 }}>{isUploading ? <Loader className="spin" size={40} /> : <ImageIcon size={40} />}</div>
-                    <p style={{ fontSize: '1rem', fontWeight: 600 }}>{isUploading ? 'Uploading Image...' : 'Click to upload a cover image'}</p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', marginTop: '0.25rem' }}>(WEBP, PNG, JPG accepted)</p>
-                  </div>
-                )}
-              </div>
-              <ImageSourcePicker
-                ref={fileInputRef}
-                accept="image/*"
-                onChange={handleImageUpload}
+                <Eye size={14} />
+                <span>View Public Profile</span>
+              </Link>
+            )}
+
+            <button
+              type="button"
+              className="fp-btn-primary"
+              onClick={handleOpenAdd}
+            >
+              <Plus size={15} />
+              <span>Add Project</span>
+            </button>
+          </div>
+        </header>
+
+        {/* ─── 2) SUMMARY STRIP ─── */}
+        <Reveal delay={0}>
+          <div className="fp-summary-strip" aria-label="Portfolio Metrics Overview">
+            <div className="fp-summary-cell">
+              <span className="fp-summary-val">{totalProjects}</span>
+              <span className="fp-summary-lbl">Total Projects</span>
+            </div>
+
+            <div className="fp-summary-divider" />
+
+            <div className="fp-summary-cell">
+              <span className="fp-summary-val fp-summary-val--green">{liveProjectsCount}</span>
+              <span className="fp-summary-lbl">Live Deployed URLs</span>
+            </div>
+
+            <div className="fp-summary-divider" />
+
+            <div className="fp-summary-cell">
+              <span className="fp-summary-val">{activeGigsCount}</span>
+              <span className="fp-summary-lbl">Service Gigs Linked</span>
+            </div>
+          </div>
+        </Reveal>
+
+        {/* ─── 3) TOOLBAR (Filter Chips, Search & View Toggle) ─── */}
+        <div className="fp-toolbar-card">
+          <div className="fp-toolbar-left">
+            {/* Filter Chips */}
+            <div className="fp-filter-chips">
+              <button
+                type="button"
+                className={`fp-filter-chip ${filterType === 'all' ? 'fp-filter-chip--active' : ''}`}
+                onClick={() => setFilterType('all')}
+              >
+                <span>All Projects</span>
+                <span className="fp-chip-count">{totalProjects}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`fp-filter-chip ${filterType === 'live' ? 'fp-filter-chip--active' : ''}`}
+                onClick={() => setFilterType('live')}
+              >
+                <Globe size={13} />
+                <span>With Live Demo</span>
+                <span className="fp-chip-count">{liveProjectsCount}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="fp-toolbar-right">
+            {/* Search Input */}
+            <div className="fp-search-wrap">
+              <Search size={14} className="fp-search-icon" />
+              <input
+                type="text"
+                className="fp-search-input"
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search portfolio projects"
               />
-              {formData.images?.[0] && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
-                  <button 
-                    type="button" 
-                    className="fl-btn fl-btn--outline fl-btn--sm" 
-                    onClick={(e) => { e.stopPropagation(); setFormData({...formData, images: []}); }}
-                  >
-                    Remove Image
-                  </button>
+            </div>
+
+            {/* Sort Select */}
+            <div className="fp-sort-wrap">
+              <ArrowUpDown size={13} className="fp-sort-icon" />
+              <select
+                className="fp-sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                aria-label="Sort projects"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="title">Title (A-Z)</option>
+              </select>
+            </div>
+
+            {/* View Mode Switcher (Grid / List) */}
+            <div className="fp-view-switcher" role="group" aria-label="Layout view mode">
+              <button
+                type="button"
+                className={`fp-view-btn ${viewMode === 'grid' ? 'fp-view-btn--active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+                aria-label="Grid view"
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                type="button"
+                className={`fp-view-btn ${viewMode === 'list' ? 'fp-view-btn--active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="List view"
+                aria-label="List view"
+              >
+                <List size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── 4) PROJECT GRID / LIST ─── */}
+        {portfolioList.length === 0 ? (
+          <Reveal delay={40}>
+            <div className="fp-empty-card">
+              <div className="fp-empty-icon-wrap">
+                <FolderOpen size={32} />
+              </div>
+              <h3 className="fp-empty-title">Your Portfolio is Empty</h3>
+              <p className="fp-empty-desc">
+                Adding showcase projects with screenshots and case details significantly improves your client booking rate and search visibility.
+              </p>
+              <button
+                type="button"
+                className="fp-btn-primary"
+                onClick={handleOpenAdd}
+              >
+                <Plus size={15} />
+                <span>Add Your First Project</span>
+              </button>
+            </div>
+          </Reveal>
+        ) : processedProjects.length === 0 ? (
+          <div className="fp-empty-card">
+            <div className="fp-empty-icon-wrap">
+              <Search size={28} />
+            </div>
+            <h3 className="fp-empty-title">No Projects Found</h3>
+            <p className="fp-empty-desc">
+              No portfolio projects match your active search filter.
+            </p>
+            <button
+              type="button"
+              className="fp-btn-outline"
+              onClick={() => { setSearchQuery(''); setFilterType('all'); }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="fp-projects-grid">
+            {processedProjects.map((item, idx) => {
+              const coverImg = item.images?.[0];
+              return (
+                <Reveal key={item._id || idx} delay={idx < 8 ? idx * 40 : 0}>
+                  <article className="fp-card">
+                    {/* Cover Image Area */}
+                    <div className="fp-card-image-wrap">
+                      {coverImg ? (
+                        <img
+                          src={coverImg}
+                          alt={item.title}
+                          className="fp-card-img"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="fp-card-fallback-img">
+                          <ImageIcon size={32} />
+                        </div>
+                      )}
+
+                      {/* Project Tag Pill */}
+                      <span className="fp-card-badge">Deliverable</span>
+
+                      {/* Clean Hover / Focus Action Overlay */}
+                      <div className="fp-card-overlay">
+                        <div className="fp-overlay-actions-row">
+                          <button
+                            type="button"
+                            className="fp-overlay-btn"
+                            onClick={() => setPreviewTarget(item)}
+                            title="Preview project"
+                            aria-label="Preview project"
+                          >
+                            <Eye size={15} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="fp-overlay-btn"
+                            onClick={() => handleOpenEdit(item)}
+                            title="Edit project"
+                            aria-label="Edit project"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="fp-overlay-btn fp-overlay-btn--del"
+                            onClick={() => setDeletingId(item._id)}
+                            title="Delete project"
+                            aria-label="Delete project"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        {item.url && (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => { e.preventDefault(); openExternal(item.url); }}
+                            className="fp-overlay-link"
+                          >
+                            <span>View Live</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="fp-card-body">
+                      <h3 className="fp-card-title" title={item.title}>
+                        {item.title}
+                      </h3>
+
+                      {item.description && (
+                        <p className="fp-card-desc" title={item.description}>
+                          {item.description}
+                        </p>
+                      )}
+
+                      {/* Card Footer */}
+                      <div className="fp-card-footer">
+                        {item.url ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => { e.preventDefault(); openExternal(item.url); }}
+                            className="fp-card-external-link"
+                          >
+                            <Globe size={13} />
+                            <span>Live Project</span>
+                          </a>
+                        ) : (
+                          <span className="fp-card-meta-tag">Deliverable Spec</span>
+                        )}
+
+                        <div className="fp-card-quick-actions">
+                          <button
+                            type="button"
+                            className="fp-icon-btn"
+                            onClick={() => handleOpenEdit(item)}
+                            title="Edit"
+                            aria-label="Edit project"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="fp-icon-btn fp-icon-btn--danger"
+                            onClick={() => setDeletingId(item._id)}
+                            title="Delete"
+                            aria-label="Delete project"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </Reveal>
+              );
+            })}
+          </div>
+        ) : (
+          /* List View Rows */
+          <div className="fp-projects-list">
+            {processedProjects.map((item, idx) => {
+              const coverImg = item.images?.[0];
+              return (
+                <article key={item._id || idx} className="fp-list-row">
+                  <div className="fp-list-thumb">
+                    {coverImg ? (
+                      <img src={coverImg} alt={item.title} className="fp-list-thumb-img" loading="lazy" />
+                    ) : (
+                      <ImageIcon size={22} color="#94A3B8" />
+                    )}
+                  </div>
+
+                  <div className="fp-list-info">
+                    <h3 className="fp-list-title">{item.title}</h3>
+                    {item.description && (
+                      <p className="fp-list-desc">{item.description}</p>
+                    )}
+                  </div>
+
+                  <div className="fp-list-meta-actions">
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => { e.preventDefault(); openExternal(item.url); }}
+                        className="fp-card-external-link"
+                      >
+                        <Globe size={13} />
+                        <span>Live Demo</span>
+                      </a>
+                    )}
+
+                    <div className="fp-list-actions-group">
+                      <button
+                        type="button"
+                        className="fp-icon-btn"
+                        onClick={() => handleOpenEdit(item)}
+                        title="Edit project"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="fp-icon-btn fp-icon-btn--danger"
+                        onClick={() => setDeletingId(item._id)}
+                        title="Delete project"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ─── 5) SERVICE GIGS SECTION ─── */}
+        <section className="fp-gigs-section">
+          <div className="fp-gigs-header-row">
+            <div>
+              <div className="fp-gigs-eyebrow">
+                <Package size={14} />
+                <span>CONNECTED MARKETPLACE SERVICES</span>
+              </div>
+              <h2 className="fp-gigs-title">Active Service Gigs</h2>
+            </div>
+            <span className="fp-gigs-count-badge">{gigs.length} Active</span>
+          </div>
+
+          {gigs.length === 0 ? (
+            <div className="fp-empty-mini-card">
+              <Package size={24} color="#94A3B8" />
+              <p className="fp-empty-mini-text">No active service gigs listed yet.</p>
+              <Link to="/freelancer/gigs/create" className="fp-btn-primary fp-btn-primary--sm">
+                Create a Gig
+              </Link>
+            </div>
+          ) : (
+            <div className="fp-gigs-grid">
+              {gigs.map((gig) => (
+                <article key={gig._id} className="fp-gig-card">
+                  <div className="fp-gig-img-wrap">
+                    {gig.media?.banner ? (
+                      <img src={gig.media.banner} alt={gig.title} className="fp-gig-img" loading="lazy" />
+                    ) : (
+                      <div className="fp-card-fallback-img">
+                        <Package size={28} />
+                      </div>
+                    )}
+                    <span className="fp-gig-cat-pill">{gig.category || 'Service'}</span>
+                  </div>
+
+                  <div className="fp-gig-body">
+                    <h4 className="fp-gig-title">{gig.title}</h4>
+                    {gig.shortDescription && (
+                      <p className="fp-gig-desc">{gig.shortDescription}</p>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+      </div>
+
+      {/* ─── 6) ADD / EDIT MODAL ─── */}
+      <Modal
+        open={isModalOpen}
+        title={editTarget ? 'Edit Portfolio Project' : 'Add New Project'}
+        onClose={() => setIsModalOpen(false)}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="fp-form-body">
+          {/* Project Title */}
+          <div className="fp-field">
+            <label className="fp-field-label" htmlFor="fp-title-input">
+              Project Title *
+            </label>
+            <input
+              id="fp-title-input"
+              type="text"
+              className="fp-field-input"
+              placeholder="e.g. Fintech Dashboard & Analytics Platform"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
+          </div>
+
+          {/* Description & Technologies (with preserved AiGenerateText) */}
+          <div className="fp-field">
+            <label className="fp-field-label">
+              Description & Technologies *
+            </label>
+            <AiGenerateText
+              fieldLabel="a portfolio project description on a freelancer's profile — what they built and what technologies they used"
+              getContext={() => ({ title: formData.title, url: formData.url })}
+              getExistingText={() => formData.description}
+              onGenerated={(text) => setFormData({ ...formData, description: text })}
+              value={formData.description}
+              onChange={(v) => setFormData({ ...formData, description: v })}
+              rows={4}
+              placeholder="What did you build? What problem did it solve? What tech stack did you utilize?"
+              required
+            />
+          </div>
+
+          {/* Project URL */}
+          <div className="fp-field">
+            <label className="fp-field-label" htmlFor="fp-url-input">
+              Live Demo / Project URL (Optional)
+            </label>
+            <div className="fp-input-with-icon">
+              <Globe size={15} className="fp-field-icon" />
+              <input
+                id="fp-url-input"
+                type="url"
+                className="fp-field-input fp-field-input--with-icon"
+                placeholder="https://example.com/project"
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Modern Image Dropzone */}
+          <div className="fp-field">
+            <label className="fp-field-label">Cover Showcase Image</label>
+            <div
+              className={`fp-dropzone ${isDragging ? 'fp-dropzone--drag' : ''} ${formData.images?.[0] ? 'fp-dropzone--has-img' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Upload showcase cover image"
+            >
+              {formData.images?.[0] ? (
+                <div className="fp-dropzone-preview">
+                  <img src={formData.images[0]} alt="Uploaded preview" className="fp-dropzone-img" />
+                  <div className="fp-dropzone-preview-overlay">
+                    <span>Click or drop image to replace</span>
+                  </div>
+                </div>
+              ) : isUploading ? (
+                <div className="fp-dropzone-loading">
+                  <Loader size="sm" text="Uploading showcase image..." />
+                </div>
+              ) : (
+                <div className="fp-dropzone-empty">
+                  <div className="fp-dropzone-icon-circle">
+                    <UploadCloud size={24} />
+                  </div>
+                  <strong className="fp-dropzone-prompt">
+                    Click to browse or drag & drop showcase image
+                  </strong>
+                  <span className="fp-dropzone-sub">
+                    PNG, JPG, or WebP up to 10MB (16:10 recommended)
+                  </span>
                 </div>
               )}
             </div>
 
+            {/* Hidden native input picker */}
+            <ImageSourcePicker ref={fileInputRef} accept="image/*" onChange={handleImageUpload} />
+
+            {formData.images?.[0] && (
+              <button
+                type="button"
+                className="fp-remove-img-btn"
+                onClick={() => setFormData({ ...formData, images: [] })}
+              >
+                <X size={13} />
+                <span>Remove Cover Image</span>
+              </button>
+            )}
           </div>
 
-          <div className="fl-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-secondary)' }}>
-            <button type="button" className="fl-btn fl-btn--ghost" onClick={() => setIsModalOpen(false)}>Cancel</button>
-            <button type="submit" className="fl-btn fl-btn--primary" disabled={isUploading}>
-              {editTarget ? 'Update Project' : 'Save Project'}
+          {/* Modal Sticky Footer */}
+          <div className="fp-modal-footer">
+            <button
+              type="button"
+              className="fp-btn-outline"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="fp-btn-primary"
+              disabled={isUploading}
+            >
+              {isUploading ? 'Uploading...' : editTarget ? 'Save Changes' : 'Publish Project'}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete Confirmation */}
+      {/* ─── 7) PREVIEW MODAL ─── */}
+      {previewTarget && (
+        <Modal
+          open={Boolean(previewTarget)}
+          title={previewTarget.title}
+          onClose={() => setPreviewTarget(null)}
+          size="lg"
+        >
+          <div className="fp-preview-modal-body">
+            {previewTarget.images?.[0] && (
+              <div className="fp-preview-image-wrap">
+                <img
+                  src={previewTarget.images[0]}
+                  alt={previewTarget.title}
+                  className="fp-preview-img"
+                />
+              </div>
+            )}
+
+            <div className="fp-preview-content">
+              <span className="fp-preview-tag">Portfolio Project Deliverable</span>
+              <h3 className="fp-preview-title">{previewTarget.title}</h3>
+              <p className="fp-preview-desc">{previewTarget.description}</p>
+
+              {previewTarget.url && (
+                <div style={{ marginTop: 16 }}>
+                  <a
+                    href={previewTarget.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => { e.preventDefault(); openExternal(previewTarget.url); }}
+                    className="fp-btn-primary"
+                  >
+                    <span>Visit Live Application</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ─── 8) DELETE CONFIRMATION DIALOG ─── */}
       <ConfirmDialog
-        open={!!deletingId}
-        title="Remove Project?"
-        message="Are you sure you want to remove this project from your portfolio? This cannot be undone."
+        open={Boolean(deletingId)}
+        title="Remove Project from Portfolio?"
+        message="Are you sure you want to delete this project? It will no longer appear on your public profile or proposals."
         confirmLabel="Delete Project"
         loading={deletingBusy}
         onConfirm={handleDelete}
         onClose={() => setDeletingId(null)}
       />
 
-      <style>{`
-        .fl-portfolio-main-grid { margin-top: 2rem; }
-        
-        .fl-gig-grid {
-          display: grid;
-          /* min(100%, 320px) lets a column shrink to the available width when
-             320px won't fit — so the card never overflows a narrow container. */
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-          gap: 2rem;
-        }
-
-        .fl-gig-card {
-          background: var(--color-bg);
-          border-radius: var(--radius-xl);
-          overflow: hidden;
-          border: 1px solid var(--color-secondary);
-          box-shadow: var(--shadow-md);
-          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-        }
-
-        .fl-gig-card:hover {
-          transform: translateY(-6px); 
-          box-shadow: var(--shadow-lg); 
-          border-color: var(--color-accent);
-        }
-
-        .fl-gig-card__banner {
-          height: 190px;
-          position: relative;
-          background: var(--color-secondary);
-          overflow: hidden;
-        }
-
-        .fl-gig-card__img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.6s ease;
-        }
-
-        .fl-gig-card:hover .fl-gig-card__img {
-          transform: scale(1.05);
-        }
-
-        .fl-gig-card__overlay {
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(4, 46, 76, 0.4);
-          backdrop-filter: blur(2px);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 1rem;
-          opacity: 0;
-          transition: all 0.3s ease;
-        }
-
-        .fl-gig-card:hover .fl-gig-card__overlay {
-          opacity: 1;
-        }
-
-        .fl-p-card__actions {
-          display: flex;
-          gap: 0.75rem;
-        }
-
-        .fl-action-btn {
-          width: 40px; height: 40px;
-          border-radius: 12px;
-          background: var(--color-white);
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1rem;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          transition: all 0.2s;
-        }
-
-        .fl-action-btn:hover {
-          transform: scale(1.1);
-          background: var(--color-primary);
-          color: var(--color-white);
-        }
-
-        .fl-action-btn--delete:hover {
-          background: var(--color-error);
-        }
-
-        .fl-p-card__link-btn {
-          background: var(--color-white);
-          color: var(--color-primary);
-          padding: 0.6rem 1.25rem;
-          border-radius: 100px;
-          font-size: 0.85rem;
-          font-weight: 800;
-          text-decoration: none;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          transition: all 0.2s;
-        }
-
-        .fl-p-card__link-btn:hover {
-          transform: scale(1.05);
-          background: var(--color-primary);
-          color: var(--color-white);
-        }
-
-        .fl-gig-card__body {
-          padding: var(--space-5);
-          flex-grow: 1;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .fl-gig-card__category {
-          font-size: 0.65rem;
-          font-weight: var(--fw-bold);
-          color: var(--color-primary);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: var(--space-2);
-        }
-
-        .fl-gig-card__title {
-          font-family: var(--font-heading);
-          font-size: var(--fs-md);
-          font-weight: var(--fw-bold);
-          color: var(--color-primary-dark);
-          margin-bottom: var(--space-2);
-          line-height: var(--lh-snug);
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          transition: color 0.2s;
-        }
-
-        .fl-gig-card:hover .fl-gig-card__title { color: var(--color-primary-light); }
-
-        .fl-gig-card__desc {
-          font-size: var(--fs-sm);
-          color: var(--color-text-mid);
-          margin-bottom: var(--space-3);
-          line-height: var(--lh-normal);
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        /* Mini Gig Section Enhancement */
-        .fl-service-gigs-section {
-          background: var(--color-secondary);
-          border: 1px solid rgba(183, 201, 226, 0.35);
-          padding: 2.5rem;
-          border-radius: 32px;
-        }
-
-        .fl-section-header { margin-bottom: 2rem; }
-        .fl-section-title { font-size: 1.5rem; font-weight: 800; color: var(--color-primary); }
-        .fl-section-sub { font-size: 0.9rem; color: var(--color-text-mid); }
-
-        .fl-empty-message {
-          padding: 5rem 2rem;
-          text-align: center;
-          background: var(--color-white);
-          border-radius: 32px;
-          border: 2px dashed rgba(183, 201, 226, 0.35);
-        }
-
-        .fl-empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
-
-        .fl-p-upload-zone {
-          border: 2px dashed rgba(183, 201, 226, 0.6);
-          border-radius: var(--radius-xl);
-          height: 180px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--color-secondary);
-          transition: all 0.2s;
-          overflow: hidden;
-        }
-
-        .fl-p-upload-zone:hover {
-          border-color: var(--color-primary);
-          background: var(--color-secondary);
-        }
-
-        .fl-p-upload-zone img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .fl-p-upload-zone__content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.5rem;
-          color: var(--color-text-mid);
-        }
-
-        .fl-p-upload-zone__content span { font-size: 2rem; }
-        .fl-p-upload-zone__content p { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
-
-        .fl-placeholder-icon {
-          font-size: 4rem;
-          opacity: 0.4;
-        }
-
-        .fl-gig-card__placeholder {
-          width: 100%; 
-          height: 100%; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center;
-          background: rgba(0, 0, 0, 0.02);
-          color: var(--color-primary);
-        }
-
-        /* ── Mobile ──────────────────────────────────────────────
-           The Service Gigs section's 2.5rem padding left too little room for the
-           gig card inside on phones. Trim the padding (and the grid gap) so the
-           card fits comfortably. */
-        @media (max-width: 640px) {
-          .fl-service-gigs-section { padding: 1.25rem; border-radius: 20px; }
-          .fl-gig-grid { gap: 1.25rem; }
-          .fl-section-title { font-size: 1.15rem; }
-        }
-        @media (max-width: 400px) {
-          .fl-service-gigs-section { padding: 1rem; }
-        }
-      `}</style>
     </div>
   );
-};
-
-export default FreelancerPortfolio;
+}

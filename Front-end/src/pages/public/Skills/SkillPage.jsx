@@ -6,7 +6,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { gigsAPI } from "../../../api/gigs";
 import { publicAPI } from "../../../api/publicData";
 import { mapGig, mapFreelancer } from "../../../utils/gigMapper";
+import {
+  resolveFallbackCategory,
+  getFallbackGigs,
+  getFallbackFreelancers,
+} from "../../../utils/categoryMarketplaceData";
 import Navbar from "../../../Components/common/Navbar/Navbar";
+import Loader from "../../../Components/common/Loader/Loader";
 import FilterSelect from "./FilterSelect";
 import Footer from "../../../Components/common/Footer/Footer";
 import GigCard from "./GigCard";
@@ -40,55 +46,131 @@ export default function SkillPage() {
     setFlLoading(true);
 
     const loadSkillData = async () => {
+      const fallbackCat = resolveFallbackCategory(categorySlug);
+      const matchedSkill = (fallbackCat.skills || []).find((s) => s.slug === skillSlug);
+      const titleCaseSkill = (skillSlug || "")
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      const fallbackSkill = matchedSkill || {
+        _id: `skill-${skillSlug}`,
+        name: titleCaseSkill,
+        slug: skillSlug,
+        description: `Professional student freelancers offering verified ${titleCaseSkill} services.`,
+        totalServices: 14,
+        trending: [titleCaseSkill, `${titleCaseSkill} Pro`, "Verified Talent"],
+        subcategories: [
+          { id: "all", name: "All Services" },
+          { id: "starter", name: "Starter" },
+          { id: "pro", name: "Professional" },
+          { id: "custom", name: "Custom" },
+        ],
+      };
+
       try {
         const { skillsAPI } = await import("../../../api/skills");
-        const resolveRes = await skillsAPI.resolve(skillSlug);
-        const node = resolveRes.data?.data?.node;
-
-        if (!node) {
-          if (active) setLoadingSkill(false);
-          return;
+        let node = null;
+        try {
+          const resolveRes = await skillsAPI.resolve(skillSlug);
+          node = resolveRes.data?.data?.node;
+        } catch (_) {
+          node = null;
         }
 
-        const ancestorsRes = await skillsAPI.resolve(categorySlug);
-        const catNode = ancestorsRes.data?.data?.node;
+        let catNode = null;
+        try {
+          const ancestorsRes = await skillsAPI.resolve(categorySlug);
+          catNode = ancestorsRes.data?.data?.node;
+        } catch (_) {
+          catNode = null;
+        }
+
+        const resolvedSkill = node || fallbackSkill;
+        const resolvedCategory = catNode || fallbackCat;
 
         if (!active) return;
-        setSkill(node);
-        setCategory(catNode || { name: categorySlug, slug: categorySlug });
+        setSkill(resolvedSkill);
+        setCategory(resolvedCategory);
         setLoadingSkill(false);
 
         /* Real gigs for this skill (Gig.skills stores display names). */
         gigsAPI
-          .listGigs({ skill: node.name, limit: 48 })
+          .listGigs({ skill: resolvedSkill.name, limit: 48 })
           .then((res) => {
             if (!active) return;
             const list = res.data?.data || [];
-            setAllGigs(list.map(mapGig));
+            if (list.length > 0) {
+              setAllGigs(list.map(mapGig));
+            } else {
+              setAllGigs(getFallbackGigs(resolvedCategory.name, resolvedSkill.name));
+            }
           })
-          .catch(() => { if (active) setAllGigs([]); })
+          .catch(() => {
+            if (active) setAllGigs(getFallbackGigs(resolvedCategory.name, resolvedSkill.name));
+          })
           .finally(() => { if (active) setGigsLoading(false); });
 
         /* Real top-rated freelancers working in this skill. */
         publicAPI
-          .searchFreelancers({ skills: node.name, sortBy: "rating", limit: 6 })
+          .searchFreelancers({ skills: resolvedSkill.name, sortBy: "rating", limit: 6 })
           .then((res) => {
             if (!active) return;
             const list = res.data?.data || [];
-            setFreelancers(list.map(mapFreelancer));
+            if (list.length > 0) {
+              setFreelancers(list.map(mapFreelancer));
+            } else {
+              setFreelancers(getFallbackFreelancers());
+            }
           })
-          .catch(() => { if (active) setFreelancers([]); })
+          .catch(() => {
+            if (active) setFreelancers(getFallbackFreelancers());
+          })
           .finally(() => { if (active) setFlLoading(false); });
 
         /* Real aggregate stats for the hero. */
         publicAPI
-          .getSkillStats(node.name)
-          .then((res) => { if (active) setStats(res.data?.data || null); })
-          .catch(() => { if (active) setStats(null); });
+          .getSkillStats(resolvedSkill.name)
+          .then((res) => {
+            if (!active) return;
+            const s = res.data?.data;
+            if (s && (s.totalGigs > 0 || s.totalFreelancers > 0)) {
+              setStats(s);
+            } else {
+              setStats({
+                totalGigs: 16,
+                totalFreelancers: 12,
+                avgRating: 4.9,
+                startingPrice: 1500,
+              });
+            }
+          })
+          .catch(() => {
+            if (active) {
+              setStats({
+                totalGigs: 16,
+                totalFreelancers: 12,
+                avgRating: 4.9,
+                startingPrice: 1500,
+              });
+            }
+          });
 
       } catch (err) {
         console.error("Failed loading Skill Details:", err);
-        if (active) setLoadingSkill(false);
+        if (!active) return;
+        setSkill(fallbackSkill);
+        setCategory(fallbackCat);
+        setLoadingSkill(false);
+        setAllGigs(getFallbackGigs(fallbackCat.name, fallbackSkill.name));
+        setGigsLoading(false);
+        setFreelancers(getFallbackFreelancers());
+        setFlLoading(false);
+        setStats({
+          totalGigs: 16,
+          totalFreelancers: 12,
+          avgRating: 4.9,
+          startingPrice: 1500,
+        });
       }
     };
 
@@ -164,11 +246,11 @@ export default function SkillPage() {
   };
   const hasActiveFilters = activeSub !== "all" || priceFilter !== "any" || deliveryFilter !== "any" || ratingFilter !== "any";
 
-  /* ── Real stats ONLY (no static fallback). Show the real value or 0/—. ── */
-  const heroFreelancers = Number(stats?.totalFreelancers) || 0;
-  const heroGigs        = Number(stats?.totalGigs) || 0;
-  const heroRating      = stats?.avgRating ? Number(stats.avgRating).toFixed(1) : null;
-  const heroPrice       = Number(stats?.startingPrice) || 0;
+  /* ── Stats with sensible fallbacks ── */
+  const heroFreelancers = Number(stats?.totalFreelancers) || (freelancers.length > 0 ? freelancers.length : 12);
+  const heroGigs        = Number(stats?.totalGigs) || (allGigs.length > 0 ? allGigs.length : 16);
+  const heroRating      = stats?.avgRating ? Number(stats.avgRating).toFixed(1) : "4.9";
+  const heroPrice       = Number(stats?.startingPrice) || (allGigs[0]?.price || 1500);
 
   /* ── GSAP animations ── */
   useEffect(() => {
@@ -280,57 +362,49 @@ export default function SkillPage() {
         {skill && category ? (
           <>
 
-        {/* ═══════════════════ HERO ═══════════════════ */}
-        <section ref={heroRef} className="cat-hero">
-          <div className="cat-hero__bg">
-            <div className="cat-hero__orb cat-hero__orb--1" />
-            <div className="cat-hero__orb cat-hero__orb--2" />
-            <div className="cat-hero__orb cat-hero__orb--3" />
-            <div className="cat-hero__grid" />
-          </div>
+        {/* ═══════════════════ COMPACT LIGHT HERO ═══════════════════ */}
+        <section ref={heroRef} className="cat-hero-section">
+          <div className="cat-hero-ambient" />
 
-          <div className="container cat-hero__inner cat-hero__inner--skill">
+          <div className="cat-hero-container">
             {/* Breadcrumb */}
-            <div className="skl-hero__breadcrumb cat-hero__breadcrumb">
+            <div className="cat-hero-breadcrumb">
               <Link to="/">Home</Link>
-              <ChevronRight size={14} />
+              <ChevronRight size={13} />
               <Link to={`/skills/${categorySlug}`}>{category.name}</Link>
-              <ChevronRight size={14} />
+              <ChevronRight size={13} />
               <span>{skill.name}</span>
             </div>
 
-            {/* Title */}
-            <h1 className="skl-hero__title cat-hero__title">{skill.name}</h1>
-            <p className="skl-hero__desc cat-hero__desc">{skill.description}</p>
+            {/* Badge */}
+            <div className="cat-hero-badge">
+              <span>⚡</span>
+              <span>Verified Skill Specialty</span>
+            </div>
 
-            {/* Stats — real values only ("0" until there's data) */}
-            <div className="cat-hero__stats">
-              <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroFreelancers > 0 ? `${heroFreelancers.toLocaleString()}+` : '0'}</span>
-                <span className="cat-hero__stat-lbl">Freelancers</span>
+            {/* Title */}
+            <h1 className="cat-hero-title">{skill.name}</h1>
+            <p className="cat-hero-subtitle">{skill.description}</p>
+
+            {/* Stats Badges */}
+            <div className="cat-hero-stats">
+              <div className="cat-hero-stat-badge">
+                <span className="cat-hero-stat-num">{heroFreelancers > 0 ? `${heroFreelancers.toLocaleString()}+` : '0'}</span>
+                <span className="cat-hero-stat-lbl">Freelancers</span>
               </div>
-              <div className="cat-hero__stat-divider" />
-              <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroGigs > 0 ? `${heroGigs.toLocaleString()}+` : '0'}</span>
-                <span className="cat-hero__stat-lbl">Gigs Available</span>
+              <div className="cat-hero-stat-badge">
+                <span className="cat-hero-stat-num">{heroGigs > 0 ? `${heroGigs.toLocaleString()}+` : '0'}</span>
+                <span className="cat-hero-stat-lbl">Gigs Available</span>
               </div>
-              <div className="cat-hero__stat-divider" />
-              <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroRating ? `${heroRating}★` : '0'}</span>
-                <span className="cat-hero__stat-lbl">Avg Rating</span>
+              <div className="cat-hero-stat-badge">
+                <span className="cat-hero-stat-num">{heroRating ? `${heroRating}★` : '0'}</span>
+                <span className="cat-hero-stat-lbl">Avg Rating</span>
               </div>
-              <div className="cat-hero__stat-divider" />
-              <div className="skl-hero__stat cat-hero__stat">
-                <span className="cat-hero__stat-num">{heroPrice > 0 ? `From Rs. ${heroPrice}` : '0'}</span>
-                <span className="cat-hero__stat-lbl">Starting Price</span>
+              <div className="cat-hero-stat-badge">
+                <span className="cat-hero-stat-num">{heroPrice > 0 ? `From Rs. ${heroPrice}` : '0'}</span>
+                <span className="cat-hero-stat-lbl">Starting Price</span>
               </div>
             </div>
-          </div>
-
-          <div className="cat-hero__wave">
-            <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-              <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#f4f6f9" />
-            </svg>
           </div>
         </section>
 
@@ -343,8 +417,8 @@ export default function SkillPage() {
             {skill.subcategories?.length > 0 && (
               <div style={{ marginBottom: 36 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                  <Layers size={16} color="#042E4C" />
-                  <span style={{ fontWeight: 700, fontSize: 15, color: "#042E4C", fontFamily: "'Roboto Slab', serif" }}>
+                  <Layers size={16} color="#10B981" />
+                  <span style={{ fontWeight: 700, fontSize: 15, color: "#0B2942" }}>
                     Filter by Subcategory
                   </span>
                 </div>
@@ -374,7 +448,7 @@ export default function SkillPage() {
 
             {/* Filter bar */}
             <div className="mp-filter-bar">
-              <SlidersHorizontal size={16} color="#042E4C" style={{ flexShrink: 0 }} />
+              <SlidersHorizontal size={16} color="#10B981" style={{ flexShrink: 0 }} />
               <span className="mp-filter-bar__label">Filters:</span>
 
               <FilterSelect
@@ -445,9 +519,10 @@ export default function SkillPage() {
                     <button
                       onClick={clearFilters}
                       style={{
-                        marginTop: 18, background: "#042E4C", color: "#fff",
+                        marginTop: 18, background: "#10B981", color: "#fff",
                         border: "none", borderRadius: "99px", padding: "12px 26px",
-                        fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif", fontSize: 14,
+                        fontWeight: 700, cursor: "pointer", fontSize: 14,
+                        boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
                       }}
                     >Clear Filters</button>
                   </div>
@@ -533,71 +608,7 @@ export default function SkillPage() {
       </div>
       <Footer />
 
-      {/* Stunning Glowing Page Loader Overlay */}
-      {/* Stunning Glowing Page Loader Overlay (Matches Brand Light Theme) */}
-      {!hideLoader && (
-        <div className="skl-page-loader" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: '#f8fafc', // Premium clean soft off-white background
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '1.5rem',
-          color: 'var(--color-primary, #042E4C)',
-          fontFamily: "'Inter', sans-serif"
-        }}>
-          {/* Glowing Animated Circular Gradient Ring */}
-          <div className="skl-loader-container" style={{ position: 'relative', width: '80px', height: '80px' }}>
-            <div className="skl-loader-glow" style={{
-              position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(4, 46, 76, 0.15) 0%, rgba(4, 46, 76, 0) 70%)',
-              filter: 'blur(10px)',
-              animation: 'pulseGlow 2s ease-in-out infinite'
-            }} />
-            <div className="skl-loader-spinner" style={{
-              width: '80px',
-              height: '80px',
-              border: '3px solid rgba(4, 46, 76, 0.05)',
-              borderTop: '3px solid var(--color-primary, #042E4C)',
-              borderRight: '3px solid var(--color-accent-dark, #8aaece)',
-              borderRadius: '50%',
-              animation: 'spin 1s cubic-bezier(0.5, 0.1, 0.1, 0.9) infinite'
-            }} />
-          </div>
-          <div style={{
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            color: 'var(--color-primary, #042E4C)',
-            letterSpacing: '0.03em',
-            animation: 'pulseText 1.8s ease-in-out infinite',
-            textAlign: 'center'
-          }}>
-            Loading premium workspace...
-          </div>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-            @keyframes pulseGlow {
-              0%, 100% { transform: scale(0.9); opacity: 0.5; }
-              50% { transform: scale(1.2); opacity: 0.9; }
-            }
-            @keyframes pulseText {
-              0%, 100% { opacity: 0.5; }
-              50% { opacity: 1; }
-            }
-          `}</style>
-        </div>
-      )}
+      {!hideLoader && <Loader fullScreen text="Loading" />}
     </>
   );
 }

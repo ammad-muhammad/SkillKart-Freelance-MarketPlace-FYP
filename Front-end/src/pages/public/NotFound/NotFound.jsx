@@ -1,126 +1,166 @@
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { gsap } from 'gsap';
-import { Home, Search, Users, ArrowLeft, Compass } from 'lucide-react';
+import {
+  Home, Search, Users, ArrowLeft, Compass, Briefcase,
+  HelpCircle, ArrowRight, Sparkles, AlertCircle
+} from 'lucide-react';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
 import { isMobileApp } from '../../../utils/platform';
 import './NotFound.css';
 
-/* Where people most often actually meant to go. `/` is safe on mobile (it
-   redirects to /login there — see AppRoutes.jsx); the other three are
-   marketing/discovery routes that aren't registered at all on the mobile
-   build, so they're excluded there rather than left as dead links on the
-   one page guaranteed to be reachable from any bad mobile deep link. */
 const SUGGESTIONS = [
-    { icon: Home, label: 'Home', desc: 'Back to the start', to: '/' },
-    { icon: Search, label: 'Browse Projects', desc: 'Find work to bid on', to: '/browse-projects', webOnly: true },
-    { icon: Users, label: 'Find Freelancers', desc: 'Hire the right talent', to: '/browse-freelancers', webOnly: true },
-    { icon: Compass, label: 'Explore Skills', desc: 'See every category', to: '/categories', webOnly: true }
+  {
+    icon: Home,
+    label: 'Home',
+    desc: 'Return to the start & dashboard',
+    to: '/'
+  },
+  {
+    icon: Briefcase,
+    label: 'Browse Projects',
+    desc: 'Find freelance jobs to bid on',
+    to: '/browse-projects',
+    webOnly: true
+  },
+  {
+    icon: Users,
+    label: 'Find Freelancers',
+    desc: 'Hire verified student specialists',
+    to: '/browse-freelancers',
+    webOnly: true
+  },
+  {
+    icon: Compass,
+    label: 'Marketplace Categories',
+    desc: 'Explore all skills & categories',
+    to: '/categories',
+    webOnly: true
+  }
 ];
 
 export default function NotFound() {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const heroRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchTerm, setSearchTerm] = useState('');
 
-    // The route that actually 404'd, handed over by the redirect in AppRoutes so
-    // the address bar can read /404 without losing what the user typed.
-    const attempted = location.state?.from;
+  // The route that actually 404'd
+  const attempted = location.state?.from;
 
-    useEffect(() => {
-        // gsap.from() with opacity leaves elements invisible if the tween is
-        // interrupted or never runs; fromTo() with clearProps guarantees the end
-        // state is the CSS default, so content is never stranded at opacity 0.
-        const ctx = gsap.context(() => {
-            const intro = (target, delay, extra = {}) =>
-                gsap.fromTo(
-                    target,
-                    { y: extra.y ?? 20, opacity: 0 },
-                    {
-                        y: 0,
-                        opacity: 1,
-                        duration: 0.6,
-                        delay,
-                        ease: 'power3.out',
-                        clearProps: 'all',
-                        ...(extra.stagger ? { stagger: extra.stagger } : {})
-                    }
-                );
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/browse-projects?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
 
-            intro('.nf__code', 0, { y: 30 });
-            intro('.nf__title', 0.15);
-            intro('.nf__sub', 0.25);
-            intro('.nf__actions > *', 0.35, { y: 16, stagger: 0.08 });
-            intro('.nf__card', 0.45, { y: 24, stagger: 0.07 });
-        }, heroRef);
-        return () => ctx.revert();
-    }, []);
+  const mobile = isMobileApp();
+  const visibleSuggestions = SUGGESTIONS.filter((s) => !s.webOnly || !mobile);
 
-    // Navbar/Footer carry their own mega-menu/footer links to the same
-    // mobile-excluded marketing routes — this page is the one guaranteed to
-    // render on any bad mobile deep link, so on mobile it gets a minimal,
-    // link-free header/footer instead of leaking that whole surface too.
-    const mobile = isMobileApp();
-    const visibleSuggestions = SUGGESTIONS.filter((s) => !s.webOnly || !mobile);
+  return (
+    <div className="nf-shell">
+      {mobile ? (
+        <header className="nf-mobile-header">
+          <span>SkillKart</span>
+        </header>
+      ) : (
+        <Navbar alwaysSticky />
+      )}
 
-    return (
-        <>
-            {mobile ? (
-                <header style={{ padding: '1.25rem', textAlign: 'center', fontWeight: 700, fontSize: '1.1rem' }}>SkillKart</header>
-            ) : (
-                <Navbar alwaysSticky />
+      <main className="nf-main">
+        {/* Soft Ambient Glows (No Blue Background!) */}
+        <div className="nf-ambient-orb nf-ambient-orb--top" aria-hidden="true" />
+        <div className="nf-ambient-orb nf-ambient-orb--bottom" aria-hidden="true" />
+
+        <div className="nf-container">
+          {/* Status Badge */}
+          <div className="nf-badge">
+            <AlertCircle size={13} className="nf-badge-icon" />
+            <span>ERROR 404 • PAGE NOT FOUND</span>
+          </div>
+
+          {/* Big Modern 404 Number */}
+          <div className="nf-code-display">
+            <span className="nf-code-num">4</span>
+            <span className="nf-code-zero">
+              <span className="nf-code-zero-inner">0</span>
+            </span>
+            <span className="nf-code-num">4</span>
+          </div>
+
+          {/* Heading & Subtitle */}
+          <h1 className="nf-title">
+            This Page Seems to Have Wandered Off
+          </h1>
+
+          <p className="nf-subtitle">
+            The link you followed may be broken, or the project might have already been completed and archived.
+            {attempted && (
+              <span className="nf-attempted-pill">
+                Could not find: <code>{attempted}</code>
+              </span>
             )}
+          </p>
 
-            <main className="nf" ref={heroRef}>
-                <div className="nf__bg" aria-hidden="true">
-                    <span className="nf__orb nf__orb--1" />
-                    <span className="nf__orb nf__orb--2" />
-                    <span className="nf__grid" />
-                </div>
+          {/* Smart In-page Search */}
+          <form className="nf-search-bar" onSubmit={handleSearchSubmit}>
+            <Search size={18} className="nf-search-icon" />
+            <input
+              type="text"
+              placeholder="Search freelance jobs, gigs, or skills..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="nf-search-input"
+            />
+            <button type="submit" className="nf-search-btn">
+              Search
+            </button>
+          </form>
 
-                <div className="container nf__inner">
-                    <p className="nf__code" aria-hidden="true">404</p>
+          {/* Action Buttons */}
+          <div className="nf-actions">
+            <Link to="/" className="nf-btn-primary">
+              <Home size={16} />
+              <span>Back to Home</span>
+            </Link>
+            <button type="button" className="nf-btn-secondary" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} />
+              <span>Go Back</span>
+            </button>
+          </div>
 
-                    <h1 className="nf__title">This page took on a different project</h1>
+          {/* Destination Suggestion Bento Cards */}
+          <div className="nf-suggestions-wrap">
+            <div className="nf-suggestions-label">
+              <Sparkles size={13} style={{ color: '#10B981' }} />
+              <span>POPULAR DESTINATIONS</span>
+            </div>
 
-                    <p className="nf__sub">
-                        The page you're looking for doesn't exist, moved, or never made it past
-                        the proposal stage.
-                        {attempted && (
-                            <>
-                                {' '}We couldn't find <code className="nf__path">{attempted}</code>.
-                            </>
-                        )}
-                    </p>
+            <div className="nf-grid">
+              {visibleSuggestions.map(({ icon: Icon, label, desc, to }) => (
+                <Link key={to} to={to} className="nf-card">
+                  <div className="nf-card-icon-wrap">
+                    <Icon size={19} />
+                  </div>
+                  <div className="nf-card-info">
+                    <span className="nf-card-title">{label}</span>
+                    <span className="nf-card-desc">{desc}</span>
+                  </div>
+                  <ArrowRight size={15} className="nf-card-arrow" />
+                </Link>
+              ))}
+            </div>
+          </div>
 
-                    <div className="nf__actions">
-                        <Link to="/" className="btn-primary">
-                            <Home size={18} /> Back to Home
-                        </Link>
-                        <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
-                            <ArrowLeft size={18} /> Go Back
-                        </button>
-                    </div>
+          {/* Help Center Footnote */}
+          <p className="nf-footer-help">
+            Need urgent assistance? Visit our <Link to="/help">Help Center</Link> or{' '}
+            <Link to="/contact">Contact Support</Link>.
+          </p>
+        </div>
+      </main>
 
-                    <div className="nf__suggest">
-                        <p className="nf__suggest-label">Or try one of these</p>
-                        <div className="nf__cards">
-                            {visibleSuggestions.map(({ icon: Icon, label, desc, to }) => (
-                                <Link key={to} to={to} className="nf__card">
-                                    <span className="nf__card-icon"><Icon size={20} /></span>
-                                    <span className="nf__card-text">
-                                        <strong>{label}</strong>
-                                        <small>{desc}</small>
-                                    </span>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            {!mobile && <Footer />}
-        </>
-    );
+      {!mobile && <Footer />}
+    </div>
+  );
 }

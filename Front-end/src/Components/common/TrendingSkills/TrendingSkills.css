@@ -1,300 +1,880 @@
-/* ============================================
-   Trending Skills Section Styles
-   ============================================ */
+/* ══════════════════════════════════════════════════════════════════════
+   TrendingSkills.css — Pixel-Accurate Redesign with Animated Signals & Console
+   ══════════════════════════════════════════════════════════════════════ */
 
-.trending {
-  padding: var(--space-16) 0 var(--space-8);
-  background: var(--color-bg);
-}
-
-/* ── Header ── */
-.trending__header {
-  margin-bottom: var(--space-12);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.trending__header-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-6);
-}
-
-.trending__highlight {
-  color: var(--color-primary);
+.trending-section {
   position: relative;
-}
-
-.trending__highlight::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--color-accent);
-  border-radius: var(--radius-full);
-  opacity: 0.7;
-}
-
-.trending__cta-desktop {
-  flex-shrink: 0;
-}
-
-/* ── Grid ── */
-.trending__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-5);
-}
-
-/* ── Card ── */
-.trending__card {
-  background: var(--color-white);
-  border: 1.5px solid var(--color-secondary);
-  border-radius: var(--radius-2xl);
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  transition: var(--transition-spring);
-  cursor: pointer;
-  position: relative;
+  padding: 2.8rem 0 1rem;
+  background: #FFFFFF;
   overflow: hidden;
 }
 
-.trending__card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--gradient-primary);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.trending__card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--color-primary);
-}
-
-.trending__card:hover::before {
-  opacity: 1;
-}
-
-.trending__card:hover .trending__card-icon,
-.trending__card:hover .trending__card-name,
-.trending__card:hover .trending__card-avg,
-.trending__card:hover .trending__card-btn {
-  color: var(--color-white);
-  position: relative;
-  z-index: 1;
-}
-
-.trending__card:hover .trending__card-trend {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--color-white);
-  position: relative;
-  z-index: 1;
-}
-
-.trending__card:hover .trending__tag {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--color-white);
-  border-color: rgba(255, 255, 255, 0.2);
-  position: relative;
-  z-index: 1;
-}
-
-.trending__card:hover .trending__card-meta {
-  position: relative;
-  z-index: 1;
-}
-
-.trending__card:hover .trending__card-tags {
-  position: relative;
-  z-index: 1;
-}
-
-.trending__card:hover .trending__card-btn {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-/* ── Hot card variant ── */
-.trending__card--hot {
-  border-color: rgba(183, 201, 226, 0.4);
-}
-
-/* ── Indicators (Top Right) ── */
-.trending__card-indicators {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-}
-
-/* ── Hot badge ── */
-.trending__hot-badge {
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  color: var(--color-white);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-black);
-  padding: 2px 10px;
-  border-radius: var(--radius-full);
-  z-index: 2;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.trending__card:hover .trending__hot-badge {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-}
-
-/* ── Card inner elements ── */
-.trending__card-header {
+/* ── Section Header ── */
+.trending-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  position: relative;
-  z-index: 1;
+  gap: 2rem;
+  margin-bottom: 2.2rem;
 }
 
-.trending__card-icon {
-  font-size: 2rem;
-  width: 52px;
-  height: 52px;
-  background: var(--color-secondary);
-  border-radius: var(--radius-lg);
+.trending-title {
+  font-size: clamp(2rem, 3.2vw, 2.6rem);
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 0.5rem;
+}
+
+.trending-title--accent {
+  color: #10B981;
+  text-decoration: underline;
+  text-decoration-color: #34D399;
+  text-underline-offset: 4px;
+}
+
+.trending-subtitle {
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.5;
+  max-width: 680px;
+  margin: 0;
+}
+
+.ts-live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F1F5F9;
+  color: #1E293B;
+  border: 1px solid #E2E8F0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.ts-live-dot {
+  width: 7px;
+  height: 7px;
+  background: #EF4444;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  animation: tsPulse 1.8s infinite;
+}
+
+@keyframes tsPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.trending-explore-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 1.15rem;
+  background: #F1F5F9;
+  color: #0F172A;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid #E2E8F0;
+}
+
+.trending-explore-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+  transform: translateY(-1px);
+}
+
+/* ── 3-Column Dashboard Stage with Connecting Circuit Cells ── */
+.ts-dashboard-stage {
+  display: grid;
+  grid-template-columns: minmax(310px, 1.05fr) 46px minmax(340px, 1.35fr) 46px minmax(290px, 1.05fr);
+  gap: 0;
+  align-items: center;
+}
+
+.ts-col-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.ts-col-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1E293B;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.85rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   COLUMN 1: Focus & Demand Center (Seamless Solid Console Card)
+   ══════════════════════════════════════════════════════════════════════ */
+.ts-focus-card {
+  width: 100%;
+  max-width: 356px;
+  margin: 0 auto;
+  background: #FFFFFF;
+  border-radius: 26px;
+  border: 1.5px solid #6EE7B7;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25), 0 16px 36px -4px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Dark Green / Teal Console Top Half with Hero Cyan/Mint Glow */
+.ts-focus-top {
+  position: relative;
+  background: radial-gradient(circle at 50% 25%, #0B4636 0%, #06392B 50%, #02241A 100%);
+  padding: 1.2rem 1.2rem 2.8rem;
+  text-align: center;
+  color: #FFFFFF;
+  overflow: hidden;
+}
+
+/* Raised Tab Notch for Badge */
+.ts-top-tab-notch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+/* Golden Halo Spotlight behind Badge */
+.ts-gold-halo {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 38px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.6) 0%, rgba(245, 158, 11, 0) 70%);
+  pointer-events: none;
+  filter: blur(5px);
+  animation: tsGoldHalo 3s ease-in-out infinite;
+}
+
+@keyframes tsGoldHalo {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.75; }
+  50% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+}
+
+.ts-focus-badge {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  background: linear-gradient(180deg, #FDE68A 0%, #F59E0B 100%);
+  color: #78350F;
+  border: 1px solid #FCD34D;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 4px 14px;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.45);
+  white-space: nowrap;
+}
+
+/* Glowing Sparkles & Heatmap Telemetry Dots */
+.ts-sparkle {
+  position: absolute;
+  color: #2DD4BF;
+  filter: drop-shadow(0 0 6px #2DD4BF);
+  pointer-events: none;
+}
+.ts-sparkle--tl {
+  top: 18%;
+  left: 12%;
+  font-size: 1.35rem;
+  animation: tsTwinkle 2.8s ease-in-out infinite;
+}
+.ts-sparkle-dot--tl {
+  position: absolute;
+  top: 32%;
+  left: 9%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2DD4BF;
+  box-shadow: 0 0 6px #2DD4BF;
+}
+.ts-sparkle--tr {
+  top: 16%;
+  right: 12%;
+  font-size: 1.45rem;
+  animation: tsTwinkle 3.2s ease-in-out 0.5s infinite;
+}
+.ts-sparkle--tr-sub {
+  top: 24%;
+  right: 24%;
+  font-size: 0.9rem;
+  color: #34D399;
+  opacity: 0.85;
+}
+.ts-sparkle-dot--tr {
+  position: absolute;
+  top: 42%;
+  right: 12%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2DD4BF;
+  box-shadow: 0 0 6px #2DD4BF;
+}
+
+@keyframes tsTwinkle {
+  0%, 100% { opacity: 0.95; transform: scale(1); filter: drop-shadow(0 0 6px #2DD4BF); }
+  50% { opacity: 0.35; transform: scale(0.75); filter: drop-shadow(0 0 2px #2DD4BF); }
+}
+
+.ts-focus-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  margin: 0 0 0.85rem;
+}
+
+/* ── Larger Circular Radial Gauge Circle (212px) ── */
+.ts-gauge-wrapper {
+  position: relative;
+  width: 212px;
+  height: 212px;
+  margin: 0 auto;
+}
+
+.ts-gauge-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+/* Rotating Radar Orbits */
+.ts-radar-orbit-group {
+  transform-origin: 105px 105px;
+  animation: tsRadarSpin 24s linear infinite;
+}
+
+@keyframes tsRadarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ts-gauge-track {
+  fill: none;
+  stroke: rgba(6, 78, 59, 0.45);
+  stroke-width: 9;
+}
+
+.ts-gauge-bar {
+  fill: none;
+  stroke-width: 9.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 10px rgba(45, 212, 191, 0.85));
+  animation: tsGaugeGlow 3s ease-in-out infinite;
+}
+
+@keyframes tsGaugeGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.75)); }
+  50% { filter: drop-shadow(0 0 14px rgba(45, 212, 191, 0.95)); }
+}
+
+.ts-gauge-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.ts-gauge-percent {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #2DD4BF;
+  text-shadow: 0 0 14px rgba(45, 212, 191, 0.5);
+  margin-bottom: 2px;
+}
+
+.ts-gauge-skill {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 4px 0 2px;
+}
+
+.ts-gauge-meta {
+  font-size: 0.68rem;
+  color: #A7F3D0;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  margin-top: 3px;
+  max-width: 82%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* White Lower Half with Smooth Curved Dome Top Arch */
+.ts-focus-bottom {
+  margin-top: -30px;
+  border-radius: 46% 46% 0 0 / 28px 28px 0 0;
+  position: relative;
+  z-index: 2;
+  padding: 1.25rem 1.15rem 1.35rem;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* 5-Step Connected Dots */
+.ts-step-track {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition-base);
+  width: 100%;
+  max-width: 230px;
+  margin: 0 auto;
 }
 
-.trending__card:hover .trending__card-icon {
-  background: rgba(255, 255, 255, 0.12) !important;
+.ts-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #CBD5E1;
+  flex-shrink: 0;
 }
 
-.trending__card-trend {
+.ts-step-dot--first {
+  background: #10B981;
+}
+
+.ts-step-dot--active {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #059669;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(5, 150, 105, 0.5);
+  animation: tsCheckPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes tsCheckPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4); }
+  50% { box-shadow: 0 0 0 5px rgba(5, 150, 105, 0); }
+}
+
+.ts-step-line {
+  flex: 1;
+  height: 2px;
+  background: #E2E8F0;
+}
+
+.ts-step-line--done {
+  background: #10B981;
+}
+
+/* ── Meta Pills: Fully Fitted with NO Overflow ── */
+.ts-focus-pills {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.ts-meta-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 5px 8px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  color: #334155;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+}
+
+.ts-meta-pill--verified {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+
+.ts-meta-pill--fast {
+  background: #F0FDF4;
+  border-color: #BBF7D0;
+  color: #166534;
+}
+
+/* ── CTA BUTTON: VIBRANT BRAND GREEN GRADIENT (NO NAVY/BLUE) ── */
+.ts-focus-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  color: #FFFFFF !important;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.38);
+  border: none;
+}
+
+.ts-focus-cta:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.48);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ANIMATED CONNECTOR CELLS (Flowing Signal Pulses & Data Packets)
+   ══════════════════════════════════════════════════════════════════════ */
+.ts-connector-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 1.8rem;
+}
+
+.ts-branch-svg {
+  width: 100%;
+  height: 100%;
+  max-height: 500px;
+}
+
+/* Flowing Electric Pulse on Connector Lines */
+.ts-signal-pulse {
+  animation: tsSignalFlow 1.8s linear infinite;
+}
+
+@keyframes tsSignalFlow {
+  0% { stroke-dashoffset: 28; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.ts-node-dot--active {
+  animation: tsActiveNodePulse 2s ease-in-out infinite;
+}
+
+@keyframes tsActiveNodePulse {
+  0%, 100% {
+    r: 4.5;
+    fill: #10B981;
+    filter: drop-shadow(0 0 2px #10B981);
+  }
+  50% {
+    r: 6;
+    fill: #2DD4BF;
+    filter: drop-shadow(0 0 6px #2DD4BF);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   COLUMN 2: Timeline Stack & Shimmer Progress Bars
+   ══════════════════════════════════════════════════════════════════════ */
+.ts-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ts-timeline-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.ts-timeline-card:hover {
+  border-color: #10B981;
+  transform: translateX(4px);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08);
+}
+
+.ts-timeline-card--active {
+  background: #ECFDF5;
+  border: 1.5px solid #10B981;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
+}
+
+.ts-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ts-card-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ts-icon-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.ts-icon-badge--ts {
+  background: #0284C7;
+  color: #FFFFFF;
+}
+
+.ts-icon-badge--py {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ts-icon-svg {
+  color: #334155;
+}
+.ts-icon-svg--pm { color: #059669; }
+.ts-icon-svg--va { color: #2563EB; }
+.ts-icon-svg--mongo { color: #16A34A; }
+.ts-icon-svg--bc { color: #D97706; }
+
+.ts-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ts-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 5px;
+}
+
+.ts-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.ts-card-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #047857;
+  background: #D1FAE5;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* ── Animated Progress Bar with Shimmer Wave ── */
+.ts-progress-wrap {
+  width: 100%;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 5px;
+  position: relative;
+}
+
+.ts-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10B981, #059669);
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ts-timeline-card--active .ts-progress-fill {
+  background: linear-gradient(90deg, #2DD4BF, #10B981);
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.5);
+}
+
+.ts-progress-shimmer-beam {
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.65) 50%,
+    transparent 100%
+  );
+  animation: tsBeamFlow 2.2s infinite ease-in-out;
+}
+
+@keyframes tsBeamFlow {
+  0% { transform: translateX(-150%); }
+  100% { transform: translateX(300%); }
+}
+
+.ts-card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #64748B;
+}
+
+.ts-meta-left {
+  color: #64748B;
+}
+
+.ts-meta-right {
+  color: #334155;
+  font-weight: 500;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   COLUMN 3: Telemetry & Tickers
+   ══════════════════════════════════════════════════════════════════════ */
+.ts-col-block--telemetry {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ts-telemetry-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 1.15rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.ts-telemetry-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.ts-telemetry-card__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.ts-dots {
+  color: #94A3B8;
+  cursor: pointer;
+}
+
+/* Live Ticker Feed */
+.ts-ticker-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ts-ticker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #334155;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-ticker-bullet {
+  color: #10B981;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+  animation: tsTickerDotPulse 2s ease-in-out infinite;
+}
+
+@keyframes tsTickerDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.ts-ticker-bullet--sub {
+  margin-left: 6px;
+}
+
+.ts-ticker-pipe {
+  color: #CBD5E1;
+  margin: 0 6px;
+}
+
+.ts-green {
+  color: #059669;
+  font-weight: 700;
+}
+
+/* Talent Match Hub Card */
+.ts-telemetry-card--hub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ts-hub-avatars-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.ts-avatars-cluster {
+  display: flex;
+  align-items: center;
+}
+
+.ts-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #FFFFFF;
+  margin-left: -8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.ts-avatar-img:first-child {
+  margin-left: 0;
+}
+
+.ts-hire-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1E293B;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.ts-hire-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.ts-hire-signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+}
+
+.ts-bar {
+  width: 2px;
+  background: #10B981;
+  border-radius: 1px;
+}
+.ts-bar--1 { height: 4px; animation: tsBar1 1.4s ease-in-out infinite; }
+.ts-bar--2 { height: 7px; animation: tsBar2 1.4s ease-in-out 0.2s infinite; }
+.ts-bar--3 { height: 10px; animation: tsBar3 1.4s ease-in-out 0.4s infinite; }
+
+@keyframes tsBar1 { 0%, 100% { height: 4px; } 50% { height: 8px; } }
+@keyframes tsBar2 { 0%, 100% { height: 7px; } 50% { height: 4px; } }
+@keyframes tsBar3 { 0%, 100% { height: 10px; } 50% { height: 6px; } }
+
+/* Telemetry Metrics */
+.ts-telemetry-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ts-telemetry-stat__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ts-stat-lbl {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #edf9f0;
-  color: #276749;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-black);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  transition: var(--transition-base);
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 500;
 }
 
-.trending__card-name {
-  font-family: var(--font-heading);
-  font-size: var(--fs-md);
-  font-weight: var(--fw-bold);
-  color: var(--color-primary);
-  line-height: var(--lh-snug);
-  position: relative;
-  z-index: 1;
-  transition: var(--transition-base);
+.ts-info-icon {
+  color: #94A3B8;
 }
 
-.trending__card-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.ts-stat-val {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
-.trending__card-avg {
-  font-size: var(--fs-lg);
-  font-weight: var(--fw-black);
-  color: var(--color-primary);
-  font-family: var(--font-heading);
-  transition: var(--transition-base);
+.ts-stat-val--green {
+  color: #059669;
+  font-size: 1.25rem;
 }
 
-.trending__card-level {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  padding: 2px 10px;
-  border-radius: var(--radius-full);
-  transition: var(--transition-base);
+.ts-sparkline {
+  width: 100px;
+  height: 32px;
+  flex-shrink: 0;
 }
 
-.trending__card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.trending__tag {
-  background: var(--color-secondary);
-  color: var(--color-text-mid);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-semibold);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(183, 201, 226, 0.3);
-  transition: var(--transition-base);
-}
-
-.trending__card-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-secondary);
-  border-radius: var(--radius-full);
-  padding: var(--space-2) var(--space-4);
-  transition: var(--transition-spring);
-  align-self: flex-start;
-  margin-top: auto;
-}
-
-.trending__card-btn:hover {
-  gap: var(--space-3);
-}
-
-/* ── Mobile CTA ── */
-.trending__cta-mobile {
-  display: none;
-  justify-content: center;
-  margin-top: var(--space-10);
-}
-
-/* ── Responsive ── */
-@media (max-width: 1023px) {
-  .trending__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .trending__cta-desktop {
-    display: none;
-  }
-
-  .trending__cta-mobile {
-    display: flex;
-  }
-
-  .trending__header-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-@media (max-width: 767px) {
-  .trending {
-    padding: var(--space-12) 0 var(--space-6);
-  }
-
-  .trending__grid {
+/* ── Responsive adjustments ── */
+@media (max-width: 1120px) {
+  .ts-dashboard-stage {
     grid-template-columns: 1fr;
-    max-width: 480px;
-    margin: 0 auto;
+    gap: 2rem;
+  }
+
+  .ts-connector-cell {
+    display: none;
   }
 }

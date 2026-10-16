@@ -8,6 +8,7 @@ import { safeToast as toast } from "../../utils/safeToast";
 import { useAuth } from "../../hooks/useAuth";
 import { freelancersAPI } from "../../api/freelancers";
 import ImageCropModal from "../common/ImageCropModal/ImageCropModal";
+import Loader from "../common/Loader/Loader";
 
 import ProgressBar from "./ProgressBar";
 import StepBasicInfo from "./StepBasicInfo";
@@ -416,15 +417,15 @@ const FreelancerOnboardingForm = () => {
 
   if (submitted) {
     return (
-      <section className="fob-root">
+      <section className="fob-root fob-root--success">
         <div className="fob-bg">
           <div className="fob-orb fob-orb--1" />
           <div className="fob-orb fob-orb--2" />
           <div className="fob-orb fob-orb--3" />
           <div className="fob-grid-overlay" />
         </div>
-        <div className="fob-container">
-          <div className="fob-card">
+        <div className="fob-container fob-container--success">
+          <div className="fob-card fob-card--success">
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -432,7 +433,7 @@ const FreelancerOnboardingForm = () => {
               className="fob-success"
             >
               <div className="fob-success-icon-wrap">
-                <Rocket size={64} className="fob-success-rocket" />
+                <Rocket size={32} className="fob-success-rocket" />
               </div>
               <h1 className="fob-success-title">You're Live on SkillKart!</h1>
               <p className="fob-success-sub">
@@ -480,18 +481,18 @@ const FreelancerOnboardingForm = () => {
                     className="fob-choice-card fob-choice-card--primary"
                     onClick={() => navigate("/freelancer/skill-test")}
                   >
-                    <Rocket size={22} />
+                    <Rocket size={18} />
                     <span className="fob-choice-card-title">Take the skill test now</span>
-                    <span className="fob-choice-card-desc">You'll choose the level first — Easy, Intermediate or Expert.</span>
+                    <span className="fob-choice-card-desc">Choose level — Easy, Intermediate or Expert.</span>
                   </button>
                   <button
                     type="button"
                     className="fob-choice-card"
                     onClick={() => navigate("/freelancer/dashboard")}
                   >
-                    <Clock size={22} />
+                    <Clock size={18} />
                     <span className="fob-choice-card-title">I'll do it later</span>
-                    <span className="fob-choice-card-desc">Go to your dashboard. Your skills start at 0% until you verify them.</span>
+                    <span className="fob-choice-card-desc">Go to dashboard. Verify skills whenever you want.</span>
                   </button>
                 </div>
               </div>
@@ -512,8 +513,8 @@ const FreelancerOnboardingForm = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)',
-              backdropFilter: 'blur(4px)', zIndex: 9999,
+              position: 'fixed', inset: 0, background: 'rgba(11, 41, 66, 0.7)',
+              backdropFilter: 'blur(5px)', zIndex: 9999,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}
           >
@@ -522,22 +523,22 @@ const FreelancerOnboardingForm = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               style={{
-                background: '#fff', borderRadius: '16px', padding: '32px',
-                maxWidth: '400px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                textAlign: 'center'
+                background: '#FFFFFF', borderRadius: '20px', padding: '36px',
+                maxWidth: '420px', width: '90%', boxShadow: '0 25px 50px -12px rgba(11, 41, 66, 0.3)',
+                textAlign: 'center', border: '1px solid #E2E8F0'
               }}
             >
               <div style={{
-                width: '64px', height: '64px', background: '#eff6ff', borderRadius: '50%',
+                width: '64px', height: '64px', background: 'var(--fob-mint)', borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 24px', color: '#3b82f6'
+                margin: '0 auto 20px', color: '#10B981', border: '2px solid var(--fob-mint-border)'
               }}>
                 <CheckCircle2 size={32} />
               </div>
-              <h3 style={{ margin: '0 0 12px', fontSize: '1.25rem', color: '#0f172a', fontWeight: 600 }}>
+              <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', color: '#0B2942', fontWeight: 800 }}>
                 Resume your onboarding progress?
               </h3>
-              <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.95rem', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 24px', color: '#64748B', fontSize: '0.95rem', lineHeight: 1.55 }}>
                 We noticed you left some unsaved changes. Would you like to pick up right where you left off?
               </p>
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -545,11 +546,11 @@ const FreelancerOnboardingForm = () => {
                   type="button"
                   onClick={handleDiscardDraft}
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                    background: 'transparent', color: '#64748b', fontWeight: 600, cursor: 'pointer',
+                    flex: 1, padding: '12px', borderRadius: '10px', border: '1.5px solid #E2E8F0',
+                    background: 'transparent', color: '#64748B', fontWeight: 700, cursor: 'pointer',
                     transition: 'all 0.2s'
                   }}
-                  onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+                  onMouseOver={(e) => e.target.style.background = '#F8FAFC'}
                   onMouseOut={(e) => e.target.style.background = 'transparent'}
                 >
                   Start Fresh
@@ -558,12 +559,13 @@ const FreelancerOnboardingForm = () => {
                   type="button"
                   onClick={handleRestoreDraft}
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                    background: '#3b82f6', color: '#fff', fontWeight: 600, cursor: 'pointer',
-                    transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)'
+                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: '#fff', fontWeight: 700, cursor: 'pointer',
+                    transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                   }}
-                  onMouseOver={(e) => e.target.style.background = '#2563eb'}
-                  onMouseOut={(e) => e.target.style.background = '#3b82f6'}
+                  onMouseOver={(e) => e.target.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)'}
+                  onMouseOut={(e) => e.target.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)'}
                 >
                   Resume
                 </button>
@@ -701,7 +703,7 @@ const FreelancerOnboardingForm = () => {
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <span className="fob-loader" />
+                    <Loader size="sm" text="" />
                   ) : (
                     <>
                       <Rocket size={18} />

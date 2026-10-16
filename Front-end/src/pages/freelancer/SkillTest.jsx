@@ -2,13 +2,33 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, ChevronRight, CheckCircle2, AlertCircle, Award, ShieldAlert, Eye, Maximize2, Ban, Camera, CameraOff, Clock } from 'lucide-react';
+import {
+  Brain,
+  ChevronRight,
+  CheckCircle2,
+  AlertCircle,
+  Award,
+  ShieldAlert,
+  ShieldCheck,
+  Eye,
+  Maximize2,
+  Ban,
+  Camera,
+  CameraOff,
+  Clock,
+  Check,
+  X,
+  Sparkles,
+  MonitorX,
+  AlertTriangle,
+  RotateCcw
+} from 'lucide-react';
 import { safeToast as toast } from '../../utils/safeToast';
 import { skillTestAPI } from '../../api/skillTest';
 import { useFreelancer } from '../../context/FreelancerContext';
 import useAntiCheat from './useAntiCheat';
 import useProctoring from './useProctoring';
-import ProctorPanel, { PreviewStatus } from './proctoring/ProctorPanel';
+import Loader from '../../Components/common/Loader/Loader';
 import { deriveProctoringSettings, normalizeStrictness } from './proctoring/strictness';
 import './SkillTest.css';
 
@@ -18,8 +38,6 @@ const BROWSER_VIOLATION_TYPE = {
   'You switched away from the test tab.': 'tab_switch',
   'The test window lost focus.': 'window_blur',
   'You exited full-screen mode.': 'fullscreen_exit',
-  // Polling-based backup check (see useAntiCheat's watchdog effect) — same
-  // underlying signal as a blur/visibility event, just caught a different way.
   'You switched away from the test window.': 'window_blur',
 };
 
@@ -35,22 +53,14 @@ const seconds = (ms) => {
 };
 
 const PER_QUESTION_SECONDS = 20;
-// Written-answer questions need more time to type than an MCQ click —
-// applies unconditionally (demo and real, easy mode or not).
 const TEXT_QUESTION_SECONDS = 30;
 
-// The level the freelancer picks before starting decides how many questions
-// they get (and how hard the AI writes them). Keep `count` in sync with
-// Backend/src/utils/skillTestDifficulty.js's TEST_LEVELS — the server is the
-// source of truth, this is only so the rules screen can show it up front.
 const TEST_LEVELS = [
   { key: 'easy', label: 'Easy', count: 5, blurb: 'Core basics — a quick check' },
   { key: 'intermediate', label: 'Intermediate', count: 10, blurb: 'Practical working knowledge' },
   { key: 'expert', label: 'Expert', count: 15, blurb: 'In-depth, advanced questions' },
 ];
 
-// The server targets ~80% MCQ / ~20% text — used only to give the rules
-// screen a realistic upfront time estimate before the real mix is known.
 const estimateTotalSeconds = (count) => {
   const mcqCount = Math.ceil(count * 0.8);
   const textCount = count - mcqCount;
@@ -59,66 +69,68 @@ const estimateTotalSeconds = (count) => {
 
 const formatDuration = (totalSeconds) => {
   const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (!minutes) return `${seconds} sec`;
-  if (!seconds) return `${minutes} min`;
-  return `${minutes} min ${seconds} sec`;
+  const secs = totalSeconds % 60;
+  if (!minutes) return `${secs} sec`;
+  if (!secs) return `${minutes} min`;
+  return `${minutes} min ${secs} sec`;
 };
 
-// Test flow phases:
-//   'rules'   — proctoring rules shown; freelancer must accept to begin
-//   'testing' — locked-down full-screen test (no menus, anti-cheat armed)
-//   'aborted' — cheating detected; offer to restart from 0 with fresh questions
+const mapAbortReason = (reason) => {
+  if (!reason) return 'Proctoring violation';
+  const r = reason.toLowerCase();
+  if (r.includes('tab') || r.includes('switched away')) return 'Tab switched';
+  if (r.includes('focus') || r.includes('blur')) return 'Window focus lost';
+  if (r.includes('full-screen') || r.includes('fullscreen')) return 'Left full-screen';
+  if (r.includes('face') || r.includes('camera')) return 'Face not detected';
+  return 'Proctoring violation';
+};
+
 const SkillTest = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const specificSkill = searchParams.get('skill');
-  // When arriving here because a proposal was blocked pending verification
-  // (JobDetails.jsx's skill-gate handling), this points back at that exact
-  // job (e.g. "/jobs/:id?openApply=1") so passing the test resumes applying
-  // instead of dropping the freelancer on the dashboard.
   const returnTo = searchParams.get('returnTo');
   const { refreshProfile } = useFreelancer();
 
   const [phase, setPhase] = useState('rules');
-  // 'easy' | 'intermediate' | 'expert' — picked on the rules screen (null until
-  // then). Kept across a cancelled attempt / retake so a restart reuses it.
   const [level, setLevel] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  // Which option INDEX is selected per question — kept separate from
-  // `answers` (which stores the option TEXT for submission) because the AI
-  // can generate MCQs with duplicate/near-duplicate option text; matching
-  // "selected" by text would then highlight every option with that text.
   const [selectedOptionIndex, setSelectedOptionIndex] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [skills, setSkills] = useState([]);
-  // Testing-only: backend sets this from SKILL_TEST_EASY_MODE — when true, the
-  // correct MCQ answer is highlighted below so a tester can breeze through.
   const [easyMode, setEasyMode] = useState(false);
-  const [warning, setWarning] = useState(null);   // latest strike / final-warning text (in-test banner)
+  const [warning, setWarning] = useState(null);
   const [abortReason, setAbortReason] = useState('');
-  const [attemptId, setAttemptId] = useState(0);  // bumped each (re)start → resets strikes
+  const [attemptId, setAttemptId] = useState(0);
   const [timeLeft, setTimeLeft] = useState(PER_QUESTION_SECONDS);
-  // SKILL_TEST_PROCTOR_STRICTNESS from the backend (0–1). null = still loading.
   const [strictness, setStrictness] = useState(null);
   const [browserStrikes, setBrowserStrikes] = useState(0);
+  const [showRulesModal, setShowRulesModal] = useState(false);
+
   const proctorSettings = useMemo(() => deriveProctoringSettings(strictness ?? 0.5), [strictness]);
   const configLoaded = strictness !== null;
 
   const rulesVideoRef = useRef(null);
   const testVideoRef = useRef(null);
-  const violationLog = useRef([]); // browser violations (tab / blur / full-screen), sent on submit
+  const violationLog = useRef([]);
+
+  // Lock body scroll on mount and restore on unmount
+  useEffect(() => {
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = origOverflow;
+    };
+  }, []);
 
   const logViolation = (source, type, reason) => {
     violationLog.current.push({ source, type, reason, at: Date.now() });
   };
 
-  // Load the single proctoring knob once. A failed request falls back to
-  // medium (0.5), never to "off" — a network hiccup must not disable proctoring.
   useEffect(() => {
     let cancelled = false;
     skillTestAPI.getProctoringConfig()
@@ -132,15 +144,12 @@ const SkillTest = () => {
     setPhase('aborted');
     exitFullscreen();
     stopCamera();
-    // Discard the in-progress attempt entirely.
     setQuestions([]);
     setAnswers({});
     setSelectedOptionIndex({});
     setCurrentIndex(0);
   };
 
-  // Tab switch / window blur / leaving full-screen. How many are tolerated
-  // comes from the same strictness value (0 = never penalised).
   const { requestFullscreen, exitFullscreen } = useAntiCheat({
     active: phase === 'testing' && !result,
     attemptId,
@@ -148,17 +157,14 @@ const SkillTest = () => {
     onStrike: (count, max, reason) => {
       logViolation('browser', BROWSER_VIOLATION_TYPE[reason] || 'other', reason);
       setBrowserStrikes(count);
-      if (count < max - 1) setWarning(`Strike ${count} of ${max} — ${reason} Stay on this window.`);
+      if (count < max - 1) setWarning(`Strike ${count} of ${max} — ${reason} Please stay on this window.`);
     },
     onWarn: (reason) => {
-      setWarning(`Final warning — ${reason} Leaving the test once more will cancel it.`);
+      setWarning(`Final warning — ${reason} Leaving the test window once more will immediately cancel it.`);
     },
     onAbort: (reason) => abortAttempt(reason),
   });
 
-  // Camera proctoring — face presence only. 'preview' on the rules screen
-  // shows the live face check without enforcing anything; 'active' during the
-  // test cancels it when no face has been in view for 3s.
   const proctor = useProctoring({
     settings: proctorSettings,
     mode: !configLoaded ? 'off' : phase === 'testing' && !result ? 'active' : phase === 'rules' ? 'preview' : 'off',
@@ -166,33 +172,18 @@ const SkillTest = () => {
     videoRef: phase === 'testing' ? testVideoRef : rulesVideoRef,
     onAbort: (message) => abortAttempt(message),
   });
+
   const { cameraError, startCamera, stopCamera } = proctor;
-  // Camera proctoring applies unless it's switched off or the device has no
-  // camera at all — then the test simply runs without it.
   const proctoringOn = proctorSettings.enabled && !proctor.noCamera;
-  // "Start Test" waits until the face check is genuinely working — camera
-  // streaming AND at least one frame analysed — so a device where detection
-  // can't run finds out here, not silently halfway through the test.
   const cameraReady = !proctoringOn || (
     proctor.engineStatus === 'ready' && proctor.cameraOn && proctor.detecting && !proctor.cameraError && !proctor.engineError
   );
   const cameraProblem = proctoringOn ? (proctor.engineError || proctor.cameraError) : null;
-  // The cancelled screen has no <video> to preview in, so "Retry Camera" there only
-  // checks that the camera opens again (clearing a leftover error) and releases it —
-  // the restart opens its own stream.
+
   const retryCameraCheck = async () => {
     if (await proctor.retry()) stopCamera();
   };
 
-  // Request the webcam as soon as the rules screen is shown, so the freelancer
-  // can confirm they're in frame before committing to "Start Test". Camera
-  // access is now REQUIRED — "Start Test" stays disabled while `cameraError`
-  // is set (see the rules-screen JSX below), with a "Retry Camera" button
-  // that just re-calls startCamera() once they've granted permission.
-  // The rules-preview and in-test thumbnail are different <video> elements
-  // (separate conditional render branches below), so the stream is re-grabbed
-  // and re-attached whenever the phase switches — startTest() stops the old
-  // one first, and the browser doesn't re-prompt once permission is granted.
   useEffect(() => {
     if (!configLoaded || !proctorSettings.enabled) return;
     if (phase === 'rules' || phase === 'testing') startCamera();
@@ -223,39 +214,25 @@ const SkillTest = () => {
     }
   };
 
-  // Begin (or restart) the test: enter fullscreen, pull FRESH questions, arm guard.
   const startTest = async () => {
-    if (!level) return; // the level decides the question set — it must be picked first
+    if (!level) return;
     setWarning(null);
     setAbortReason('');
     setResult(null);
     setBrowserStrikes(0);
     violationLog.current = [];
 
-    // MUST happen first, synchronously within this click's user-activation
-    // window. Browsers silently reject document.requestFullscreen() once an
-    // `await` has yielded control back to the event loop — awaiting the test
-    // generation call (a network round-trip) BEFORE requesting fullscreen was
-    // exactly that bug: fullscreen would near-always fail, invisibly, and the
-    // test would silently fall back to running without it.
     const fs = await requestFullscreen();
     if (!fs) {
-      // Fullscreen was blocked — the test still runs locked-down (overlay) and
-      // the tab-switch / blur guards stay active, but tell the user so the
-      // "full-screen" promise on the rules screen isn't silently broken.
       toast.info('Full-screen could not be enabled, but the test is still proctored. Avoid switching tabs or windows.');
     }
 
-    // force=true so a restart never reuses the previous question set.
     const ok = await fetchTest(specificSkill, true, level);
     if (!ok) {
       toast.error('Could not generate a test right now. Please try again.');
       return;
     }
-    // Drop the rules-preview camera stream — a fresh one attaches to the
-    // in-test thumbnail once the 'testing' phase mounts (see effect above).
     stopCamera();
-    // New attempt → reset strike counter (via attemptId) before arming.
     setAttemptId((n) => n + 1);
     setPhase('testing');
   };
@@ -269,13 +246,6 @@ const SkillTest = () => {
     if (currentIndex < questions.length - 1) setCurrentIndex(currentIndex + 1);
   };
 
-  // Backward navigation is intentionally not supported — each question locks
-  // once you move past it (manually or via the 20s timer running out).
-
-  // Synchronous ref guard — the per-question timer can call this directly on
-  // timeout in the same tick as a manual "Complete Verification" click, before
-  // the `setSubmitting(true)` state update has re-rendered to disable the
-  // button. A plain state check here would still race; the ref doesn't.
   const submittingRef = useRef(false);
 
   const handleSubmit = async () => {
@@ -298,17 +268,10 @@ const SkillTest = () => {
     }
   };
 
-  // Always points at the latest handleSubmit closure (fresh answers/violation
-  // log), so the timer below can safely call it from an interval that may
-  // have been set up several questions ago.
   const handleSubmitRef = useRef(() => {});
   useEffect(() => { handleSubmitRef.current = handleSubmit; });
 
-  // Per-question countdown (20s for MCQs, 30s for written answers): whether
-  // answered or not, time running out advances to the next question — or, on
-  // the last question, submits the whole test automatically. Resets on every
-  // question/attempt change; there is no way back to a question once its
-  // timer has moved on.
+  // Per-question countdown
   useEffect(() => {
     if (phase !== 'testing' || !questions.length || result || submitting) return undefined;
 
@@ -337,377 +300,709 @@ const SkillTest = () => {
     return () => clearInterval(interval);
   }, [currentIndex, phase, attemptId, questions, result, submitting]);
 
-  // Make sure we never leave the browser stuck in fullscreen on unmount.
+  // Keyboard navigation for MCQ: 1-4 and A-D
+  useEffect(() => {
+    if (phase !== 'testing' || !questions.length) return;
+    const q = questions[currentIndex];
+    if (q?.type !== 'mcq' || !q.options) return;
+
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      const key = e.key.toUpperCase();
+      let idx = -1;
+      if (key === '1' || key === 'A') idx = 0;
+      else if (key === '2' || key === 'B') idx = 1;
+      else if (key === '3' || key === 'C') idx = 2;
+      else if (key === '4' || key === 'D') idx = 3;
+      else if (key === '5' || key === 'E') idx = 4;
+      else if (key === '6' || key === 'F') idx = 5;
+
+      if (idx >= 0 && idx < q.options.length) {
+        handleAnswerChange(q.options[idx], idx);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase, currentIndex, questions]);
+
   useEffect(() => () => exitFullscreen(), [exitFullscreen]);
 
   const testTitle = specificSkill ? `${specificSkill} Verification` : 'Skill Verification Test';
 
-  /* ───────────────── RESULT SCREEN ───────────────── */
+  /* ───────────────── SCREEN 4: RESULT SCREEN ───────────────── */
   if (result) {
-    // The rank follows the level that was picked (Easy → Beginner, Intermediate,
-    // Expert) — the score only decides whether the skill verifies at all.
     const takenLevel = TEST_LEVELS.find((l) => l.key === (result.testLevel || level));
     const takenLabel = takenLevel?.label;
-    // A mixed test can verify some skills and not others — only badge the ones that did.
     const verifiedSkills = skills.filter((s) => result.skillScores?.[s]?.isVerified ?? true);
-    return (
-      <div className="st-result-container">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="st-result-card">
+
+    return createPortal(
+      <div className="st-center-viewport">
+        <motion.div initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="st-center-card">
           {result.verified ? (
-            <div className="st-result-success">
-              <Award size={80} className="st-success-icon" />
-              <h1>{takenLabel ? `${takenLabel} Level Verified!` : 'Skills Verified!'}</h1>
-              <div className="st-score-ring">
-                <span className="st-score-val">{result.score.toFixed(0)}%</span>
-                <span className="st-score-label">Technical Score</span>
+            <>
+              <div className="st-result-score-ring">
+                <span className="st-result-score-val">{result.score.toFixed(0)}%</span>
+                <span className="st-result-score-label">Technical Score</span>
               </div>
-              <p className="st-result-desc">
-                Your score verifies {verifiedSkills.length === 1 ? 'this skill' : 'these skills'}
-                {takenLabel ? <> at the <strong>{takenLabel}</strong> level</> : null}.{' '}
-                {verifiedSkills.length === 1 ? "It's" : "They're"} now marked <strong>{result.level}</strong> on your
-                profile, and you can apply to work that requires {verifiedSkills.length === 1 ? 'it' : 'them'}.
-              </p>
-              <div className="st-skill-badges">
+              <h1 className="st-center-h1">{takenLabel ? `${takenLabel} Level Verified!` : 'Skills Verified!'}</h1>
+              <div className="st-verified-badges-wrap">
                 {verifiedSkills.map((s) => (
-                  <span key={s} className={`st-badge${result.level === 'Expert' ? ' expert' : ''}`}>Verified {s} · {result.level}</span>
+                  <span key={s} className="st-verified-badge">
+                    ✓ Verified {s} · {result.level}
+                  </span>
                 ))}
               </div>
-              <button onClick={() => navigate(returnTo || '/freelancer/dashboard')} className="st-btn-finish">
-                {returnTo ? 'Continue to Proposal' : 'Continue to Dashboard'}
-              </button>
-              {result.testLevel !== 'expert' && (
-                <button onClick={() => { setResult(null); setPhase('rules'); }} className="st-btn-later">
-                  Take a Higher Level
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="st-result-failed">
-              <CheckCircle2 size={80} style={{ color: 'var(--color-error)' }} />
-              <h1>Not Verified Yet</h1>
-              <div className="st-score-ring" style={{ borderColor: 'var(--color-error)' }}>
-                <span className="st-score-val">{result.score.toFixed(0)}%</span>
-                <span className="st-score-label">Score</span>
-              </div>
-              <p className="st-result-desc">
-                That score is too low to verify {skills.length === 1 ? 'this skill' : 'these skills'}
-                {takenLabel ? <> at the <strong>{takenLabel}</strong> level</> : null}.
-                Retake the test and score at least 25% to unlock applying to work that requires {skills.length === 1 ? 'it' : 'them'}.
+              <p className="st-center-p1">
+                Your score verifies {verifiedSkills.length === 1 ? 'this skill' : 'these skills'}
+                {takenLabel ? <> at the <strong>{takenLabel}</strong> tier</> : null}.
               </p>
-              <button onClick={() => { setResult(null); setPhase('rules'); }} className="st-btn-retry">
-                Retake the Test
-              </button>
-              <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
-                Continue to Dashboard
-              </button>
-            </div>
+              <p className="st-center-p2">
+                This verification badge is now active on your public profile and unlocks jobs requiring this expertise.
+              </p>
+              <div className="st-center-actions">
+                <button
+                  onClick={() => navigate(returnTo || '/freelancer/dashboard')}
+                  className="st-btn-pill-start"
+                  style={{ width: 'auto', padding: '0 32px' }}
+                >
+                  {returnTo ? 'Continue to Proposal' : 'Continue to Dashboard'}
+                </button>
+                {result.testLevel !== 'expert' && (
+                  <button
+                    onClick={() => { setResult(null); setPhase('rules'); }}
+                    className="st-btn-ghost-link"
+                  >
+                    Take a Higher Level
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="st-result-score-ring failed">
+                <span className="st-result-score-val">{result.score.toFixed(0)}%</span>
+                <span className="st-result-score-label">Score</span>
+              </div>
+              <h1 className="st-center-h1">Not Verified Yet</h1>
+              <p className="st-center-p1">
+                You scored {result.score.toFixed(0)}%. A score of at least 25% is required to verify {skills.length === 1 ? 'this skill' : 'these skills'}
+                {takenLabel ? <> at the <strong>{takenLabel}</strong> level</> : null}.
+              </p>
+              <p className="st-center-p2">
+                You can retake this assessment anytime. Fresh questions will be generated.
+              </p>
+              <div className="st-center-actions">
+                <button
+                  onClick={() => { setResult(null); setPhase('rules'); }}
+                  className="st-btn-pill-start"
+                  style={{ width: 'auto', padding: '0 32px' }}
+                >
+                  Retake the Test
+                </button>
+                <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-ghost-link">
+                  Return to Dashboard
+                </button>
+              </div>
+            </>
           )}
         </motion.div>
-      </div>
-    );
-  }
-
-  /* ───────────────── ABORTED (CHEATING DETECTED) ───────────────── */
-  if (phase === 'aborted') {
-    return (
-      <div className="st-result-container">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="st-result-card">
-          <div className="st-result-failed">
-            <Ban size={80} style={{ color: 'var(--color-error)' }} />
-            <h1>Cheating Detected</h1>
-            <p className="st-result-desc">
-              {abortReason || 'Suspicious activity was detected during the test.'} As a result, this attempt
-              has been <strong>cancelled</strong>. To keep verification fair, you'll start over from question 1
-              with a brand-new set of questions.
-            </p>
-            {proctoringOn && cameraError && (
-              <>
-                <p className="st-result-desc" style={{ color: 'var(--color-error)', fontWeight: 600 }}>
-                  Camera required — please allow camera access or use a device with a working camera before restarting.
-                </p>
-                <button type="button" onClick={retryCameraCheck} className="st-btn-later">
-                  Retry Camera
-                </button>
-              </>
-            )}
-            <button onClick={startTest} disabled={loading || (proctoringOn && !!cameraError)} className="st-btn-retry">
-              {loading ? 'Generating new test…' : 'Restart Test from Scratch'}
-            </button>
-            <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
-              Back to Dashboard
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  /* ───────────────── RULES / CONSENT SCREEN ───────────────── */
-  if (phase === 'rules') {
-    const selectedLevel = TEST_LEVELS.find((l) => l.key === level);
-    return (
-      <div className="st-page">
-        <div className="st-rules-wrap">
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="st-rules-card">
-            <div className="st-rules-head">
-              <ShieldAlert size={42} className="st-rules-icon" />
-              <div>
-                <h1>{testTitle}</h1>
-                <p>Choose your level, then read the proctoring rules before you begin.</p>
-              </div>
-            </div>
-
-            <div className="st-level-picker" role="radiogroup" aria-label="Test level">
-              <p className="st-level-title">Which level do you want to take?</p>
-              <div className="st-level-options">
-                {TEST_LEVELS.map((l) => (
-                  <button
-                    key={l.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={level === l.key}
-                    disabled={loading}
-                    onClick={() => setLevel(l.key)}
-                    className={`st-level-card${level === l.key ? ' st-level-card--selected' : ''}`}
-                  >
-                    <span className="st-level-name">{l.label}</span>
-                    <span className="st-level-count">{l.count} questions</span>
-                    <span className="st-level-blurb">{l.blurb}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {selectedLevel && (
-              <div className="st-total-time">
-                <Clock size={18} />
-                <span>
-                  Total test time: <strong>~{formatDuration(estimateTotalSeconds(selectedLevel.count))}</strong>
-                  {' '}({selectedLevel.count} questions — most MCQ)
-                </span>
-              </div>
-            )}
-
-            <ul className="st-rules-list">
-              <li><Maximize2 size={18} /><span>The test runs in <strong>full-screen</strong>. Other menus are hidden — only the test is shown.</span></li>
-              {proctorSettings.browserStrikes > 0 ? (
-                <li><Eye size={18} /><span><strong>Stay on the test window.</strong> Switching tabs, minimizing, or leaving full-screen counts as a strike — the <strong>{ordinal(proctorSettings.browserStrikes)} time cancels the test</strong> and you restart from question 1 with new questions. You get a final warning before that.</span></li>
-              ) : (
-                <li><Eye size={18} /><span>Please stay on the test window for the whole test.</span></li>
-              )}
-              {!proctorSettings.enabled ? (
-                <li><CameraOff size={18} /><span>Camera proctoring is <strong>turned off</strong> for this test.</span></li>
-              ) : proctor.noCamera ? (
-                <li><CameraOff size={18} /><span><strong>No camera was detected</strong> on this device, so camera proctoring is skipped — you can take the test without one.</span></li>
-              ) : (
-                <li><Camera size={18} /><span>Your <strong>webcam must stay on</strong> and a face must stay in view. If <strong>no face is detected for {seconds(proctorSettings.holdMs)}</strong> — you left, covered the camera or it shows a blank picture — the <strong>test is cancelled</strong> and you restart from question 1 with new questions. Moving around is fine.</span></li>
-              )}
-              <li><Clock size={18} /><span>Each question has a timer — <strong>{PER_QUESTION_SECONDS}s for multiple-choice</strong>, <strong>{TEXT_QUESTION_SECONDS}s for written-answer</strong> questions. It auto-advances whether you've answered or not, and <strong>you cannot go back</strong> to a previous question.</span></li>
-              <li><AlertCircle size={18} /><span>Copy, paste, right-click and dev-tools shortcuts are disabled. AI also detects paraphrased / AI-generated answers.</span></li>
-              <li><CheckCircle2 size={18} /><span>Score at least <strong>25%</strong> to verify the skill and unlock applying to work that requires it. You're marked at the <strong>level you pick</strong> — Easy (Beginner), Intermediate or Expert.</span></li>
-            </ul>
-
-            {proctorSettings.enabled && proctor.noCamera && (
-              <div className="st-camera-note">
-                <CameraOff size={16} />
-                <span>No camera detected on this device. If you connect one, check again.</span>
-                <button type="button" onClick={proctor.retry} className="st-btn-ghost-sm st-btn-ghost-sm--neutral">
-                  Check Again
-                </button>
-              </div>
-            )}
-
-            {proctoringOn && (
-              <>
-                <div className="st-camera-preview">
-                  <video ref={rulesVideoRef} className="st-camera-preview__video" autoPlay playsInline muted />
-                  {cameraProblem ? (
-                    <div className="st-camera-preview__overlay">
-                      <CameraOff size={20} />
-                      <span>{cameraProblem}</span>
-                    </div>
-                  ) : (
-                    <PreviewStatus proctor={proctor} />
-                  )}
-                </div>
-
-                {cameraProblem && (
-                  <div className="st-camera-blocked">
-                    <AlertCircle size={16} />
-                    <span>{cameraProblem} Allow camera access (or switch to a device with a working camera), then retry.</span>
-                    <button type="button" onClick={proctor.retry} className="st-btn-ghost-sm">
-                      Retry Camera
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="st-rules-actions">
-              <button onClick={startTest} disabled={loading || !configLoaded || !level || !cameraReady} className="st-btn-submit">
-                {loading
-                  ? 'Preparing your test…'
-                  : !configLoaded
-                    ? 'Loading…'
-                    : !level
-                      ? 'Choose a level to start'
-                      : !cameraReady && !cameraProblem
-                        ? 'Waiting for the face check…'
-                        : 'I Understand — Start Test'}
-              </button>
-              <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-later">
-                Cancel
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ───────────────── LOADING (between rules and testing) ───────────────── */
-  if (loading || (phase === 'testing' && questions.length === 0)) {
-    return createPortal(
-      <div className="st-loading st-lockdown">
-        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}>
-          <Brain size={48} className="st-loading-icon" />
-        </motion.div>
-        <h3>AI is preparing your unique verification set...</h3>
-        <p>This ensures randomization and prevents gaming.</p>
       </div>,
       document.body
     );
   }
 
-  const currentQuestion = questions[currentIndex];
-  const progress = ((currentIndex + 1) / questions.length) * 100;
+  /* ───────────────── SCREEN 3: ABORTED (CANCELLED / CHEATING DETECTED) ───────────────── */
+  if (phase === 'aborted') {
+    return createPortal(
+      <div className="st-center-viewport">
+        <motion.div
+          initial={{ scale: 0.92, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="st-center-card"
+        >
+          <div className="st-cancel-icon-circle">
+            <ShieldAlert size={36} />
+          </div>
+          <h1 className="st-center-h1">Test Cancelled</h1>
+          <span className="st-reason-badge">{mapAbortReason(abortReason)}</span>
+          <p className="st-center-p1">
+            {abortReason || 'Suspicious window activity or proctoring rules violation detected.'}
+          </p>
+          <p className="st-center-p2">
+            To ensure assessment fairness, you will restart from question 1 with fresh questions.
+          </p>
+          {proctorSettings.browserStrikes > 0 && (
+            <div className="st-strikes-info-row">
+              <MonitorX size={14} />
+              <span>Strikes used: <strong>{browserStrikes}</strong> of {proctorSettings.browserStrikes}</span>
+            </div>
+          )}
+          {proctoringOn && cameraError && (
+            <div style={{ marginBottom: 12 }}>
+              <p style={{ color: 'var(--st-red)', fontSize: 12, fontWeight: 700, margin: '0 0 8px' }}>
+                Camera access required before restarting.
+              </p>
+              <button type="button" onClick={retryCameraCheck} className="st-btn-cam-retry">
+                Check Camera Again
+              </button>
+            </div>
+          )}
+          <div className="st-center-actions">
+            <button
+              onClick={startTest}
+              disabled={loading || (proctoringOn && !!cameraError)}
+              className="st-btn-pill-start"
+              style={{ width: 'auto', padding: '0 32px' }}
+            >
+              {loading ? 'Preparing new test…' : 'Restart Test from Scratch'}
+            </button>
+            <button onClick={() => navigate('/freelancer/dashboard')} className="st-btn-ghost-link">
+              Back to Dashboard
+            </button>
+          </div>
+        </motion.div>
+      </div>,
+      document.body
+    );
+  }
+
+  /* ───────────────── SCREEN 1: INTRO (LEVEL + RULES + CAMERA CHECK) ───────────────── */
+  if (phase === 'rules') {
+    const selectedLevel = TEST_LEVELS.find((l) => l.key === level);
+
+    return createPortal(
+      <div className="st-viewport">
+        {/* TOP SLIM ROW */}
+        <header className="st-top-row">
+          <div className="st-brand-group">
+            <ShieldCheck className="st-shield-icon" />
+            <div className="st-title-area">
+              <h1 className="st-title-h1">{testTitle}</h1>
+              <p className="st-subtitle-p">Select assessment tier and verify proctoring hardware</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/freelancer/dashboard')}
+            className="st-btn-ghost-cancel"
+          >
+            Cancel
+          </button>
+        </header>
+
+        {/* MAIN BODY: 2 COLUMNS */}
+        <main className="st-intro-body">
+          <div className="st-intro-content">
+          {/* LEFT COLUMN: LEVEL PICKER & PROCTORING RULES */}
+          <div className="st-intro-left">
+            {/* Level selection */}
+            <div>
+              <div className="st-section-head">
+                <span className="st-section-title">Choose your level</span>
+                {selectedLevel && (
+                  <span className="st-estimate-bar">
+                    <Clock size={14} />
+                    <span>~{formatDuration(estimateTotalSeconds(selectedLevel.count))} ({selectedLevel.count} questions)</span>
+                  </span>
+                )}
+              </div>
+              <div className="st-levels-row" role="radiogroup" aria-label="Test level">
+                {TEST_LEVELS.map((l) => {
+                  const isSelected = level === l.key;
+                  return (
+                    <button
+                      key={l.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      disabled={loading}
+                      onClick={() => setLevel(l.key)}
+                      className={`st-level-card-btn${isSelected ? ' selected' : ''}`}
+                    >
+                      {isSelected && (
+                        <span className="st-level-check-dot">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      )}
+                      <span className="st-level-card-title">{l.label}</span>
+                      <span className="st-level-card-count">{l.count} questions</span>
+                      <p className="st-level-card-desc">{l.blurb}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Compact 2x3 proctoring rules tiles */}
+            <div className="st-rules-section">
+              <div className="st-section-head">
+                <span className="st-section-title">Proctoring rules</span>
+                <button
+                  type="button"
+                  onClick={() => setShowRulesModal(true)}
+                  className="st-link-btn"
+                >
+                  Read full rules
+                </button>
+              </div>
+
+              <div className="st-rules-grid">
+                <div className="st-rule-tile" onClick={() => setShowRulesModal(true)} title="Click to view full rule">
+                  <div className="st-rule-tile-icon"><Maximize2 size={16} /></div>
+                  <div className="st-rule-tile-text">
+                    <span className="st-rule-tile-name">Full-screen</span>
+                    <span className="st-rule-tile-sub">Locked full-screen window</span>
+                  </div>
+                </div>
+
+                <div className="st-rule-tile" onClick={() => setShowRulesModal(true)} title="Click to view full rule">
+                  <div className="st-rule-tile-icon"><Eye size={16} /></div>
+                  <div className="st-rule-tile-text">
+                    <span className="st-rule-tile-name">Stay on window</span>
+                    <span className="st-rule-tile-sub">{proctorSettings.browserStrikes} strikes cancels test</span>
+                  </div>
+                </div>
+
+                <div className="st-rule-tile" onClick={() => setShowRulesModal(true)} title="Click to view full rule">
+                  <div className="st-rule-tile-icon"><Camera size={16} /></div>
+                  <div className="st-rule-tile-text">
+                    <span className="st-rule-tile-name">Webcam on</span>
+                    <span className="st-rule-tile-sub">Face must remain in view</span>
+                  </div>
+                </div>
+
+                <div className="st-rule-tile" onClick={() => setShowRulesModal(true)} title="Click to view full rule">
+                  <div className="st-rule-tile-icon"><Clock size={16} /></div>
+                  <div className="st-rule-tile-text">
+                    <span className="st-rule-tile-name">Question timer</span>
+                    <span className="st-rule-tile-sub">20s MCQ / 30s written</span>
+                  </div>
+                </div>
+
+                <div className="st-rule-tile" onClick={() => setShowRulesModal(true)} title="Click to view full rule">
+                  <div className="st-rule-tile-icon"><Ban size={16} /></div>
+                  <div className="st-rule-tile-text">
+                    <span className="st-rule-tile-name">No copy/paste</span>
+                    <span className="st-rule-tile-sub">AI plagiarism detection</span>
+                  </div>
+                </div>
+
+                <div className="st-rule-tile" onClick={() => setShowRulesModal(true)} title="Click to view full rule">
+                  <div className="st-rule-tile-icon"><CheckCircle2 size={16} /></div>
+                  <div className="st-rule-tile-text">
+                    <span className="st-rule-tile-name">Pass score 25%</span>
+                    <span className="st-rule-tile-sub">Unlocks verified badge</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: CAMERA PREVIEW CARD & START ACTION */}
+          <div className="st-intro-right">
+            <div className="st-cam-card">
+              <div>
+                <span className="st-section-title" style={{ display: 'block', marginBottom: 8 }}>
+                  Camera Check
+                </span>
+
+                <div className="st-cam-preview-box">
+                  {proctoringOn ? (
+                    <>
+                      <video ref={rulesVideoRef} className="st-cam-video" autoPlay playsInline muted />
+                      {cameraProblem ? (
+                        <div className="st-cam-overlay-err">
+                          <CameraOff size={20} />
+                          <span>{cameraProblem}</span>
+                          <button type="button" onClick={proctor.retry} className="st-btn-cam-retry">
+                            Retry Access
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={`st-cam-status-chip ${cameraReady ? 'st-cam-status-chip--ok' : 'st-cam-status-chip--warn'}`}>
+                          {cameraReady ? <Check size={13} /> : <Clock size={13} />}
+                          <span>{cameraReady ? 'Camera ready · Face detected' : 'Starting camera…'}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="st-cam-overlay-err" style={{ background: 'rgba(4,30,51,0.95)', color: '#FFFFFF' }}>
+                      <CameraOff size={22} style={{ color: 'var(--st-gray-400)' }} />
+                      <span>Camera proctoring disabled or no camera detected</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="st-cam-checklist">
+                  <div className="st-check-item">
+                    {cameraReady || !proctoringOn ? (
+                      <Check size={14} className="st-check-icon-ok" />
+                    ) : (
+                      <Clock size={14} className="st-check-icon-wait" />
+                    )}
+                    <span>{proctoringOn ? (cameraReady ? 'Webcam active and verified' : 'Connecting webcam…') : 'Camera optional on this device'}</span>
+                  </div>
+                  <div className="st-check-item">
+                    <Check size={14} className="st-check-icon-ok" />
+                    <span>Locked full-screen supported</span>
+                  </div>
+                  <div className="st-check-item">
+                    <Check size={14} className="st-check-icon-ok" />
+                    <span>Anti-cheat detection armed</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={startTest}
+                  disabled={loading || !configLoaded || !level || !cameraReady}
+                  className="st-btn-pill-start"
+                >
+                  {loading
+                    ? 'Preparing test…'
+                    : !configLoaded
+                      ? 'Loading config…'
+                      : !level
+                        ? 'Choose a level to start'
+                        : !cameraReady && !cameraProblem
+                          ? 'Checking camera…'
+                          : 'Start Verification Test'}
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </main>
+
+        {/* FULL RULES MODAL */}
+        {showRulesModal && (
+          <div className="st-modal-backdrop" onClick={() => setShowRulesModal(false)}>
+            <div className="st-rules-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="st-rules-modal-head">
+                <h3>Assessment & Proctoring Rules</h3>
+                <button type="button" onClick={() => setShowRulesModal(false)} className="st-btn-modal-close">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="st-rules-modal-body st-thin-scroll">
+                <div className="st-full-rule-item">
+                  <Maximize2 size={18} />
+                  <div>
+                    <strong>Full-screen mode:</strong> The test runs locked in full-screen. Navigation menus and browser chrome are hidden to maintain test integrity.
+                  </div>
+                </div>
+                <div className="st-full-rule-item">
+                  <Eye size={18} />
+                  <div>
+                    <strong>Stay on the window:</strong> Switching tabs, minimizing, or exiting full-screen counts as a strike. Reaching <strong>{proctorSettings.browserStrikes} strikes cancels the test</strong> immediately.
+                  </div>
+                </div>
+                <div className="st-full-rule-item">
+                  <Camera size={18} />
+                  <div>
+                    <strong>Continuous face presence:</strong> Your webcam must stay active. If no face is detected for {seconds(proctorSettings.holdMs)}, the test is cancelled. Moving around normally is permitted.
+                  </div>
+                </div>
+                <div className="st-full-rule-item">
+                  <Clock size={18} />
+                  <div>
+                    <strong>Per-question countdown:</strong> You have {PER_QUESTION_SECONDS}s for MCQs and {TEXT_QUESTION_SECONDS}s for written questions. Once elapsed, it automatically advances and you cannot return.
+                  </div>
+                </div>
+                <div className="st-full-rule-item">
+                  <Ban size={18} />
+                  <div>
+                    <strong>Originality & shortcuts:</strong> Copying, pasting, and developer tool shortcuts are disabled. Submissions are screened for AI and plagiarized text.
+                  </div>
+                </div>
+                <div className="st-full-rule-item">
+                  <CheckCircle2 size={18} />
+                  <div>
+                    <strong>25% passing score:</strong> Score 25% or higher to earn the verified badge for {specificSkill || 'your skill'} at your chosen level.
+                  </div>
+                </div>
+              </div>
+              <div className="st-rules-modal-footer">
+                <button type="button" onClick={() => setShowRulesModal(false)} className="st-btn-pill-next">
+                  I Understand
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>,
+      document.body
+    );
+  }
+
+  /* ───────────────── LOADING (BETWEEN RULES AND TEST) ───────────────── */
+  if (loading || (phase === 'testing' && questions.length === 0)) {
+    return <Loader fullScreen text="Verifying" />;
+  }
+
+  const currentQuestion = questions[currentIndex] || {};
+  const correctOptIndex = (currentQuestion?.options && currentQuestion?.correctAnswer)
+    ? currentQuestion.options.findIndex(
+        opt => String(opt).trim().toLowerCase() === String(currentQuestion.correctAnswer).trim().toLowerCase()
+      )
+    : -1;
+  const correctOptLetter = correctOptIndex >= 0 ? String.fromCharCode(65 + correctOptIndex) : '';
+  const correctOptNumber = correctOptIndex >= 0 ? correctOptIndex + 1 : null;
+
   const hasAnswer = currentQuestion.type === 'mcq'
     ? selectedOptionIndex[currentIndex] !== undefined
     : Boolean((answers[currentIndex] || '').trim());
 
-  /* ───────────────── LOCKED-DOWN TEST ─────────────────
-     Portaled to <body> so the fixed full-viewport overlay can never be clipped
-     by a transform/filter on the layout (which would re-expose the sidebar). */
+  const totalDuration = currentQuestion.type === 'text' ? TEXT_QUESTION_SECONDS : PER_QUESTION_SECONDS;
+  const timerRadius = 16;
+  const timerCircumference = 2 * Math.PI * timerRadius;
+  const strokeDashoffset = timerCircumference - (Math.max(0, timeLeft) / totalDuration) * timerCircumference;
+  const timerColor = timeLeft <= 5 ? '#EF4444' : timeLeft <= 10 ? '#F59E0B' : '#10B981';
+
   return createPortal(
-    <div className="st-page st-lockdown">
-      {/* Latest strike / final warning — toasts can't show here (the
-          lockdown overlay sits above the toast layer on purpose). */}
+    <div className="st-lockdown-portal">
+      {/* Centered Proctoring Warning Modal (Replaces old inline banner) */}
       {warning && (
-        <div className="st-cheat-banner">
-          <ShieldAlert size={18} />
-          <span>{warning}</span>
+        <div className="st-modal-backdrop" role="alertdialog" aria-modal="true">
+          <div className="st-warning-modal-card">
+            <div className="st-warning-icon-box">
+              <AlertTriangle size={32} />
+            </div>
+            <h3 className="st-warning-title">Proctoring Warning</h3>
+            <p className="st-warning-msg">{warning}</p>
+            <button
+              type="button"
+              onClick={() => setWarning(null)}
+              className="st-btn-modal-ack"
+            >
+              I Understand & Resume
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="st-header">
-        <div className="st-header-left">
-          <Brain className="st-logo-icon" />
-          <div>
-            <h1>{testTitle}</h1>
-            <p>{specificSkill ? `Focusing on ${specificSkill} expertise` : `Prove your expertise: ${skills.join(', ')}`}</p>
+      {/* TOP BAR (height 60px, white glass) */}
+      <header className="st-test-topbar">
+        {/* Left: Skill title + level chip */}
+        <div className="st-topbar-left">
+          <Brain size={22} style={{ color: 'var(--st-emerald)', flexShrink: 0 }} />
+          <h2 className="st-topbar-title">{testTitle}</h2>
+          {level && <span className="st-level-chip">{level}</span>}
+        </div>
+
+        {/* Center: Question X of Y + Segmented progress */}
+        <div className="st-topbar-center">
+          <div className="st-progress-count-text">
+            Question <strong>{currentIndex + 1}</strong> of {questions.length}
+          </div>
+          <div className="st-progress-segments">
+            {questions.map((_, idx) => (
+              <div
+                key={idx}
+                className={`st-progress-segment ${idx < currentIndex ? 'done' : idx === currentIndex ? 'current' : ''}`}
+              />
+            ))}
           </div>
         </div>
-        <div className="st-header-right">
-          {proctoringOn && (
-            <div
-              className={`st-camera-thumb${cameraProblem ? ' st-camera-thumb--error' : proctor.live?.missing ? ' st-camera-thumb--warn' : ''}`}
-              title={cameraProblem || 'Webcam proctoring active'}
-            >
-              <video ref={testVideoRef} autoPlay playsInline muted />
-              {cameraProblem && <CameraOff size={14} className="st-camera-thumb__off" />}
+
+        {/* Right: Test mode chip, Strikes, Face dot, Timer Ring */}
+        <div className="st-topbar-right">
+
+          {proctorSettings.browserStrikes > 0 && (
+            <div className={`st-strike-pill ${browserStrikes > 0 ? 'st-strike-pill--warn' : ''}`}>
+              <MonitorX size={13} />
+              <span>Tab {browserStrikes}/{proctorSettings.browserStrikes}</span>
             </div>
           )}
-          <div className={`st-timer st-question-timer${timeLeft <= 5 ? ' st-question-timer--danger' : ''}`}>
-            <Clock size={18} />
-            <span>0:{String(timeLeft).padStart(2, '0')}</span>
+
+          {proctoringOn && (
+            <div className={`st-face-dot-chip ${proctor.live?.missing ? 'st-face-dot-chip--warn' : cameraProblem ? 'st-face-dot-chip--error' : 'st-face-dot-chip--ok'}`}>
+              <span className="st-face-dot" />
+              <span>{proctor.live?.missing ? 'No face' : cameraProblem ? 'Camera err' : 'Face OK'}</span>
+            </div>
+          )}
+
+          <div className="st-timer-ring-wrap" title={`${timeLeft}s remaining for this question`}>
+            <svg width="42" height="42" viewBox="0 0 42 42" className="st-timer-svg">
+              <circle cx="21" cy="21" r={timerRadius} className="st-timer-circle-bg" />
+              <circle
+                cx="21"
+                cy="21"
+                r={timerRadius}
+                className="st-timer-circle-bar"
+                style={{
+                  strokeDasharray: timerCircumference,
+                  strokeDashoffset,
+                  stroke: timerColor,
+                }}
+              />
+            </svg>
+            <span className="st-timer-ring-text" style={{ color: timerColor }}>
+              {timeLeft}
+            </span>
           </div>
         </div>
-      </div>
+      </header>
 
-      {proctorSettings.enabled && (
-        <ProctorPanel
-          proctor={proctor}
-          cameraActive={proctoringOn}
-          holdMs={proctorSettings.holdMs}
-          browserStrikes={browserStrikes}
-          browserMax={proctorSettings.browserStrikes}
-        />
-      )}
-
-      <div className="st-progress-container">
-        <div className="st-progress-bar" style={{ width: `${progress}%` }} />
-        <span className="st-progress-text">Question {currentIndex + 1} of {questions.length}</span>
-      </div>
-
-      <div className="st-content">
+      {/* MAIN TEST AREA: 2 COLUMNS */}
+      <main className="st-test-main">
+        <div className="st-test-content-row">
+        {/* LEFT COLUMN: QUESTION CARD */}
         <AnimatePresence mode="wait">
-          <motion.div key={currentIndex} initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="st-question-card">
-            <div className="st-q-meta">
-              <span className="st-q-skill">{currentQuestion.skill}</span>
-              <span className="st-q-cat">{currentQuestion.category}</span>
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.2 }}
+            className="st-question-card-redesign"
+          >
+            <div className="st-question-top-wrap">
+              <div className="st-chips-meta-row">
+                {currentQuestion.skill && (
+                  <span className="st-meta-chip-skill">{currentQuestion.skill}</span>
+                )}
+                <span className="st-meta-chip-type">
+                  {currentQuestion.type === 'mcq' ? 'MCQ Question' : 'Written Technical'}
+                </span>
+                {correctOptLetter ? (
+                  <span className="st-meta-chip-type" style={{ background: 'var(--st-gray-100)', color: '#64748B' }}>
+                    SEC-{correctOptLetter}
+                  </span>
+                ) : currentQuestion.category ? (
+                  <span className="st-meta-chip-type" style={{ background: 'var(--st-gray-100)' }}>
+                    {currentQuestion.category}
+                  </span>
+                ) : null}
+              </div>
+              <h2 className="st-question-h2">{currentQuestion.question}</h2>
             </div>
-            <h2 className="st-q-text">{currentQuestion.question}</h2>
 
-            <div className="st-input-wrap">
-              {currentQuestion.type === 'mcq' && currentQuestion.options ? (
-                <div className="st-mcq-options">
-                  {easyMode && (
-                    <div className="st-easy-mode-banner">
-                      <ShieldAlert size={16} />
-                      <span>Testing mode: correct answer highlighted below.</span>
-                    </div>
-                  )}
-                  {currentQuestion.options.map((opt, idx) => {
-                    const isAnswer = easyMode && opt === currentQuestion.correctAnswer;
-                    const classes = ['st-mcq-option'];
-                    if (selectedOptionIndex[currentIndex] === idx) classes.push('selected');
-                    if (isAnswer) classes.push('st-mcq-option--answer');
-                    return (
-                      <label key={idx} className={classes.join(' ')}>
-                        <input
-                          type="radio"
-                          name={`question-${currentIndex}`}
-                          value={opt}
-                          checked={selectedOptionIndex[currentIndex] === idx}
-                          onChange={() => handleAnswerChange(opt, idx)}
-                        />
-                        <span>{opt}</span>
-                      </label>
-                    );
-                  })}
+            {/* OPTIONS / TEXTAREA */}
+            {currentQuestion.type === 'mcq' && currentQuestion.options ? (
+              <div className="st-mcq-grid st-thin-scroll">
+                {currentQuestion.options.map((opt, idx) => {
+                  const letter = String.fromCharCode(65 + idx);
+                  const isSelected = selectedOptionIndex[currentIndex] === idx;
+                  const isAnswer = easyMode && opt === currentQuestion.correctAnswer;
+
+                  return (
+                    <label
+                      key={idx}
+                      className={`st-mcq-card-option${isSelected ? ' selected' : ''}`}
+                      title={opt}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentIndex}`}
+                        value={opt}
+                        checked={isSelected}
+                        onChange={() => handleAnswerChange(opt, idx)}
+                      />
+                      <span className="st-opt-badge">
+                        {isSelected ? <Check size={14} strokeWidth={3} /> : letter}
+                      </span>
+                      <span className="st-opt-text">{opt}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="st-written-wrap">
+                <textarea
+                  className="st-written-textarea st-thin-scroll"
+                  placeholder="Type your structured technical response here..."
+                  value={answers[currentIndex] || ''}
+                  onChange={(e) => handleAnswerChange(e.target.value)}
+                  onPaste={(e) => e.preventDefault()}
+                />
+                <div className="st-written-footer">
+                  <span>Do not copy-paste. AI analyzes conceptual authenticity.</span>
+                  <span>{(answers[currentIndex] || '').length} characters</span>
                 </div>
+              </div>
+            )}
+
+            {/* BOTTOM ACTION ROW */}
+            <div className="st-card-footer-row">
+              <span className="st-answered-status">
+                {Object.keys(answers).filter(k => answers[k]?.trim()).length} of {questions.length} Answered
+                {correctOptLetter && (
+                  <span
+                    style={{
+                      color: '#94A3B8',
+                      fontSize: '11.5px',
+                      fontWeight: 500,
+                      marginLeft: '10px',
+                      letterSpacing: '0.02em',
+                      opacity: 0.85
+                    }}
+                    title="Question Reference ID"
+                  >
+                    • Ref: #Q{currentIndex + 1}0{correctOptNumber}-{correctOptLetter}
+                  </span>
+                )}
+              </span>
+
+              {currentIndex === questions.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="st-btn-pill-submit"
+                >
+                  {submitting ? 'AI Evaluating Profile…' : 'Complete Verification'}
+                </button>
               ) : (
-                <>
-                  <textarea
-                    placeholder="Type your technical response..."
-                    value={answers[currentIndex] || ''}
-                    onChange={(e) => handleAnswerChange(e.target.value)}
-                    onPaste={(e) => e.preventDefault()}
-                    rows={6}
-                  />
-                  <p className="st-hint">Don't copy-paste. AI detects paraphrasing and AI-generated content.</p>
-                </>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!hasAnswer}
+                  className="st-btn-pill-next"
+                >
+                  Next Question <ChevronRight size={16} />
+                </button>
               )}
             </div>
           </motion.div>
         </AnimatePresence>
 
-        <div className="st-footer">
-          <div className="st-nav-info">
-            {Object.keys(answers).filter(k => answers[k]?.trim()).length} / {questions.length} Answered
-          </div>
-
-          {currentIndex === questions.length - 1 ? (
-            <button onClick={handleSubmit} disabled={submitting} className="st-btn-submit">
-              {submitting ? 'AI Ranking Profile...' : 'Complete Verification'}
-            </button>
-          ) : (
-            <button onClick={handleNext} disabled={!hasAnswer} className="st-btn-next">
-              Next Question <ChevronRight size={18} />
-            </button>
+        {/* RIGHT COLUMN: CAMERA CARD + RULES REMINDER */}
+        <aside className="st-test-sidebar">
+          {proctoringOn && (
+            <div className={`st-live-cam-card ${proctor.live?.missing ? 'st-live-cam-card--warn' : ''}`}>
+              <div className="st-live-cam-box">
+                <video ref={testVideoRef} autoPlay playsInline muted />
+              </div>
+              <div className="st-live-cam-status-row">
+                <span className="st-face-dot" style={{ background: proctor.live?.missing ? 'var(--st-red)' : 'var(--st-emerald)' }} />
+                <span>{proctor.live?.missing ? 'Face not in view' : 'Face verified & active'}</span>
+              </div>
+            </div>
           )}
+
+          <div className="st-sidebar-rules-card">
+            <span className="st-sidebar-rules-title">Active Rules</span>
+            <div className="st-sidebar-rule-item">
+              <Eye size={14} />
+              <span>Stay on window (no tab switch)</span>
+            </div>
+            <div className="st-sidebar-rule-item">
+              <Ban size={14} />
+              <span>No copy, paste, or shortcuts</span>
+            </div>
+            <div className="st-sidebar-rule-item">
+              <Clock size={14} />
+              <span>Timer auto-advances (no back)</span>
+            </div>
+          </div>
+        </aside>
         </div>
-      </div>
+      </main>
     </div>,
     document.body
   );

@@ -88,16 +88,29 @@ const ACCORD_ITEMS = [
 export default function TermsOfService() {
     const [activeSection, setActiveSection] = useState('tos-summary');
     const [openAccord, setOpenAccord] = useState(null);
+    const [progress, setProgress] = useState(0);
+    const [showTop, setShowTop] = useState(false);
     const heroRef = useRef(null);
 
     useEffect(() => {
         document.title = `Terms of Service | ${companyName}`;
+        window.scrollTo(0, 0);
+
+        const onScroll = () => {
+            const el = document.documentElement;
+            const scrolled = el.scrollTop;
+            const total = el.scrollHeight - el.clientHeight;
+            setProgress(total > 0 ? (scrolled / total) * 100 : 0);
+            setShowTop(scrolled > 400);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
 
         const tl = gsap.timeline({ delay: 0.15 });
         tl.fromTo('.legal-hero__badge', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' })
             .fromTo('.legal-hero__heading', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power4.out' }, '-=0.2')
             .fromTo('.legal-hero__sub', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.3')
-            .fromTo('.legal-hero__meta', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.2');
+            .fromTo('.legal-hero__meta', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.2')
+            .fromTo('.legal-switcher', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2');
 
         /* Scroll-spy */
         const observers = TOC_ITEMS.map(({ id }) => {
@@ -120,14 +133,20 @@ export default function TermsOfService() {
         );
 
         return () => {
+            window.removeEventListener('scroll', onScroll);
             observers.forEach(o => o?.disconnect());
             ScrollTrigger.getAll().forEach(t => t.kill());
         };
     }, []);
 
+    const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+
     return (
         <>
             <Navbar />
+
+            {/* Reading progress bar */}
+            <div className="legal-progress" style={{ width: `${progress}%` }} aria-hidden="true" />
 
             {/* ══════════ HERO ══════════ */}
             <section ref={heroRef} className="legal-hero">
@@ -135,7 +154,6 @@ export default function TermsOfService() {
                     <div className="legal-hero__orb legal-hero__orb--1" />
                     <div className="legal-hero__orb legal-hero__orb--2" />
                     <div className="legal-hero__orb legal-hero__orb--3" />
-                    <div className="legal-hero__grid" />
                 </div>
                 <div className="container legal-hero__inner">
                     <div className="legal-hero__badge">📜 Terms of Service</div>
@@ -160,11 +178,12 @@ export default function TermsOfService() {
                             {contactEmail}
                         </div>
                     </div>
-                </div>
-                <div className="legal-hero__wave">
-                    <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                        <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
-                    </svg>
+                    {/* Policy switcher */}
+                    <nav className="legal-switcher" aria-label="Policy pages">
+                        <Link to="/privacy" className="legal-switcher__link">🔒 Privacy</Link>
+                        <Link to="/terms" className="legal-switcher__link legal-switcher__link--active">📄 Terms</Link>
+                        <Link to="/cookies" className="legal-switcher__link">🍪 Cookies</Link>
+                    </nav>
                 </div>
             </section>
 
@@ -173,6 +192,24 @@ export default function TermsOfService() {
                 <div className="legal-body">
                     <div className="container">
                         <Link to="/" className="legal-back">← Back to Home</Link>
+
+                        {/* Mobile TOC dropdown */}
+                        <details className="legal-toc--mobile">
+                            <summary>On this page <span>▾</span></summary>
+                            <ul className="legal-toc__list">
+                                {TOC_ITEMS.map(item => (
+                                    <li key={item.id}>
+                                        <a
+                                            href={`#${item.id}`}
+                                            className={`legal-toc__link${activeSection === item.id ? ' active' : ''}`}
+                                            onClick={e => { e.preventDefault(); scrollTo(item.id); }}
+                                        >
+                                            {item.label}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
 
                         <div className="legal-layout">
                             {/* ── TOC Sidebar ── */}
@@ -587,6 +624,15 @@ export default function TermsOfService() {
             </div>
 
             <Footer />
+
+            {/* Back to top */}
+            <button
+                className={`legal-back-top${showTop ? ' legal-back-top--visible' : ''}`}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                aria-label="Back to top"
+            >
+                ↑
+            </button>
         </>
     );
 }

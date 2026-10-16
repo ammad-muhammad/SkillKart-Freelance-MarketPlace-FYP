@@ -79,6 +79,7 @@ const BASE_NAV_ITEMS = [
     label: 'Resources',
     children: [
       { label: 'Help Center', sub: 'Guides & support',  href: '/help',      icon: <HelpCircle size={18} /> },
+      { label: 'SkillKart App', sub: 'Download Android APK', href: '/#download-app', icon: <Smartphone size={18} /> },
     ],
   },
 ];
@@ -188,84 +189,66 @@ export default function Navbar({ alwaysSticky = false }) {
   const linksRef = useRef(null);
   const actionsRef = useRef(null);
 
-  /* ── GSAP entrance animation ── */
+    /* ── GSAP entrance animation (runs once on mount and clears inline styles) ── */
   useEffect(() => {
     if (isMobileApp()) return undefined;
 
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
     tl.fromTo(navRef.current,
       { y: -100, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.8 }
+      { y: 0, opacity: 1, duration: 0.7, clearProps: 'transform,opacity' }
     )
       .fromTo(logoRef.current,
         { x: -30, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.5 },
+        { x: 0, opacity: 1, duration: 0.45, clearProps: 'transform,opacity' },
         '-=0.4'
       )
       .fromTo(linksRef.current?.children ? Array.from(linksRef.current.children) : [],
         { y: -20, opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.08, duration: 0.5 },
+        { y: 0, opacity: 1, stagger: 0.06, duration: 0.45, clearProps: 'transform,opacity' },
         '-=0.4'
       )
       .fromTo(actionsRef.current,
         { x: 30, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.5 },
+        { x: 0, opacity: 1, duration: 0.45, clearProps: 'transform,opacity' },
         '-=0.5'
       );
   }, []);
 
-  /* ── Scroll shadow & Smart Sticky ── */
+  /* ── Scroll depth shadow (always visible, never unclickable) ── */
   useEffect(() => {
     if (isMobileApp()) return undefined;
 
     const onScroll = () => {
-      const currentScrollY = window.scrollY;
-      const isScrollingUp = currentScrollY < lastScrollY.current;
-      
-      // 1. At the very top: Show normal absolute navbar
-      if (currentScrollY < 120 && !alwaysSticky) {
-        setIsSticky(false);
-        setVisible(true);
-      } 
-      // 2. Past the top: Show floating pill on SCROLL UP, Hide on SCROLL DOWN
-      else {
-        if (isScrollingUp) {
-          setIsSticky(true);
-          setVisible(true);
-        } else {
-          setVisible(false);
-        }
-      }
-      
-      lastScrollY.current = currentScrollY;
+      const scrolled = window.scrollY > 20;
+      setIsSticky(scrolled || alwaysSticky);
     };
+
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [alwaysSticky]);
 
-  /* ── Trigger animation every time sticky reveal occurs ── */
+  /* ── Close dropdown on outside click or Escape key ── */
   useEffect(() => {
-    if (isMobileApp()) return;
-    if (visible && isSticky) {
-      gsap.fromTo(navRef.current,
-        { 
-          y: -100, 
-          opacity: 0, 
-          scale: 0.95,
-          filter: "blur(4px)"
-        },
-        { 
-          y: 0, 
-          opacity: 1, 
-          scale: 1, 
-          filter: "blur(0px)",
-          duration: 0.8, 
-          ease: "power4.out",
-          clearProps: "filter"
-        }
-      );
-    }
-  }, [visible, isSticky]);
+    const handleOutsideClick = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setActiveDropdown(null);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActiveDropdown(null);
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   /* ── Close mobile menu on resize ── */
   useEffect(() => {
@@ -316,7 +299,7 @@ export default function Navbar({ alwaysSticky = false }) {
     <>
       <nav
         ref={navRef}
-        className={`navbar ${!visible ? 'navbar--hidden' : ''} ${isSticky ? 'navbar--sticky' : ''} ${mobileOpen ? 'navbar--mobile-open' : ''}`}
+        className={`navbar ${isSticky ? 'navbar--sticky' : ''} ${mobileOpen ? 'navbar--mobile-open' : ''}`}
       >
         <div className="container navbar__inner">
 
@@ -335,7 +318,15 @@ export default function Navbar({ alwaysSticky = false }) {
                 onMouseEnter={() => handleMouseEnter(idx)}
                 onMouseLeave={handleMouseLeave}
               >
-                <button className={`navbar__link${activeDropdown === idx ? ' navbar__link--active' : ''}`}>
+                <button
+                  type="button"
+                  className={`navbar__link${activeDropdown === idx ? ' navbar__link--active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveDropdown(prev => (prev === idx ? null : idx));
+                  }}
+                  aria-expanded={activeDropdown === idx}
+                >
                   {item.label}
                   <svg className="navbar__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

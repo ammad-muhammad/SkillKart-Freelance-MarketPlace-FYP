@@ -1,3 +1,4 @@
+import Loader from '../Loader/Loader';
 import './Button.css';
 
 /**
@@ -31,7 +32,7 @@ const Button = ({
 
   return (
     <button type={type} className={classes} disabled={disabled || loading} {...rest}>
-      {loading && <span className="btn__spinner" aria-hidden="true" />}
+      {loading && <Loader size="sm" text="" />}
       {!loading && icon && iconPosition === 'left' && <span className="btn__icon">{icon}</span>}
       {children != null && <span className="btn__label">{children}</span>}
       {!loading && icon && iconPosition === 'right' && <span className="btn__icon">{icon}</span>}

@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Star, MessageSquare, Edit3, Trash2, X, AlertCircle, 
-  CheckCircle, Loader2, LogIn, Calendar
+  CheckCircle, LogIn, Calendar
 } from 'lucide-react';
+import Loader from '../Loader/Loader';
 import { useAuth } from '../../../hooks/useAuth';
 import { reviewsAPI } from '../../../api/reviews';
 import { safeToast as toast } from '../../../utils/safeToast';
@@ -31,6 +32,12 @@ export default function ReviewSection({
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Store onRatingUpdated in a ref to avoid infinite re-render loops when parent passes inline callback
+  const onRatingUpdatedRef = useRef(onRatingUpdated);
+  useEffect(() => {
+    onRatingUpdatedRef.current = onRatingUpdated;
+  }, [onRatingUpdated]);
+
   // Robust current user ID matching
   const currentUserId = String(user?._id || user?.id || '');
   const isSelf = Boolean(currentUserId && currentUserId === String(targetUserId));
@@ -42,19 +49,21 @@ export default function ReviewSection({
   }, [currentUserId]);
 
   // Fetch reviews directly from API for real-time background sync
-  const fetchReviews = useCallback(async () => {
+  const fetchReviews = useCallback(async (notifyParent = false) => {
     if (!targetUserId) return;
     try {
       const res = await reviewsAPI.getReviews({ revieweeId: targetUserId });
       const fetched = res.data?.data?.reviews;
       if (Array.isArray(fetched)) {
         setReviews(fetched);
-        onRatingUpdated?.(fetched);
+        if (notifyParent) {
+          onRatingUpdatedRef.current?.(fetched);
+        }
       }
     } catch (err) {
       console.warn('Could not fetch reviews:', err?.message);
     }
-  }, [targetUserId, onRatingUpdated]);
+  }, [targetUserId]);
 
   // Sync initialReviews when prop changes
   useEffect(() => {
@@ -63,10 +72,10 @@ export default function ReviewSection({
     }
   }, [initialReviews]);
 
-  // Fetch on mount or when target user changes
+  // Fetch on mount or when target user changes (notifyParent = false to prevent cyclic re-render loops)
   useEffect(() => {
     if (targetUserId) {
-      fetchReviews();
+      fetchReviews(false);
     }
   }, [targetUserId, fetchReviews]);
 
@@ -564,7 +573,7 @@ export default function ReviewSection({
                 >
                   {submitting ? (
                     <>
-                      <Loader2 size={16} className="rs-spinner" /> Saving...
+                      <Loader size="sm" text="" /> Saving...
                     </>
                   ) : modalMode === 'create' ? (
                     'Submit Review'

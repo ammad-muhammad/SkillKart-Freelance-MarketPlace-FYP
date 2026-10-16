@@ -1,34 +1,53 @@
+/* ==========================================================================
+   Client Layout — Shared Shell Adaptation
+   Sidebar removed; inherits modern AppNavbar container layout
+   ========================================================================== */
+
 .cl-layout {
   display: flex;
-  min-height: 100vh;
-  background: #f0f4f8;
-  font-family: var(--font-body);
+  flex-direction: column;
+  width: 100%;
 }
 
 .cl-main {
   flex: 1;
-  margin-left: 265px;
-  padding: 2rem;
-  min-height: 100vh;
-  overflow-y: auto;
-  transition: margin-left 0.3s ease;
+  margin-left: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
 }
 
-@media (max-width: 1024px) {
-  .cl-main {
-    margin-left: 0;
-    padding: 5rem 1.25rem 1.25rem; /* Space for fixed mobile header */
-  }
+/* Hide legacy sidebar if referenced */
+.cl-sidebar,
+.client-sidebar {
+  display: none !important;
 }
 
-@media (max-width: 768px) {
-  .cl-main {
-    padding: 5rem 1rem 1.25rem;
-  }
+/* ── Fullscreen Messages Page Override (Edge-to-Edge) ── */
+.app-shell:has(.cl-messages-layout),
+.app-shell:has(.flm-page) {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden !important;
+  background: #FFFFFF !important;
 }
 
-@media (max-width: 400px) {
-  .cl-main {
-    padding: 5rem 0.75rem 1rem;
-  }
+.app-shell:has(.cl-messages-layout) .app-shell__main,
+.app-shell:has(.flm-page) .app-shell__main {
+  height: calc(100vh - 72px) !important;
+  max-height: calc(100vh - 72px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.app-shell:has(.cl-messages-layout) .app-shell__container,
+.app-shell:has(.flm-page) .app-shell__container {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }

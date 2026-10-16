@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminSearch } from '../../api/adminPanel';
+import Loader from '../common/Loader/Loader';
 
 const TYPE_ICON = {
   user: '👤', job: '💼', contract: '📋',
@@ -99,9 +100,8 @@ const GlobalSearch = () => {
       {open && (
         <div className="ap-search-results">
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', gap: '10px', color: 'var(--ap-text-muted)', fontSize: '0.85rem' }}>
-              <div className="ap-spinner" style={{ width: 18, height: 18 }} />
-              Searching…
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+              <Loader size="sm" text="Searching" />
             </div>
           )}
 

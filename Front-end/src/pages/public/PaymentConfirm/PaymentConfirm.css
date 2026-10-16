@@ -1,15 +1,17 @@
+/* Payment Confirmation — SkillKart Theme */
 .pay-confirm {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5f9;
+  background: var(--sk-bg-secondary, #F3F7F5);
   padding: 1.5rem;
 }
 .pay-confirm__card {
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(11, 41, 66, 0.08);
+  border: 1px solid var(--sk-border, #E2E8F0);
   padding: 3rem 2.5rem;
   max-width: 480px;
   width: 100%;
@@ -18,25 +20,26 @@
 .pay-confirm__card h1 {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--sk-navy, #0B2942);
   margin: 1.25rem 0 0.5rem;
 }
 .pay-confirm__card p {
-  color: #64748b;
+  color: var(--sk-text-muted, #64748B);
   line-height: 1.6;
   margin-bottom: 1.75rem;
 }
-.pay-confirm__ok { color: #16a34a; }
+.pay-confirm__ok { color: var(--sk-emerald, #10B981); }
 .pay-confirm__err { color: #ef4444; }
-.pay-confirm__spin { color: #2563eb; animation: pc-spin 0.9s linear infinite; }
+.pay-confirm__spin { color: var(--sk-emerald, #10B981); animation: pc-spin 0.9s linear infinite; }
 @keyframes pc-spin { to { transform: rotate(360deg); } }
 .pay-confirm__btn {
-  background: var(--color-primary, #042e4c);
+  background: var(--sk-emerald, #10B981);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.75rem 1.75rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.2s;
 }
-.pay-confirm__btn:hover { opacity: 0.92; }
+.pay-confirm__btn:hover { background: var(--sk-hover-emerald, #059669); }

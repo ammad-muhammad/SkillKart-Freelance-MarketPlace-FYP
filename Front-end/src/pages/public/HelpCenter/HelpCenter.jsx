@@ -4,18 +4,23 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Navbar from '../../../Components/common/Navbar/Navbar';
 import Footer from '../../../Components/common/Footer/Footer';
+import {
+    LifeBuoy, Search, Rocket, CreditCard, Bot, Scale, Target, Building2,
+    KeyRound, FileText, BadgeCheck, Send, ArrowRight, Mail, MessageSquare,
+    Clock3, Star
+} from 'lucide-react';
 import './HelpCenter.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
 /* ─── DATA ─── */
 const CATEGORIES = [
-    { id: 'getting-started', icon: '🚀', label: 'Getting Started', articles: 14, color: '#0a4a73', bg: 'rgba(10,74,115,.1)', desc: 'Account setup, profile building, and your first project.' },
-    { id: 'payments', icon: '💳', label: 'Payments & Escrow', articles: 12, color: '#276749', bg: 'rgba(39,103,73,.1)', desc: 'Billing, escrow milestones, withdrawals, and invoices.' },
-    { id: 'ai-tools', icon: '🤖', label: 'AI Tools & Buddy', articles: 18, color: '#1a6fa8', bg: 'rgba(26,111,168,.1)', desc: 'Buddy AI, matchmaking engine, and skill verification.' },
-    { id: 'disputes', icon: '⚖️', label: 'Disputes & Safety', articles: 9, color: '#c05621', bg: 'rgba(192,86,33,.1)', desc: 'How to raise disputes, refund policies, and account safety.' },
-    { id: 'freelancers', icon: '🎯', label: 'For Freelancers', articles: 22, color: '#553c9a', bg: 'rgba(85,60,154,.1)', desc: 'Proposals, portfolio, contracts, and getting found.' },
-    { id: 'clients', icon: '🏢', label: 'For Clients', articles: 16, color: '#b7791f', bg: 'rgba(183,121,31,.1)', desc: 'Posting projects, reviewing proposals, and managing teams.' },
+    { id: 'getting-started', Icon: Rocket, label: 'Getting Started', articles: 14, color: '#0B2942', bg: 'rgba(11, 41, 66, 0.07)', desc: 'Account setup, profile building, and your first project.' },
+    { id: 'payments', Icon: CreditCard, label: 'Payments & Escrow', articles: 12, color: '#059669', bg: 'rgba(5, 150, 105, 0.08)', desc: 'Billing, escrow milestones, withdrawals, and invoices.' },
+    { id: 'ai-tools', Icon: Bot, label: 'AI Tools & Buddy', articles: 18, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.07)', desc: 'Buddy AI, matchmaking engine, and skill verification.' },
+    { id: 'disputes', Icon: Scale, label: 'Disputes & Safety', articles: 9, color: '#d97706', bg: 'rgba(217, 119, 6, 0.08)', desc: 'How to raise disputes, refund policies, and account safety.' },
+    { id: 'freelancers', Icon: Target, label: 'For Freelancers', articles: 22, color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.07)', desc: 'Proposals, portfolio, contracts, and getting found.' },
+    { id: 'clients', Icon: Building2, label: 'For Clients', articles: 16, color: '#dc2626', bg: 'rgba(220, 38, 38, 0.07)', desc: 'Posting projects, reviewing proposals, and managing teams.' },
 ];
 
 const FAQS = [
@@ -68,18 +73,18 @@ const FAQS = [
 
 // Each links to the real page that actually performs the action.
 const POPULAR = [
-    { id: 1, icon: '🔑', title: 'Reset your password', to: '/forgot-password' },
-    { id: 2, icon: '📄', title: 'Find work & submit a proposal', to: '/browse-projects' },
-    { id: 3, icon: '✅', title: 'Get your skills AI-verified', to: '/freelancer/skill-test' },
-    { id: 4, icon: '🤖', title: 'Use Buddy AI for your profile', to: '/ai/buddy' },
-    { id: 5, icon: '🚀', title: 'Post a project & get matched', to: '/post-project' },
-    { id: 6, icon: '💬', title: 'Contact support', to: '/contact' },
+    { id: 1, Icon: KeyRound, title: 'Reset your password', to: '/forgot-password' },
+    { id: 2, Icon: FileText, title: 'Find work & submit a proposal', to: '/browse-projects' },
+    { id: 3, Icon: BadgeCheck, title: 'Get your skills AI-verified', to: '/freelancer/skill-test' },
+    { id: 4, Icon: Bot, title: 'Use Buddy AI for your profile', to: '/ai/buddy' },
+    { id: 5, Icon: Rocket, title: 'Post a project & get matched', to: '/post-project' },
+    { id: 6, Icon: Send, title: 'Contact support', to: '/contact' },
 ];
 
 const SUPPORT_EMAIL = 'support@skillkart.com';
 const SUPPORT_CHANNELS = [
-    { icon: '📧', title: 'Email Support', desc: 'Send a detailed ticket and get a thorough response from our team.', cta: 'Send Email', color: '#276749', bg: 'rgba(39,103,73,.07)', wait: 'Avg. response: 4 hrs', href: `mailto:${SUPPORT_EMAIL}` },
-    { icon: '📨', title: 'Contact Form', desc: "Prefer a form? Reach us through our contact page and we'll get back to you.", cta: 'Go to Contact', color: '#0a4a73', bg: 'rgba(10,74,115,.07)', wait: 'Avg. response: 4 hrs', to: '/contact' },
+    { Icon: Mail, title: 'Email Support', desc: 'Send a detailed ticket and get a thorough response from our team.', cta: 'Send Email', wait: 'Avg. response: 4 hrs', href: `mailto:${SUPPORT_EMAIL}` },
+    { Icon: MessageSquare, title: 'Contact Form', desc: "Prefer a form? Reach us through our contact page and we'll get back to you.", cta: 'Go to Contact', wait: 'Avg. response: 4 hrs', to: '/contact' },
 ];
 
 const STATUS = [
@@ -98,28 +103,29 @@ export default function HelpCenter() {
 
     useEffect(() => {
         document.title = 'Help Center — SkillKart Support & Documentation';
+        window.scrollTo(0, 0);
 
         const tl = gsap.timeline({ delay: 0.1 });
-        tl.fromTo('.hc-hero__badge', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' })
-            .fromTo('.hc-hero__heading', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65, ease: 'power4.out' }, '-=0.2')
-            .fromTo('.hc-hero__sub', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, '-=0.3')
-            .fromTo('.hc-hero__search-wrap', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2');
+        tl.fromTo('.hc-hero__badge', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' })
+            .fromTo('.hc-hero__heading', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power4.out' }, '-=0.2')
+            .fromTo('.hc-hero__sub', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' }, '-=0.3')
+            .fromTo('.hc-hero__search-wrap', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' }, '-=0.2');
 
         gsap.fromTo('.hc-cat-card',
-            { y: 30, opacity: 0 },
-            { y: 0, opacity: 1, stagger: 0.07, duration: 0.5, ease: 'power3.out', scrollTrigger: { trigger: '.hc-cats__grid', start: 'top 84%' } }
+            { y: 24, opacity: 0 },
+            { y: 0, opacity: 1, stagger: 0.06, duration: 0.45, ease: 'power3.out', scrollTrigger: { trigger: '.hc-cats__grid', start: 'top 88%' } }
         );
         gsap.fromTo('.hc-popular-item',
-            { x: -20, opacity: 0 },
-            { x: 0, opacity: 1, stagger: 0.06, duration: 0.45, ease: 'power3.out', scrollTrigger: { trigger: '.hc-popular__list', start: 'top 84%' } }
+            { x: -14, opacity: 0 },
+            { x: 0, opacity: 1, stagger: 0.05, duration: 0.4, ease: 'power3.out', scrollTrigger: { trigger: '.hc-popular__list', start: 'top 88%' } }
         );
         gsap.fromTo('.hc-faq-item',
-            { y: 20, opacity: 0 },
-            { y: 0, opacity: 1, stagger: 0.06, duration: 0.45, ease: 'power3.out', scrollTrigger: { trigger: '.hc-faq__list', start: 'top 84%' } }
+            { y: 16, opacity: 0 },
+            { y: 0, opacity: 1, stagger: 0.05, duration: 0.4, ease: 'power3.out', scrollTrigger: { trigger: '.hc-faq__list', start: 'top 88%' } }
         );
         gsap.fromTo('.hc-support-card',
-            { y: 30, opacity: 0 },
-            { y: 0, opacity: 1, stagger: 0.1, duration: 0.55, ease: 'power3.out', scrollTrigger: { trigger: '.hc-support__grid', start: 'top 84%' } }
+            { y: 24, opacity: 0 },
+            { y: 0, opacity: 1, stagger: 0.1, duration: 0.5, ease: 'power3.out', scrollTrigger: { trigger: '.hc-support__grid', start: 'top 88%' } }
         );
 
         return () => ScrollTrigger.getAll().forEach(t => t.kill());
@@ -137,11 +143,8 @@ export default function HelpCenter() {
 
             {/* ══ HERO ══ */}
             <section className="hc-hero">
-                <div className="hc-hero__orb hc-hero__orb--1" />
-                <div className="hc-hero__orb hc-hero__orb--2" />
-                <div className="hc-hero__grid" />
                 <div className="container hc-hero__inner">
-                    <div className="hc-hero__badge">🛟 Help Center</div>
+                    <div className="hc-hero__badge"><LifeBuoy size={15} /> Help Center</div>
                     <h1 className="hc-hero__heading">
                         How can we <span className="hc-hero__accent">help you?</span>
                     </h1>
@@ -149,7 +152,7 @@ export default function HelpCenter() {
                         Search our knowledge base, browse FAQs, or reach our support team — we're here to make sure you succeed.
                     </p>
                     <div className="hc-hero__search-wrap">
-                        <span className="hc-hero__search-icon">🔍</span>
+                        <span className="hc-hero__search-icon"><Search size={19} /></span>
                         <input
                             id="hc-search"
                             type="search"
@@ -165,11 +168,6 @@ export default function HelpCenter() {
                             <button key={s} className="hc-hero__sug" onClick={() => setSearchQ(s)}>{s}</button>
                         ))}
                     </div>
-                </div>
-                <div className="hc-hero__wave">
-                    <svg viewBox="0 0 1440 80" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M0 40C240 80 480 0 720 40C960 80 1200 0 1440 40V80H0V40Z" fill="#FFFFFF" />
-                    </svg>
                 </div>
             </section>
 
@@ -201,10 +199,9 @@ export default function HelpCenter() {
                                 key={cat.id}
                                 className={`hc-cat-card${activecat === cat.id ? ' hc-cat-card--active' : ''}`}
                                 onClick={() => setActivecat(activecat === cat.id ? 'all' : cat.id)}
-                                style={activecat === cat.id ? { borderColor: cat.color, boxShadow: `0 0 0 3px ${cat.bg}` } : {}}
                             >
                                 <div className="hc-cat-card__icon" style={{ background: cat.bg, color: cat.color }}>
-                                    {cat.icon}
+                                    <cat.Icon size={21} />
                                 </div>
                                 <div className="hc-cat-card__body">
                                     <div className="hc-cat-card__name">{cat.label}</div>
@@ -223,15 +220,13 @@ export default function HelpCenter() {
 
                     {/* Left – Popular Articles */}
                     <div className="hc-popular">
-                        <div className="hc-popular__header">
-                            <div className="hc-popular__title">⭐ Quick Links</div>
-                        </div>
+                        <div className="hc-popular__title"><Star size={17} /> Quick Links</div>
                         <div className="hc-popular__list">
                             {POPULAR.map(p => (
                                 <Link key={p.id} to={p.to} className="hc-popular-item">
-                                    <span className="hc-popular-item__icon">{p.icon}</span>
+                                    <span className="hc-popular-item__icon"><p.Icon size={17} /></span>
                                     <span className="hc-popular-item__title">{p.title}</span>
-                                    <span className="hc-popular-item__arrow">→</span>
+                                    <span className="hc-popular-item__arrow"><ArrowRight size={15} /></span>
                                 </Link>
                             ))}
                         </div>
@@ -241,7 +236,7 @@ export default function HelpCenter() {
                     <div className="hc-faq">
                         <div className="hc-faq__header">
                             <div className="hc-faq__title">
-                                ❓ FAQs
+                                FAQs
                                 {activecat !== 'all' && (
                                     <span className="hc-faq__cat-pill">
                                         {CATEGORIES.find(c => c.id === activecat)?.label}
@@ -264,9 +259,7 @@ export default function HelpCenter() {
                                         aria-expanded={openFaq === f.id}
                                     >
                                         <span>{f.q}</span>
-                                        <span className="hc-faq-item__chevron">
-                                            {openFaq === f.id ? '▲' : '▼'}
-                                        </span>
+                                        <span className="hc-faq-item__chevron" />
                                     </button>
                                     {openFaq === f.id && (
                                         <div className="hc-faq-item__a">{f.a}</div>
@@ -274,9 +267,9 @@ export default function HelpCenter() {
                                 </div>
                             )) : (
                                 <div className="hc-faq__empty">
-                                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+                                    <Search size={32} style={{ margin: '0 auto 10px', color: '#94A3B8' }} />
                                     <div>No results found for <strong>"{searchQ}"</strong>.</div>
-                                    <div style={{ color: 'var(--color-text-light)', marginTop: '0.4rem', fontSize: '0.85rem' }}>
+                                    <div style={{ color: '#94A3B8', marginTop: '4px', fontSize: '0.85rem' }}>
                                         Try different keywords or browse a category above.
                                     </div>
                                 </div>
@@ -298,20 +291,20 @@ export default function HelpCenter() {
                     </div>
                     <div className="hc-support__grid">
                         {SUPPORT_CHANNELS.map(ch => (
-                            <div key={ch.title} className="hc-support-card" style={{ borderTop: `3px solid ${ch.color}` }}>
-                                <div className="hc-support-card__icon" style={{ background: ch.bg, color: ch.color }}>
-                                    {ch.icon}
+                            <div key={ch.title} className="hc-support-card">
+                                <div className="hc-support-card__icon" style={{ background: 'var(--ds-accent-soft, #EAFBF4)', color: 'var(--ds-accent-strong, #059669)' }}>
+                                    <ch.Icon size={22} />
                                 </div>
                                 <h3 className="hc-support-card__title">{ch.title}</h3>
                                 <p className="hc-support-card__desc">{ch.desc}</p>
-                                <div className="hc-support-card__wait">{ch.wait}</div>
+                                <div className="hc-support-card__wait"><Clock3 size={14} /> {ch.wait}</div>
                                 {ch.href ? (
-                                    <a href={ch.href} className="hc-support-card__btn" style={{ background: ch.color }}>
-                                        {ch.cta} →
+                                    <a href={ch.href} className="hc-support-card__btn">
+                                        {ch.cta} <ArrowRight size={15} />
                                     </a>
                                 ) : (
-                                    <Link to={ch.to} className="hc-support-card__btn" style={{ background: ch.color }}>
-                                        {ch.cta} →
+                                    <Link to={ch.to} className="hc-support-card__btn">
+                                        {ch.cta} <ArrowRight size={15} />
                                     </Link>
                                 )}
                             </div>
@@ -322,18 +315,14 @@ export default function HelpCenter() {
 
             {/* ══ BOTTOM CTA ══ */}
             <section className="hc-bottom-cta">
-                <div className="hc-bottom-cta__orb hc-bottom-cta__orb--1" />
-                <div className="hc-bottom-cta__orb hc-bottom-cta__orb--2" />
                 <div className="container hc-bottom-cta__inner">
-                    <div className="hc-bottom-cta__left">
+                    <div>
                         <div className="hc-bottom-cta__title">Didn't find your answer?</div>
                         <div className="hc-bottom-cta__sub">
                             Our support team is here to help. Reach out and we'll get back to you quickly.
                         </div>
                     </div>
-                    <div className="hc-bottom-cta__right">
-                        <Link to="/contact" className="hc-bottom-cta__btn">Contact Support →</Link>
-                    </div>
+                    <Link to="/contact" className="hc-bottom-cta__btn">Contact Support <ArrowRight size={16} /></Link>
                 </div>
             </section>
 

@@ -8,6 +8,7 @@ import { getUserId } from '../utils/user';
 import { tokenManager } from '../utils/tokenManager';
 import { extractApiError } from '../utils/apiError';
 import { log } from "../utils/logger";
+import { notify } from '../utils/notify';
 
 const FreelancerContext = createContext(null);
 
@@ -224,11 +225,9 @@ export const FreelancerProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.role, user?.id, user?._id, authLoading, fetchFreelancerData]);
 
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
-  };
+  const showToast = useCallback((message, type = 'success') => {
+    notify(message, { type });
+  }, []);
 
   const saveProfile = async (updatedData = null, options = {}) => {
     setLoading(true);

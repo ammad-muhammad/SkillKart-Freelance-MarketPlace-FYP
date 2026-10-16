@@ -1,12 +1,12 @@
 /* =======================================================
    FilterSelect — Custom Dropdown
-   Matches SkillKart theme (#042E4C navy, Lato, etc.)
+   Theme: SkillKart Emerald #10B981 + Deep Navy #0B2942
    ======================================================= */
 
 .fsel {
   position: relative;
   display: inline-flex;
-  font-family: 'Lato', sans-serif;
+  font-family: inherit;
 }
 
 /* ── Trigger button ── */
@@ -14,54 +14,55 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f4f6f9;
-  border: 1.5px solid #d1d9e6;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
   border-radius: 10px;
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: #042E4C;
-  font-family: 'Lato', sans-serif;
+  color: #0B2942;
+  font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  min-width: 130px;
+  min-width: 136px;
   justify-content: space-between;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: all 0.2s ease;
   user-select: none;
   outline: none;
 }
 
 .fsel__trigger:hover {
-  border-color: #0a4a73;
-  background: #eef2f7;
+  border-color: #10B981;
+  background: #ffffff;
 }
 
 .fsel--open .fsel__trigger {
-  border-color: #042E4C;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(4, 46, 76, 0.08);
+  border-color: #10B981;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
 }
 
 /* Active state — when a non-default option is selected */
 .fsel--active .fsel__trigger {
-  background: #042E4C;
-  border-color: #042E4C;
-  color: #fff;
+  background: #EAFBF4;
+  border-color: #10B981;
+  color: #059669;
+  font-weight: 700;
 }
 
 .fsel--active.fsel--open .fsel__trigger {
-  background: #0a4a73;
-  border-color: #0a4a73;
-  box-shadow: 0 0 0 3px rgba(4, 46, 76, 0.18);
+  background: #EAFBF4;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
 }
 
 /* Chevron icon */
 .fsel__chevron {
-  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   flex-shrink: 0;
   opacity: 0.75;
 }
-.fsel--active .fsel__chevron { color: #fff; opacity: 0.9; }
+.fsel--active .fsel__chevron { color: #059669; opacity: 1; }
 .fsel--open .fsel__chevron { transform: rotate(180deg); opacity: 1; }
 
 /* ── Dropdown panel ── */
@@ -70,12 +71,12 @@
   top: calc(100% + 6px);
   left: 0;
   min-width: 100%;
-  background: #fff;
-  border: 1px solid rgba(183, 201, 226, 0.4);
-  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 14px;
   box-shadow:
-    0 8px 24px rgba(4, 46, 76, 0.12),
-    0 2px 8px rgba(4, 46, 76, 0.06);
+    0 12px 32px rgba(11, 41, 66, 0.10),
+    0 2px 8px rgba(11, 41, 66, 0.04);
   z-index: 9999;
   padding: 6px;
   list-style: none;
@@ -92,9 +93,9 @@
   left: 18px;
   width: 13px;
   height: 13px;
-  background: #fff;
-  border-left: 1px solid rgba(183, 201, 226, 0.4);
-  border-top: 1px solid rgba(183, 201, 226, 0.4);
+  background: #ffffff;
+  border-left: 1.5px solid #E2E8F0;
+  border-top: 1.5px solid #E2E8F0;
   transform: rotate(45deg);
   border-radius: 2px 0 0 0;
 }
@@ -119,40 +120,38 @@
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #4a5568;
+  color: #475569;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: all 0.15s ease;
   gap: 10px;
 }
 
 .fsel__option:hover {
-  background: #f0f5fa;
-  color: #042E4C;
+  background: #F0FDF4;
+  color: #0B2942;
 }
 
 /* Selected option */
 .fsel__option--selected {
-  background: #042E4C;
-  color: #fff;
+  background: #10B981;
+  color: #ffffff;
   font-weight: 700;
 }
 
 .fsel__option--selected:hover {
-  background: #0a4a73;
-  color: #fff;
+  background: #059669;
+  color: #ffffff;
 }
 
 /* Checkmark icon */
 .fsel__check {
   flex-shrink: 0;
-  opacity: 0.9;
-  color: #B7C9E2;
+  opacity: 0.95;
+  color: #ffffff;
 }
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  /* Make the whole dropdown full-width so the three filters line up uniformly
-     instead of each sizing to its own label (ragged widths). */
   .fsel {
     width: 100%;
     min-width: 0;

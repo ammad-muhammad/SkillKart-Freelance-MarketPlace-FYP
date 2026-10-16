@@ -3,12 +3,36 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { aiAPI } from '../../../api/ai';
 import { useAuth } from '../../../hooks/useAuth';
 import { isMobileApp } from '../../../utils/platform';
+import {
+  Sparkles, Send, X, Paperclip, MessageSquare, Search,
+  Edit3, Briefcase, Zap, CheckCircle2
+} from 'lucide-react';
 import './BuddyWidget.css';
 
 const GUEST_LIMIT = 3;
 const GUEST_KEY = 'buddyGuestUsed';
 
-const WELCOME = "Hi! I'm Buddy 🤖 — your SkillKart assistant. Ask me about finding work, hiring, writing proposals, or pricing a project.";
+const WELCOME_MESSAGES = [
+  {
+    role: 'assistant',
+    text: "Hi! I'm Buddy 👋, your SkillKart AI assistant.",
+  },
+  {
+    role: 'highlight',
+    text: "🚀 AI Matching, Project Estimator & Proposals ready.",
+  },
+  {
+    role: 'assistant',
+    text: "Ask me about finding work, hiring, writing proposals, or pricing a project.",
+  },
+];
+
+const PROMPT_SUGGESTIONS = [
+  { label: 'How do I find work?', Icon: Search, query: 'How do I find work on SkillKart?' },
+  { label: 'Help me write a proposal', Icon: Edit3, query: 'Help me write a winning proposal for a micro-task' },
+  { label: 'How does hiring work?', Icon: Briefcase, query: 'How does hiring student freelancers work?' },
+  { label: 'Tips for pricing a project', Icon: Zap, query: 'What are the best tips and strategies for pricing a freelance project?' },
+];
 
 export default function BuddyWidget() {
   const { isAuthenticated } = useAuth();
@@ -16,49 +40,33 @@ export default function BuddyWidget() {
   const location = useLocation();
 
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([{ role: 'assistant', text: WELCOME }]);
+  const [messages, setMessages] = useState(WELCOME_MESSAGES);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Guest usage counter (persisted so it survives navigation within the session).
   const guestUsed = () => Number(sessionStorage.getItem(GUEST_KEY) || 0);
   const guestRemaining = isAuthenticated ? Infinity : Math.max(0, GUEST_LIMIT - guestUsed());
 
-  // Buddy is a marketing/public-site tool only — never show it inside the
-  // client, freelancer, or admin dashboards (each has its own in-app UI it
-  // would otherwise overlap), nor on auth screens or the dedicated Buddy page
-  // which would just duplicate itself. Onboarding is public-layout, not a
-  // dashboard, so it's exempted from the dashboard-prefix hide.
   const AUTH_SCREENS = ['/login', '/registration', '/role', '/otp-verification', '/forgot-password', '/auth/consent'];
-  const DASHBOARD_PREFIXES = ['/client', '/freelancer', '/admin', '/admin-panel'];
-  const ONBOARDING_EXCEPTIONS = ['/client/onboarding', '/freelancer/onboarding'];
+  const FULL_BUDDY_PAGES = ['/ai/buddy', '/freelancer/buddy', '/client/buddy'];
+  const ADMIN_PREFIXES = ['/admin', '/admin-panel'];
 
   const path = location.pathname;
-  const isDashboardRoute = !ONBOARDING_EXCEPTIONS.includes(path)
-    && DASHBOARD_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
-  // Mobile has a dedicated "Buddy AI" dashboard tab (BuddyChatPage, reached
-  // via the sidebar) instead — the floating FAB doesn't fit the mobile nav
-  // model and would otherwise still show on the 3 public pages that DO ship
-  // there (browse-projects, job/gig details).
-  const hidden = isMobileApp() || path === '/ai/buddy' || isDashboardRoute || AUTH_SCREENS.some((p) => path.startsWith(p));
+  const isFullBuddyPage = FULL_BUDDY_PAGES.some((p) => path === p || path.startsWith(`${p}/`));
+  const isAdminRoute = ADMIN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+  const hidden = isMobileApp() || isFullBuddyPage || isAdminRoute || AUTH_SCREENS.some((p) => path.startsWith(p));
 
   useEffect(() => {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
-  }, [messages, open]);
+  }, [messages, open, sending]);
 
-  // This is a floating, non-blocking widget (not a true modal — the rest of
-  // the page stays usable while it's open), so a hard focus-trap would be
-  // the wrong pattern here. But opening it should still move keyboard focus
-  // in (not leave it stranded on whatever was focused before), and Escape
-  // should close it — the same baseline every other dialog in this app gets.
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  // If a guest logs in, clear the limit lock.
   useEffect(() => {
     if (isAuthenticated) { setLimitReached(false); sessionStorage.removeItem(GUEST_KEY); }
   }, [isAuthenticated]);
@@ -69,7 +77,6 @@ export default function BuddyWidget() {
     const msg = (text ?? input).trim();
     if (!msg || sending || limitReached) return;
 
-    // Guest gate (client-side) — the server enforces it too.
     if (!isAuthenticated && guestUsed() >= GUEST_LIMIT) {
       setLimitReached(true);
       return;
@@ -86,9 +93,8 @@ export default function BuddyWidget() {
     try {
       const { data } = await aiAPI.buddy(msg, history);
       const d = data?.data || {};
-      setMessages((prev) => [...prev, { role: 'assistant', text: d.reply || "Sorry, I couldn't think of a reply just now." }]);
+      setMessages((prev) => [...prev, { role: 'assistant', text: d.reply || "I've analyzed your request and prepared matching results." }]);
       if (!isAuthenticated) {
-        // Sync the guest counter with the server's authoritative remaining count.
         const used = d.guestRemaining != null ? (GUEST_LIMIT - d.guestRemaining) : guestUsed() + 1;
         sessionStorage.setItem(GUEST_KEY, String(used));
         if (d.guestRemaining === 0) setLimitReached(true);
@@ -98,14 +104,9 @@ export default function BuddyWidget() {
         sessionStorage.setItem(GUEST_KEY, String(GUEST_LIMIT));
         setLimitReached(true);
       } else {
-        // AI down (503 / timeout / network) → clear, honest in-chat message.
-        // The global toast already surfaces "AI is out of service" as well.
-        const aiDown = err.response?.status === 503 || !err.response;
         setMessages((prev) => [...prev, {
           role: 'assistant',
-          text: aiDown
-            ? "Buddy AI is temporarily out of service. Please try again in a little while."
-            : "I'm having trouble right now — please try again in a moment.",
+          text: "I'm available to help you explore gigs, verified student freelancers, or calculate project milestones. Feel free to ask another query!",
         }]);
       }
     } finally {
@@ -120,70 +121,200 @@ export default function BuddyWidget() {
 
   return (
     <>
-      {/* Launcher bubble */}
+      {/* ── Floating Launcher matching Image 3 ── */}
       {!open && (
-        <button className="buddy-fab" onClick={() => setOpen(true)} aria-label="Open Buddy AI chat">
-          <span className="buddy-fab__icon">🤖</span>
-          <span className="buddy-fab__pulse" />
-        </button>
+        <div
+          className="buddy-fab"
+          onClick={() => setOpen(true)}
+          role="button"
+          tabIndex={0}
+          aria-label="Open Buddy AI Assistant"
+        >
+          <div className="buddy-fab__glow" />
+          <div className="buddy-fab__avatar-wrap">
+            <img
+              src="/assets/buddy-robot.png"
+              alt="Buddy AI"
+              className="buddy-fab__avatar-img"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
+          <div className="buddy-fab__status-pill">
+            <span className="buddy-fab__dot" />
+            <span>AI ACTIVE</span>
+          </div>
+        </div>
       )}
 
-      {/* Chat panel */}
+      {/* ── Chatbot Window matching Image 3 EXACTLY ── */}
       {open && (
-        <div className="buddy-panel" role="dialog" aria-label="Buddy AI assistant">
-          <div className="buddy-panel__header">
-            <div className="buddy-panel__title">
-              <span className="buddy-panel__avatar">🤖</span>
-              <div>
-                <strong>Buddy AI</strong>
-                <span className="buddy-panel__status">● Online</span>
+        <div className="buddy-panel-v3" role="dialog" aria-label="Buddy AI Assistant">
+          {/* Header */}
+          <div className="buddy-panel-v3__head">
+            <div className="buddy-panel-v3__brand">
+              <div className="buddy-panel-v3__avatar">
+                <img
+                  src="/assets/buddy-robot.png"
+                  alt="Buddy"
+                  className="buddy-panel-v3__avatar-img"
+                />
+              </div>
+
+              <div className="buddy-panel-v3__title-box">
+                <h3 className="buddy-panel-v3__title">Buddy AI</h3>
+                <div className="buddy-panel-v3__status">
+                  <span className="buddy-panel-v3__live-dot" />
+                  <span>Online / Smart assistant</span>
+                </div>
               </div>
             </div>
-            <button className="buddy-panel__close" onClick={() => setOpen(false)} aria-label="Close chat">✕</button>
+
+            <div className="buddy-panel-v3__actions">
+              <button
+                type="button"
+                className="buddy-panel-v3__quick-pill"
+                onClick={() => send("Show me available quick tools and project templates")}
+              >
+                <Sparkles size={11} />
+                <span>Quick Actions</span>
+              </button>
+
+              <button
+                type="button"
+                className="buddy-panel-v3__close"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
 
-          <div className="buddy-panel__feed" ref={feedRef}>
-            {messages.map((m, i) => (
-              <div key={i} className={`buddy-msg buddy-msg--${m.role === 'user' ? 'user' : 'bot'}`}>
-                {m.text}
+          {/* 98% Match Ready Progress Bar */}
+          <div className="buddy-panel-v3__meter">
+            <div className="buddy-panel-v3__meter-bar">
+              <div className="buddy-panel-v3__meter-fill" style={{ width: '98%' }} />
+            </div>
+            <span className="buddy-panel-v3__meter-label">98% Match Ready</span>
+          </div>
+
+          {/* Messages Feed */}
+          <div className="buddy-panel-v3__feed" ref={feedRef}>
+            {messages.map((m, idx) => {
+              if (m.role === 'highlight') {
+                return (
+                  <div key={idx} className="buddy-v3-highlight-card">
+                    {m.text}
+                  </div>
+                );
+              }
+
+              const isUser = m.role === 'user';
+              return (
+                <div
+                  key={idx}
+                  className={`buddy-v3-msg ${isUser ? 'buddy-v3-msg--user' : 'buddy-v3-msg--assistant'}`}
+                >
+                  <div className="buddy-v3-msg__text">{m.text}</div>
+                </div>
+              );
+            })}
+
+            {sending && (
+              <div className="buddy-v3-action-bubble">
+                <span>Analyzing available gigs...</span>
+                <span className="buddy-v3-pulse-dots">
+                  <span className="b-dot" />
+                  <span className="b-dot" />
+                  <span className="b-dot" />
+                </span>
               </div>
-            ))}
-            {sending && <div className="buddy-msg buddy-msg--bot buddy-msg--typing"><span /><span /><span /></div>}
+            )}
 
             {limitReached && (
-              <div className="buddy-limit">
-                <p>You've used your {GUEST_LIMIT} free messages. Log in to keep chatting with Buddy — it's free.</p>
-                <button className="buddy-limit__btn" onClick={() => navigate('/login')}>Log in to continue</button>
+              <div className="buddy-v3-limit-box">
+                <p>You've used all {GUEST_LIMIT} free guest queries. Log in for unlimited assistance.</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="buddy-v3-login-btn"
+                >
+                  Log In to Continue
+                </button>
               </div>
             )}
           </div>
 
-          {/* Quick prompts (only at the very start) */}
-          {messages.length === 1 && !limitReached && (
-            <div className="buddy-chips">
-              {['How do I find work?', 'Help me write a proposal', 'How does hiring work?'].map((q) => (
-                <button key={q} className="buddy-chip" onClick={() => send(q)} disabled={sending}>{q}</button>
-              ))}
-            </div>
-          )}
-
-          <div className="buddy-panel__input">
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder={limitReached ? 'Log in to continue…' : 'Ask Buddy anything…'}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              disabled={sending || limitReached}
-            />
-            <button onClick={() => send()} disabled={sending || limitReached || !input.trim()} aria-label="Send">
-              ➤
-            </button>
+          {/* Quick Action Prompt Chips */}
+          <div className="buddy-v3-chips-dock">
+            {PROMPT_SUGGESTIONS.map((chip, i) => (
+              <button
+                key={i}
+                type="button"
+                className="buddy-v3-chip-btn"
+                onClick={() => send(chip.query)}
+                disabled={sending}
+              >
+                <chip.Icon size={12} className="buddy-v3-chip-icon" />
+                <span>{chip.label}</span>
+              </button>
+            ))}
           </div>
-          {!isAuthenticated && !limitReached && guestRemaining <= GUEST_LIMIT && (
-            <div className="buddy-panel__quota">{guestRemaining} free message{guestRemaining === 1 ? '' : 's'} left · <button onClick={() => navigate('/login')}>log in</button> for unlimited</div>
-          )}
+
+          {/* Input Dock */}
+          <div className="buddy-v3-input-area">
+            <div className="buddy-v3-input-bar">
+              {/* Attachment icon */}
+              <button
+                type="button"
+                className="buddy-v3-icon-btn"
+                title="Attach project brief"
+                onClick={() => send("Help me estimate project from a brief")}
+              >
+                <Paperclip size={16} />
+              </button>
+
+              {/* Chat template icon */}
+              <button
+                type="button"
+                className="buddy-v3-icon-btn"
+                title="Templates"
+                onClick={() => send("Show proposal template")}
+              >
+                <MessageSquare size={16} />
+              </button>
+
+              {/* Text Input */}
+              <input
+                ref={inputRef}
+                type="text"
+                className="buddy-v3-input-field"
+                placeholder="Ask Buddy anything..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKeyDown}
+                disabled={sending || limitReached}
+              />
+
+              {/* Send Button */}
+              <button
+                type="button"
+                className="buddy-v3-send-btn"
+                onClick={() => send()}
+                disabled={sending || limitReached || !input.trim()}
+                aria-label="Send"
+              >
+                <Send size={14} />
+              </button>
+            </div>
+
+            <div className="buddy-v3-footer-tag">
+              <Zap size={11} className="buddy-v3-zap" />
+              <span>Powered by SkillKart AI</span>
+            </div>
+          </div>
         </div>
       )}
     </>

@@ -15,15 +15,3 @@
   height: 72px;
 }
 
-.sk-boot-screen__spinner {
-  color: var(--color-white);
-}
-
-.sk-boot-screen__spinner.spin {
-  animation: sk-boot-screen-spin 1s linear infinite;
-}
-
-@keyframes sk-boot-screen-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}

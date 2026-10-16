@@ -1,8 +1,8 @@
 import React, { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X, Loader2 } from "lucide-react";
-import { freelancersAPI } from "../../api/freelancers";
+import { FolderOpen, Plus, Trash2, ExternalLink, ImagePlus, X, Sparkles } from "lucide-react";
 import { safeToast as toast } from "../../utils/safeToast";
+import { freelancersAPI } from "../../api/freelancers";
 import AiGenerateText from "../common/AiSuggest/AiGenerateText";
 import ImageSourcePicker from "../common/ImageSourcePicker/ImageSourcePicker";
 
@@ -41,7 +41,7 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
 
     if (validImages.length === 0) return;
 
-    // Show local previews first for better UX
+    // Show local previews first for responsive UX
     const localPreviews = validImages.map(f => URL.createObjectURL(f));
     
     setFormData((prev) => {
@@ -67,27 +67,24 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
 
       setFormData((prev) => {
         const updated = [...(prev.portfolio || [])];
-        // Replace previews with permanent URLs in the main images array
         updated[index] = {
           ...updated[index],
           images: [...(updated[index].images || []), ...permanentUrls],
-          // We can clear previews or keep them, but let's sync them
           imagePreviews: [...(updated[index].images || []), ...permanentUrls]
         };
         return { ...prev, portfolio: updated };
       });
       
-      toast.success("Images uploaded successfully!");
+      toast.success("Project images uploaded successfully!");
     } catch (error) {
       console.error("Portfolio upload error:", error);
       toast.error("Failed to upload portfolio images.");
-      // Remove the local previews on failure
       setFormData((prev) => {
         const updated = [...(prev.portfolio || [])];
         const currentImages = updated[index].images || [];
         updated[index] = {
           ...updated[index],
-          imagePreviews: currentImages // Revert to only confirmed images
+          imagePreviews: currentImages
         };
         return { ...prev, portfolio: updated };
       });
@@ -109,20 +106,20 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 30 }}
+      initial={{ opacity: 0, x: 25 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      exit={{ opacity: 0, x: -25 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
     >
       <div className="fob-form-group">
         <div className="fob-section-header">
           <div>
             <label className="fob-label">
-              <FolderOpen size={15} className="fob-label-icon" />
-              Portfolio Projects
+              <FolderOpen size={16} className="fob-label-icon" />
+              Portfolio Projects & Case Studies
             </label>
             <p className="fob-hint">
-              Showcase your best work. Good portfolios increase hire rates by 3x.
+              Showcase tangible proofs of work. Freelancers with verified portfolio projects get 3x higher client conversion.
             </p>
           </div>
           <button type="button" className="fob-add-btn" onClick={addProject}>
@@ -139,8 +136,13 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
               exit={{ opacity: 0 }}
               className="fob-empty-state"
             >
-              <FolderOpen size={40} className="fob-empty-icon" />
-              <p>No projects yet. Add your first portfolio project!</p>
+              <FolderOpen size={42} className="fob-empty-icon" />
+              <p style={{ fontWeight: 600, color: "var(--fob-text)", marginBottom: "4px" }}>
+                No projects added yet
+              </p>
+              <p style={{ fontSize: "13px", color: "var(--fob-text-muted)" }}>
+                Click "Add Project" above to highlight your best achievements.
+              </p>
             </motion.div>
           )}
 
@@ -150,12 +152,13 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
               className="fob-dynamic-item"
             >
               <div className="fob-dynamic-item-header">
                 <span className="fob-item-number">
-                  <FolderOpen size={14} /> Project #{index + 1}
+                  <FolderOpen size={14} style={{ color: "#10B981" }} />
+                  Project #{index + 1}
                 </span>
                 <button
                   type="button"
@@ -174,47 +177,49 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
                   value={project.title}
                   onChange={(e) => updateProject(index, "title", e.target.value)}
                   className="fob-input"
-                  placeholder="e.g. E-commerce Platform for Fashion Brand"
+                  placeholder="e.g. Modern E-commerce Platform with Stripe & Next.js"
                 />
               </div>
 
               <div className="fob-form-group">
-                <label className="fob-label">Description*</label>
+                <label className="fob-label">Description & Key Highlights*</label>
                 <textarea
                   value={project.description}
                   onChange={(e) =>
                     updateProject(index, "description", e.target.value)
                   }
                   className="fob-textarea"
-                  placeholder="Describe the project, your role, technologies used, and impact..."
+                  placeholder="Describe the challenge, tech stack utilized, your role, and quantitative outcomes..."
                   rows={3}
                 />
-                <AiGenerateText
-                  fieldLabel="a portfolio project description on a freelancer's profile — the project, their role, technologies used, and impact"
-                  getContext={() => ({ title: project.title, url: project.url })}
-                  getExistingText={() => project.description}
-                  onGenerated={(text) => updateProject(index, 'description', text)}
-                />
+                <div style={{ marginTop: "8px" }}>
+                  <AiGenerateText
+                    fieldLabel="a portfolio project description on a freelancer's profile — the project, their role, technologies used, and impact"
+                    getContext={() => ({ title: project.title, url: project.url })}
+                    getExistingText={() => project.description}
+                    onGenerated={(text) => updateProject(index, 'description', text)}
+                  />
+                </div>
               </div>
 
               <div className="fob-form-group">
                 <label className="fob-label">
-                  <ExternalLink size={13} className="fob-label-icon" />
-                  Project URL
+                  <ExternalLink size={14} className="fob-label-icon" />
+                  Live Demo or Repository URL
                 </label>
                 <input
                   type="url"
                   value={project.url}
                   onChange={(e) => updateProject(index, "url", e.target.value)}
                   className="fob-input"
-                  placeholder="https://your-project.com"
+                  placeholder="https://example.com/demo or https://github.com/..."
                 />
               </div>
 
-              <div className="fob-form-group">
+              <div className="fob-form-group" style={{ marginBottom: 0 }}>
                 <label className="fob-label">
-                  <ImagePlus size={13} className="fob-label-icon" />
-                  Project Screenshots
+                  <ImagePlus size={14} className="fob-label-icon" />
+                  Screenshots & Media
                 </label>
 
                 {(project.imagePreviews || []).length > 0 && (
@@ -226,6 +231,7 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
                           type="button"
                           className="fob-image-remove"
                           onClick={() => removeImage(index, imgIdx)}
+                          title="Remove image"
                         >
                           <X size={12} />
                         </button>
@@ -236,7 +242,7 @@ const StepPortfolio = ({ formData, setFormData, errors }) => {
 
                 <div className="fob-upload-area" onClick={() => fileInputRefs.current[index]?.click()}>
                   <ImagePlus size={24} className="fob-upload-icon" />
-                  <span>Click to upload images</span>
+                  <span>Click to select and upload images</span>
                   <span className="fob-upload-formats">PNG, JPG, WEBP up to 5MB each</span>
                   <ImageSourcePicker
                     multiple

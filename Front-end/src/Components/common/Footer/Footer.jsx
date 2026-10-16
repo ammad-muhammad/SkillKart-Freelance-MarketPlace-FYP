@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Rocket, Trophy, Bot, Heart } from 'lucide-react';
+import { Rocket, Trophy, Bot, ArrowRight } from 'lucide-react';
 import { safeToast as toast } from '../../../utils/safeToast';
 import { publicAPI } from '../../../api/publicData';
 import { isMobileApp } from '../../../utils/platform';
+import { generateNotchedPath, generateFooterSilhouettePath } from './notchedPath';
 import './Footer.css';
-
-gsap.registerPlugin(ScrollTrigger);
 
 // Each link: { label, to } for internal routes, { label, href } for external/placeholder
 const FOOTER_LINKS = [
@@ -19,6 +16,7 @@ const FOOTER_LINKS = [
       { label: 'Browse Projects', to: '/browse-projects' },
       { label: 'Post a Project', to: '/post-project' },
       { label: 'AI Matchmaking', to: '/ai-matchmaking' },
+      { label: 'Download Mobile App', href: '/#download-app' },
       { label: 'Categories', to: '/categories' },
     ],
   },
@@ -49,18 +47,23 @@ const FOOTER_LINKS = [
   },
 ];
 
-
 export default function Footer() {
   const footerRef = useRef(null);
+  const panelRef = useRef(null);
+  const [footerClip, setFooterClip] = useState('');
+  const [panelClip, setPanelClip] = useState('');
+  const [isEntered, setIsEntered] = useState(false);
   const [email, setEmail] = useState('');
-
   const [loading, setLoading] = useState(false);
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-    if (!ok) { toast.error('Please enter a valid email address.'); return; }
-    
+    if (!ok) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
     try {
       await publicAPI.subscribeNewsletter(email.trim());
@@ -73,77 +76,103 @@ export default function Footer() {
     }
   };
 
+  // Measure and compute SVG silhouette paths dynamically
   useEffect(() => {
-    // Returning null from render below means footerRef never attaches to a
-    // DOM node on mobile — gsap.context() would crash trying to scope to a
-    // null ref (footerRef.current.querySelectorAll(...) on null). Skip the
-    // whole animation setup rather than just skipping the render output.
-    if (isMobileApp()) return undefined;
+    if (isMobileApp()) return;
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(footerRef.current.querySelectorAll('.footer__col'),
-        { y: 30, opacity: 0 },
-        {
-          y: 0, opacity: 1, stagger: 0.1, duration: 0.6, ease: 'power3.out',
-          scrollTrigger: { trigger: footerRef.current, start: 'top 90%' },
+    const measure = () => {
+      if (footerRef.current) {
+        const rect = footerRef.current.getBoundingClientRect();
+        if (rect.width > 768) {
+          setFooterClip(generateFooterSilhouettePath(rect.width, rect.height, 64));
+        } else {
+          setFooterClip('');
         }
-      );
-    }, footerRef);
+      }
+      if (panelRef.current) {
+        const rect = panelRef.current.getBoundingClientRect();
+        if (rect.width > 768) {
+          setPanelClip(
+            generateNotchedPath(rect.width, rect.height, {
+              radius: 28,
+              notchDepth: 26,
+              topTabRatio: 0.46,
+              botTabRatio: 0.24,
+              chamfer: 24,
+            })
+          );
+        } else {
+          setPanelClip('');
+        }
+      }
+    };
 
-    return () => ctx.revert();
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    if (footerRef.current) ro.observe(footerRef.current);
+    if (panelRef.current) ro.observe(panelRef.current);
+
+    return () => ro.disconnect();
   }, []);
 
-  // Sitemap-style marketing footer (Browse Freelancers, Post a Project,
-  // Categories, ...) — none of those routes exist in the mobile build, and a
-  // handful of otherwise-public pages that DO ship there (job/gig details,
-  // browse-projects) don't need a full site footer under their content either.
+  // Entrance trigger
+  useEffect(() => {
+    if (isMobileApp() || !footerRef.current) {
+      setIsEntered(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsEntered(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.05, rootMargin: '50px' }
+    );
+    observer.observe(footerRef.current);
+
+    // Guaranteed fallback
+    const timer = setTimeout(() => setIsEntered(true), 600);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // Sitemap-style marketing footer — none of those routes exist in the mobile build
   if (isMobileApp()) return null;
 
   return (
-    <footer ref={footerRef} className="footer">
-      {/* ── Newsletter bar ── */}
-      <div className="footer__newsletter">
-        <div className="container footer__newsletter-inner">
-          <div>
-            <h3 className="footer__newsletter-title">
-              Stay ahead of the freelance market <Rocket size={16} style={{ display:'inline', verticalAlign:'middle', color:'#1a6fa8' }} />
-            </h3>
-            <p className="footer__newsletter-sub">
-              Weekly AI tips, trending skills, and opportunities for students.
-            </p>
-          </div>
-          <form className="footer__newsletter-form" onSubmit={handleSubscribe}>
-            <input
-              type="email"
-              placeholder="Enter your university email"
-              className="footer__newsletter-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <button type="submit" className="footer__newsletter-btn" disabled={loading}>
-              {loading ? '...' : 'Subscribe'}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* ── Main footer ── */}
-      <div className="footer__main">
-        <div className="container">
-          <div className="footer__grid">
-            {/* Brand col */}
-            <div className="footer__col footer__col--brand">
-              <Link to="/" className="footer__logo">
-                <span className="footer__logo-icon">
-                  <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                    <rect width="32" height="32" rx="8" fill="#B7C9E2" />
-                    <path d="M8 22L13 10l5 8 3-5 4 9" stroke="#042E4C" strokeWidth="2.5"
-                      strokeLinecap="round" strokeLinejoin="round" />
-                    <circle cx="24" cy="10" r="2.5" fill="#042E4C" />
+    <footer
+      ref={footerRef}
+      className={`footer ${isEntered ? 'is-entered' : ''}`}
+      style={footerClip ? { clipPath: `path("${footerClip}")` } : undefined}
+    >
+      <div className="footer__body">
+        <div className="footer__container">
+          {/* ════ 1) INFO ROW (4 Brand / 8 Links) ════ */}
+          <div className="footer__info-row">
+            {/* Brand Column */}
+            <div className="footer__info-brand">
+              <Link to="/" className="footer__brand-logo">
+                <span className="footer__brand-logo-icon">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="8" fill="#10B981" />
+                    <path
+                      d="M8 22L13 10l5 8 3-5 4 9"
+                      stroke="#ffffff"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="24" cy="10" r="2.5" fill="#ffffff" />
                   </svg>
                 </span>
-                <span className="footer__logo-text">
-                  Skill<span>Kart</span>
+                <span className="footer__brand-logo-text">
+                  Skill<span className="footer__brand-logo-accent">Kart</span>
                 </span>
               </Link>
               <p className="footer__brand-desc">
@@ -152,40 +181,114 @@ export default function Footer() {
                 start earning today.
               </p>
               <div className="footer__badges">
-                <div className="footer__badge"><Trophy size={13} /> FYP Project 2026</div>
-                <div className="footer__badge"><Bot size={13} /> AI-Powered</div>
+                <div className="footer__badge">
+                  <Trophy size={13} className="footer__badge-icon" /> FYP Project 2026
+                </div>
+                <div className="footer__badge footer__badge--ai">
+                  <Bot size={13} className="footer__badge-icon" /> AI-Powered
+                </div>
               </div>
             </div>
 
-            {/* Link columns */}
-            {FOOTER_LINKS.map(col => (
-              <div key={col.heading} className="footer__col">
-                <h4 className="footer__col-heading">{col.heading}</h4>
-                <ul className="footer__col-links">
-                  {col.links.map(link => (
-                    <li key={link.label}>
-                      {link.to ? (
-                        <Link to={link.to} className="footer__col-link">{link.label}</Link>
-                      ) : (
-                        <a href={link.href} className="footer__col-link">{link.label}</a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {/* Link Columns */}
+            <div className="footer__info-nav">
+              {FOOTER_LINKS.map((col) => (
+                <div key={col.heading} className="footer__link-col">
+                  <h4 className="footer__link-heading">{col.heading}</h4>
+                  <ul className="footer__link-list">
+                    {col.links.map((link) => (
+                      <li key={link.label}>
+                        {link.to ? (
+                          <Link to={link.to} className="footer__nav-link">{link.label}</Link>
+                        ) : (
+                          <a href={link.href} className="footer__nav-link">{link.label}</a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* ── Bottom bar ── */}
-          <div className="footer__bottom">
-            <p className="footer__copy">
-              © {new Date().getFullYear()} SkillKart. All rights reserved. Built with <Heart size={13} style={{ display:'inline', verticalAlign:'middle', color:'#1a6fa8', fill:'#1a6fa8' }} /> as an FYP project.
-            </p>
-            <div className="footer__bottom-links">
-              <Link to="/privacy">Privacy Policy</Link>
-              <Link to="/terms">Terms of Service</Link>
-              <Link to="/cookies">Cookie Policy</Link>
+          {/* ════ 2) NOTCHED WHITE PANEL (Hero Element) ════ */}
+          <div className="footer__notched-panel-wrapper">
+            <span className="footer__notch-top-text">
+             Built as an FYP Project 2026
+            </span>
+
+            <div
+              ref={panelRef}
+              className="footer__notched-panel"
+              style={panelClip ? { clipPath: `path("${panelClip}")` } : undefined}
+            >
+              {/* Panel Row 1: Wordmark */}
+              <div className="footer__panel-top-row">
+                <div className="footer__giant-brand">
+                  <span className="footer__giant-logo-icon">
+                    <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+                      <rect width="32" height="32" rx="8" fill="#10B981" />
+                      <path
+                        d="M8 22L13 10l5 8 3-5 4 9"
+                        stroke="#ffffff"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="24" cy="10" r="2.5" fill="#ffffff" />
+                    </svg>
+                  </span>
+                  <span className="footer__giant-text">
+                    SkillKart<span className="footer__giant-accent">.</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Panel Row 2: Heading + Newsletter Field */}
+              <div className="footer__panel-middle-row">
+                <h3 className="footer__panel-heading">
+                  Stay ahead of the freelance market{' '}
+                  <Rocket size={20} className="footer__panel-rocket" />
+                </h3>
+                <form className="footer__panel-form" onSubmit={handleSubscribe}>
+                  <input
+                    type="email"
+                    placeholder="Enter your university email..."
+                    className="footer__panel-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <button type="submit" className="footer__panel-submit-btn" disabled={loading}>
+                    {loading ? (
+                      '...'
+                    ) : (
+                      <>
+                        <span>Subscribe</span>
+                        <ArrowRight size={14} className="footer__submit-arrow" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {/* Panel Row 3: Subtext + Legal Links */}
+              <div className="footer__panel-bottom-row">
+                <p className="footer__panel-sub">
+                  Weekly AI tips, trending skills, and opportunities for students.
+                </p>
+                <div className="footer__panel-legal">
+                  <Link to="/privacy" className="footer__legal-link">Privacy Policy</Link>
+                  <span className="footer__legal-sep">•</span>
+                  <Link to="/terms" className="footer__legal-link">Terms of Service</Link>
+                  <span className="footer__legal-sep">•</span>
+                  <Link to="/cookies" className="footer__legal-link">Cookie Policy</Link>
+                </div>
+              </div>
             </div>
+
+            <span className="footer__notch-bottom-text">
+              © 2026 SkillKart. All rights reserved.
+            </span>
           </div>
         </div>
       </div>
