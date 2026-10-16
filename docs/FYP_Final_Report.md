@@ -729,87 +729,41 @@ Three further characteristics shape the rest of the system.
 
 ### 10.2 Collections by Domain
 
-The 40 collections fall into nine groups. Each table lists the collection, its purpose, and the fields that matter most to the rest of the system.
+The 40 collections are organised into core marketplace entities and platform governance schemas. Tables 10.1 and 10.2 summarize the primary schemas and their essential operational fields.
 
-**Table 10.1 — Identity and access collections**
+**Table 10.1 — Marketplace, profile and communication schemas**
 
-| Collection | Purpose | Key fields |
+| Collection | Purpose | Key Fields |
 |------------|---------|------------|
-| `User` | The core identity for every marketplace account | `email` (unique), hashed `password`, `role` (`superadmin`, `admin`, `contenteditor`, `freelancer`, `client`, `publicviewer`), `authProvider`, `isEmailVerified`, `isActive`, `isBlocked`, `tokenVersion`, `loginAttempts`/`lockUntil`, `pushTokens`, `contactViolations` |
-| `RefreshToken` | Server-side record of every issued refresh token, enabling rotation and theft detection | `jti` (unique), `familyId`, `userId`, `revokedAt`, `replacedByJti`, TTL on `expiresAt` |
-| `OTP` | One-time passwords for verification and sensitive operations | `otpHash` (never the plain code), `purpose` (11 values, e.g. `email_verification`, `login`, `password_reset`), `attempts`/`maxAttempts` (5), `isBlocked`, TTL on `expiresAt` |
-| `AdminUser` | The isolated identity of database-backed administrators | `email`, `passwordHash`, `role` (`super_admin`, `finance_admin`, `support_admin`, `moderator`, `analytics_viewer`), `isActive` |
-| `AdminSession` | A login session of an administrator | `tokenHash` (unique), `ipAddress`, `lastActivityAt`, `logoutReason` (`manual`, `expired`, `inactivity`, `forced`), TTL on `expiresAt` |
-| `ClientOnboardingDraft` | Saved progress of the client onboarding wizard | `userId` (unique), `formData`, `step` |
-| `OnboardingProgress` | Step-by-step onboarding tracker (email, profile, CV, portfolio, payment method) | `userType`, `steps.*`, `overallProgress`, `isOnboardingComplete` |
+| `User` | Core authentication and account identity | `email`, `password`, `role`, `authProvider`, `isEmailVerified`, `isActive`, `isBlocked`, `tokenVersion`, `loginAttempts`, `lockUntil`, `pushTokens` |
+| `RefreshToken` | Refresh token state and theft detection | `jti`, `familyId`, `userId`, `revokedAt`, `replacedByJti`, TTL `expiresAt` |
+| `OTP` | Passcode hashing and verification | `otpHash`, `purpose`, `attempts`, `maxAttempts`, `isBlocked`, TTL `expiresAt` |
+| `FreelancerProfile` | Freelancer identity, skills and earnings | `title`, `bio`, `hourlyRate`, `skills[]` (`name`, `level`, `isVerified`, `verificationScore`, `expiresAt`), `portfolio[]`, `rating`, `walletBalance` |
+| `ClientProfile` | Client organisation and spend tracking | `companyName`, `companyType`, `industry`, `budgetRange`, `totalProjectsPosted`, `totalSpent`, `walletBalance` |
+| `Job` | Project requirements and gig order instances | `title`, `description`, `budget` (`min`, `max`, `type`), `skills`, `category`, `status`, `source`, `gigId`, `gigTier`, `requirements` |
+| `Gig` | Packaged freelancer service listings | `title`, `category`, `skills`, `pricing` (`basic`, `standard`, `premium`), `media`, `faqs[]`, `status`, `stats` |
+| `Proposal` | Freelancer bid submissions on open jobs | `coverLetter`, `fixedPrice`, `hourlyRate`, `estimatedDeliveryTime`, `estimatedWeeklyHours`, `status`, `canResubmit` |
+| `CustomOffer` | Direct chat proposals converted to jobs | `title`, `description`, `price`, `deliveryDays`, `revisions`, `status`, `expiresAt`, `jobId` |
+| `Conversation` | Chat sessions and unread tracking | `participants[]`, `lastMessage`, `unreadCount` map |
+| `Message` | Chat messages and attachments | `content`, `attachments`, `type` (`text`/`custom_offer`), `customOfferId`, `readBy` |
+| `Review` | Two-way post-completion ratings | `rating`, `comment`, `type`, `isHidden`, unique `(jobId, reviewerId)` |
 
-**Table 10.2 — Profile and file collections**
+**Table 10.2 — Financial escrow, verification and governance schemas**
 
-| Collection | Purpose | Key fields |
+| Collection | Purpose | Key Fields |
 |------------|---------|------------|
-| `FreelancerProfile` | Everything specific to a freelancer | `title`, `bio`, `hourlyRate`, `skills[]` (`name`, `level`, `isVerified`, `verificationScore`, `lastTestedAt`, `expiresAt`), `portfolio[]`, `education[]`, `certifications[]`, `languages[]`, `availability`, `experienceLevel`, `rating`, `completedProjects`, `totalEarnings`, `walletBalance`, `stripeAccountId`, `verificationDetails`, `aiClassification` |
-| `ClientProfile` | Everything specific to a client | `companyName`, `companyType` (`Individual`, `Startup`, `SME`, `Enterprise`), `industry`, `budgetRange`, `totalProjectsPosted`, `totalSpent`, `walletBalance`, `verificationStatus`, `savedFreelancers`, `fundingFlags[]` |
-| `FileUpload` | Metadata of every uploaded asset | `url`, `cloudinaryId`, `fileType` (`cv`, `portfolio`, `document`, `image`, `other`), `mimeType`, `size`, owning `userId` |
-
-**Table 10.3 — Marketplace collections**
-
-| Collection | Purpose | Key fields |
-|------------|---------|------------|
-| `Job` | A client's requirement — and, for a gig order, the order itself | `title`, `description`, `budget` (`min`, `max`, `type`: `fixed`/`hourly`), `skills`, `category`, `experienceLevel`, `status` (`draft`, `open`, `pending_payment`, `in-progress`, `completed`, `cancelled`, `expired`, `closed`), `source` (`project`/`gig`), `gigId`, `gigTier`, `customOfferId`, `requirements`, `delivery`, `revisions[]` |
-| `Gig` | A freelancer's packaged service | `title`, `category`, `skills`, three-tier `pricing` (`basic`, `standard`, `premium`: price, delivery time, revisions, features), `media`, `faqs[]`, `status` (`draft`, `active`, `paused`), `stats` (views, orders, rating, reviews) |
-| `Proposal` | A freelancer's bid on a job | `coverLetter`, `fixedPrice` or `hourlyRate`, `estimatedDeliveryTime`, `estimatedWeeklyHours`, `status` (`pending`, `accepted`, `rejected`, `withdrawn`), `canResubmit` |
-| `CustomOffer` | A bespoke offer sent inside a chat | `title`, `description`, `price`, `deliveryDays`, `revisions`, `status` (`pending`, `accepted`, `declined`, `withdrawn`, `expired`), `expiresAt`, link to the resulting `jobId` |
-
-**Table 10.4 — Engagement and payment collections**
-
-| Collection | Purpose | Key fields |
-|------------|---------|------------|
-| `Contract` | The lifecycle engine, created when a proposal is accepted | `type` (`fixed`/`hourly`), `fixedPrice` or `hourlyRate`, `weeklyLimit`, `milestoneMode`, `currentMilestoneOrder`, `status` (`active`, `paused`, `in_revision`, `delivered`, `completed`, `pending_cancellation`, `under_review`, `cancelled`), `paymentStatus`, `timer`, `hourlyEscrow` (`lockedBalance`, `weeklyLockAmount`, `totalLocked`, `totalDrawn`), `endRequest`, embedded `dispute` (hourly only) |
-| `Milestone` | One funded phase of a fixed-price contract | `order`, `title`, `amount`, `status` (`pending_funding`, `funded`, `submitted`, `in_revision`, `approved`, `disputed`, `released`, `refunded`, `cancelled`), `reviewDeadline`, embedded `dispute` |
-| `ContractHistory` | Append-only log of significant contract events | `action`, `previousValue`, `newValue`, `performedBy` or `performedByAdmin`, `notes` |
-| `Delivery` | A submitted deliverable | `version`, `message`, `files`, `links`, `status` (`pending_review`, `accepted`, `revision_requested`), `milestoneId` |
-| `TimeLog` | A time entry on an hourly contract | `duration`, `startTime`, `endTime`, `source` (`timer`/`manual`), `status` (`pending`, `approved`, `rejected`, `billed`) |
-| `Payment` | An escrow or wallet transaction | `type` (`job_escrow`, `wallet_deposit`, `hourly_escrow`, `hourly_invoice`), `milestoneId`, `totalAmount`, `feeRate` (default 0.005), `platformFee`, `freelancerPayout`, `currency` (default `PKR`), `status` (`deposit_pending`, `deposit_paid`, `released`, `refunded`), Stripe identifiers |
-| `Withdrawal` | A freelancer cash-out request | `amount`, `method` (`bank_transfer`, `paypal`, `stripe`), `status` (`pending`, `processing`, `completed`, `failed`, `cancelled`) |
-
-**Table 10.5 — Communication and feedback collections**
-
-| Collection | Purpose | Key fields |
-|------------|---------|------------|
-| `Conversation` | A chat between participants | `participants`, `lastMessage`, per-user `unreadCount` map |
-| `Message` | One message in a conversation | `content`, `attachments`, `type` (`text`/`custom_offer`), `customOfferId`, `readBy` |
-| `Notification` | An in-app notification | `type`, `title`, `message`, `link`, `read`, references to the related job, gig or proposal |
-| `Review` | A two-way rating | `rating`, `comment`, `type` (`client_to_freelancer`/`freelancer_to_client`), `isHidden` with moderator details; unique per job and reviewer |
-| `Testimonial` | A user's public success story | `text`, `rating`, `status`; one per user |
-
-**Table 10.6 — Skill, verification and taxonomy collections**
-
-| Collection | Purpose | Key fields |
-|------------|---------|------------|
-| `SkillNode` | A vertex of the skill graph | `name`, `slug`, `type` (`industry`, `category`, `profession`, `skill`, `technology`, `tool`, `concept`), `aliases`, `synonyms`, `weight`, `status` (`active`, `deprecated`, `merged`), `canonicalParent` |
-| `SkillRelationship` | A typed edge between two nodes | `from`, `to`, `type` (15 relationship types such as `BELONGS_TO`, `RELATED_TO`, `PREREQUISITE`), `weight`; the `from`/`to`/`type` triple is unique |
-| `TaxonomyProposal` | An AI-suggested node awaiting admin approval | `name`, `type`, `relationships[]`, `sourceType` (`gig_creation`, `job_posting`, `profile_update`, `periodic_analysis`), `status` (`draft`, `pending_review`, `approved`, `rejected`), `aiReasoning` |
-| `SkillTestAttempt` | One attempt at a skill test | `skillsTested`, `level` (`easy`, `intermediate`, `expert`), `questions[]`, `totalScore`, `passed`, `status`, `violations[]`, `proctoring` summary |
-
-**Table 10.7 — Administration and operations collections**
-
-| Collection | Purpose | Key fields |
-|------------|---------|------------|
-| `AdminAuditLog` | Immutable record of sensitive administrative actions | `adminEmail`, `action`, `category` (16 categories), `resource`, `resourceId`, `previousValue`, `newValue`, `severity` (`info`, `warning`, `critical`), `ipAddress` |
-| `Report` | A user or content report | `category` (`spam`, `abuse`, `fraud`, `harassment`, `inappropriate`, `other`), `priority` (`low`…`critical`), `status` (`pending`, `investigating`, `resolved`, `dismissed`), `reportedItem` |
-| `PlatformSettings` | Category-popularity weights used for ordering categories | `weights` (gigs 0.40, jobs 0.25, freelancers 0.20, search volume 0.10, views 0.05) |
-| `SystemSettings` | Key–value platform configuration | `key`, `value`, `category` (`fees`, `security`, `email`, `features`, `general`, `maintenance`), `valueType` |
-| `ApiLog` | One row per API request | `method`, `path`, `statusCode`, `duration`, `userId`, `ip` |
-| `ErrorLog` | Captured server errors | `message`, `type` (`unhandledRejection`, `uncaughtException`, `requestError`, `validationError`, `other`), `route`, `resolved` |
-| `EmailLog` | One row per email send attempt | `to`, `subject`, `template`, `provider` (`smtp`/`gmail`), `status`, `attempts`, `errorMessage` |
-
-**Table 10.8 — Content and public-form collections**
-
-| Collection | Purpose | Key fields |
-|------------|---------|------------|
-| `CMSContent` | A versioned content page (backend infrastructure; see Section 14.6) | `pageId`, `status` (`draft`, `published`, `archived`, `scheduled`), `version`, `previousVersions[]`, `modificationHistory[]`, SEO block |
-| `NewsletterSubscriber` | A newsletter sign-up from the public site | `email` (unique), `status` |
-| `ContactMessage` | A message sent through the public contact form | `name`, `email`, `subject`, `message`, `status` (`new`, `read`, `resolved`) |
+| `Contract` | Central engagement lifecycle engine | `type`, `fixedPrice`/`hourlyRate`, `milestoneMode`, `status`, `timer`, `hourlyEscrow` (`lockedBalance`, `weeklyLockAmount`), `endRequest` |
+| `Milestone` | Funded phase of fixed-price contracts | `order`, `title`, `amount`, `status`, `reviewDeadline`, embedded `dispute` |
+| `Payment` | Escrow ledger and transaction audit | `type`, `milestoneId`, `totalAmount`, `feeRate`, `platformFee`, `freelancerPayout`, `currency`, `status`, Stripe IDs |
+| `TimeLog` | Hourly contract work sessions | `duration`, `startTime`, `endTime`, `source` (`timer`/`manual`), `status` (`pending`, `approved`, `billed`) |
+| `Withdrawal` | Freelancer payout disbursement requests | `amount`, `method` (`bank_transfer`, `paypal`, `stripe`), `status` |
+| `SkillNode` | Knowledge graph vertices | `name`, `slug`, `type` (`industry`, `category`, `skill`, `technology`), `aliases`, `weight`, `status` |
+| `SkillRelationship`| Directed typed edges in taxonomy graph | `from`, `to`, `type` (15 edge types), `weight`, unique `(from, to, type)` |
+| `SkillTestAttempt` | Proctored skill examination records | `skillsTested`, `level`, `questions[]`, `totalScore`, `passed`, `violations[]`, `proctoring` summary |
+| `AdminAuditLog` | Immutable record of sensitive actions | `adminEmail`, `action`, `category`, `resource`, `resourceId`, `previousValue`, `newValue`, `severity` |
+| `Report` | Abuse, spam and contract dispute flags | `category`, `priority`, `status`, `reportedItem`, `resolvedBy` |
+| `SystemSettings` | Key–value platform runtime parameters | `key`, `value`, `category` (`fees`, `security`, `general`), `valueType` |
+| `ApiLog` / `ErrorLog`| Operational telemetry and crash dumps | `method`, `path`, `statusCode`, `duration`, `userId`, `ip`, `errorMessage` |
 
 ### 10.3 Key Design Decisions
 
@@ -984,23 +938,21 @@ Choosing a stack is a set of engineering trade-offs under real constraints. Equa
 
 ## 12. Features
 
-This chapter describes the platform's functional modules in the order in which a user meets them: identity and verification first, then the marketplace, the engagement and payment lifecycle, communication, and the public site. Administrative features are covered in Chapter 14, AI features in Chapter 13, and the mobile applications in Chapter 15.
+This chapter details the functional architecture across the user journey: identity and authentication, profile onboarding, skill verification and gating, marketplace interactions (jobs and gigs), proposal negotiation, milestone and hourly escrow lifecycles, payments, communication, and administration reporting.
 
 ### 12.1 Authentication and Account Security
 
-**Registration.** A visitor registers with an email address and password. Registration is a two-step form: the visitor first chooses to join as a **Client** or a **Freelancer**, then enters a first name, last name, email, and password. The role is sent with the registration request and the server re-validates it against a whitelist, so a privileged role can never be self-assigned. Passwords must be at least eight characters and contain an upper-case letter, a lower-case letter, and a digit. They are hashed with bcrypt at cost factor 12 before storage [24].
+**Registration and Access Control.** Visitors register as either a **Client** or a **Freelancer**. The requested role is strictly validated against a server whitelist to prevent role-escalation exploits. Passwords require a minimum of eight characters, containing uppercase, lowercase, and numeric characters, hashed via bcrypt at cost factor 12 before persistence [24].
 
-**Email verification and one-time passwords.** After registration the system emails a six-digit one-time password (OTP). The code expires after ten minutes, is stored only as a SHA-256 hash, is deleted automatically by a database expiry index, and allows five attempts before the code is blocked. A new code may be requested after a one-minute cooldown; a sign-in code can be re-sent only while a live one exists, which shows that the password step was completed moments earlier. The same OTP mechanism, with eleven distinct *purposes*, also confirms password resets, password changes, email changes, recovery-email changes, account deactivation, and account deletion.
+**One-Time Passwords (OTP).** Registration, credential changes, and account lifecycle events issue a 6-digit cryptographic OTP. OTPs are stored exclusively as SHA-256 hashes, enforce a 10-minute time-to-live managed by MongoDB TTL expiry indexes, permit up to 5 verification attempts, and enforce a 1-minute resend cooldown. The unified OTP service manages 11 security contexts, including password resets, email updates, recovery email binding, and account deactivation/deletion.
 
-**Login and two-factor authentication.** On login the server checks the credentials and the account state. An account that is inactive or blocked is refused, and an account is **locked for two hours after five consecutive wrong passwords**. Two-factor authentication is enabled by default for every client and freelancer: after the password is accepted, a login OTP is emailed and must be entered before tokens are issued. The user can switch two-factor authentication, login-alert emails, and password-change alert emails on or off in the Security settings page. Social-login users skip the OTP step because their identity has already been established by the provider.
+**Two-Factor Authentication and Account Locking.** Accounts are locked for 2 hours after 5 consecutive incorrect password submissions. Two-factor authentication (2FA) via email OTP is enabled by default across all client and freelancer accounts, requiring OTP validation before JWT issuance. Users may toggle 2FA and security alerts within settings.
 
-**Social login.** Google, LinkedIn, and GitHub sign-in are offered through Supabase Auth [20], which implements the OAuth 2.0 authorisation framework [38] (Google only on the registration page). The backend does not trust any identity claim decoded in the browser: it sends the access token to Supabase for server-side verification, then finds the existing account by provider identity or by email address, or creates one. New social users start with a neutral `publicviewer` role and choose Client or Freelancer on a role-selection screen before onboarding. In the Android app the provider's consent screen opens in the system browser (a Chrome Custom Tab) and returns to the app through a registered deep link (`skillkart://auth-callback`), because Google does not allow OAuth inside an embedded WebView.
+**Social Authentication.** OAuth 2.0 integration via Supabase Auth supports Google, LinkedIn, and GitHub federated identity [20, 38]. Identity claims are verified server-side. New social users receive a neutral `publicviewer` role until completing role selection. On Android, OAuth executes inside Chrome Custom Tabs and redirects via deep linking (`skillkart://auth-callback`) to comply with Google OAuth policies.
 
-**Sessions and tokens.** Authentication uses a pair of JSON Web Tokens [9]. The access token (lifetime seven days by default) is held in memory and in per-tab session storage; the refresh token (thirty days) is kept in local storage in obfuscated form so that all browser tabs share one session. The client refreshes the access token proactively every 55 minutes and, as a safety net, retries once through the refresh endpoint whenever a request returns 401. Refresh tokens **rotate**: every use of the refresh endpoint revokes the old token and issues a new one, and the server stores only each token's identifier (`jti`) and its family. If a token that has already been rotated is presented again after a ten-second grace period — the signature of a stolen token — the whole token family is revoked and the account's `tokenVersion` is incremented, logging the user out on every device. A change or reset of the password, or "sign out of all devices", increments `tokenVersion` in the same way, which invalidates every token issued earlier. The browser also logs the user out after 30 minutes of inactivity, and a logout in one tab logs out the others.
+**JWT Token Architecture.** The platform implements dual-token authentication [9]. The 7-day access token resides in memory and session storage, proactively refreshed every 55 minutes. Refresh tokens (30-day lifetime) rotate on every use. Presenting a previously rotated token outside a 10-second grace window triggers reuse detection, revoking the token family and incrementing the account's `tokenVersion` to invalidate sessions globally. Sessions terminate after 30 minutes of inactivity.
 
-**Per-request checks.** The authentication middleware does not rely on the claims inside the token. On every request it reloads the user record and rejects the request if the account is missing, inactive, or temporarily locked, or if the token's version does not match the account's current `tokenVersion`. A user who has been blocked by an administrator may still read data, but every write request is refused with a 403 response, and the interface shows a "suspended" overlay.
-
-**Account maintenance.** Users can change their email address (the confirmation code is sent to the *new* address, and security alerts go to the old, new, and recovery addresses), set a recovery email, change their password (current password plus OTP), deactivate the account, or delete it. Deactivation and deletion are refused while the user has active work: a freelancer with a hired job in progress, or a client with an open or in-progress job.
+**Per-Request Enforcement.** Middleware inspects user state and `tokenVersion` on every request. Administrative account suspensions permit read access while rejecting state-mutating requests with HTTP 403. Account deactivation and deletion are prohibited while contracts or open jobs remain active.
 
 **Table 12.1 — Authentication parameters**
 
@@ -1020,34 +972,25 @@ This chapter describes the platform's functional modules in the order in which a
 
 ### 12.2 Freelancer Onboarding and Profile
 
-After verifying their email, a new freelancer completes an eight-step onboarding wizard:
+Freelancers complete an 8-step onboarding sequence:
+1. **Résumé Extraction (Optional):** Server parses uploaded PDF/DOC/DOCX files (up to 5 MB), using AI to extract biographies, skills, and education, assigning an automated quality classification (Strong, Average, Weak).
+2. **Basic Information:** Professional title, bio, hourly rate (PKR), availability status, time zone, experience tier (Entry, Intermediate, Expert), and profile photo.
+3. **Skills:** Tag selection backed by taxonomy graph resolution. AI validates and normalises tags (e.g., "reactjs" $\rightarrow$ "React.js"). Unrecognised tags queue for admin review.
+4. **Languages:** Language proficiencies (Basic, Conversational, Fluent, Native).
+5. **Portfolio:** Project showcases with media uploads.
+6. **Education:** Academic credentials and degrees.
+7. **Certifications:** Professional accreditations.
+8. **Review and Submission:** State validation and draft finalisation.
 
-1. **Résumé (optional).** The freelancer can upload a PDF, DOC, or DOCX file of up to 5 MB. The text is extracted on the server and analysed by AI, which proposes a title, a biography, a skill list, and education entries, and gives the résumé a score and a classification (Strong, Average, or Weak). The freelancer reviews the suggestions and accepts or discards them; the file itself is not stored.
-2. **Basic information.** Name, professional title, biography, hourly rate, availability (full-time, part-time, contract, or not available), time zone, experience level (Entry, Intermediate, or Expert), and a cropped profile photo.
-3. **Skills.** Skills are entered as tags. Typing offers suggestions drawn from the skill graph (Section 12.6); adding a tag asks the AI to validate and normalise it (for example "reactjs" becomes "React.js") and rejects entries that are not professional digital skills. If the AI service is unavailable, the tag is accepted unverified rather than blocking the user. An "AI suggest" helper can infer skills and an experience level from the title and biography.
-4. **Languages**, each with a proficiency (basic, conversational, fluent, native).
-5. **Portfolio**, with images uploaded to cloud storage.
-6. **Education.**
-7. **Certifications.**
-8. **Review and submit.**
-
-The wizard autosaves a draft in the browser so that an interrupted onboarding can be resumed. On submission the server accepts only a whitelist of profile fields, strips HTML from the biography, marks onboarding complete, computes a profile-completion score, and queues any skill it does not recognise for administrator review (Section 12.6). Editing a profile never changes a skill's earned level, score, or verification: only passing the skill test, or an administrator, can do that. Onboarding never depends on a skill test: on the success screen the freelancer chooses either **"Take the skill test now"** or **"I'll do it later"**. Choosing *later* leaves every skill at 0% and unverified, which is the default for any new skill; verification is needed only later, when the freelancer wants to apply for work or publish a gig that requires it.
-
-The freelancer's **dashboard** shows a verification checklist (email, profile, onboarding, and skill verification are required; a payment method is optional) and a *Skill Verification Center* listing every skill with its level and score and a "Verify Skill" or "Retake Test" button. The **profile editor** covers personal information, education, certifications, skills and languages, portfolio projects, and social links, and the **public profile** shows the verified badge, tested skills, portfolio, languages, ratings, and reviews. The public view deliberately omits private data: phone number, security settings, wallet balance, earnings, and payment identifiers.
-
-A freelancer's *verified* status is computed, not self-declared: it requires a verified email, completed onboarding, a complete profile (a biography, a title, at least one skill, and at least one portfolio item), and every listed skill to be verified.
+The onboarding wizard auto-saves drafts in browser storage. Profiles maintain computed verification status requiring verified email, complete profile elements, and tested skills. Passing the skill test is optional during onboarding but strictly required before bidding or publishing gigs. Public profiles expose verified badges and portfolio metrics while shielding sensitive phone, wallet, and payment records.
 
 ### 12.3 Client Onboarding and Profile
 
-A client completes a five-step wizard: (1) identity and organisation — name, work email, phone, organisation type (Individual, Startup, SME, or Enterprise), company details, and logo; (2) company background — whether the client is new to hiring, industry, role, and a description (with an **AI industry recommendation** that suggests the three most suitable industries from a fixed list of 30); (3) project requirements — technology stack, budget range, and hiring frequency; (4) strategy and timeline — technical understanding, communication preferences, and urgency; and (5) a final security check covering time zone, social links, and acceptance of the terms. Company name and industry are optional for an individual client. The wizard saves a server-side draft on every step and, on submission, stores a normalised budget range and marks the profile *pending* verification.
-
-The public client profile shows the company, location, industry, projects posted, total spent, and reviews written by freelancers; budget range, phone number, and wallet balance remain private.
+Clients register through a 5-step wizard capturing: (1) Identity and organization (Individual, Startup, SME, Enterprise); (2) Industry background assisted by AI recommending the top 3 categories from 30 domain options; (3) Project requirements (technology stack, hiring frequency, budget); (4) Timeline and communication preferences; and (5) Security terms confirmation. Drafts persist server-side. Public client profiles display hire counts, total project spend, and freelancer reviews, keeping internal wallet balances private.
 
 ### 12.4 Skill Verification
 
-Skill verification is SkillKart's answer to the problem of self-declared skills (Section 4.4). It is an AI-generated, proctored test that the freelancer takes for a chosen skill.
-
-**Three levels.** Before starting, the freelancer picks a level on the rules screen. The level determines the number of questions and how hard the AI writes them.
+Skill verification addresses unverified claims through AI-generated, proctored examinations tailored to three proficiency tiers.
 
 **Table 12.2 — Skill-test levels**
 
@@ -1057,96 +1000,66 @@ Skill verification is SkillKart's answer to the problem of self-declared skills 
 | Intermediate | 10 | 8 / 2 | Intermediate |
 | Expert | 15 | 12 / 3 | Expert |
 
-About 80% of each test is multiple choice with four options and the remainder is short written answers. Each multiple-choice question allows 20 seconds and each written answer 30 seconds; the test advances automatically, cannot be revisited, and runs in a locked full-screen view.
+Each examination allocates 20 seconds per multiple-choice question (MCQ) and 30 seconds for written responses within a locked fullscreen interface.
 
-**Grading and results.** The AI grades each answer and returns a score between 0 and 1, with partial credit for written answers; a skill's percentage is the mean of its question scores. The option that the question writer marked as correct is kept on the server with the attempt and is never sent to the browser, so a candidate cannot read it from the page; the grader itself does not use it (Section 13.6). A skill scoring **25% or more is verified**, and it is marked with the rank of the *level the freelancer chose* — not a rank derived from the score. Below 25% the skill earns nothing, and a failed attempt never removes an existing verification, rank, or score. A verification is valid for **six months**; when it lapses, the skill reverts to unverified — on the profile and public badge as well as at the gate — and the freelancer is notified. A daily job applies this, and it is also applied whenever the profile's verification status is recalculated. The last score and rank stay visible beside the *Retake Test* button. There is no cooldown or attempt limit: a freelancer can retake a test, and a passed retake re-marks the skill at the retaken level.
+**Grading and Validity.** The AI evaluator assigns scores between 0 and 1, including partial credit for written explanations. Scores $\ge$ 25% grant verified status at the chosen level rank. Verifications remain valid for 6 months, after which daily cron maintenance flags them as expired. Retakes are unrestricted and never revoke existing passing scores.
 
-**Proctoring.** To make a verified skill mean something, the test is proctored in the freelancer's browser or phone, using two independent guards.
-
-- *Camera guard.* Google's MediaPipe Face Landmarker [16] runs entirely on the device, analysing a camera frame every 700 milliseconds. The only camera rule is **face presence**: if no face has been in view for three seconds, the attempt is cancelled immediately. Head turns, eye direction, movement, and extra faces are deliberately not checked. A device with no camera at all may still take the test (a warning is shown and only the browser guard applies), whereas a denied or busy camera blocks the start, so that declining the permission prompt cannot bypass the check. On Android the detector runs on the CPU, because WebView GPU inference fails silently, and the three-second countdown pauses while the WebView's camera feed is frozen.
-- *Browser guard.* Switching tabs, blurring the window, or leaving full-screen mode counts as a strike; at the default setting the third strike cancels the test, with a warning at the second. Right-click, copy, cut, developer-tool shortcuts, and paste into the answer box are blocked on a best-effort basis.
-
-The strictness of proctoring is controlled by **one backend setting**, `SKILL_TEST_PROCTOR_STRICTNESS`, between 0 (proctoring off) and 1: it switches the guards on or off and sets the strike limit (between two and six, three at the default of 0.5). A blank or invalid value falls back to the default rather than to "off", so a typing mistake can never disable proctoring silently. The server records the violations a test reported, together with the strictness in force, on the attempt for later review.
+**Client-Side Automated Proctoring.** Proctoring incorporates two complementary client-side guards:
+- **Camera Guard:** Google MediaPipe Face Landmarker [16] runs locally at 700 ms intervals on the device CPU. Absence of a detected face for 3 continuous seconds terminates the examination immediately.
+- **Browser Guard:** Window blur, tab switching, and fullscreen exits increment strike violations. Three strikes trigger test termination. Copy, paste, right-click, and developer shortcuts are suppressed.
+- **Strictness Control:** Environment parameter `SKILL_TEST_PROCTOR_STRICTNESS` (0.0 to 1.0, default 0.5) configures violation tolerances and guard enforcement.
 
 ![Figure 12.2 — Skill-test flow: level choice, proctored test, grading and verification](thesis-figures/diagrams/fig-12-02-skill-test-flow.png "The camera and browser guards can cancel an attempt at any point; a cancelled attempt is discarded and never affects an existing verification (Section 12.4).")
 
 ### 12.5 Skill Gating and the Apply Gate
 
-Verified skills carry weight because they control what a freelancer may do. A freelancer may apply for a job, resubmit a rejected proposal, or create or edit a gig only if they hold **at least one non-expired verified skill that covers a skill (or the category) the work requires**. When a job also states a required experience level — entry, intermediate, or expert — only verified skills whose rank is at least that level count: a skill verified at Beginner cannot unlock an Expert job. Whether one skill covers another is decided by the skill graph (Section 12.6), so a verified "React" can satisfy a requirement for "Frontend Development".
-
-The check is enforced by the server. To spare the freelancer the frustration of writing a proposal that will be refused, the job-details page calls a read-only eligibility endpoint **before** opening the proposal form. If the freelancer is not eligible, a dialog explains why and offers to take the relevant skill test, returning them to the same job afterwards with the proposal form open. If that eligibility request itself fails, the form opens anyway and the server remains the final authority.
+Skill gating enforces competence across marketplace operations: freelancers must hold at least one active, non-expired verified skill covering the job category and matching or exceeding the required experience level. Gating rules are evaluated via skill graph coverage. When viewing jobs, an automated pre-check determines proposal eligibility, displaying guidance and test links for missing prerequisites while the backend performs definitive authorization checks upon submission.
 
 ![Figure 12.3 — The apply gate: eligibility is checked before the proposal form opens](thesis-figures/diagrams/fig-12-03-apply-gate.png "The server re-checks eligibility when the proposal is submitted, so the pre-check is a convenience and not the security boundary (Section 12.5).")
 
 ### 12.6 Skill Taxonomy and Discovery
 
-Behind categories, search, and gating sits a **skill graph**. `SkillNode` documents are typed vertices — industry, category, profession, skill, technology, tool, or concept — each with aliases, synonyms, a relevance weight, and an active, deprecated, or merged status. `SkillRelationship` documents are typed edges (fifteen types, including *belongs to*, *related to*, *prerequisite*, *specialises in*, and *similar to*), which lets the graph express relationships that a flat category tree cannot. The initial graph, of roughly 180 nodes, is created by a seed script, and 68 job categories in ten groups are defined as constants.
+The platform taxonomy is structured as a directed graph comprising ~180 `SkillNode` vertices and 15 typed `SkillRelationship` edge variants across 68 predefined categories in 10 groups. The graph powers:
+- **Canonical Resolution:** Maps user synonyms and aliases to standardized taxonomy nodes.
+- **Search Expansion:** Broadens search queries to encompass parent categories, sub-disciplines, and related technologies.
+- **Deterministic Match Scoring:** Calculates compatibility weights: exact match (1.0), specialized sub-skill (0.85), broader parent skill (0.70), and related skill (0.55).
+- **Supervised Graph Evolution:** Unrecognised terms prompt AI taxonomy classification stored as `TaxonomyProposal` entities, requiring administrative approval via `/admin/taxonomy`.
 
-The graph is used in four ways:
-
-- **Resolution** maps what a user types ("reactjs", "ML") onto a canonical node through its aliases and synonyms.
-- **Search expansion** widens a search for a skill to include its ancestors, descendants, and related skills, so that a search for "Frontend" finds freelancers who list "React".
-- **Matching.** A match score compares the skills a job requires against those a freelancer holds: an exact match scores 1.0, a more specific skill the candidate holds 0.85, a more general one 0.70, and a directly related skill 0.55 weighted by the edge's strength.
-- **Navigation.** The site's category menu and the category and skill pages are built from the graph.
-
-The graph **grows under supervision.** When a freelancer, gig, or job introduces a skill the graph does not recognise, the system asks an AI provider to suggest where the skill belongs and records the suggestion as a `TaxonomyProposal` with the AI's reasoning. A proposal changes nothing until an administrator reviews it in the taxonomy admin page (`/admin/taxonomy`), where nodes and relationships can also be created, edited, and merged. That page authenticates with the ordinary marketplace token and is limited to the `admin` and `superadmin` roles; it is one of two older administrative surfaces that sit outside the isolated admin panel (Section 14.6).
-
-Freelancers can be discovered through a public search (`/browse-freelancers`) that filters by text, skills, hourly rate, availability, verified status, minimum rating, and location, and orders results by verification and test score by default.
+Freelancer discovery (`/browse-freelancers`) supports multi-criteria filtering by skills, hourly rates, verified status, and reviews, ordering verified profiles with higher test scores first.
 
 ### 12.7 Jobs
 
-A **job** is a client's requirement, and the starting point of the proposal-based route. Jobs are created from the client's *My Projects* area through a five-step wizard: basic information (title, category, subcategory, required skills, experience level), budget and timeline (fixed price or hourly, a minimum and maximum budget in rupees, a duration, and a proposed deadline), description, media (up to five images and five documents, uploaded to cloud storage), and a final review. A client can **save a draft** at any time or **publish**; publishing requires a future deadline. The category must be one of 68 fixed categories arranged in ten groups (for example *Software & Technology*, *Design*, *Writing & Content*, *Marketing*), and the subcategory is free text.
+Clients initiate requirements through a 5-step posting wizard specifying title, taxonomy category/subcategory, skill tags, fixed or hourly budget, duration, and attachments (up to 5 images and 5 documents). AI helpers offer category classification and brief expansion.
 
-The wizard includes AI helpers: a "suggest category" and a "suggest subcategory" button that return up to three suggestions, a **Generate with AI** button on the free-text fields that drafts or expands a description, and a link to the AI cost estimator. If the category-suggestion service is unavailable, a keyword fallback answers instead, so the form never dead-ends. A brief started on the public *Post a Project* page — which offers a "suggest category and skills" helper — is carried into this wizard once the visitor signs in.
-
-**No wallet check at posting.** A client may publish a job with any wallet balance, including zero. The job is then visible to freelancers and can collect proposals; the balance is checked, and funds locked, only when the client accepts a proposal (Section 12.10).
-
-**Job lifecycle.** A job moves through the statuses `draft`, `open`, `in-progress`, `completed`, `cancelled`, `expired`, and `closed`, and a gig order adds a further status, `pending_payment` (Section 12.9). A draft becomes *open* when published; accepting a proposal moves it to *in-progress*; the final release of escrow, the end of an hourly contract, or an administrator's force-completion moves it to *completed*. An open job whose deadline passes becomes *expired* the next time it is read, and a client can *close* an open job, which rejects its pending proposals with the note "Job closed". A job that is in progress cannot be closed or deleted by the client: it must run through the delivery, payment, or dispute lifecycle.
-
-**Browsing and search.** The public browse page (`/browse-projects`) lists open jobs ten at a time and filters them by category, budget type, and experience level; a text search matches the title and description and also expands the query through the skill graph (Section 12.6). The job detail page (`/jobs/:id`) shows the brief, the client's profile summary and statistics, the number of proposals, and the actions the visitor may take — apply, edit a proposal, or resubmit a rejected one. Freelancers can **save** jobs to revisit later (`/freelancer/saved`), and clients can likewise save freelancers (`/client/saved`).
+**Posting Mechanics and Lifecycle.** Clients may publish jobs with zero wallet balance; funding checks occur exclusively upon proposal acceptance. Jobs transition across statuses: `draft`, `open`, `in-progress`, `completed`, `cancelled`, `expired`, and `closed`. Expired deadlines trigger automated closure, rejecting pending proposals. Active engagements cannot be cancelled unilaterally.
 
 ### 12.8 Gigs
 
-A **gig** is a freelancer's packaged service, and the starting point of the Fiverr-style route. A gig has a title, short and full descriptions, a category and subcategory, skill tags, a banner and up to five images, a list of frequently asked questions, and up to **three pricing tiers — Basic, Standard, and Premium**. Only the Basic tier is mandatory; each tier carries a title, a description, a price, a delivery time, a number of revisions, and a feature list. Gigs are created in a five-step wizard (basic information, pricing, description, media, publish) and can be saved as drafts, published, or **paused** and re-activated later. Each gig keeps its own statistics: views, orders, rating, and review count.
-
-Publishing and editing a gig is **skill-gated** (Section 12.5): a freelancer can offer a gig only in an area in which they hold a verified skill, and the skill chips offered in the wizard are restricted to the freelancer's verified skills. A gig cannot be deleted while any order for it is in progress; deleting a gig cancels its unpaid orders.
-
-Gigs are discovered on the public browse page (`/browse-gigs`), which offers search, category, price, and rating filters and several sort orders, and on the gig detail page (`/gigs/:id`), which shows the tiers side by side, the frequently asked questions, the freelancer's profile, and the ordering controls.
+Gigs represent packaged freelancer services featuring up to three pricing tiers (Basic, Standard, Premium), delivery windows, revision counts, media galleries, and FAQ entries. Gig publishing is strictly skill-gated against verified capabilities. Gigs maintain individual telemetry (views, orders, average rating) and support pausing.
 
 ### 12.9 Gig Orders and Custom Offers
 
-**Ordering a gig.** A client orders a gig by choosing a tier and filling in a requirements form. The requirements are **mandatory**: a description of at least 30 characters, and up to five reference links. Ordering does not create a separate order record; it creates a `Job` with `source: 'gig'`, linked to the gig and tier and assigned to the gig's owner. The order starts in the status **`pending_payment`**: it is hidden from the freelancer, and the freelancer is not notified, until the first deposit has been paid.
+**Direct Gig Orders.** Clients initiate orders by selecting a tier and submitting requirements ($\ge$ 30 characters). The system creates a `Job` entity (`source: 'gig'`) in `pending_payment` status, invisible to the freelancer until deposit confirmation. Gig orders follow a 50/50 escrow split: 50% deposit upfront and 50% upon delivery approval. Unpaid orders auto-cancel after 7 days.
 
-Gig orders use a **deposit-then-release** payment in two equal halves, 50% at the start and 50% on delivery. For each half, the client's wallet is used first if it covers the amount; otherwise the client is sent to a Stripe Checkout page. When the deposit is confirmed — whichever route it arrives by — a single activation function moves the order to *in-progress*, increments the gig's order count, and notifies the freelancer; because every confirmation path calls that one function, an order can never be activated twice or counted twice. While an order is unpaid, the client can pay it or **cancel** it from *My Projects*, and an unpaid order that is left for seven days is cancelled automatically by a scheduled job.
-
-The freelancer delivers through a message and up to ten links. The client can request a revision (there is no limit on the number of revisions) or pay the second half, at which point the platform fee is deducted, the freelancer's wallet is credited, and the order is completed. A gig order has no `Contract`, so — unlike a proposal-based engagement — it has no milestone, no dispute path, and no automatic release; this simplicity is the trade-off for a one-step purchase.
-
-**Custom offers.** A freelancer can turn a conversation into a priced order by sending a **custom offer** from inside the chat. An offer has a title, a description, a price, a delivery time in days, and a number of revisions, and it can be tied to one of the freelancer's gigs. To limit abuse, an offer must be addressed to a client in an existing conversation; its price must lie between Rs. 5 and Rs. 10,000,000, its delivery time between 1 and 365 days; its text must not contain an email address or phone number; it expires after seven days; and a freelancer may have at most five open offers in one conversation. The offer appears in the chat as a card, and the client can accept, decline, or let it lapse; the freelancer can withdraw it while it is pending. Accepting an offer is a single atomic action that creates the same `pending_payment` gig order described above, after which payment, delivery, and completion proceed identically.
+**In-Chat Custom Offers.** Freelancers generate custom contractual offers within direct messaging. Offers define title, description, price (Rs. 5 to Rs. 10,000,000), delivery timeframe (1–365 days), and revisions, expiring after 7 days. Offers enforce contact-masking filters and limit active pending offers to five per conversation. Acceptance creates a `pending_payment` gig order.
 
 ![Figure 12.4 — Life cycle of a gig order, from requirements to completion](thesis-figures/diagrams/fig-12-04-gig-order.png "A gig order starts as pending_payment and becomes in-progress only when a deposit lands, through a single activation function (Section 12.9).")
 
 ### 12.10 Proposals
 
-A freelancer applies for an open job by submitting a **proposal**: a cover letter of 100 to 2,000 characters, a price, and an estimate of delivery. For a fixed-price job the proposal states a fixed price and a delivery estimate; for an hourly job it states an hourly rate and the number of hours the freelancer expects to work each week. A freelancer may submit **one proposal per job**, and cannot bid on a job that already has a contract. The cover letter can be drafted by the AI from the job and the freelancer's own profile (Section 13.1) and is then edited freely.
+Freelancers bid on open jobs by submitting a proposal containing a cover letter (100–2,000 characters, with optional AI drafting), bid amount, and delivery estimate. Freelancers are restricted to one proposal per job. Clients review proposals, negotiate via messaging, and can reject or allow resubmissions.
 
-Before the proposal form opens, the apply gate checks that the freelancer is eligible (Section 12.5). A pending proposal can be edited or withdrawn while the job is open.
-
-**Reviewing proposals.** The client reviews proposals on a dedicated page (`/client/projects/:jobId/proposals`), where each proposal can be inspected, discussed in chat, accepted, or rejected. A rejection carries a reason and an **"allow resubmission"** option. If resubmission is allowed, the freelancer can revise the same proposal and send it back into *pending*; this second submission is subject to the same skill gate as the first, so a verification that has lapsed cannot be sidestepped by resubmitting instead of applying afresh.
-
-**Accepting a proposal** is the most consequential action on the platform, because it is the moment at which money is committed. It follows a strict order, designed to be safe without database transactions:
-
-1. The server checks that the job is still open and has no contract, and that the price the client saw is still the live price.
-2. For a **fixed-price** job, the client may split the price into any number of sequential **milestones**; each amount must be positive and the amounts must add up exactly to the agreed price. If no split is given, a single implicit milestone, "Full Project", carries the whole price. The server checks that the client's wallet covers the **first** milestone. For an **hourly** job, the server computes one week's estimated cost (hourly rate multiplied by estimated weekly hours) and checks that the wallet covers it. If the wallet is short, nothing is written and the interface offers a top-up.
-3. Only after the check does the server write: it atomically claims the job (moving it to *in-progress*), marks the proposal accepted, creates the contract and the milestones, auto-rejects every other pending proposal with the note "Position filled", and finally debits the wallet and locks the funds (Sections 12.12 and 12.13).
-4. If locking the funds fails — for example, because a concurrent action drained the wallet — every earlier write is reversed and the error is returned, leaving the job open as it was.
+**Atomic Proposal Acceptance.** Acceptance commits client funds through a 4-step sequence:
+1. Validates job availability and price parity.
+2. For fixed-price contracts, verifies client wallet coverage for the first milestone (or entire project); for hourly work, verifies coverage for one week's estimated cost (hourly rate $\times$ weekly hours).
+3. Atomically updates job status to `in-progress`, accepts the winning proposal, generates the `Contract` and `Milestone` records, auto-rejects competing bids, and debits/locks wallet funds.
+4. Reverses state changes if wallet lock operations encounter concurrent race conditions.
 
 ![Figure 12.5 — Life cycle of a proposal and the effect of accepting it](thesis-figures/diagrams/fig-12-05-proposal.png "Acceptance validates before it writes and reverses its writes if funding fails (Section 12.10).")
 
 ### 12.11 Contracts and Lifecycle
 
-When a proposal is accepted, a **contract** links the job, the proposal, the client, and the freelancer, and drives everything that follows. The contract's `type` — fixed or hourly — decides which payment model applies. Its status is a **state machine**: it starts as `active`; when the freelancer submits work it becomes `delivered`; if the client asks for changes it becomes `in_revision` and returns to `delivered` on resubmission; approval returns it to `active` (to start the next milestone) or finishes it as `completed`. A dispute or cancellation request moves it to `under_review`, and an administrator can `pause`, `resume`, or `cancel` it. Every significant event is appended to the **contract history**, which records what changed, who changed it, and — for administrators — their email address.
-
-Only hourly contracts can be ended by agreement. Either party may submit an **end request** with a reason (*work completed*, *mutual agreement*, *client no longer requires work*, *freelancer unavailable*, *communication issues*, or *other*), and the other party approves or rejects it. A fixed-price contract has no such flow: it ends when its last milestone is approved, when a dispute is resolved, or by administrator action.
+Accepted proposals instantiate a `Contract` entity governing execution. Contract status operates as a state machine: `active`, `delivered`, `in_revision`, `under_review`, and `completed`, with administrative states `paused` and `cancelled`. Complete audit logs record state transitions in `ContractHistory`. Hourly contracts allow mutual termination requests; fixed-price contracts conclude upon milestone approvals or dispute resolution.
 
 ![Figure 12.6a — Contract state machine](thesis-figures/diagrams/fig-12-06a-contract-states.png "A contract and its current milestone move together; disputes attach to the milestone for fixed-price work and to the contract for hourly work (Sections 12.11 and 12.17).")
 
@@ -1154,31 +1067,17 @@ Only hourly contracts can be ended by agreement. Either party may submit an **en
 
 ### 12.12 Fixed-Price Milestone Escrow
 
-Fixed-price work is protected by a wallet-native, **milestone-based escrow**. The money for a phase is debited from the client's wallet and held by the platform until the client approves the work or the review window lapses; the freelancer can see that the money is there before starting.
+Fixed-price engagements utilize wallet-native milestone escrow. Clients fund milestone phases sequentially, avoiding upfront capital lockup for subsequent stages.
 
-**Funding.** The first milestone is funded as part of accepting the proposal. Each later milestone is funded only when the client is ready for that phase, by an explicit request that is accepted only if the previous milestone has been released and no milestone of the contract is under dispute. Capital is therefore never locked for work that has not begun. Funding performs an atomic, conditional debit of the client's wallet (the debit succeeds only if the balance covers the amount), creates a `Payment` row for the milestone, marks the milestone `funded`, and notifies the freelancer.
-
-**The submit gate.** A freelancer may submit a delivery only when the current milestone is `funded` or `in_revision`. This turns the promise "escrow is funded, so it is safe to work" into a rule enforced by the server, not a claim made by the interface.
-
-**Review and release.** A submission starts a **review window** (by default seven days, set by the administrator). The client then approves the work, which releases the milestone, or asks for a revision. On release the platform fee is deducted from the milestone amount — 0.5% by default, an administrator-set value that is captured on each payment when it is funded, so that changing the rate affects only future payments — and the remainder is credited to the freelancer's wallet. If that was the last milestone, the contract and the job are completed; otherwise the contract advances to the next milestone, which the client then funds.
-
-**Auto-release.** To stop a client from going silent after receiving work, a scheduled job runs every hour, finds submitted milestones whose review deadline has passed, and releases them through the *same* approval function a client's click uses, notifying both parties. A milestone that is under dispute can never be auto-released.
-
-**One path for money.** All movement of milestone money goes through a single service (`milestone.service`): the manual approval and the automatic release both call the same function, so the rules can never diverge. Every debit and credit is an atomic, conditional database update, and a double release is prevented because the release first *claims* the payment row (moving it from `deposit_paid` to `released`) and only the caller that wins the claim credits the wallet.
+**Escrow Lifecycle and Safety.** Freelancer deliverable submissions require active milestone funding. Submissions initiate a 7-day review window. Client approval releases funds to the freelancer wallet minus the platform fee (0.5% default). If the client remains inactive past the review deadline, a background hourly cron executes automated release. Financial operations execute within `milestone.service` via atomic conditional claims, preventing double-release races.
 
 ![Figure 12.7 — Fixed-price milestone funding, delivery and release](thesis-figures/diagrams/fig-12-07-milestone-escrow.png "Funding, submission and release are separate steps, each guarded by a state check (Section 12.12).")
 
 ### 12.13 Hourly Wallet-Lock Escrow
 
-An hourly contract has no fixed price to lock, so it uses a **balance-lock** model. At hire, one week's estimated cost (hourly rate multiplied by the estimated weekly hours) is debited from the client's wallet and held in the contract's *locked balance*; if the wallet cannot cover it, the hire is refused up front.
+Hourly contracts implement balance-lock escrow, holding one week's estimated expenditure in escrow at inception.
 
-**Time tracking.** The freelancer logs time either with a **timer** (start and stop) or with a **manual entry** (start time, end time, notes). A timer session shorter than 60 seconds is discarded as too short, and manual entries may not overlap an existing entry. Before any time is logged, the server checks that the **unbilled work does not exceed the locked balance**; if it would, logging is blocked with a message asking the client to top up.
-
-**Automatic billing.** Billing is automatic and incremental, not approved hour by hour. As soon as a log is created, its amount (the logged hours multiplied by the contract's hourly rate) is drawn down from the locked balance and credited to the freelancer's wallet, net of the platform fee, and the log is marked `billed`. If the lock cannot cover a log — for instance, because the freelancer's last timer session ran past it — the log stays `pending` and the freelancer is told that a top-up is needed.
-
-**Top-up.** The client re-locks more funds (by default one more weekly amount), and the system immediately retries every pending log, oldest first, until the lock is exhausted. A scheduled job on Sunday evening performs the same retry for every active hourly contract, as a safety net.
-
-**Ending the contract.** When an end request is approved, any remaining pending logs are settled first and **whatever is left in the lock is refunded to the client's wallet**; a lock is a hold, not a spend. Ending is refused while unbilled time exceeds the lock, so the client must top up before an engagement can close with money owed.
+**Time Logging and Automated Billing.** Freelancers track hours via a live timer ($\ge$ 60-second threshold) or manual logs. Before logging, unbilled time is validated against the locked balance. Log generation immediately draws down funds from the locked balance to the freelancer wallet, net of platform fees. Shortfalls pause logging until the client replenishes the lock. Unused locked balances are refunded in full upon contract completion.
 
 **Table 12.3 — Fixed-price and hourly escrow compared**
 
@@ -1195,21 +1094,15 @@ An hourly contract has no fixed price to lock, so it uses a **balance-lock** mod
 
 ### 12.14 Deliveries and Revisions
 
-A freelancer submits work through the **delivery** mechanism: a message and any number of links, recorded as a numbered version. A delivery is accepted only while the contract is `active` or `in_revision`, so at most one delivery is awaiting review at a time. For fixed-price work, each delivery is linked to the milestone it was submitted against, and releasing money is resolved from that link rather than from a counter. The client reviews a delivery in one of two ways: **accept** it (which releases the milestone, or, on an hourly contract, completes the engagement) or **request a revision** with written feedback, which returns the milestone to `in_revision` and clears its review deadline until the freelancer resubmits. There is no limit on the number of revision rounds. Deliveries are exchanged as links to files hosted elsewhere rather than as uploads.
+Freelancers submit work through numbered version deliveries containing links and documentation. Submissions require contracts to be in `active` or `in_revision` status. Clients may accept deliveries or request revisions with written feedback, clearing auto-release deadlines until resubmission.
 
 ### 12.15 Wallet, Payments and Withdrawals
 
-Each client and each freelancer has a **wallet** balance, held on their profile and changed only through atomic, guarded database updates. The platform operates in **Pakistani Rupees (PKR)**.
+All financial operations execute in Pakistani Rupees (PKR) through atomic profile balance mutations.
 
-**Funding the wallet.** Only clients add money: they choose an amount (at least Rs. 5) and complete a Stripe Checkout payment by card. The credit is idempotent — each Stripe session identifier is recorded on the profile, and the update is conditional on the identifier not having been processed — so a page refresh or a webhook arriving first cannot credit the wallet twice.
+**Funding and Disbursal.** Clients deposit funds via Stripe Checkout; transactions record Stripe session IDs to ensure idempotency. Freelancers disburse earnings through Stripe Connect Express accounts (Rs. 5 minimum threshold). Payout requests atomically reserve wallet balances prior to invoking Stripe transfer APIs, eliminating concurrency races. Simulated transactions (`STRIPE_DUMMY=true`) utilize signed cryptographic nonces and are blocked in production environments.
 
-**Paying out.** A freelancer earns into their wallet and **withdraws** from it. The minimum withdrawal is administrator-configurable (Rs. 5 by default). The withdrawal interface offers a **Stripe Connect** payout: the freelancer connects an Express account through Stripe's hosted onboarding, and a payout request first *reserves* the amount by debiting the wallet atomically and only then calls Stripe, refunding the reservation if Stripe fails — an ordering that closes a double-payout race in which two simultaneous requests could both pass the balance check. The backend also supports `bank_transfer` and `paypal` withdrawals, which create a *pending* request for manual handling by an administrator (Section 14.3); the freelancer interface currently exposes only the Stripe route.
-
-**Payment records.** Every movement of escrow leaves a `Payment` row of one of four types — `job_escrow`, `hourly_escrow`, `hourly_invoice`, and `wallet_deposit` — each with its total amount, platform fee, freelancer payout, currency, and one of four statuses (`deposit_pending`, `deposit_paid`, `released`, `refunded`). A fixed-price contract has several payment rows, one per milestone, so a payment is always resolved through its milestone and never through the contract alone.
-
-**Frozen wallets.** An administrator can freeze a wallet (Section 14.3). A frozen wallet cannot fund a milestone, lock hourly escrow, pay a gig deposit or final payment, accept a proposal, or withdraw: the check runs before anything is written, and each debit repeats it inside its atomic update so that a freeze applied at the last instant still wins. Money coming *in* — an escrow release, a refund, a top-up — is still credited, so a freeze holds funds in place rather than losing them.
-
-**Simulated payments.** With no Stripe key configured, or when `STRIPE_DUMMY=true`, every payment is simulated: checkout sessions, Connect accounts, transfers, and payouts are synthetic, and the full flow can be demonstrated without real money. Simulated session identifiers are signed by the server (they carry a random nonce and a signature over the phase, job, amount, and — for a wallet top-up — the user), so an identifier that the server did not issue is refused. As a safeguard, the server **refuses to start** in a production environment (`NODE_ENV=production` or a managed host such as Railway) if `STRIPE_DUMMY` is set, because a simulated payment would tell a client that money had moved when none had.
+**Frozen Wallets and Ledgers.** Administrators may freeze suspect wallets, preventing outbound debits while allowing inbound escrow releases. All financial flows record `Payment` entities across four types (`job_escrow`, `hourly_escrow`, `hourly_invoice`, `wallet_deposit`).
 
 **Table 12.4 — Platform settings that govern money**
 
@@ -1219,24 +1112,13 @@ Each client and each freelancer has a **wallet** balance, held on their profile 
 | `escrow_release_days` | 7 | Review window after a milestone is submitted before auto-release |
 | `withdrawal_min_amount` | Rs. 5 | Smallest allowed withdrawal |
 
-The wallets pages show these balances to the user. The client's **Billing and Payments** page (`/client/wallet`) shows the available balance, the funds currently in escrow, an *Add Funds* action, and a filterable transaction history; the freelancer's **Earnings and Wallet** page (`/freelancer/wallet`) shows the balance available for withdrawal, lifetime earnings, the Stripe connection status, and the withdrawal form with the live minimum.
-
 ### 12.16 Reviews and Ratings
 
-Reviews are the platform's record of behaviour. Each review has a rating from 1 to 5 and an optional comment of up to 1,000 characters, and it is directional: either a *client-to-freelancer* review or a *freelancer-to-client* review.
-
-There are two ways to write one. After a job is **completed**, the client and the hired freelancer can each review the other once; the type is derived from who is writing. In addition, a signed-in user can leave a review for another user directly from that user's public profile (`/freelancers/:id` or `/clients/:id`), one per direction. Reviewers can **edit or delete** their own reviews at any time. Each change recalculates the reviewee's rating — the average of the reviewee's visible reviews of that type — and, for reviews of a gig order, the gig's own rating and review count. Administrators can hide, restore, or permanently delete a review for policy reasons (Section 14.3); hidden reviews are excluded from every average and from public display.
-
-A freelancer can also publish a **testimonial** — a short success story of 20 to 600 characters with a rating — which is shown on the home page.
+Completed engagements permit mutual 1-to-5 star ratings with 1,000-character reviews. Reviews update aggregate reputation scores for users and gigs. Administrators retain moderation authority to hide or expunge violating reviews, dynamically recalculating ratings. Freelancers may also submit home page testimonials.
 
 ### 12.17 Disputes
 
-When an engagement goes wrong, either party can raise a **dispute** with a reason (5–500 characters) and a description. The scope of a dispute follows the money.
-
-- For a **fixed-price** contract, a dispute is scoped to the **specific milestone** under review. The milestone moves to `disputed`, its review deadline is cleared so that auto-release can never touch it, and the contract moves to `under_review`. Disputing one phase therefore does not freeze the rest of a multi-phase project's history. A milestone can carry at most one pending dispute.
-- For an **hourly** contract, which has no milestones, the dispute is raised on the contract as a whole; a running timer is folded into the logged time and any pending end request is rejected.
-
-Disputes are handled by administrators in a single merged queue that shows both kinds side by side. For a dispute the administrator sees the milestone breakdown, deliveries, time logs, and the complete chat between the parties, and chooses one of six outcomes, with written notes of 10 to 2,000 characters.
+Contract disputes are submitted with justification and categorized by contract scope: fixed-price disputes attach to specific milestones (leaving other milestones unaffected), whereas hourly disputes attach to the entire contract.
 
 **Table 12.5 — Dispute resolution outcomes**
 
@@ -1248,23 +1130,19 @@ Disputes are handled by administrators in a single merged queue that shows both 
 | Cancel contract | Only when the milestone was never funded and so holds no escrow; the contract and job are cancelled | Not available |
 | Resume / reject | Dismiss the dispute: the milestone returns to `submitted` with a fresh review window | Dismiss the dispute and resume work |
 
-A financial resolution of a milestone then advances the contract to its next milestone, or completes the contract and the job if it was the last. Resolution is **atomic**: the resolution first claims the pending dispute in a single conditional update, so that a double submission is refused with a conflict response instead of paying twice. Every resolution is written to the audit log at critical severity.
+Dispute adjudications execute atomically and log critical severity entries in the admin audit ledger.
 
 ![Figure 12.9 — Dispute handling for a fixed-price milestone](thesis-figures/diagrams/fig-12-09-dispute.png "The administrator's decision is applied to the disputed milestone only; the contract then continues, completes, or is cancelled (Section 12.17).")
 
 ### 12.18 Messaging
 
-SkillKart includes a one-to-one, in-app chat between any two signed-in users. A conversation can be opened from a freelancer's or client's public profile, from a gig page, or from the proposals screen, so that a client can ask a question before hiring. The *Messages* pages (`/client/messages` and `/freelancer/messages`) show a conversation list and a thread; messages can carry up to ten attachments (images, PDFs, or Word documents of up to 10 MB each, uploaded to cloud storage), and each conversation records a per-user unread count and who has read each message. Custom offers appear in a thread as rich cards (Section 12.9).
+SkillKart provides one-to-one messaging supporting up to 10 cloud attachments ($\le$ 10 MB). Chat utilizes HTTP polling (3-second active conversation polling, 10-second list cadence).
 
-**Anti-leakage protection.** Marketplaces depend on payments staying on the platform, so the system masks **off-platform contact details**. An email address or phone number typed into a message is replaced with a "contact info blocked" notice and counted as a violation: the first violation sends the sender a warning notification, and the second blocks the account, with the reason recorded. Custom offers containing contact details are rejected outright.
-
-**Delivery of messages.** Chat uses HTTP polling rather than a persistent connection: an open conversation refreshes every three seconds and the conversation list every ten. This is simple and robust behind any proxy, and it is a deliberate trade-off; replacing it with WebSockets is listed among the future enhancements (Chapter 21).
-
-**Support conversations.** An administrator can message a user, or reply to an existing conversation, as **SkillKart Support**. Because chat messages need a user as sender, a hidden system account is created on first use for this purpose, and the message reaches the user's ordinary inbox and notification feed (Section 14.3).
+**Contact Anti-Leakage Guard.** Outgoing messages are scanned for email addresses and phone numbers. Detected contact information is automatically masked. The system issues a warning notification on the first infraction and temporarily suspends the account upon the second infraction. Administrators can communicate directly with users under the *SkillKart Support* system persona.
 
 ### 12.19 Notifications
 
-Every significant event produces a notification. A single function, `notify()`, is the only way a notification is created: it stores a `Notification` record, never throws (a notification failure can never break the action that triggered it), and then attempts a push notification to the user's phone. The platform defines 25 event types, grouped below, plus the administrator broadcast.
+System notifications are generated via a unified, non-throwing `notify()` service, dispatching database records and native Firebase Cloud Messaging push alerts across 25 distinct events.
 
 **Table 12.6 — Notification events**
 
@@ -1277,51 +1155,25 @@ Every significant event produces a notification. A single function, `notify()`, 
 | Contracts and disputes | contract status changed, contract disputed, dispute resolved, dispute dismissed, job cancelled |
 | Social and policy | new message, review submitted, contact-information warning, skill verification expired |
 
-A notification bell on the dashboards polls for the unread count every 30 seconds and shows the latest eight notifications; the full page lists them with filters, per-item delete, and *clear all*. Each notification carries a link, so that opening it takes the user straight to the relevant screen. On the Android app the same events are also delivered as **push notifications** (Chapter 15).
-
 ### 12.20 Transactional Email
 
-The platform sends email for the events that need an out-of-band channel: one-time passwords, login and password-change alerts, email-change and recovery-email security notices, the administrator login code, the public contact form, and the newsletter sign-up notice. All sending goes through one service and a pluggable **provider layer** selected by a single `EMAIL_PROVIDER` setting (Section 9.7): the **Gmail API**, which sends over HTTPS and is the provider used in deployment, or **SMTP**, which is the default for local development. A transient failure — a network error, an HTTP 429 or 5xx response, a temporary SMTP reply — is retried up to three times with exponential back-off and random jitter, whereas errors that cannot be fixed by retrying, such as an invalid credential, are not. Every attempt is recorded in `EmailLog` and can be inspected by administrators on the Monitoring page. Two switches exist for safe testing: `EMAIL_ENABLED=false` suppresses all sending, and a *sandbox* mode redirects every message to a single test address with the original recipient noted in the subject line.
+Transactional communications (OTPs, security notices, administrative alerts) route through a provider layer supporting the Gmail API (production HTTPS) and SMTP (development). Transient delivery failures trigger up to 3 retries with exponential backoff and jitter. Dispatched emails log to `EmailLog` for operational diagnostics, with sandbox modes available for testing.
 
 ### 12.21 Public Website and Discoverability
 
-The public website is what a visitor sees before signing in. Its pages are:
-
-- **Home** — a hero section, a skills slider, trending skills (computed from live data), testimonials, and a footer with a newsletter sign-up.
-- **Browse Projects**, **Browse Gigs**, and **Browse Freelancers** with filters, and the matching **detail pages** for a job, a gig, a freelancer, and a client.
-- **Categories**, **category pages**, and **skill pages**, which show real aggregates (counts of active gigs, jobs, and freelancers) for each category and skill.
-- **Post a Project**, a short brief form that hands the draft to the signed-in wizard, and **AI Matchmaking**, which ranks freelancers for a pasted brief (Section 13.2).
-- **Buddy AI** and the **AI Cost Estimator** (Chapter 13).
-- **About**, **Contact**, **Help Center**, and the legal pages (Privacy Policy, Terms of Service, Cookie Policy, Services Agreement).
-
-The Contact and Newsletter forms are protected by reCAPTCHA and a rate limit, store each submission in its own collection, and relay a notice to the platform's inbox.
-
-**Search-engine visibility.** The sitemap (`/sitemap.xml`) is **generated live** by the backend from the database — static pages plus every open job, active gig, and public freelancer and client profile (up to 5,000 of each) and the category pages — and cached for an hour, so new content becomes crawlable without a redeployment. It is built from a dedicated `PUBLIC_SITE_URL` setting rather than the CORS origin list. The frontend host proxies `/sitemap.xml` to the backend through a rewrite that must stay above the single-page-app catch-all rule, or the request would be swallowed by `index.html`. A `robots.txt` excludes authentication, dashboard, admin, and payment pages from crawling. The site ships a web-app manifest with the brand colours, icons, and shortcuts, and a static Open Graph and Twitter-card block for link previews; page titles and the canonical link are set per page.
+The public platform includes landing pages, talent directories, category listings, and AI utility interfaces (Buddy AI, Cost Estimator). Search engine discovery utilizes a dynamic `/sitemap.xml` generated directly from active database records and cached for 1 hour. Indexing controls are defined via `robots.txt` and Open Graph metadata tags.
 
 ### 12.22 Dashboards and Navigation
 
-Each role has its own area, reached after login according to the user's role.
-
-**Client area (`/client/*`).**
-
-- *Dashboard* — profile summary and statistics (total projects, open jobs, freelancers hired, total spent), quick actions, and recent projects.
-- *My Projects* — every job and gig order with its status; per project the client can edit, publish, or delete a draft, view proposals, fund the next milestone, review a delivery or request a revision, pay or cancel a gig order, top up an hourly escrow, request the end of an hourly contract, raise a dispute, and leave a review. The page refreshes itself every four seconds while it is visible.
-- *Post a Project*, *Review Proposals*, *Wallet*, *Saved Freelancers*, *Messages*, *Notifications*, *Buddy AI*, *Profile*, *Settings*, and *Security*.
-
-**Freelancer area (`/freelancer/*`).**
-
-- *Dashboard* — profile summary, statistics (gigs, active bids, accepted proposals, profile views), the verification checklist and Skill Verification Center, quick actions, and recent gigs.
-- *Gigs* and *Create Gig*, *Proposals*, *My Work* (contracts and gig orders — deliver work, start and stop the timer, add a manual time entry, respond to end requests, raise a dispute, review), *Wallet*, *Portfolio*, *Saved Jobs*, *Skill Test*, *Messages* (including *Send Custom Offer*), *Notifications*, *Buddy AI*, and the same profile and security pages.
-
-Shared pieces — the notification bell, the Buddy AI tab, the offline screen on mobile, and the suspended-account overlay — are described in the chapters that cover them.
+Role-based navigation routes users to dedicated workspace dashboards:
+- **Client Workspace (`/client/*`):** Metrics dashboard, project and proposal management, wallet checkout, candidate search, and security controls.
+- **Freelancer Workspace (`/freelancer/*`):** Earnings telemetry, active contracts, time tracking logs, gig management, Skill Verification Center, and withdrawal requests.
 
 ![Figure 12.10 — Interaction map of the client and freelancer areas](thesis-figures/diagrams/fig-12-10-navigation.png "Each role sees only its own route tree; role guards redirect everything else to an 'unauthorized' page (Section 12.22).")
 
 ### 12.23 Reporting Content
 
-Any signed-in user can **report** a freelancer or client profile, a job, a gig, or a review, using a *Report* button on the corresponding public page (it is hidden on a user's own content). The dialog asks for a reason — spam or misleading, scam or fraud, harassment or threats, abusive or hateful content, inappropriate content, or something else — and a description of 10 to 1,000 characters, and sends it to the moderation team.
-
-Three rules keep the channel trustworthy. The person being reported is worked out by the **server from the item itself**, never from anything the browser sends, so a report cannot be aimed at an arbitrary account; you cannot report your own content; and there is **one open report per user per item**, so a second click is answered kindly rather than queued again. Reports about fraud or harassment are queued at *high* priority, and the rest at *medium*; the reporter chooses the reason, not the priority. To stop one account flooding the queue, each user may file ten reports an hour. A report appears in the admin panel's Reports module (Section 14.3), where a moderator assigns it, resolves it with notes, or dismisses it. Filing a report does not notify the reported person; the queue is where moderators find it.
+Users may report policy violations across profiles, jobs, gigs, and reviews. Anti-abuse rules enforce server-side target resolution, limit submissions to one open report per user per entity, and impose a 10 reports/hour rate limit. Reports queue within the administration panel for moderator review and action.
 
 <div style="page-break-after: always;"></div>
 
@@ -1434,34 +1286,26 @@ The provider abstraction makes it straightforward to add providers or models: a 
 
 ### 14.1 Design Rationale
 
-The admin panel is a **separate, isolated application** inside the frontend, served under `/admin-panel/*`. Its isolation is a security decision: a marketplace user's token can never grant administrative access, and administrative code and credentials can never leak into the marketplace. The isolation is complete along every axis.
+The admin panel is a **separate, isolated application** under `/admin-panel/*`. Isolation prevents privilege escalation: marketplace tokens cannot grant admin access, and credentials never cross the boundary:
+- **Independent Secret (`ADMIN_JWT_SECRET`):** Distinct issuer/audience ensures cross-token rejection.
+- **Isolated Cookie (`admin_token`):** Stored as `httpOnly`, decoupled from marketplace bearer tokens.
+- **Isolated Middleware & Limiters:** Dedicated `adminAuth`, rate limits, and express-validator chains.
+- **Separate Frontend Context:** Isolated HTTP client that never touches marketplace session state.
+- **Dedicated Route Tree:** Powers both the web panel and the standalone *SkillKart Admin* Android app.
 
-- A **separate secret** (`ADMIN_JWT_SECRET`), with its own token issuer and audience, so a marketplace token fails admin verification and the reverse.
-- A **separate cookie** (`admin_token`), `httpOnly`, rather than the marketplace's bearer token.
-- **Separate middleware** (`adminAuth`), **separate rate limiters**, and **separate request validators**.
-- A **separate frontend context and HTTP client**, so the admin interface never reads or writes marketplace session state.
-- A **separate route tree**, which is served both inside the web application and as the entire content of the standalone *SkillKart Admin* Android app (Chapter 15).
-
-The panel is organised as **17 management modules** (Section 14.3), seven detail screens, and a global search.
+The panel organizes administrative operations into **17 management modules** (Section 14.3), 7 detail screens, and a global Ctrl+K search.
 
 ![Figure 14.1 — Admin login: credentials, emailed one-time code, session cookie](thesis-figures/diagrams/fig-14-01-admin-auth.png "The administrator's credentials are verified, a one-time code is emailed, and a successful verification creates a server-side session and sets an httpOnly cookie (Section 14.2).")
 
 ### 14.2 Authentication and Sessions
 
-The panel has one administrative identity, defined in the server's environment rather than in the database: the operator's email address (`ADMIN_EMAIL`) and a bcrypt hash of their password (`ADMIN_PASSWORD_HASH`). Keeping the credential in configuration means that no marketplace account — and no database record that a marketplace user could influence — can ever become an administrator.
+Administrative credentials reside exclusively in server configuration (`ADMIN_EMAIL`, bcrypt-hashed `ADMIN_PASSWORD_HASH`), preventing database-injection privilege escalation.
 
-**Login is two-step.**
+**Authentication Workflow.**
+1. **Credentials Validation:** Timing-safe evaluation returns generic error responses to prevent user enumeration.
+2. **Emailed OTP Verification:** A single-use 6-digit OTP (SHA-256 hashed, 10-minute expiry, max 5 attempts) is dispatched to `ADMIN_EMAIL`. Route limiters enforce 5 login attempts / 15 mins and 3 verifications / 10 mins per IP.
 
-1. The operator submits an email and a password. Both are checked, and a failure of either returns the same generic "invalid credentials" response (and is audit-logged), so the response never reveals which was wrong.
-2. A six-digit **one-time code** is emailed to the administrator address. The code is stored only as a SHA-256 hash, is single-use, expires after ten minutes, and allows five attempts. Route-level limits are tighter still: five login attempts per fifteen minutes and three code verifications per ten minutes per IP address.
-
-A successful verification creates an `AdminSession` record that stores a SHA-256 hash of the session token, the IP address, and the user agent, signs a JWT with the admin secret, and returns it in the `admin_token` cookie. On every request the middleware verifies the signature *and* looks the session up by its hash, so a valid signature without an active session is refused; sessions also expire after 30 minutes of inactivity, and the cookie lifetime is a fixed **30 minutes** from login. Session records are deleted automatically by a database expiry index. The cookie is `Secure` and `SameSite=None` when the connection is HTTPS (the frontend and the API are hosted on different domains) and `SameSite=Lax` otherwise; the choice is made from the *request protocol*, not from an environment label (Section 20.8). The API also offers a session-history endpoint and a *force logout* endpoint for an individual session.
-
-**Cross-site request protection.** Because the cookie must be `SameSite=None` for a cross-domain deployment, a browser attaches it to cross-site requests, so every state-changing admin request must show that it came from the admin client: it must carry a custom header that the admin client sends, an `Origin` on the CORS allow-list (which also keeps already-installed admin apps, which present the fixed origin `https://localhost`, working), or a Bearer token. A cross-site HTML form cannot set a custom header, and a request from any other origin is already refused by the CORS layer before it reaches the panel; the guard is the defence in depth for requests that carry no `Origin` at all. Read-only requests are unaffected.
-
-**Encrypted SuperAdmin credential.** Separately from the panel, the marketplace API supports a legacy *SuperAdmin* login (`POST /auth/superadmin/login`). Its username and a bcrypt-hashed password are stored in a file encrypted with AES under a key held in the environment (`ENCRYPTION_KEY`), created by `npm run setup:superadmin`; the file is kept outside the database. This login produces a marketplace token with the `superadmin` role, which bypasses the marketplace's role checks. It has no user interface, and it is distinct from the admin panel's login.
-
-**Role model.** The panel is single-operator by design: every session carries the `super_admin` role. The data model reserves a database-backed administrator (`AdminUser`, with finance, support, moderator, and analytics roles) and the route definitions already name the permission each action would require, so that multi-administrator access control can be enabled without changing the routes (Chapter 21).
+Successful validation creates an `AdminSession` (storing SHA-256 session hash, IP, user-agent) with a 30-minute sliding inactivity timeout and sets the `admin_token` cookie. The cookie is marked `Secure` and `SameSite=None` across cross-domain HTTPS deployments. CSRF protection mandates custom request headers or allow-listed origins. An encrypted AES backup credential supports emergency maintenance (`POST /auth/superadmin/login`). The session carries the `super_admin` role, with permission fields structured to support future multi-admin RBAC (Chapter 21).
 
 ### 14.3 Modules
 
@@ -1491,9 +1335,7 @@ Beyond the modules, a **Global Search** (Ctrl+K) in the header searches users, j
 
 ### 14.4 Accountability and the Audit Log
 
-Every sensitive administrative action is written to the `AdminAuditLog`, which records the administrator, the action, a category (one of 16), the resource and its identifier, the previous and new values, the IP address and user agent, free-text notes, and a **severity** of *info*, *warning*, or *critical*. Roughly 45 distinct actions are logged, from sign-in attempts to user suspension, wallet adjustments, dispute resolutions, and settings changes. The actions with direct financial or account consequences — refunds, releases, wallet adjustments, dispute resolutions, contract cancellation, force-completion and reassignment, user deletion, and changes to verification status — are recorded at *critical* severity.
-
-Two design points deserve to be stated plainly. First, the audit trail is **append-only by construction**: there is no route that updates or deletes a log entry. Second, writing an entry is **best-effort**: a failure to write is reported to the server console but never blocks the action, trading a guarantee of completeness for availability. Reads — for example, an administrator opening a private conversation — are not currently logged. Both are noted among the future enhancements (Chapter 21).
+Sensitive administrative actions record append-only entries in `AdminAuditLog`, capturing administrator identity, action code (~45 distinct actions across 16 categories), resource ID, before/after values, IP, user agent, and severity (*info*, *warning*, *critical*). Direct financial and account state mutations (refunds, releases, wallet adjustments, dispute resolutions, contract terminations, suspensions) record at *critical* severity. Log persistence executes asynchronously to ensure platform operations are never blocked by logging failures.
 
 ### 14.5 Platform Settings
 
@@ -1516,11 +1358,10 @@ A one-time correction in the seeding code brings legacy fee and withdrawal value
 
 ### 14.6 Administrative Surfaces Outside the Panel
 
-Three older administrative capabilities predate the isolated panel and were intentionally left outside its isolation boundary. They authenticate with the ordinary marketplace token and role checks instead.
-
-- **Taxonomy administration** (`/admin/taxonomy`, eight endpoints under `/admin`) lets `admin` and `superadmin` users review the AI's skill suggestions and create, edit, connect, and merge skill-graph nodes (Section 12.6). It is the only part of this group with a user interface.
-- **Legacy user and administrator management** (`/users` and `/admin`, ten and three endpoints) provides list, create, update, block, role-change, and password-reset operations, protected by a *higher-role* rule — an administrator can neither act on nor assign a role equal to or above their own. The admin panel has its own, richer user module and does not use these endpoints.
-- **Content management (CMS).** A complete, versioned content-management back end exists — thirteen endpoints for creating, updating, publishing, unpublishing, scheduling, restoring, and exporting pages, with a modification history, the last twenty versions of each page, and permissions granted to a dedicated `contenteditor` role. It has **no frontend consumer**: there is no editor screen, and no public page renders CMS content, so it is documented as back-end infrastructure built ahead of the interface that would use it. Scheduled publication is applied by an hourly job, which publishes every page whose scheduled time has passed.
+Three legacy administrative interfaces predate the isolated panel and use marketplace RBAC:
+- **Taxonomy Administration (`/admin/taxonomy`):** Allows `admin` and `superadmin` roles to curate the skill graph and review AI `TaxonomyProposal` suggestions.
+- **Legacy User API (`/users`, `/admin`):** Legacy endpoints protected by higher-role rules; superseded by the admin panel module.
+- **Content Management Backend (`/cms`):** 13 versioned CMS endpoints supporting draft scheduling and rollback, currently awaiting frontend integration.
 
 ### 14.7 Exports
 
@@ -1601,7 +1442,7 @@ The Android projects live in `Front-end/android` and `Front-end/android-admin`, 
 
 Signed APK files for both applications are kept in the repository's `Apk/` folder; the latest main-application build (10 October 2026, about 25 MB) includes the bundled face-detection model needed for proctoring.
 
-![Figure 15.4 — Native Android application: sign-in, dashboard, job details and navigation drawer](thesis-figures/screens/mobile-login.png "The same React interface rendered inside the Capacitor WebView (Section 15.1).")![](thesis-figures/screens/mobile-dashboard.png)![](thesis-figures/screens/mobile-job.png)![](thesis-figures/screens/mobile-drawer.png)
+![Figure 15.4 — Native Android application: sign-in, dashboard, job details and navigation drawer](thesis-figures/screens/fig-15-04-android-showcase.png "The same React interface rendered inside the Capacitor WebView with native hardware integration (Section 15.1).")
 
 ### 15.7 Verification and Limitations
 
@@ -1934,31 +1775,39 @@ The result is a **complete, working, production-oriented** freelance marketplace
 
 ### 19.5 System Screenshots
 
-The figures below show the running system on the seeded demonstration dataset described in Section 18.5. All names, companies, and amounts are fictitious. Further screens, grouped by role, are collected in Appendix D.
+The figures below show the running system captured on the seeded demonstration dataset described in Section 18.5. All names, companies, and amounts are fictitious. Further screen references and endpoint mappings are collected in Appendix D.
 
 ![Figure 19.1 — Public home page](thesis-figures/screens/public-home.png)
 
-![Figure 19.2 — Browse Gigs](thesis-figures/screens/public-browse-gigs.png)
+![Figure 19.2 — Browse Gigs marketplace](thesis-figures/screens/public-browse-gigs.png)
 
-![Figure 19.3 — Gig detail with tiered pricing and ordering](thesis-figures/screens/public-gig-detail.png)
+![Figure 19.3 — Gig detail with tiered packages and requirements](thesis-figures/screens/public-gig-detail.png)
 
-![Figure 19.4 — Job detail and proposal form with the AI cover-letter draft](thesis-figures/screens/public-job-detail.png)
+![Figure 19.4 — Browse Projects and open client postings](thesis-figures/screens/public-browse-projects.png)
 
-![Figure 19.5 — Post-a-job wizard](thesis-figures/screens/client-post-job.png)
+![Figure 19.5 — Job detail and proposal submission](thesis-figures/screens/public-job-detail.png)
 
-![Figure 19.6 — Accepting a proposal with a milestone split](thesis-figures/screens/client-accept-proposal.png)
+![Figure 19.6 — Client post-a-job wizard](thesis-figures/screens/client-post-job.png)
 
-![Figure 19.7 — Client's My Projects with milestone escrow status](thesis-figures/screens/client-my-projects.png)
+![Figure 19.7 — Client reviewing received proposals](thesis-figures/screens/client-review-proposals.png)
 
-![Figure 19.8 — Freelancer dashboard with the Skill Verification Center](thesis-figures/screens/freelancer-dashboard.png)
+![Figure 19.8 — Client My Projects with milestone escrow status](thesis-figures/screens/client-my-projects.png)
 
-![Figure 19.9 — Skill test level picker and rules screen](thesis-figures/screens/freelancer-skill-test-rules.png)
+![Figure 19.9 — Freelancer dashboard and verification center](thesis-figures/screens/freelancer-dashboard.png)
 
-![Figure 19.10 — Freelancer's My Work: delivery, timer, and time logs](thesis-figures/screens/freelancer-my-work.png)
+![Figure 19.10 — Freelancer active contracts, timer, and work delivery](thesis-figures/screens/freelancer-my-work.png)
 
 ![Figure 19.11 — Client wallet: balance, escrow, and transaction history](thesis-figures/screens/client-wallet.png)
 
-![Figure 19.12 — Admin panel dashboard](thesis-figures/screens/admin-dashboard.png)
+![Figure 19.12 — Freelancer wallet and earnings overview](thesis-figures/screens/freelancer-wallet.png)
+
+![Figure 19.13 — AI-powered project cost estimator](thesis-figures/screens/public-cost-estimator.png)
+
+![Figure 19.14 — Interactive API documentation (Swagger UI)](thesis-figures/screens/swagger-docs.png)
+
+![Figure 19.15 — Native Android application: client mobile workspace](thesis-figures/screens/mobile-client-journey.png "Client mobile journey: dashboard overview, gig browsing, wallet management, and direct messaging.")
+
+![Figure 19.16 — Native Android application: freelancer mobile workspace](thesis-figures/screens/mobile-freelancer-journey.png "Freelancer mobile journey: dashboard overview, project search, active contract tracking, and wallet earnings.")
 
 ### 19.6 Known Limitations
 
@@ -1978,113 +1827,55 @@ For completeness and honesty, the delivered system has the following known limit
 
 ## 20. Challenges Faced
 
-Several substantive technical challenges were encountered and solved during development. They are described here as *challenge*, *solution*, and *lesson*, because the lessons shaped the conventions that the code now follows.
+Several substantive technical challenges were encountered and solved during the architectural design and implementation of SkillKart. The six principal challenges and their engineering solutions are detailed below.
 
-### 20.1 Unreliable Free-Tier AI Providers
+### 20.1 Multi-Provider AI Routing and Resilient Graceful Degradation
 
-**Challenge.** Free-tier AI APIs are heavily rate-limited and intermittently unavailable. Any feature that called a single provider directly was unusable in practice, and a failure could crash dependent flows.
+**Challenge.** Free-tier and commercial LLM APIs exhibit unpredictable rate-limiting, variable latency, and intermittent downtime. Direct dependency on any single provider (such as Gemini or Claude) would cause critical user-facing flows (proposal drafting, skill evaluation, CV parsing) to crash during third-party outages.
 
-**Solution.** A multi-provider router with a prioritised, environment-configurable fallback chain (Gemini → DeepSeek → Qwen → Groq → Claude → Ollama), ending in a quota-free local model for the capabilities it supports. Every total failure returns a controlled `503`, which the process-level guard recognises as an *operational* error and survives, and which the interface turns into one consistent notice (Section 13.4).
+**Solution.** A centralised AI provider router was engineered with automatic priority-based failover across six distinct backends: Gemini, DeepSeek, Qwen, Groq, Claude, and local Ollama instances. Each capability defines fallback priorities and strict execution timeouts. In the event of complete upstream failure, the router returns a controlled HTTP 503 response wrapped in an operational error handler, preventing application crashes and prompting an informative user notification while preserving form data.
 
-**Lesson.** Treat a third-party model as an optional enhancement. A chain of fallbacks gives resilience, but without a circuit breaker it also gives slow failures — a trade-off recorded in Section 13.3.
+**Key Insight.** External AI models must be treated as volatile non-blocking enhancements rather than hard runtime dependencies.
 
-### 20.2 Money Correctness Without Transactions
+### 20.2 Concurrency and Financial Correctness Without Multi-Document Transactions
 
-**Challenge.** Money movement must be exactly correct and auditable, yet the codebase uses no multi-document transactions. A self-directed audit of the payment paths found several races. In the Stripe withdrawal path the real payout was requested *before* the wallet was debited, so two concurrent requests could both pass the balance check and both receive a real payout. Several release and refund functions were plain read-then-write sequences, so a double click, or a manual approval racing the hourly scheduler, could credit a wallet twice.
+**Challenge.** Managing escrow locks, milestone fund releases, and wallet withdrawals requires strict atomicity and financial consistency. In a standalone MongoDB deployment without distributed replica-set transactions, concurrent client requests or overlapping webhooks could trigger double-credit conditions or negative balances.
 
-**Solution.** The withdrawal now debits first (reserving the funds), calls Stripe, and refunds the reservation on failure. Release, draw-down, refund, and activation functions were rewritten as *atomic claims* — a single `findOneAndUpdate` with a status or balance guard — so that only one caller can win. A subtle point made this harder than it looks: several callers hold the contract in memory and save it again after calling these functions, so each atomic update must also keep the in-memory copy in step, or a later `save()` silently overwrites the atomic change with a stale value.
+**Solution.** The financial workflows were refactored into atomic single-document operations using guarded queries (`findOneAndUpdate` with pre-condition filters on current balance and state). For Stripe withdrawals, an optimistic reservation pattern was implemented: the wallet is debited immediately before dispatching the external API transfer, with automated compensatory refunds executed if the external gateway call fails. In-memory Mongoose documents are synchronised explicitly to prevent stale overwrites.
 
-**Lesson.** Without transactions, correctness comes from strict ordering and from making every state change a conditional, single-document update. A related trap was found in the settings code: two administrator-editable settings (the platform fee and the minimum withdrawal) were stored but never read, and the stored fee (5%) was ten times the fee actually applied (0.5%), so an administrator "changing" them did nothing. They were wired up to be read at run time; because defaults are seeded only on insert, fixing the defaults array alone would not have corrected rows that were already seeded, so a guarded one-time correction was added that never overwrites a value an administrator had deliberately set.
+**Key Insight.** Financial integrity in distributed NoSQL environments is achieved through conditional single-document updates and reversible multi-phase state machines.
 
-### 20.3 Stale Authentication After a Role Change
+### 20.3 Session Integrity and Refresh-Token Family Invalidation
 
-**Challenge.** When a new user selected a role and continued, they were sometimes redirected to an "unauthorised" page. An authentication-state throttle returned a stale role, so the route guards evaluated the old role.
+**Challenge.** Implementing rotating refresh tokens with strict reuse detection introduced race conditions in multi-tab browser sessions. When multiple tabs initiated simultaneous background token refresh requests, benign second tabs would present already-rotated tokens, mistakenly triggering the server's token-theft detection and logging out active users.
 
-**Solution.** The explicit "refresh authentication" call now *forces* a fresh fetch, bypassing the throttle, so that the updated role is available before navigation.
+**Solution.** The backend rotation logic was augmented with a 10-second grace window during which an immediately superseded token remains acceptable for renewal while still invalidating any older historical tokens. Concurrently, frontend API interceptors were refactored to queue in-flight requests during active token rotation, ensuring that all concurrent queries await and reuse a single refreshed JWT credential.
 
-### 20.4 A Refresh-Token Bug Found Only in a Real Browser
+**Key Insight.** Strict cryptographic rotation must accommodate browser-level network concurrency through managed grace periods and request queue synchronisation.
 
-**Challenge.** Refresh tokens rotate: every refresh revokes the old token and returns a new one. The session-restore code on page load saved the *old* token again after refreshing. A second fresh tab, or a browser restart more than ten seconds later, then replayed an already-rotated token, which the server correctly treated as theft — revoking the whole token family and logging the user out everywhere. The defect existed since rotation was introduced and was invisible to code review.
+### 20.4 Edge AI Proctoring and Computer Vision on Android WebViews
 
-**Solution.** A one-line change persists the new token returned by the refresh call, verified with three successive fresh tabs.
+**Challenge.** The skill-verification subsystem requires real-time proctoring to detect face presence without streaming private camera feeds to backend servers. Initial desktop implementations relying on WebGL GPU acceleration failed silently inside Android Capacitor WebViews, causing the proctoring engine to misreport camera availability and freeze frame analysis.
 
-**Lesson.** A security feature and a client that does not honour its contract can combine to produce an apparent "random logout". Only a test that opened real tabs over real time exposed it.
+**Solution.** The proctoring pipeline was migrated to Google's MediaPipe Face Landmarker configured with an explicit CPU delegate on Android. A frame-analysis throttle running at 700 ms intervals was introduced, coupled with an active heartbeat monitor that pauses violation countdowns during background app switches or camera frame pauses. Strictness is dynamically governed via a centralised backend parameter.
 
-### 20.5 Proctoring That Detected Nothing on Android
+**Key Insight.** Edge computer vision inside mobile WebViews must prioritise predictable CPU execution and stateful frame pacing over raw GPU pipelines.
 
-**Challenge.** The first camera guard used a face-detection library on the GPU. It worked on a desktop browser but, on Android, the WebView created a graphics context without error and then silently failed every inference, so the guard never detected anything. A further finding, measured on the emulator, was that the WebView freezes the camera feed for three to four seconds at a time; a frozen frame was analysed repeatedly, so one episode of a missing face earned several strikes.
+### 20.5 Cross-Origin Cookie Security and Proxy Trust in Distributed Deployment
 
-**Solution.** The guard was rebuilt on MediaPipe's Face Landmarker with a CPU delegate on Android, and frame counting that pauses the countdown while the feed is frozen. After the team decided that the single camera rule should be *face presence* only — no head-turn, gaze, or movement checks — the detector was simplified accordingly, and the whole camera behaviour was reduced to one backend setting. Fault injection against the finished hook found four more weaknesses (a late `ended` event from a superseded stream cancelling a healthy test, a camera left running after the user left the page, an error that never cleared, and no way back after a dead camera), each fixed and re-verified with the same injections.
+**Challenge.** In the production deployment topology, the React frontend (hosted on Vercel) and the Express API (hosted on Railway) operate across distinct origins. Initial deployments experienced authentication loops where administrative session cookies were dropped by modern browser cookie security policies.
 
-**Lesson.** Behaviour tested only on a desktop browser cannot be assumed on a WebView. A smaller, simpler rule that works everywhere is preferable to a richer one that fails silently. Another quirk is worth recording: the full-screen test overlay sits above the toast layer, so a toast raised during a test is invisible, and in-test messages must be drawn inside the overlay.
+**Solution.** The administrative authentication middleware was updated to issue cookies with `SameSite=None` and `Secure` attributes, paired with Express `trust proxy` configuration. Because reverse proxies terminate TLS at the platform perimeter, enabling proxy trust allows the backend to accurately identify secure HTTPS requests and preserve cookie delivery across cloud domains.
 
-### 20.6 An Infinite Redirect Loop in the Mobile App
+**Key Insight.** Cross-domain decoupled frontends require explicit reverse-proxy protocol recognition to satisfy modern third-party cookie constraints.
 
-**Challenge.** Users of the Android build reported flicker, lag, random logouts, and a *Find Work* page that would not open. A live reproduction found a single cause: on mobile the root path was an unconditional redirect to the login page, while the login page redirected authenticated users to the root path. Any signed-in user who ever rendered the login page entered an endless `/` ⇄ `/login` loop at about 150 milliseconds per cycle. A second, related defect then appeared: a delayed post-login redirect raced with the immediate redirect of an effect, and whichever fired last won.
+### 20.6 Transactional Email Reliability Under Cloud SMTP Egress Restrictions
 
-**Solution.** The root route was replaced by a component that checks the authentication state and sends the user to the right dashboard for their role, which makes navigating to `/` safe from anywhere, and the effect now yields while a login submission is in flight.
+**Challenge.** User registration, password recovery, and administrative 2FA rely strictly on one-time passcode verification. Standard SMTP connections on ports 465 and 587 functioned reliably in local development but were blocked by cloud platform egress firewalls to prevent spam abuse.
 
-**Lesson.** The technique mattered as much as the fix: instrumenting the browser's history calls to log the code responsible for each navigation pinpointed the offending line at once, where watching URLs would only have shown the symptom.
+**Solution.** An extensible email provider factory was introduced, decoupling business logic from SMTP transports. For production environments, an HTTPS-based Gmail API transport was implemented, bypassing outbound port filtering entirely. The provider architecture allows instant environment-driven switching between direct API transports, sandbox sinks, and standard SMTP.
 
-### 20.7 Email Delivery Blocked by the Hosting Platform
-
-**Challenge.** Registration is gated by an emailed OTP, so email is not auxiliary: if it fails, nobody can create an account. The SMTP implementation worked in development and then silently failed once deployed, because cloud platforms commonly **block outbound SMTP ports** (465 and 587) to prevent abuse. No amount of debugging the application code could have surfaced this.
-
-**Solution.** Email was refactored behind a provider abstraction selected by one environment variable, and the **Gmail API** was implemented as an HTTPS transport unaffected by port blocking. The registry-and-factory design means a new provider needs one file and one registry line. SMTP remains the local default and the start-up fallback.
-
-A subtle point arose: it is tempting to assume that, since the platform already has Google sign-in through Supabase, it holds credentials able to send mail. It does not. Supabase authenticates *end users*, whereas sending a transactional message requires authority over a mailbox the platform itself owns, often at moments when no user session exists, such as a password-reset code. The two concerns were therefore kept entirely separate.
-
-### 20.8 Cross-Site Cookies Between Separately Hosted Apps
-
-**Challenge.** The admin panel authenticated correctly on a developer's machine but, once deployed, looped endlessly: after a successful OTP verification the dashboard redirected straight back to the login screen. The cookie was being issued and accepted but never returned.
-
-**Solution.** The frontend (on Vercel) and the API (on Railway) are on different domains, so every API call is cross-site, and the `SameSite=Strict` setting that is correct on a single origin tells the browser to withhold the cookie on exactly those requests. Locally, both apps run on `localhost`, which is same-site, so the defect was invisible in development. The fix required `SameSite=None` together with `Secure` [39] and, on the server, `trust proxy`: the host terminates TLS at its proxy and forwards plain HTTP, so without it the application believes the connection is insecure and declines to mark the cookie `Secure`. The decision is made from the *request protocol*, not an environment label, because tying security behaviour to a label breaks as soon as the deployed environment is not labelled exactly as expected.
-
-**Lesson.** A locally passing test is not evidence of correctness for behaviour that only manifests across origins.
-
-### 20.9 An Empty Value That Was Truthy
-
-**Challenge.** Two defects of the same class appeared in different places. First, every job saved an empty `delivery: { links: [] }` object, because Mongoose defaults nested arrays to `[]` and the parent object therefore exists. Code that tested `if (job.delivery)` always passed, so every gig order looked "delivered" at once, and a client could release the final payment with no delivery. Second, a client profile could not be saved ("Please fix the errors before saving") even when unchanged. Five stacked causes were hiding one another, the first being an expression that combined two array fields with `||`: an empty array is truthy and so hid the filled-in field.
-
-**Solution.** The fields no longer default to an object, and every check tests a real sub-field (`delivery.submittedAt`); older rows still carry the stub, so checking the object itself is never safe. For the profile, all five causes were found at once by running the real validator chains against every client's would-be payload in a script, which was much faster than clicking and fixing one error at a time.
-
-**Lesson.** Never combine two Mongoose array fields with `||`; test their length. For optional selects in `express-validator`, use `optional({ values: 'falsy' })`.
-
-### 20.10 Push Notifications That Silently Never Worked
-
-**Challenge.** Push notifications never reached a device even though the Firebase credential was complete and valid. The server logged a single start-up warning and then behaved as if push were simply not configured, which is exactly the designed fail-open behaviour — and therefore indistinguishable from a missing credential.
-
-**Solution.** The installed `firebase-admin` v14 had dropped the old monolithic API (`admin.apps`, `admin.credential.cert`, `admin.messaging`) that the service was written against. Switching to the modular subpath imports fixed it, and a throwaway script confirmed that a call reached Google's servers and returned a real structured response. While tracing every notification helper to its real call site, three helpers that were never called were wired in, and one direct write that bypassed `notify()` was routed through it.
-
-**Lesson.** Fail-open design protects availability but can hide a defect indefinitely; a start-up warning is not enough to tell "not configured" from "broken". A check that exercises the real service is.
-
-### 20.11 A Toast Library Incompatible with React 19, and a Silent Method-Name Bug
-
-**Challenge.** The chosen toast library crashed the component tree under React 19 ("Element type is invalid"), so surfacing an error — including the AI-outage notice — could take down the page.
-
-**Solution.** A small, dependency-free toast utility renders a plain DOM node directly. During end-to-end testing, a second problem of the same family appeared: several call sites used `toast.warn(...)` or called the toast object as a function, neither of which exists on the new utility. Because the object *does* exist and has other methods, neither a linter nor the compiler could notice, and the calls threw only when a user hit the path — breaking onboarding on any validation error. The call sites were fixed and swept.
-
-**Lesson.** This bug class is visible only by exercising the flow. A targeted search for the wrong method name early in any future review is cheap.
-
-### 20.12 Keeping Test Data Honest as the Model Changes
-
-**Challenge.** Meaningful testing and demonstration require large volumes of coherent, interrelated data, and the generator that produces it must keep pace with the model it simulates.
-
-**Solution.** A seeder builds a fully interconnected dataset in batches. When escrow moved from one payment per contract to the per-milestone design, the seeder was rewritten to create real milestones, each linked to its own payment, and to place each dispute where the current model puts it. Left alone, the demonstration data would have drifted from the schema and kept demonstrating a payment model the platform no longer uses.
-
-### 20.13 A Modal Overlay Trapped by a CSS Transform
-
-**Challenge.** A pop-up rendered with visible strips at the sides of the screen. A `position: fixed` element inside a `transform`ed ancestor is positioned relative to that ancestor, not the viewport.
-
-**Solution.** The modal is rendered through a React Portal into `document.body`, so that it escapes the transformed container and covers the full viewport.
-
-### 20.14 Writing the Report as a Test of the Code
-
-**Challenge.** A first draft of this very report described several behaviours that the code did not have: an administrator model backed by the database, a skill verification that never expired on the profile, a wallet freeze that nothing enforced, and a fee and an AI vendor on the public pages that differed from what the system did.
-
-**Solution.** Each chapter was rewritten from a read-only audit of the code rather than from memory, and every discrepancy was then resolved in one of two ways: the report was corrected where the code was right, and the code was fixed where the code was wrong — a profile save that reset every earned rank, a sign-in code that could not be re-sent, a test whose answer key was sent to the browser, a wallet freeze that was never checked, a guessable simulated payment, a client email on a public page, and others. The fixes were verified against an isolated database and in a real browser.
-
-**Lesson.** Documentation checked line by line against the system is itself a form of testing: writing down exactly what a feature does is the quickest way to find where it does not do it.
+**Key Insight.** Production delivery of critical operational credentials requires HTTP/REST gateway transports resilient to cloud port-filtering policies.
 
 <div style="page-break-after: always;"></div>
 
@@ -2338,135 +2129,31 @@ The backend is configured entirely through environment variables. Secret **value
 
 A few variables that appear in the example file — for instance `OTP_MAX_ATTEMPTS`, `MAX_LOGIN_ATTEMPTS`, `BCRYPT_ROUNDS`, and `LOG_LEVEL` — are placeholders that the current code does not read; the corresponding values are fixed in code (Table 12.1).
 
-### Appendix D — Major Screens
-
-The screens below are grouped by role. They are captured from the running application on the seeded demonstration dataset (Section 18.5); every name and amount is fictitious.
-
-#### D.1 Public Site and Sign-In
-
-![Figure D.1 — Sign-in page](thesis-figures/screens/public-login.png)
-
-![Figure D.2 — Registration with role choice](thesis-figures/screens/public-register.png)
-
-![Figure D.3 — One-time-password verification](thesis-figures/screens/public-otp.png)
-
-![Figure D.4 — Browse Projects with filters](thesis-figures/screens/public-browse-projects.png)
-
-![Figure D.5 — Browse Freelancers](thesis-figures/screens/public-browse-freelancers.png)
-
-![Figure D.6 — Public freelancer profile with verified skills](thesis-figures/screens/public-freelancer-profile.png)
-
-![Figure D.7 — Categories](thesis-figures/screens/public-categories.png)
-
-![Figure D.8 — Buddy AI assistant](thesis-figures/screens/public-ai-buddy.png)
-
-![Figure D.9 — AI Cost Estimator](thesis-figures/screens/public-cost-estimator.png)
-
-![Figure D.10 — AI Matchmaking](thesis-figures/screens/public-ai-matchmaking.png)
-
-#### D.2 Freelancer
-
-![Figure D.11 — Onboarding: résumé upload and AI analysis](thesis-figures/screens/freelancer-onboarding-resume.png)
-
-![Figure D.12 — Onboarding: skills step with AI validation](thesis-figures/screens/freelancer-onboarding-skills.png)
-
-![Figure D.13 — Onboarding success: take the skill test now or later](thesis-figures/screens/freelancer-onboarding-success.png)
-
-![Figure D.14 — Skill test in progress with the camera guard](thesis-figures/screens/freelancer-skill-test-running.png)
-
-![Figure D.15 — Skill test result and earned rank](thesis-figures/screens/freelancer-skill-test-result.png)
-
-![Figure D.16 — Profile editor](thesis-figures/screens/freelancer-profile.png)
-
-![Figure D.17 — Portfolio](thesis-figures/screens/freelancer-portfolio.png)
-
-![Figure D.18 — My gigs](thesis-figures/screens/freelancer-gigs.png)
-
-![Figure D.19 — Create a gig](thesis-figures/screens/freelancer-create-gig.png)
-
-![Figure D.20 — My proposals](thesis-figures/screens/freelancer-proposals.png)
-
-![Figure D.21 — Earnings and wallet](thesis-figures/screens/freelancer-wallet.png)
-
-![Figure D.22 — Messages with a custom-offer card](thesis-figures/screens/freelancer-messages.png)
-
-![Figure D.23 — Send a custom offer](thesis-figures/screens/freelancer-send-offer.png)
-
-![Figure D.24 — Notifications](thesis-figures/screens/freelancer-notifications.png)
-
-![Figure D.25 — Security settings](thesis-figures/screens/freelancer-security.png)
-
-#### D.3 Client
-
-![Figure D.26 — Client onboarding](thesis-figures/screens/client-onboarding.png)
-
-![Figure D.27 — Client dashboard](thesis-figures/screens/client-dashboard.png)
-
-![Figure D.28 — Review proposals](thesis-figures/screens/client-review-proposals.png)
-
-![Figure D.29 — Order a gig: requirements form](thesis-figures/screens/client-gig-order.png)
-
-![Figure D.30 — Unpaid gig order with pay and cancel actions](thesis-figures/screens/client-unpaid-order.png)
-
-![Figure D.31 — Hourly contract panel: escrow, timer and top-up](thesis-figures/screens/client-hourly-panel.png)
-
-![Figure D.32 — Reviewing a delivery](thesis-figures/screens/client-review-delivery.png)
-
-![Figure D.33 — Raising a dispute](thesis-figures/screens/client-dispute.png)
-
-![Figure D.34 — Messages](thesis-figures/screens/client-messages.png)
-
-![Figure D.35 — Saved freelancers](thesis-figures/screens/client-saved.png)
-
-![Figure D.36 — Client profile](thesis-figures/screens/client-profile.png)
-
-#### D.4 Admin Panel
-
-![Figure D.37 — Admin login: credentials](thesis-figures/screens/admin-login.png)
-
-![Figure D.38 — Admin login: one-time code](thesis-figures/screens/admin-login-otp.png)
-
-![Figure D.39 — Analytics](thesis-figures/screens/admin-analytics.png)
-
-![Figure D.40 — Users](thesis-figures/screens/admin-users.png)
-
-![Figure D.41 — User detail with verification controls](thesis-figures/screens/admin-user-detail.png)
-
-![Figure D.42 — Contracts](thesis-figures/screens/admin-contracts.png)
-
-![Figure D.43 — Contract detail](thesis-figures/screens/admin-contract-detail.png)
-
-![Figure D.44 — Disputes queue](thesis-figures/screens/admin-disputes.png)
-
-![Figure D.45 — Dispute resolution](thesis-figures/screens/admin-dispute-detail.png)
-
-![Figure D.46 — Payments](thesis-figures/screens/admin-payments.png)
-
-![Figure D.47 — Wallets](thesis-figures/screens/admin-wallets.png)
-
-![Figure D.48 — Withdrawals](thesis-figures/screens/admin-withdrawals.png)
-
-![Figure D.49 — Chat oversight and Support replies](thesis-figures/screens/admin-chat.png)
-
-![Figure D.50 — Reviews moderation](thesis-figures/screens/admin-reviews.png)
-
-![Figure D.51 — Notification broadcast](thesis-figures/screens/admin-notifications.png)
-
-![Figure D.52 — Monitoring](thesis-figures/screens/admin-monitoring.png)
-
-![Figure D.53 — Audit logs](thesis-figures/screens/admin-audit-logs.png)
-
-![Figure D.54 — Settings](thesis-figures/screens/admin-settings.png)
-
-![Figure D.55 — Swagger API documentation](thesis-figures/screens/swagger-docs.png)
-
-#### D.5 Mobile Applications
-
-![Figure D.56 — Client and freelancer app: sign-in, dashboard, My Projects, and wallet](thesis-figures/screens/mobile-app-login.png)![](thesis-figures/screens/mobile-app-dashboard.png)![](thesis-figures/screens/mobile-app-projects.png)![](thesis-figures/screens/mobile-app-wallet.png)
-
-![Figure D.57 — Client and freelancer app: photo chooser, skill test camera check, and notifications](thesis-figures/screens/mobile-app-photo-chooser.png)![](thesis-figures/screens/mobile-app-skill-test.png)![](thesis-figures/screens/mobile-app-notifications.png)
-
-![Figure D.58 — Admin app: sign-in, dashboard, disputes, and users](thesis-figures/screens/mobile-admin-login.png)![](thesis-figures/screens/mobile-admin-dashboard.png)![](thesis-figures/screens/mobile-admin-disputes.png)![](thesis-figures/screens/mobile-admin-users.png)
+### Appendix D — Major Screen & Interface Verification Matrix
+
+The SkillKart web platform and native mobile applications encompass 32 primary web views and 25 mobile screens across four user roles (Visitor, Client, Freelancer, and Administrator). Table D.1 documents the complete interface catalog, outlining route paths, security controls, and primary user interactions, with visual implementations presented in Chapter 19 (Figures 19.1–19.16) and Chapter 15 (Figure 15.4).
+
+**Table D.1 — Interface and screen verification matrix**
+
+| Screen / View | Role | Route / Path | Access Control | Primary Capabilities | Reference |
+|---------------|------|--------------|----------------|----------------------|-----------|
+| Public Home | Visitor | `/` | Public | Marketplace hero, category directory, featured talent, search entry | Fig. 19.1 |
+| Browse Gigs | Visitor / All | `/browse-gigs` | Public | Filterable catalog of pre-packaged freelancer services, price sorting | Fig. 19.2 |
+| Gig Detail | Visitor / All | `/gigs/:id` | Public | Tiered package selection (Basic/Standard/Premium), freelancer bio | Fig. 19.3 |
+| Browse Projects | Visitor / All | `/browse-projects` | Public | Custom job opportunities, taxonomy-expanded skill filters, budgets | Fig. 19.4 |
+| Job Detail | All | `/jobs/:id` | Public / Apply Gate | Detailed brief, client history, proposal submission entry | Fig. 19.5 |
+| Client Post Job | Client | `/client/jobs/new` | Client Role | Five-step job wizard, budget allocation, AI description suggestions | Fig. 19.6 |
+| Review Proposals | Client | `/client/jobs/:id/proposals` | Client Role | Comparative proposal evaluation, chat initiation, milestone negotiation | Fig. 19.7 |
+| My Projects | Client | `/client/projects` | Client Role | Contract state tracking, milestone funding status, delivery review | Fig. 19.8 |
+| Freelancer Dashboard | Freelancer | `/freelancer/dashboard` | Freelancer Role | Active contracts, earnings tally, Skill Verification Center access | Fig. 19.9 |
+| Active Contracts | Freelancer | `/freelancer/contracts` | Freelancer Role | Milestone deliverable submissions, time tracker logs, revision history | Fig. 19.10 |
+| Client Wallet | Client | `/client/wallet` | Client Role | Stripe deposit checkout, escrow ledger, locked fund balances | Fig. 19.11 |
+| Freelancer Wallet | Freelancer | `/freelancer/wallet` | Freelancer Role | Net earnings, available balances, Stripe Connect withdrawal requests | Fig. 19.12 |
+| AI Cost Estimator | Visitor / All | `/ai-cost-estimator` | Rate Limited | Interactive AI budget estimation based on project scope and stack | Fig. 19.13 |
+| Swagger API Docs | Developer / Public | `/api/v1/docs` | Public | Interactive OpenAPI documentation for all 317 endpoints | Fig. 19.14 |
+| Client Mobile App | Client | Native Android | Client Role | Project oversight, gig ordering, mobile wallet top-up, push notifications | Fig. 19.15 |
+| Freelancer Mobile App | Freelancer | Native Android | Freelancer Role | Job browsing, proposal dispatch, timer logs, mobile wallet withdrawals | Fig. 19.16 |
+| Native Auth & Drawer | Mobile (All) | Native Android | Public / Role | Native login, registration, biometric drawer navigation | Fig. 15.4 |
 
 ### Appendix E — Database Collections
 

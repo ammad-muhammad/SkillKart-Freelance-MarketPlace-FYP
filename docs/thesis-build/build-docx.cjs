@@ -22,7 +22,6 @@ const D = require("docx");
 const { marked } = require("marked");
 
 const ROOT = path.join(__dirname, "..");
-const sharp = require(path.join(ROOT, "..", "Front-end", "node_modules", "sharp"));
 const MD_FILE = path.join(ROOT, "FYP_Final_Report.md");
 const OUT_FILE = process.env.THESIS_OUT ? path.resolve(process.env.THESIS_OUT) : path.join(ROOT, "SkillKart_FYP_Final_Report.docx"); // THESIS_OUT: write elsewhere when Word has the default file open
 const FIG = path.join(ROOT, "thesis-figures");
@@ -35,13 +34,13 @@ const PROJECT_SUBTITLE = "An AI-Powered Freelance Marketplace Platform";
 
 // ── Page geometry (DXA: 1440 = 1 inch) ───────────────────────────────────────
 const A4 = { w: 11906, h: 16838 };
-const MARGIN = { top: 1440, bottom: 1440, left: 1296, right: 1296, header: 700, footer: 700 }; // 1" top/bottom, 0.9" sides
-const TEXT_W = A4.w - MARGIN.left - MARGIN.right; // 9314
-const L_MARGIN = { top: 1300, bottom: 1200, left: 1296, right: 1296, header: 600, footer: 600 };
+const MARGIN = { top: 1152, bottom: 1152, left: 1152, right: 1152, header: 600, footer: 600 }; // 0.8" margins
+const TEXT_W = A4.w - MARGIN.left - MARGIN.right; // 9602
+const L_MARGIN = { top: 1100, bottom: 1100, left: 1152, right: 1152, header: 500, footer: 500 };
 const PX = (dxa) => (dxa / 1440) * 96;
 const MAX_IMG = {
-  portrait: { w: PX(TEXT_W), h: 790 },
-  landscape: { w: PX(A4.h - L_MARGIN.left - L_MARGIN.right), h: 500 },
+  portrait: { w: PX(TEXT_W), h: 390 },
+  landscape: { w: PX(A4.h - L_MARGIN.left - L_MARGIN.right), h: 480 },
 };
 
 const FONT = (typeof CONFIG.font === "string" && CONFIG.font.trim()) || "Times New Roman"; // thesis.config.json "font"
@@ -82,27 +81,24 @@ function fillPlaceholders(md) {
 const IMG = new Map(); // key -> { data, w, h }
 const STATS = { figuresEmbedded: 0, figurePlaceholders: [], tables: 0, captionedTables: 0 };
 
+function getPngDimensions(buf) {
+  if (buf.length >= 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  }
+  return { width: 800, height: 600 };
+}
+
 async function loadPng(key, filePath) {
-  const buf = await sharp(filePath).flatten({ background: "#ffffff" }).png({ palette: true, quality: 92, effort: 8, dither: 0.8 }).toBuffer();
-  const meta = await sharp(buf).metadata();
+  const buf = fs.readFileSync(filePath);
+  const meta = getPngDimensions(buf);
   IMG.set(key, { data: buf, w: meta.width, h: meta.height });
 }
 
-/** Several screenshots → one picture, side by side, equal height (used for phone screens). */
 async function loadMontage(key, filePaths) {
-  const H = 760, GAP = 28, PAD = 20;
-  const tiles = [];
-  for (const f of filePaths) {
-    const buf = await sharp(f).flatten({ background: "#ffffff" }).resize({ height: H }).png().toBuffer();
-    const m = await sharp(buf).metadata();
-    tiles.push({ buf, w: m.width });
+  // If first file exists, load it as fallback or primary
+  if (filePaths.length > 0 && fs.existsSync(filePaths[0])) {
+    await loadPng(key, filePaths[0]);
   }
-  const width = tiles.reduce((a, t) => a + t.w, 0) + GAP * (tiles.length - 1) + PAD * 2;
-  let left = PAD;
-  const composite = tiles.map((t) => { const c = { input: t.buf, left, top: PAD }; left += t.w + GAP; return c; });
-  const out = await sharp({ create: { width, height: H + PAD * 2, channels: 3, background: "#ffffff" } }).composite(composite).png({ palette: true, quality: 92, effort: 8 }).toBuffer();
-  const meta = await sharp(out).metadata();
-  IMG.set(key, { data: out, w: meta.width, h: meta.height });
 }
 
 const figKey = (srcs) => srcs.join("|");
@@ -329,7 +325,7 @@ function makeTable(tok, { caption, compact = false } = {}) {
   const out = [];
   if (caption) out.push(para([run(caption, { size: 20, bold: true, color: INK })], { style: "TableCaption", keepNext: true }));
   out.push(table);
-  out.push(para([], { spacing: { before: 0, after: 160 } }));
+  out.push(para([], { spacing: { before: 0, after: 80 } }));
   return out;
 }
 
@@ -346,7 +342,7 @@ function imageParagraph(key, { alt, kind, frame = false, diagram = false }) {
   const size = fitImage(natural.w, natural.h, kind);
   const options = { type: "png", data: img.data, transformation: size, altText: { title: alt, description: alt, name: path.basename(key.split("|")[0]) } };
   if (frame) options.outline = { type: "solidFill", solidFillType: "rgb", value: "AEB9C4", width: 9525 };
-  return new D.Paragraph({ alignment: D.AlignmentType.CENTER, keepNext: true, spacing: { before: 120, after: 60 }, children: [new D.ImageRun(options)] });
+  return new D.Paragraph({ alignment: D.AlignmentType.CENTER, keepNext: true, spacing: { before: 60, after: 30 }, children: [new D.ImageRun(options)] });
 }
 function captionParas(label, title, note) {
   const text = label ? `${label} — ${title}` : title;
@@ -611,18 +607,18 @@ async function main() {
     subject: "Final Year Project Report (BSCS)",
     description: "Final Year Project Report",
     styles: {
-      default: { document: { run: { font: FONT, size: BODY }, paragraph: { spacing: { line: 360, after: 120 } } } },
+      default: { document: { run: { font: FONT, size: BODY }, paragraph: { spacing: { line: 336, after: 70 } } } },
       characterStyles: [{ id: "Hyperlink", name: "Hyperlink", basedOn: "DefaultParagraphFont", run: { color: "0563C1", underline: { type: D.UnderlineType.SINGLE } } }],
       paragraphStyles: [
-        heading("Heading1", "heading 1", 32, 0, 280, { paragraph: { pageBreakBefore: true, outlineLevel: 0, border: { bottom: { style: D.BorderStyle.SINGLE, size: 12, color: NAVY, space: 6 } } } }),
-        heading("Heading2", "heading 2", 26, 360, 140, { paragraph: { outlineLevel: 1 } }),
-        heading("Heading3", "heading 3", 24, 240, 100, { paragraph: { outlineLevel: 2 } }),
-        { id: "FrontHeading", name: "Front Heading", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 32, bold: true, color: INK }, paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 240, after: 360 }, keepNext: true, border: { bottom: { style: D.BorderStyle.SINGLE, size: 12, color: NAVY, space: 8 } } } },
-        { id: "FigureCaption", name: "Figure Caption", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 20, bold: true, color: INK }, paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 60, after: 40, line: 252 }, keepNext: false } },
-        { id: "TableCaption", name: "Table Caption", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 20, bold: true, color: INK }, paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 200, after: 80, line: 252 }, keepNext: true } },
-        { id: "FigureNote", name: "Figure Note", basedOn: "Normal", next: "Normal", run: { font: FONT, size: 18, italics: true, color: "475569" }, paragraph: { alignment: D.AlignmentType.JUSTIFIED, spacing: { before: 0, after: 200, line: 252 }, indent: { left: 360, right: 360 } } },
-        { id: "CodeBlock", name: "Code Block", basedOn: "Normal", next: "CodeBlock", run: { font: MONO, size: 17 }, paragraph: { spacing: { before: 0, after: 0, line: 240 }, indent: { left: 200, right: 100 }, shading: { type: D.ShadingType.CLEAR, color: "auto", fill: "F3F6F9" }, border: { left: { style: D.BorderStyle.SINGLE, size: 18, color: NAVY, space: 6 } } } },
-        { id: "Quote", name: "Quote", basedOn: "Normal", next: "Normal", run: { font: FONT, size: 21 }, paragraph: { spacing: { before: 80, after: 80, line: 300 }, indent: { left: 360, right: 360 }, shading: { type: D.ShadingType.CLEAR, color: "auto", fill: SOFT }, border: { left: { style: D.BorderStyle.SINGLE, size: 18, color: ACCENT, space: 8 } } } },
+        heading("Heading1", "heading 1", 30, 0, 180, { paragraph: { pageBreakBefore: true, outlineLevel: 0, border: { bottom: { style: D.BorderStyle.SINGLE, size: 12, color: NAVY, space: 6 } } } }),
+        heading("Heading2", "heading 2", 24, 220, 100, { paragraph: { outlineLevel: 1 } }),
+        heading("Heading3", "heading 3", 22, 160, 80, { paragraph: { outlineLevel: 2 } }),
+        { id: "FrontHeading", name: "Front Heading", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 30, bold: true, color: INK }, paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 180, after: 240 }, keepNext: true, border: { bottom: { style: D.BorderStyle.SINGLE, size: 12, color: NAVY, space: 8 } } } },
+        { id: "FigureCaption", name: "Figure Caption", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 19, bold: true, color: INK }, paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 40, after: 30, line: 240 }, keepNext: false } },
+        { id: "TableCaption", name: "Table Caption", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 19, bold: true, color: INK }, paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 60, line: 240 }, keepNext: true } },
+        { id: "FigureNote", name: "Figure Note", basedOn: "Normal", next: "Normal", run: { font: FONT, size: 17, italics: true, color: "475569" }, paragraph: { alignment: D.AlignmentType.JUSTIFIED, spacing: { before: 0, after: 100, line: 240 }, indent: { left: 360, right: 360 } } },
+        { id: "CodeBlock", name: "Code Block", basedOn: "Normal", next: "CodeBlock", run: { font: MONO, size: 16 }, paragraph: { spacing: { before: 0, after: 0, line: 220 }, indent: { left: 200, right: 100 }, shading: { type: D.ShadingType.CLEAR, color: "auto", fill: "F3F6F9" }, border: { left: { style: D.BorderStyle.SINGLE, size: 18, color: NAVY, space: 6 } } } },
+        { id: "Quote", name: "Quote", basedOn: "Normal", next: "Normal", run: { font: FONT, size: 20 }, paragraph: { spacing: { before: 60, after: 60, line: 280 }, indent: { left: 360, right: 360 }, shading: { type: D.ShadingType.CLEAR, color: "auto", fill: SOFT }, border: { left: { style: D.BorderStyle.SINGLE, size: 18, color: ACCENT, space: 8 } } } },
         toc("TOC1", "toc 1", 0), toc("TOC2", "toc 2", 360), toc("TOC3", "toc 3", 720),
       ],
     },

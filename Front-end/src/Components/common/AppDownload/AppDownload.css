@@ -1,0 +1,324 @@
+/* ============================================
+   App Download Card Component Styles
+   Theme-aligned with SkillKart (#042E4C)
+   ============================================ */
+
+.app-download-section {
+  padding: 40px 24px;
+  background-color: var(--color-bg, #ffffff);
+  display: flex;
+  justify-content: center;
+}
+
+.app-download-container {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.app-download-card {
+  position: relative;
+  background: linear-gradient(135deg, #042E4C 0%, #073B60 48%, #0C4E7D 100%);
+  border-radius: 28px;
+  padding: 44px 52px;
+  color: #ffffff;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 48px;
+  box-shadow: 0 20px 45px -12px rgba(4, 46, 76, 0.38),
+              0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  overflow: hidden;
+}
+
+/* Subtle decorative radial glow in background */
+.app-download-card__glow {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(183, 201, 226, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+/* ── Left Content ── */
+.app-download-card__content {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+
+/* Badge pill (MOBILE APP) */
+.app-download__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  width: fit-content;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #e2eaf4;
+  margin-bottom: 18px;
+}
+
+.app-download__badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+/* Heading */
+.app-download__title {
+  font-family: var(--font-heading, 'Roboto Slab', serif);
+  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.18;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+}
+
+/* Subtitle */
+.app-download__subtitle {
+  font-family: var(--font-body, 'Lato', sans-serif);
+  font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.84);
+  max-width: 580px;
+  margin: 0 0 22px 0;
+}
+
+/* Feature bullets */
+.app-download__features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-download__features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body, 'Lato', sans-serif);
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.4;
+}
+
+.app-download__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5eead4; /* subtle cyan/teal matching the checkmark in user image */
+  flex-shrink: 0;
+}
+
+/* Action buttons */
+.app-download__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.app-download__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background-color: #ffffff;
+  color: #042E4C;
+  font-family: var(--font-body, 'Lato', sans-serif);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 13px 26px;
+  border-radius: 9999px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  transition: all 0.22s ease-in-out;
+  cursor: pointer;
+}
+
+.app-download__btn-primary:hover {
+  background-color: #f0f6fc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+  color: #021e33;
+}
+
+.app-download__btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font-body, 'Lato', sans-serif);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 12px 22px;
+  border-radius: 9999px;
+  user-select: none;
+  backdrop-filter: blur(4px);
+  cursor: default;
+}
+
+/* Requirements footnote */
+.app-download__footnote {
+  font-family: var(--font-body, 'Lato', sans-serif);
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── Right Column: QR Box ── */
+.app-download-card__visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.app-download__qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.app-download__qr-box {
+  background: #ffffff;
+  padding: 14px;
+  border-radius: 22px;
+  box-shadow: 0 14px 34px -8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+  transition: transform 0.25s ease;
+}
+
+.app-download__qr-box:hover {
+  transform: scale(1.03);
+}
+
+.app-download__qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
+
+.app-download__qr-skeleton {
+  width: 172px;
+  height: 172px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  animation: qrPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes qrPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.app-download__qr-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: var(--font-body, 'Lato', sans-serif);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 200px;
+  line-height: 1.35;
+}
+
+.app-download__qr-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* ── Responsive adjustments ── */
+@media (max-width: 900px) {
+  .app-download-card {
+    grid-template-columns: 1fr;
+    padding: 36px 30px;
+    gap: 36px;
+    text-align: center;
+  }
+
+  .app-download-card__content {
+    align-items: center;
+  }
+
+  .app-download__subtitle {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .app-download__features {
+    align-items: flex-start;
+    display: inline-flex;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+  }
+
+  .app-download__actions {
+    justify-content: center;
+  }
+
+  .app-download__footnote {
+    text-align: center;
+  }
+}
+
+@media (max-width: 540px) {
+  .app-download-section {
+    padding: 24px 16px;
+  }
+
+  .app-download-card {
+    padding: 28px 20px;
+    border-radius: 20px;
+  }
+
+  .app-download__actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .app-download__btn-primary,
+  .app-download__btn-secondary {
+    width: 100%;
+  }
+
+  .app-download__qr-box {
+    width: 170px;
+    height: 170px;
+    padding: 10px;
+  }
+}
