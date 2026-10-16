@@ -13,7 +13,6 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-
 const question = (query) => {
   return new Promise((resolve) => rl.question(query, resolve));
 };
