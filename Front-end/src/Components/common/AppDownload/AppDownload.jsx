@@ -3,13 +3,15 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Download, Smartphone, QrCode, CheckCircle2 } from 'lucide-react';
 import './AppDownload.css';
 
+// Always the latest build, served from Front-end/public/downloads (static — no env var).
+const APK_PATH = '/downloads/SkillKart-v1.0.apk';
+
 export default function AppDownload() {
   const [downloadUrl, setDownloadUrl] = useState('');
 
   useEffect(() => {
-    // Generate the full direct APK URL based on current host or custom env
-    const base = import.meta.env.VITE_APK_URL || `${window.location.origin}/downloads/SkillKart-v1.0.apk`;
-    setDownloadUrl(base);
+    // Full URL for the QR code (a phone scanning it needs the absolute address)
+    setDownloadUrl(`${window.location.origin}${APK_PATH}`);
   }, []);
 
   return (
@@ -57,7 +59,7 @@ export default function AppDownload() {
             {/* Action Buttons Row */}
             <div className="sk-app-actions-row">
               <a
-                href={downloadUrl || '/downloads/SkillKart-v1.0.apk'}
+                href={APK_PATH}
                 download="SkillKart-v1.0.apk"
                 className="sk-app-btn-download"
                 id="btn-download-apk"
